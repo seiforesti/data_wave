@@ -1,0 +1,971 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import {
+  Cloud,
+  Settings,
+  Shield,
+  Key,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertTriangle,
+  X,
+  Plus,
+  Trash2,
+  Save,
+  TestTube,
+  RefreshCw,
+  Database,
+  Server,
+  Globe,
+  Lock,
+  Unlock,
+  Network,
+  HardDrive,
+  Cpu,
+  Memory,
+  Zap,
+  Info,
+  ExternalLink,
+  Download,
+  Upload,
+  Copy,
+  Edit,
+  EyeIcon,
+  EyeOffIcon,
+} from "lucide-react"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
+import { DataSource, CloudConfig, ReplicaConfig, SSLConfig } from "./types"
+import {
+  useUpdateDataSourceMutation,
+  validateCloudConfig,
+  validateReplicaConfig,
+  validateSSLConfig,
+} from "./services/apis"
+
+interface DataSourceCloudConfigProps {
+  dataSource: DataSource
+  onSave?: (config: any) => void
+  onCancel?: () => void
+}
+
+export function DataSourceCloudConfig({
+  dataSource,
+  onSave,
+  onCancel,
+}: DataSourceCloudConfigProps) {
+  const [activeTab, setActiveTab] = useState("cloud")
+  const [isEditing, setIsEditing] = useState(false)
+  const [showSecrets, setShowSecrets] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
+  const [validationResults, setValidationResults] = useState<any>({})
+
+  // Form states
+  const [cloudProvider, setCloudProvider] = useState(dataSource.cloud_provider || "")
+  const [cloudConfig, setCloudConfig] = useState<CloudConfig>(dataSource.cloud_config || {})
+  const [replicaConfig, setReplicaConfig] = useState<ReplicaConfig>(dataSource.replica_config || {})
+  const [sslConfig, setSslConfig] = useState<SSLConfig>(dataSource.ssl_config || {})
+  const [poolConfig, setPoolConfig] = useState({
+    pool_size: dataSource.pool_size || 5,
+    max_overflow: dataSource.max_overflow || 10,
+    pool_timeout: dataSource.pool_timeout || 30,
+  })
+
+  // Mutations
+  const updateMutation = useUpdateDataSourceMutation()
+
+  const handleSave = async () => {
+    try {
+      const updates = {
+        cloud_provider: cloudProvider || null,
+        cloud_config: Object.keys(cloudConfig).length > 0 ? cloudConfig : null,
+        replica_config: Object.keys(replicaConfig).length > 0 ? replicaConfig : null,
+        ssl_config: Object.keys(sslConfig).length > 0 ? sslConfig : null,
+        pool_size: poolConfig.pool_size,
+        max_overflow: poolConfig.max_overflow,
+        pool_timeout: poolConfig.pool_timeout,
+      }
+
+      await updateMutation.mutateAsync({ id: dataSource.id, ...updates })
+      setIsEditing(false)
+      onSave?.(updates)
+    } catch (error) {
+      console.error("Failed to save cloud configuration:", error)
+    }
+  }
+
+  const handleValidate = async (type: "cloud" | "replica" | "ssl") => {
+    setIsValidating(true)
+    try {
+      let result
+      switch (type) {
+        case "cloud":
+          result = await validateCloudConfig(dataSource.id)
+          break
+        case "replica":
+          result = await validateReplicaConfig(dataSource.id)
+          break
+        case "ssl":
+          result = await validateSSLConfig(dataSource.id)
+          break
+      }
+      setValidationResults(prev => ({ ...prev, [type]: result }))
+    } catch (error) {
+      console.error(`Failed to validate ${type} config:`, error)
+      setValidationResults(prev => ({ 
+        ...prev, 
+        [type]: { success: false, message: "Validation failed" } 
+      }))
+    } finally {
+      setIsValidating(false)
+    }
+  }
+
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case "aws":
+        return <Cloud className="h-4 w-4 text-orange-500" />
+      case "azure":
+        return <Cloud className="h-4 w-4 text-blue-500" />
+      case "gcp":
+        return <Cloud className="h-4 w-4 text-red-500" />
+      default:
+        return <Cloud className="h-4 w-4" />
+    }
+  }
+
+  const getProviderName = (provider: string) => {
+    switch (provider) {
+      case "aws":
+        return "Amazon Web Services"
+      case "azure":
+        return "Microsoft Azure"
+      case "gcp":
+        return "Google Cloud Platform"
+      default:
+        return "Unknown"
+    }
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Cloud Configuration</h2>
+            <p className="text-muted-foreground">
+              Configure cloud provider settings, connection pooling, and security
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSecrets(!showSecrets)}
+            >
+              {showSecrets ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+              {showSecrets ? "Hide" : "Show"} Secrets
+            </Button>
+            {!isEditing ? (
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Configuration
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Configuration Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="cloud" className="flex items-center gap-2">
+              <Cloud className="h-4 w-4" />
+              Cloud Provider
+            </TabsTrigger>
+            <TabsTrigger value="replica" className="flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Replica Set
+            </TabsTrigger>
+            <TabsTrigger value="ssl" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              SSL/TLS
+            </TabsTrigger>
+            <TabsTrigger value="pool" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Connection Pool
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Cloud Provider Configuration */}
+          <TabsContent value="cloud" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Provider Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Cloud Provider</CardTitle>
+                  <CardDescription>Select and configure your cloud provider</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cloud-provider">Provider</Label>
+                    <Select
+                      value={cloudProvider}
+                      onValueChange={setCloudProvider}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select cloud provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="aws">
+                          <div className="flex items-center gap-2">
+                            <Cloud className="h-4 w-4 text-orange-500" />
+                            Amazon Web Services
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="azure">
+                          <div className="flex items-center gap-2">
+                            <Cloud className="h-4 w-4 text-blue-500" />
+                            Microsoft Azure
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="gcp">
+                          <div className="flex items-center gap-2">
+                            <Cloud className="h-4 w-4 text-red-500" />
+                            Google Cloud Platform
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {cloudProvider && (
+                    <div className="flex items-center gap-2">
+                      {getProviderIcon(cloudProvider)}
+                      <span className="font-medium">{getProviderName(cloudProvider)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleValidate("cloud")}
+                      disabled={isValidating || !cloudProvider}
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {isValidating ? "Validating..." : "Validate Config"}
+                    </Button>
+                    {validationResults.cloud && (
+                      <Badge variant={validationResults.cloud.success ? "default" : "destructive"}>
+                        {validationResults.cloud.success ? "Valid" : "Invalid"}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Provider-Specific Configuration */}
+              {cloudProvider && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{getProviderName(cloudProvider)} Configuration</CardTitle>
+                    <CardDescription>Provider-specific settings and credentials</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {cloudProvider === "aws" && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="aws-access-key">Access Key ID</Label>
+                          <Input
+                            id="aws-access-key"
+                            type={showSecrets ? "text" : "password"}
+                            placeholder="AKIA..."
+                            value={cloudConfig.aws?.access_key_id || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              aws: { ...prev.aws, access_key_id: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="aws-secret-key">Secret Access Key</Label>
+                          <Input
+                            id="aws-secret-key"
+                            type={showSecrets ? "text" : "password"}
+                            placeholder="••••••••••••••••••••••••••••••••"
+                            value={cloudConfig.aws?.secret_access_key || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              aws: { ...prev.aws, secret_access_key: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="aws-region">Region</Label>
+                          <Select
+                            value={cloudConfig.aws?.region || ""}
+                            onValueChange={(value) => setCloudConfig(prev => ({
+                              ...prev,
+                              aws: { ...prev.aws, region: value }
+                            }))}
+                            disabled={!isEditing}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select region" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                              <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                              <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                              <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="aws-iam"
+                            checked={cloudConfig.aws?.use_iam_auth || false}
+                            onCheckedChange={(checked) => setCloudConfig(prev => ({
+                              ...prev,
+                              aws: { ...prev.aws, use_iam_auth: checked }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                          <Label htmlFor="aws-iam">Use IAM Authentication</Label>
+                        </div>
+                      </div>
+                    )}
+
+                    {cloudProvider === "azure" && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="azure-tenant">Tenant ID</Label>
+                          <Input
+                            id="azure-tenant"
+                            placeholder="00000000-0000-0000-0000-000000000000"
+                            value={cloudConfig.azure?.tenant_id || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              azure: { ...prev.azure, tenant_id: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="azure-client">Client ID</Label>
+                          <Input
+                            id="azure-client"
+                            placeholder="00000000-0000-0000-0000-000000000000"
+                            value={cloudConfig.azure?.client_id || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              azure: { ...prev.azure, client_id: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="azure-secret">Client Secret</Label>
+                          <Input
+                            id="azure-secret"
+                            type={showSecrets ? "text" : "password"}
+                            placeholder="••••••••••••••••••••••••••••••••"
+                            value={cloudConfig.azure?.client_secret || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              azure: { ...prev.azure, client_secret: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="azure-managed-identity"
+                            checked={cloudConfig.azure?.use_managed_identity || false}
+                            onCheckedChange={(checked) => setCloudConfig(prev => ({
+                              ...prev,
+                              azure: { ...prev.azure, use_managed_identity: checked }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                          <Label htmlFor="azure-managed-identity">Use Managed Identity</Label>
+                        </div>
+                      </div>
+                    )}
+
+                    {cloudProvider === "gcp" && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="gcp-project">Project ID</Label>
+                          <Input
+                            id="gcp-project"
+                            placeholder="my-project-123"
+                            value={cloudConfig.gcp?.project_id || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              gcp: { ...prev.gcp, project_id: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="gcp-service-account">Service Account Key</Label>
+                          <Textarea
+                            id="gcp-service-account"
+                            placeholder="Paste your service account JSON key"
+                            value={cloudConfig.gcp?.service_account_key || ""}
+                            onChange={(e) => setCloudConfig(prev => ({
+                              ...prev,
+                              gcp: { ...prev.gcp, service_account_key: e.target.value }
+                            }))}
+                            disabled={!isEditing}
+                            rows={4}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="gcp-workload-identity"
+                            checked={cloudConfig.gcp?.use_workload_identity || false}
+                            onCheckedChange={(checked) => setCloudConfig(prev => ({
+                              ...prev,
+                              gcp: { ...prev.gcp, use_workload_identity: checked }
+                            }))}
+                            disabled={!isEditing}
+                          />
+                          <Label htmlFor="gcp-workload-identity">Use Workload Identity</Label>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Replica Set Configuration */}
+          <TabsContent value="replica" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Replica Set Configuration</CardTitle>
+                  <CardDescription>Configure high availability and read replicas</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="replica-host">Replica Host</Label>
+                    <Input
+                      id="replica-host"
+                      placeholder="replica.example.com"
+                      value={replicaConfig.replica_host || ""}
+                      onChange={(e) => setReplicaConfig(prev => ({
+                        ...prev,
+                        replica_host: e.target.value
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="replica-port">Replica Port</Label>
+                    <Input
+                      id="replica-port"
+                      type="number"
+                      placeholder="5432"
+                      value={replicaConfig.replica_port || ""}
+                      onChange={(e) => setReplicaConfig(prev => ({
+                        ...prev,
+                        replica_port: parseInt(e.target.value) || undefined
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="replica-set">Replica Set Name</Label>
+                    <Input
+                      id="replica-set"
+                      placeholder="rs0"
+                      value={replicaConfig.replica_set || ""}
+                      onChange={(e) => setReplicaConfig(prev => ({
+                        ...prev,
+                        replica_set: e.target.value
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="read-preference">Read Preference</Label>
+                    <Select
+                      value={replicaConfig.read_preference || "primary"}
+                      onValueChange={(value) => setReplicaConfig(prev => ({
+                        ...prev,
+                        read_preference: value
+                      }))}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="primary">Primary</SelectItem>
+                        <SelectItem value="secondary">Secondary</SelectItem>
+                        <SelectItem value="nearest">Nearest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="write-concern">Write Concern</Label>
+                    <Select
+                      value={replicaConfig.write_concern || "majority"}
+                      onValueChange={(value) => setReplicaConfig(prev => ({
+                        ...prev,
+                        write_concern: value
+                      }))}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="majority">Majority</SelectItem>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleValidate("replica")}
+                      disabled={isValidating}
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {isValidating ? "Validating..." : "Validate Replica"}
+                    </Button>
+                    {validationResults.replica && (
+                      <Badge variant={validationResults.replica.success ? "default" : "destructive"}>
+                        {validationResults.replica.success ? "Valid" : "Invalid"}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Replica Members</CardTitle>
+                  <CardDescription>Configure replica set members</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Replica Members</Label>
+                    <div className="space-y-2">
+                      {(replicaConfig.replica_members || []).map((member, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={member}
+                            onChange={(e) => {
+                              const newMembers = [...(replicaConfig.replica_members || [])]
+                              newMembers[index] = e.target.value
+                              setReplicaConfig(prev => ({
+                                ...prev,
+                                replica_members: newMembers
+                              }))
+                            }}
+                            placeholder="replica1.example.com:27017"
+                            disabled={!isEditing}
+                          />
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newMembers = replicaConfig.replica_members?.filter((_, i) => i !== index) || []
+                                setReplicaConfig(prev => ({
+                                  ...prev,
+                                  replica_members: newMembers
+                                }))
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {isEditing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newMembers = [...(replicaConfig.replica_members || []), ""]
+                          setReplicaConfig(prev => ({
+                            ...prev,
+                            replica_members: newMembers
+                          }))
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Member
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* SSL/TLS Configuration */}
+          <TabsContent value="ssl" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">SSL/TLS Configuration</CardTitle>
+                  <CardDescription>Configure secure connections and certificates</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ssl-mode">SSL Mode</Label>
+                    <Select
+                      value={sslConfig.ssl_mode || "require"}
+                      onValueChange={(value) => setSslConfig(prev => ({
+                        ...prev,
+                        ssl_mode: value
+                      }))}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="disable">Disable</SelectItem>
+                        <SelectItem value="require">Require</SelectItem>
+                        <SelectItem value="verify-ca">Verify CA</SelectItem>
+                        <SelectItem value="verify-full">Verify Full</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ssl-ca">CA Certificate Path</Label>
+                    <Input
+                      id="ssl-ca"
+                      placeholder="/path/to/ca.pem"
+                      value={sslConfig.ssl_ca || ""}
+                      onChange={(e) => setSslConfig(prev => ({
+                        ...prev,
+                        ssl_ca: e.target.value
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ssl-cert">Client Certificate Path</Label>
+                    <Input
+                      id="ssl-cert"
+                      placeholder="/path/to/cert.pem"
+                      value={sslConfig.ssl_cert || ""}
+                      onChange={(e) => setSslConfig(prev => ({
+                        ...prev,
+                        ssl_cert: e.target.value
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ssl-key">Client Key Path</Label>
+                    <Input
+                      id="ssl-key"
+                      placeholder="/path/to/key.pem"
+                      value={sslConfig.ssl_key || ""}
+                      onChange={(e) => setSslConfig(prev => ({
+                        ...prev,
+                        ssl_key: e.target.value
+                      }))}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="verify-ssl"
+                      checked={sslConfig.verify_ssl !== false}
+                      onCheckedChange={(checked) => setSslConfig(prev => ({
+                        ...prev,
+                        verify_ssl: checked
+                      }))}
+                      disabled={!isEditing}
+                    />
+                    <Label htmlFor="verify-ssl">Verify SSL Certificate</Label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleValidate("ssl")}
+                      disabled={isValidating}
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {isValidating ? "Validating..." : "Validate SSL"}
+                    </Button>
+                    {validationResults.ssl && (
+                      <Badge variant={validationResults.ssl.success ? "default" : "destructive"}>
+                        {validationResults.ssl.success ? "Valid" : "Invalid"}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">SSL Status</CardTitle>
+                  <CardDescription>Current SSL configuration status</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">SSL Mode</span>
+                      <Badge variant="outline">{sslConfig.ssl_mode || "Not configured"}</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">CA Certificate</span>
+                      <Badge variant={sslConfig.ssl_ca ? "default" : "secondary"}>
+                        {sslConfig.ssl_ca ? "Configured" : "Not configured"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Client Certificate</span>
+                      <Badge variant={sslConfig.ssl_cert ? "default" : "secondary"}>
+                        {sslConfig.ssl_cert ? "Configured" : "Not configured"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Client Key</span>
+                      <Badge variant={sslConfig.ssl_key ? "default" : "secondary"}>
+                        {sslConfig.ssl_key ? "Configured" : "Not configured"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Certificate Verification</span>
+                      <Badge variant={sslConfig.verify_ssl !== false ? "default" : "secondary"}>
+                        {sslConfig.verify_ssl !== false ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Connection Pool Configuration */}
+          <TabsContent value="pool" className="space-y-4">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Connection Pool Settings</CardTitle>
+                  <CardDescription>Configure connection pooling for optimal performance</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pool-size">Pool Size</Label>
+                    <Input
+                      id="pool-size"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={poolConfig.pool_size}
+                      onChange={(e) => setPoolConfig(prev => ({
+                        ...prev,
+                        pool_size: parseInt(e.target.value) || 5
+                      }))}
+                      disabled={!isEditing}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of connections to maintain in the pool
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="max-overflow">Max Overflow</Label>
+                    <Input
+                      id="max-overflow"
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={poolConfig.max_overflow}
+                      onChange={(e) => setPoolConfig(prev => ({
+                        ...prev,
+                        max_overflow: parseInt(e.target.value) || 10
+                      }))}
+                      disabled={!isEditing}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Maximum number of connections that can be created beyond pool size
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pool-timeout">Pool Timeout (seconds)</Label>
+                    <Input
+                      id="pool-timeout"
+                      type="number"
+                      min="1"
+                      max="300"
+                      value={poolConfig.pool_timeout}
+                      onChange={(e) => setPoolConfig(prev => ({
+                        ...prev,
+                        pool_timeout: parseInt(e.target.value) || 30
+                      }))}
+                      disabled={!isEditing}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Time to wait for a connection from the pool
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Pool Recommendations</CardTitle>
+                  <CardDescription>Suggested settings based on your workload</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <h4 className="font-medium mb-2">Light Workload</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        For development and testing environments
+                      </p>
+                      <div className="text-sm">
+                        <div>Pool Size: 5-10</div>
+                        <div>Max Overflow: 5-10</div>
+                        <div>Timeout: 30s</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted rounded-lg">
+                      <h4 className="font-medium mb-2">Medium Workload</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        For production applications with moderate traffic
+                      </p>
+                      <div className="text-sm">
+                        <div>Pool Size: 10-20</div>
+                        <div>Max Overflow: 10-20</div>
+                        <div>Timeout: 30-60s</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted rounded-lg">
+                      <h4 className="font-medium mb-2">Heavy Workload</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        For high-traffic production applications
+                      </p>
+                      <div className="text-sm">
+                        <div>Pool Size: 20-50</div>
+                        <div>Max Overflow: 20-50</div>
+                        <div>Timeout: 60-120s</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Validation Results */}
+        {Object.keys(validationResults).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Validation Results</CardTitle>
+              <CardDescription>Configuration validation status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(validationResults).map(([type, result]: [string, any]) => (
+                  <Alert key={type} variant={result.success ? "default" : "destructive"}>
+                    {result.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      <strong className="capitalize">{type} Configuration:</strong> {result.message}
+                    </AlertDescription>
+                  </Alert>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </TooltipProvider>
+  )
+}
