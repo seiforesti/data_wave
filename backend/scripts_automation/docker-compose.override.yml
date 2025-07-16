@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+  extractor:
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./scripts_automation:/app/scripts_automation
+      - ./scripts:/app/scripts
