@@ -83,7 +83,6 @@
     @apply bg-background text-foreground;
   }
 }
-
 /* Performance optimizations */
 .gpu-accelerated {
   transform: translateZ(0);
@@ -214,3 +213,4 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
