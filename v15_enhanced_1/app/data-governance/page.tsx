@@ -65,6 +65,7 @@ import EntityDetails from "@/components/data-catalog/entity-details"
 import EntityLineageView from "@/components/data-catalog/entity-lineage-view"
 import EntityManagementContent from "@/components/data-catalog/entity-management-content"
 import { DataSourcesApp } from "@/components/data-sources/data-sources-app"
+import { EnterpriseDataSourcesApp } from "@/components/data-sources/enterprise-data-sources-app"
 import { ScanSystemApp } from "@/components/scan-logic/scan-system-app"
 import { ScanRuleSetApp } from "@/components/Scan-Rule-Sets/ScanRuleSetApp"
 import { LoadingSpinner } from "@/components/Scan-Rule-Sets/components/LoadingSpinner"
@@ -978,7 +979,7 @@ export default function DataGovernancePage() {
     } else if (secondSidebarContext === "data-map") {
       switch (activeSecondSidebarItem) {
         case "data-sources":
-          return <DataSourcesApp />
+          return <EnterpriseDataSourcesApp />
         case "scan":
           return <ScanSystemApp />
         case "scan-rules":

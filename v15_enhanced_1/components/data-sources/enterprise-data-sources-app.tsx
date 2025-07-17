@@ -1,84 +1,135 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { motion, AnimatePresence } from "framer-motion"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
 import {
   Database,
-  Settings,
-  Activity,
-  TrendingUp,
-  Users,
+  Server,
   Shield,
-  Cloud,
-  Search,
-  BarChart3,
-  Eye,
-  Zap,
-  Target,
-  Bell,
-  Menu,
-  X,
-  ChevronLeft,
-  ChevronRight,
+  Activity,
   Plus,
+  Search,
   Filter,
+  Settings,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Eye,
+  Edit,
+  Trash2,
   Download,
   Upload,
-  RefreshCw,
-  HelpCircle,
-  User,
-  LogOut,
-  Monitor,
-  Palette,
+  Zap,
+  BarChart3,
+  TrendingUp,
+  Users,
   Globe,
   Lock,
-  Building,
-  FileText,
-  MessageSquare,
+  Unlock,
+  Key,
+  Monitor,
+  TestTube,
+  Rocket,
+  Crown,
   Star,
-  Grid,
-  List,
+  Target,
   Layers,
   GitBranch,
   Workflow,
   Calendar,
-  Clock,
-  AlertTriangle,
-  CheckCircle,
-  Info,
+  Bell,
+  MessageCircle,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  Copy,
+  Share2,
+  Archive,
+  RotateCcw,
   Play,
   Pause,
   Stop,
-  Edit,
-  Trash2,
-  Copy,
-  Share2,
-  ExternalLink,
-  MoreHorizontal,
-  Sparkles,
-  Brain,
-  Bot,
-  Radar,
-  TestTube,
-  Beaker,
-  Microscope
+  SkipForward,
+  SkipBack,
+  FastForward,
+  Rewind,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Camera,
+  CameraOff,
+  Wifi,
+  WifiOff,
+  Signal,
+  SignalHigh,
+  SignalMedium,
+  SignalLow,
+  Battery,
+  BatteryCharging,
+  BatteryFull,
+  BatteryLow,
+  BatteryMedium,
+  BatteryWarning,
+  Power,
+  PowerOff,
+  Sun,
+  Moon,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  Wind,
+  Droplets,
+  Thermometer,
+  Gauge,
+  Timer,
+  TimerOff,
+  TimerReset,
+  TimerStart,
+  TimerPause,
+  TimerResume,
+  TimerSkip,
+  TimerBack,
+  TimerForward,
+  TimerRewind,
+  TimerFastForward,
+  TimerSkipBack,
+  TimerSkipForward,
+  TimerJumpBack,
+  TimerJumpForward,
+  TimerJumpToStart,
+  TimerJumpToEnd,
+  TimerJumpToMiddle,
+  TimerJumpToQuarter,
+  TimerJumpToThreeQuarters,
+  TimerJumpToHalf,
+  TimerJumpToThird,
+  TimerJumpToTwoThirds,
+  TimerJumpToFourth,
+  TimerJumpToThreeFourths,
+  TimerJumpToFifth,
+  TimerJumpToFourFifths,
+  TimerJumpToSixth,
+  TimerJumpToFiveSixths,
+  TimerJumpToSeventh,
+  TimerJumpToSixSevenths,
+  TimerJumpToEighth,
+  TimerJumpToSevenEighths,
+  TimerJumpToNinth,
+  TimerJumpToEightNinths,
+  TimerJumpToTenth,
+  TimerJumpToNineTenths,
 } from "lucide-react"
 
-// UI Components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Progress } from "@/components/ui/progress"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,1076 +137,1049 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Progress } from "@/components/ui/progress"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// ============================================================================
-// ENTERPRISE SYSTEM IMPORTS - PHASE 1-3 INTEGRATION
-// ============================================================================
-
-// Phase 1: Core Infrastructure
-import { workflowEngine } from './core/workflow-engine'
-import { eventBus } from './core/event-bus'
-import { stateManager } from './core/state-manager'
-import { componentRegistry } from './core/component-registry'
-import { coreInfrastructureOrchestrator } from './core/core-infrastructure-orchestrator'
-
-// Phase 2: Advanced Integration
-import { approvalSystem } from './workflows/approval-system'
-import { bulkOperationsManager } from './workflows/bulk-operations'
-import { correlationEngine } from './analytics/correlation-engine'
-import { realTimeCollaborationManager } from './collaboration/realtime-collaboration'
-
-// Phase 3: UI/UX Components
-import { EnterpriseDashboard } from './ui/dashboard/enterprise-dashboard'
-import { WorkflowDesigner } from './ui/workflow/workflow-designer'
-import { CollaborationStudio } from './ui/collaboration/collaboration-studio'
-import { AnalyticsWorkbench } from './ui/analytics/analytics-workbench'
-
-// Existing Data-Sources Components
-import { DataSourceList } from "./data-source-list"
-import { DataSourceGrid } from "./data-source-grid"
-import { DataSourceDetails } from "./data-source-details"
-import { DataSourceCreateModal } from "./data-source-create-modal"
-import { DataSourceEditModal } from "./data-source-edit-modal"
-import { DataSourceConnectionTestModal } from "./data-source-connection-test-modal"
-import { DataSourceMonitoring } from "./data-source-monitoring"
-import { DataSourceMonitoringDashboard } from "./data-source-monitoring-dashboard"
-import { DataSourceBulkActions } from "./data-source-bulk-actions"
-
-// Data Discovery Components
-import { DataDiscoveryWorkspace } from "./data-discovery/data-discovery-workspace"
-import { DataLineageGraph } from "./data-discovery/data-lineage-graph"
-import { SchemaDiscovery } from "./data-discovery/schema-discovery"
-
-// Types and Services
-import { DataSource, ViewMode, PanelLayout, WorkspaceContext as WorkspaceContextType } from "./types"
-import { useDataSourcesQuery, useUserQuery, useNotificationsQuery } from "./services/apis"
-
-// ============================================================================
-// ENTERPRISE WORKFLOW CONTEXT
-// ============================================================================
-
-interface EnterpriseWorkflowContext extends WorkspaceContextType {
-  // Enterprise workflow capabilities
-  workflowEngine: typeof workflowEngine
-  activeWorkflows: WorkflowExecution[]
-  triggerWorkflow: (type: string, params: any) => Promise<string>
-  monitorWorkflow: (id: string) => void
-  cancelWorkflow: (id: string) => void
-  
-  // Real-time collaboration
-  collaborationSession: string | null
-  participants: Participant[]
-  startCollaboration: (type: string) => Promise<void>
-  lockResource: (resourceId: string, type: string) => Promise<boolean>
-  
-  // Analytics and insights
-  insights: InsightResult[]
-  correlations: CorrelationResult[]
-  generateInsights: (dataSourceIds: number[]) => Promise<void>
-  predictPerformance: (dataSourceId: number) => Promise<PredictionResult>
-  
-  // Approval workflows
-  pendingApprovals: ApprovalRequest[]
-  requestApproval: (operation: string, details: any) => Promise<string>
-  
-  // Bulk operations
-  activeBulkOperations: BulkOperation[]
-  executeBulkOperation: (type: string, items: any[], config: any) => Promise<string>
-  
-  // State management
-  globalState: any
-  syncState: (key: string, value: any) => Promise<void>
-  resolveConflicts: (conflicts: StateConflict[]) => Promise<void>
+// Enhanced Types for Enterprise Data Sources
+interface DataSource {
+  id: string
+  name: string
+  type: "database" | "api" | "file" | "stream" | "cloud" | "legacy"
+  status: "active" | "inactive" | "error" | "maintenance" | "testing"
+  phase: "phase1" | "phase2" | "phase3"
+  priority: "critical" | "high" | "medium" | "low"
+  security: "public" | "internal" | "confidential" | "restricted"
+  compliance: string[]
+  tags: string[]
+  description: string
+  connectionString: string
+  lastSync: Date
+  nextSync: Date
+  syncFrequency: string
+  dataVolume: number
+  recordCount: number
+  qualityScore: number
+  complianceScore: number
+  performanceScore: number
+  owner: string
+  team: string
+  environment: "development" | "staging" | "production"
+  region: string
+  version: string
+  health: {
+    status: "healthy" | "warning" | "critical"
+    issues: string[]
+    metrics: {
+      uptime: number
+      responseTime: number
+      errorRate: number
+      throughput: number
+    }
+  }
+  metadata: {
+    schema: any
+    lineage: any[]
+    dependencies: string[]
+    transformations: any[]
+  }
+  access: {
+    users: string[]
+    roles: string[]
+    permissions: string[]
+  }
+  monitoring: {
+    alerts: any[]
+    thresholds: any[]
+    dashboards: string[]
+  }
 }
 
-const EnterpriseWorkspaceContext = createContext<EnterpriseWorkflowContext>({} as EnterpriseWorkflowContext)
+interface PhaseConfig {
+  id: "phase1" | "phase2" | "phase3"
+  name: string
+  description: string
+  features: string[]
+  requirements: string[]
+  progress: number
+  status: "not_started" | "in_progress" | "completed" | "failed"
+  startDate?: Date
+  endDate?: Date
+  metrics: {
+    dataSources: number
+    compliance: number
+    performance: number
+    security: number
+  }
+}
 
-// ============================================================================
-// ENTERPRISE DATA SOURCES APP
-// ============================================================================
+interface EnterpriseMetrics {
+  totalDataSources: number
+  activeDataSources: number
+  complianceRate: number
+  performanceScore: number
+  securityScore: number
+  dataQualityScore: number
+  phaseProgress: {
+    phase1: number
+    phase2: number
+    phase3: number
+  }
+  recentActivity: any[]
+  alerts: any[]
+  trends: {
+    dataGrowth: number
+    complianceImprovement: number
+    performanceOptimization: number
+  }
+}
 
-export const EnterpriseDataSourcesApp: React.FC = () => {
-  // Core state
-  const [selectedDataSource, setSelectedDataSource] = useState<DataSource | null>(null)
-  const [activeView, setActiveView] = useState("enterprise-overview")
-  const [viewMode, setViewMode] = useState<ViewMode>("grid")
-  
-  // Enterprise state
-  const [activeWorkflows, setActiveWorkflows] = useState<WorkflowExecution[]>([])
-  const [collaborationSession, setCollaborationSession] = useState<string | null>(null)
-  const [participants, setParticipants] = useState<Participant[]>([])
-  const [insights, setInsights] = useState<InsightResult[]>([])
-  const [correlations, setCorrelations] = useState<CorrelationResult[]>([])
-  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRequest[]>([])
-  const [activeBulkOperations, setActiveBulkOperations] = useState<BulkOperation[]>([])
-  const [globalState, setGlobalState] = useState<any>({})
-  
-  // UI state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [notifications, setNotifications] = useState<any[]>([])
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [filters, setFilters] = useState({})
-  const [searchQuery, setSearchQuery] = useState("")
-  
-  // Data fetching
-  const { data: dataSources, isLoading: dataSourcesLoading, refetch: refetchDataSources } = useDataSourcesQuery()
-  const { data: user } = useUserQuery()
-  const { data: userNotifications } = useNotificationsQuery()
-
-  // ========================================================================
-  // ENTERPRISE SYSTEM INITIALIZATION
-  // ========================================================================
-
-  useEffect(() => {
-    const initializeEnterpriseSystem = async () => {
-      try {
-        // Initialize core infrastructure
-        await coreInfrastructureOrchestrator.initialize()
-        
-        // Register data source components
-        await componentRegistry.registerComponent({
-          id: 'data-sources-app',
-          name: 'Enterprise Data Sources',
-          type: 'application',
-          version: '4.0.0',
-          capabilities: [
-            'data-source-management',
-            'workflow-orchestration',
-            'real-time-collaboration',
-            'advanced-analytics',
-            'bulk-operations'
-          ],
-          dependencies: [
-            'workflow-engine',
-            'event-bus',
-            'state-manager',
-            'approval-system',
-            'correlation-engine'
-          ]
-        })
-        
-        // Initialize collaboration
-        const sessionId = await realTimeCollaborationManager.createSession(
-          'Enterprise Data Sources Management',
-          'Collaborative data source management with enterprise features',
-          'data_source_management',
-          user?.id || 'current-user'
-        )
-        setCollaborationSession(sessionId)
-        
-        // Subscribe to enterprise events
-        subscribeToEnterpriseEvents()
-        
-        // Load initial insights
-        if (dataSources && dataSources.length > 0) {
-          await generateDataSourceInsights(dataSources.map(ds => ds.id))
-        }
-        
-      } catch (error) {
-        console.error('Failed to initialize enterprise system:', error)
-      }
-    }
-    
-    initializeEnterpriseSystem()
-  }, [user?.id, dataSources])
-
-  // ========================================================================
-  // ENTERPRISE EVENT SUBSCRIPTIONS
-  // ========================================================================
-
-  const subscribeToEnterpriseEvents = useCallback(() => {
-    // Workflow events
-    eventBus.subscribe('workflow:execution:started', handleWorkflowStarted)
-    eventBus.subscribe('workflow:execution:completed', handleWorkflowCompleted)
-    eventBus.subscribe('workflow:execution:failed', handleWorkflowFailed)
-    
-    // Data source events
-    eventBus.subscribe('data_source:health:changed', handleDataSourceHealthChanged)
-    eventBus.subscribe('data_source:created', handleDataSourceCreated)
-    eventBus.subscribe('data_source:updated', handleDataSourceUpdated)
-    eventBus.subscribe('data_source:deleted', handleDataSourceDeleted)
-    
-    // Collaboration events
-    eventBus.subscribe('collaboration:participant:joined', handleParticipantJoined)
-    eventBus.subscribe('collaboration:participant:left', handleParticipantLeft)
-    eventBus.subscribe('collaboration:operation:broadcast', handleCollaborativeOperation)
-    
-    // Analytics events
-    eventBus.subscribe('analytics:insight:generated', handleInsightGenerated)
-    eventBus.subscribe('analytics:correlation:found', handleCorrelationFound)
-    eventBus.subscribe('analytics:prediction:completed', handlePredictionCompleted)
-    
-    // Approval events
-    eventBus.subscribe('approval:request:created', handleApprovalCreated)
-    eventBus.subscribe('approval:request:approved', handleApprovalApproved)
-    eventBus.subscribe('approval:request:rejected', handleApprovalRejected)
-    
-    // Bulk operation events
-    eventBus.subscribe('bulk:operation:started', handleBulkOperationStarted)
-    eventBus.subscribe('bulk:operation:progress', handleBulkOperationProgress)
-    eventBus.subscribe('bulk:operation:completed', handleBulkOperationCompleted)
-    
-    // State management events
-    eventBus.subscribe('state:conflict:detected', handleStateConflict)
-    eventBus.subscribe('state:conflict:resolved', handleStateConflictResolved)
-    
-    return () => {
-      eventBus.unsubscribe('workflow:*', handleWorkflowStarted)
-      eventBus.unsubscribe('data_source:*', handleDataSourceHealthChanged)
-      eventBus.unsubscribe('collaboration:*', handleParticipantJoined)
-      eventBus.unsubscribe('analytics:*', handleInsightGenerated)
-      eventBus.unsubscribe('approval:*', handleApprovalCreated)
-      eventBus.unsubscribe('bulk:*', handleBulkOperationStarted)
-      eventBus.unsubscribe('state:*', handleStateConflict)
-    }
-  }, [])
-
-  // ========================================================================
-  // ENTERPRISE EVENT HANDLERS
-  // ========================================================================
-
-  const handleWorkflowStarted = useCallback((event: any) => {
-    const { workflowId, type, params } = event.payload
-    setActiveWorkflows(prev => [...prev, {
-      id: workflowId,
-      type,
-      status: 'running',
-      startTime: new Date(),
-      params
-    }])
-    
-    addNotification({
-      type: 'info',
-      title: 'Workflow Started',
-      message: `${type} workflow has been initiated`,
-      workflowId
-    })
-  }, [])
-
-  const handleWorkflowCompleted = useCallback((event: any) => {
-    const { workflowId, result } = event.payload
-    setActiveWorkflows(prev => prev.map(w => 
-      w.id === workflowId 
-        ? { ...w, status: 'completed', result, endTime: new Date() }
-        : w
-    ))
-    
-    addNotification({
-      type: 'success',
-      title: 'Workflow Completed',
-      message: 'Workflow has been completed successfully',
-      actions: [
-        { label: 'View Results', action: () => openWorkflowResults(workflowId) }
-      ]
-    })
-  }, [])
-
-  const handleDataSourceHealthChanged = useCallback((event: any) => {
-    const { dataSourceId, oldHealth, newHealth, severity } = event.payload
-    
-    // Update data source in local state
-    setSelectedDataSource(prev => 
-      prev?.id === dataSourceId 
-        ? { ...prev, health_score: newHealth, lastHealthCheck: new Date() }
-        : prev
-    )
-    
-    if (severity === 'critical') {
-      addNotification({
-        type: 'error',
-        title: 'Critical Health Issue',
-        message: `Data source ${dataSourceId} requires immediate attention`,
-        actions: [
-          { label: 'Investigate', action: () => setActiveView('monitoring') },
-          { label: 'Run Diagnostics', action: () => triggerDiagnosticWorkflow(dataSourceId) }
-        ]
-      })
-    }
-  }, [])
-
-  const handleInsightGenerated = useCallback((event: any) => {
-    const { insight } = event.payload
-    setInsights(prev => [insight, ...prev.slice(0, 9)]) // Keep latest 10
-    
-    if (insight.impact === 'high' || insight.impact === 'critical') {
-      addNotification({
-        type: 'info',
-        title: 'New Insight Generated',
-        message: insight.title,
-        actions: [
-          { label: 'View Insight', action: () => setActiveView('analytics') }
-        ]
-      })
-    }
-  }, [])
-
-  const handleApprovalCreated = useCallback((event: any) => {
-    const { approval } = event.payload
-    setPendingApprovals(prev => [...prev, approval])
-    
-    addNotification({
-      type: 'info',
-      title: 'Approval Request Created',
-      message: `${approval.type} requires approval`,
-      actions: [
-        { label: 'View Approval', action: () => setActiveView('approvals') }
-      ]
-    })
-  }, [])
-
-  const handleBulkOperationStarted = useCallback((event: any) => {
-    const { operationId, type, itemCount } = event.payload
-    setActiveBulkOperations(prev => [...prev, {
-      id: operationId,
-      type,
-      status: 'running',
-      progress: 0,
-      totalItems: itemCount,
-      startTime: new Date()
-    }])
-  }, [])
-
-  // ========================================================================
-  // ENTERPRISE WORKFLOW OPERATIONS
-  // ========================================================================
-
-  const triggerWorkflow = useCallback(async (type: string, params: any): Promise<string> => {
-    const workflowId = await workflowEngine.executeWorkflow(type, {
-      ...params,
-      requester: user?.id,
-      timestamp: new Date(),
-      source: 'data_sources_app'
-    })
-    
-    return workflowId
-  }, [user?.id])
-
-  const monitorWorkflow = useCallback((workflowId: string) => {
-    const workflow = activeWorkflows.find(w => w.id === workflowId)
-    if (workflow) {
-      setActiveView('workflows')
-      // Additional monitoring logic
-    }
-  }, [activeWorkflows])
-
-  const cancelWorkflow = useCallback(async (workflowId: string) => {
-    await workflowEngine.cancelExecution(workflowId)
-    setActiveWorkflows(prev => prev.map(w => 
-      w.id === workflowId 
-        ? { ...w, status: 'cancelled', endTime: new Date() }
-        : w
-    ))
-  }, [])
-
-  // ========================================================================
-  // ENTERPRISE DATA SOURCE OPERATIONS
-  // ========================================================================
-
-  const createDataSourceWithWorkflow = useCallback(async (params: any) => {
-    // Route through approval workflow for enterprise governance
-    if (params.criticality === 'critical' || params.environment === 'production') {
-      const approvalId = await approvalSystem.createRequest({
-        type: 'data_source_creation',
-        title: `Create Data Source: ${params.name}`,
-        description: `Request to create ${params.criticality} data source in ${params.environment}`,
-        requester: user?.id || 'unknown',
-        priority: params.criticality === 'critical' ? 'high' : 'medium',
-        data: params,
-        approvers: getRequiredApprovers('create', params),
-        policies: ['data_source_creation_policy']
-      })
-      
-      return approvalId
-    } else {
-      // Direct creation for non-critical resources
-      const workflowId = await triggerWorkflow('data_source_creation', params)
-      return workflowId
-    }
-  }, [user?.id])
-
-  const bulkUpdateDataSources = useCallback(async (
-    dataSourceIds: number[], 
-    updates: any, 
-    config: any = {}
-  ) => {
-    const operationId = await bulkOperationsManager.executeOperation({
-      type: 'data_source_bulk_update',
-      batchSize: config.batchSize || 5,
-      parallelism: config.parallelism || 3,
-      rollbackOnFailure: config.rollbackOnFailure ?? true,
-      items: dataSourceIds.map(id => ({ 
-        id: id.toString(), 
-        data: { dataSourceId: id, updates } 
-      })),
-      executor: async (item: any) => {
-        const { dataSourceId, updates } = item.data
-        // Apply updates through workflow engine for audit trail
-        return await triggerWorkflow('data_source_update', {
-          dataSourceId,
-          updates,
-          source: 'bulk_operation'
-        })
+// Mock Data for Enterprise Data Sources
+const mockDataSources: DataSource[] = [
+  {
+    id: "ds-001",
+    name: "Customer Database",
+    type: "database",
+    status: "active",
+    phase: "phase3",
+    priority: "critical",
+    security: "confidential",
+    compliance: ["GDPR", "CCPA", "SOX"],
+    tags: ["customer", "pii", "critical"],
+    description: "Primary customer database containing user profiles and transaction history",
+    connectionString: "postgresql://customer-db:5432/customers",
+    lastSync: new Date("2024-01-15T10:30:00Z"),
+    nextSync: new Date("2024-01-15T11:30:00Z"),
+    syncFrequency: "1 hour",
+    dataVolume: 2.5, // GB
+    recordCount: 1500000,
+    qualityScore: 98,
+    complianceScore: 95,
+    performanceScore: 92,
+    owner: "Sarah Johnson",
+    team: "Data Engineering",
+    environment: "production",
+    region: "us-east-1",
+    version: "2.1.0",
+    health: {
+      status: "healthy",
+      issues: [],
+      metrics: {
+        uptime: 99.9,
+        responseTime: 45,
+        errorRate: 0.1,
+        throughput: 1500,
       },
-      progressCallback: (progress) => {
-        handleBulkOperationProgress({ payload: { operationId, ...progress } })
-      }
-    })
-    
-    return operationId
-  }, [])
-
-  const generateDataSourceInsights = useCallback(async (dataSourceIds: number[]) => {
-    // Use correlation engine to analyze data source patterns
-    const dataPoints = dataSources
-      ?.filter(ds => dataSourceIds.includes(ds.id))
-      .map(ds => ({
-        id: ds.id,
-        health_score: ds.health_score || 0,
-        response_time: ds.avg_response_time || 0,
-        error_rate: ds.error_rate || 0,
-        usage: ds.queries_per_second || 0,
-        size: ds.size_gb || 0
-      })) || []
-
-    if (dataPoints.length > 1) {
-      const correlations = await correlationEngine.analyzeCorrelations([
-        { name: 'health_score', data: dataPoints.map(dp => dp.health_score) },
-        { name: 'response_time', data: dataPoints.map(dp => dp.response_time) },
-        { name: 'error_rate', data: dataPoints.map(dp => dp.error_rate) },
-        { name: 'usage', data: dataPoints.map(dp => dp.usage) }
-      ])
-      
-      setCorrelations(correlations.correlations)
-      
-      // Generate insights
-      const insights = await correlationEngine.generateInsights(correlations.correlations)
-      setInsights(insights)
-    }
-  }, [dataSources])
-
-  const predictDataSourcePerformance = useCallback(async (dataSourceId: number) => {
-    const prediction = await correlationEngine.predict('data_source_performance', {
-      dataSourceId,
-      features: [
-        'historical_health_scores',
-        'response_time_trend',
-        'error_rate_trend',
-        'usage_pattern'
-      ],
-      horizon: 7 // 7 days
-    })
-    
-    return prediction
-  }, [])
-
-  // ========================================================================
-  // COLLABORATIVE OPERATIONS
-  // ========================================================================
-
-  const startCollaboration = useCallback(async (type: string) => {
-    if (!collaborationSession) {
-      const sessionId = await realTimeCollaborationManager.createSession(
-        `Data Source ${type}`,
-        `Collaborative ${type} session`,
-        type as any,
-        user?.id || 'current-user'
-      )
-      setCollaborationSession(sessionId)
-    }
-  }, [collaborationSession, user?.id])
-
-  const lockResource = useCallback(async (resourceId: string, type: string): Promise<boolean> => {
-    if (!collaborationSession) return false
-    
-    const lockResult = await realTimeCollaborationManager.lockDocument(
-      collaborationSession,
-      user?.id || 'current-user',
-      resourceId,
-      type
-    )
-    
-    return lockResult.success
-  }, [collaborationSession, user?.id])
-
-  // ========================================================================
-  // UTILITY FUNCTIONS
-  // ========================================================================
-
-  const addNotification = useCallback((notification: any) => {
-    setNotifications(prev => [
-      { id: Date.now().toString(), timestamp: new Date(), ...notification },
-      ...prev.slice(0, 9)
-    ])
-  }, [])
-
-  const getRequiredApprovers = (operation: string, details: any) => {
-    const approvers = ['data_team_lead']
-    
-    if (details.criticality === 'critical') {
-      approvers.push('security_team_lead', 'data_architect')
-    }
-    
-    if (operation === 'delete') {
-      approvers.push('database_admin')
-    }
-    
-    return approvers
-  }
-
-  const triggerDiagnosticWorkflow = useCallback(async (dataSourceId: number) => {
-    const workflowId = await triggerWorkflow('data_source_diagnostics', {
-      dataSourceId,
-      tests: ['connectivity', 'performance', 'security', 'compliance'],
-      generateReport: true
-    })
-    
-    addNotification({
-      type: 'info',
-      title: 'Diagnostic Started',
-      message: `Running comprehensive diagnostics for data source ${dataSourceId}`,
-      workflowId
-    })
-    
-    return workflowId
-  }, [])
-
-  const openWorkflowResults = useCallback((workflowId: string) => {
-    setActiveView('workflows')
-    // Additional logic to show specific workflow results
-  }, [])
-
-  // ========================================================================
-  // ENTERPRISE WORKSPACE CONTEXT
-  // ========================================================================
-
-  const enterpriseContextValue = useMemo<EnterpriseWorkflowContext>(() => ({
-    // Base workspace context
-    selectedDataSource,
-    setSelectedDataSource,
-    activeView,
-    setActiveView,
-    layout: 'standard',
-    setLayout: () => {},
-    panels: [],
-    setPanels: () => {},
-    notifications,
-    addNotification,
-    removeNotification: (id: string) => setNotifications(prev => prev.filter(n => n.id !== id)),
-    selectedItems,
-    setSelectedItems,
-    filters,
-    setFilters,
-    searchQuery,
-    setSearchQuery,
-    viewMode,
-    setViewMode,
-    expandedPanels: new Set(),
-    togglePanel: () => {},
-    quickActions: [],
-    addQuickAction: () => {},
-    removeQuickAction: () => {},
-    
-    // Enterprise extensions
-    workflowEngine,
-    activeWorkflows,
-    triggerWorkflow,
-    monitorWorkflow,
-    cancelWorkflow,
-    
-    collaborationSession,
-    participants,
-    startCollaboration,
-    lockResource,
-    
-    insights,
-    correlations,
-    generateInsights: generateDataSourceInsights,
-    predictPerformance: predictDataSourcePerformance,
-    
-    pendingApprovals,
-    requestApproval: async (operation: string, details: any) => {
-      return await approvalSystem.createRequest({
-        type: `data_source_${operation}`,
-        title: `Data Source ${operation}`,
-        description: `${operation} operation request`,
-        requester: user?.id || 'unknown',
-        priority: details.criticality === 'critical' ? 'high' : 'medium',
-        data: details,
-        approvers: getRequiredApprovers(operation, details),
-        policies: [`data_source_${operation}_policy`]
-      })
     },
-    
-    activeBulkOperations,
-    executeBulkOperation: bulkUpdateDataSources,
-    
-    globalState,
-    syncState: async (key: string, value: any) => {
-      await stateManager.updateState('data_sources', key, value)
-      setGlobalState(prev => ({ ...prev, [key]: value }))
+    metadata: {
+      schema: {},
+      lineage: [],
+      dependencies: [],
+      transformations: [],
     },
-    resolveConflicts: async (conflicts: any[]) => {
-      for (const conflict of conflicts) {
-        await stateManager.resolveConflict(conflict.id, {
-          strategy: 'last_writer_wins',
-          metadata: { resolvedBy: user?.id, timestamp: new Date() }
-        })
-      }
-    }
-  }), [
-    selectedDataSource, activeView, notifications, selectedItems, filters, searchQuery, viewMode,
-    activeWorkflows, collaborationSession, participants, insights, correlations, pendingApprovals,
-    activeBulkOperations, globalState, user?.id
-  ])
-
-  // ========================================================================
-  // ENHANCED COMPONENT RENDERER
-  // ========================================================================
-
-  const renderEnterpriseComponent = (componentId: string) => {
-    const commonProps = {
-      dataSource: selectedDataSource,
-      dataSources,
-      onSelectDataSource: setSelectedDataSource,
-      user,
-      
-      // Enterprise context
-      workflowEngine,
-      eventBus,
-      stateManager,
-      correlationEngine,
-      collaborationSession,
-      insights,
-      correlations,
-      activeWorkflows,
-      pendingApprovals,
-      activeBulkOperations,
-      
-      // Operations
-      triggerWorkflow,
-      generateInsights: generateDataSourceInsights,
-      executeBulkOperation: bulkUpdateDataSources,
-      startCollaboration,
-      createDataSource: createDataSourceWithWorkflow
-    }
-
-    switch (componentId) {
-      case "enterprise-overview":
-        return (
-          <div className="space-y-6">
-            <EnterpriseDashboard />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DataSourceMonitoringDashboard {...commonProps} />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Brain className="h-5 w-5 mr-2" />
-                    AI Insights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {insights.slice(0, 3).map((insight, index) => (
-                      <div key={index} className="p-3 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium text-blue-900">{insight.title}</h4>
-                        <p className="text-sm text-blue-700 mt-1">{insight.description}</p>
-                        <Badge variant="outline" className="mt-2">
-                          {Math.round(insight.confidence * 100)}% confidence
-                        </Badge>
-                      </div>
-                    ))}
-                    {insights.length === 0 && (
-                      <p className="text-gray-500 text-sm">No insights available. Add data sources to generate insights.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )
-      
-      case "workflows":
-        return <WorkflowDesigner />
-      
-      case "collaboration":
-        return <CollaborationStudio />
-      
-      case "analytics":
-        return <AnalyticsWorkbench />
-      
-      case "data-sources":
-        return viewMode === 'grid' ? (
-          <DataSourceGrid {...commonProps} />
-        ) : (
-          <DataSourceList {...commonProps} />
-        )
-      
-      case "discovery":
-        return <DataDiscoveryWorkspace {...commonProps} />
-      
-      case "lineage":
-        return <DataLineageGraph {...commonProps} />
-      
-      case "schema":
-        return <SchemaDiscovery {...commonProps} />
-      
-      case "monitoring":
-        return selectedDataSource ? (
-          <DataSourceMonitoring {...commonProps} />
-        ) : (
-          <DataSourceMonitoringDashboard {...commonProps} />
-        )
-      
-      case "bulk-operations":
-        return <DataSourceBulkActions {...commonProps} />
-      
-      default:
-        return (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Component Not Found</AlertTitle>
-            <AlertDescription>
-              The requested component "{componentId}" could not be found.
-            </AlertDescription>
-          </Alert>
-        )
-    }
-  }
-
-  // ========================================================================
-  // ENHANCED NAVIGATION
-  // ========================================================================
-
-  const enterpriseNavigation = {
-    overview: {
-      label: "Enterprise Overview",
-      icon: BarChart3,
-      component: "enterprise-overview",
-      description: "Comprehensive enterprise dashboard with AI insights"
-    },
-    workflows: {
-      label: "Workflow Designer",
-      icon: Workflow,
-      component: "workflows",
-      description: "Visual workflow orchestration and automation"
-    },
-    collaboration: {
-      label: "Collaboration Studio",
-      icon: Users,
-      component: "collaboration",
-      description: "Real-time collaborative workspace"
-    },
-    analytics: {
-      label: "Analytics Workbench",
-      icon: Brain,
-      component: "analytics",
-      description: "AI-powered analytics and insights"
-    },
-    dataSources: {
-      label: "Data Sources",
-      icon: Database,
-      component: "data-sources",
-      description: "Manage data source connections"
-    },
-    discovery: {
-      label: "Data Discovery",
-      icon: Search,
-      component: "discovery",
-      description: "Automated data discovery workspace"
-    },
-    lineage: {
-      label: "Data Lineage",
-      icon: GitBranch,
-      component: "lineage",
-      description: "Data lineage visualization"
-    },
-    schema: {
-      label: "Schema Discovery",
-      icon: TestTube,
-      component: "schema",
-      description: "Automated schema discovery"
+    access: {
+      users: ["sarah.johnson", "mike.chen"],
+      roles: ["admin", "analyst"],
+      permissions: ["read", "write", "delete"],
     },
     monitoring: {
-      label: "Monitoring",
-      icon: Monitor,
-      component: "monitoring",
-      description: "Real-time system monitoring"
+      alerts: [],
+      thresholds: [],
+      dashboards: ["customer-metrics", "performance-dashboard"],
     },
-    bulkOps: {
-      label: "Bulk Operations",
-      icon: Layers,
-      component: "bulk-operations",
-      description: "Mass operations with rollback"
+  },
+  {
+    id: "ds-002",
+    name: "Product Catalog API",
+    type: "api",
+    status: "active",
+    phase: "phase2",
+    priority: "high",
+    security: "internal",
+    compliance: ["GDPR"],
+    tags: ["product", "catalog", "api"],
+    description: "REST API providing product catalog information",
+    connectionString: "https://api.products.company.com/v2",
+    lastSync: new Date("2024-01-15T10:25:00Z"),
+    nextSync: new Date("2024-01-15T10:35:00Z"),
+    syncFrequency: "10 minutes",
+    dataVolume: 0.5,
+    recordCount: 50000,
+    qualityScore: 94,
+    complianceScore: 88,
+    performanceScore: 89,
+    owner: "Alex Rodriguez",
+    team: "Product Engineering",
+    environment: "production",
+    region: "us-west-2",
+    version: "2.0.1",
+    health: {
+      status: "warning",
+      issues: ["High response time during peak hours"],
+      metrics: {
+        uptime: 99.5,
+        responseTime: 120,
+        errorRate: 0.5,
+        throughput: 800,
+      },
+    },
+    metadata: {
+      schema: {},
+      lineage: [],
+      dependencies: [],
+      transformations: [],
+    },
+    access: {
+      users: ["alex.rodriguez", "lisa.wang"],
+      roles: ["developer", "analyst"],
+      permissions: ["read", "write"],
+    },
+    monitoring: {
+      alerts: ["High response time alert"],
+      thresholds: [],
+      dashboards: ["api-performance", "product-metrics"],
+    },
+  },
+  {
+    id: "ds-003",
+    name: "Legacy Order System",
+    type: "legacy",
+    status: "maintenance",
+    phase: "phase1",
+    priority: "medium",
+    security: "internal",
+    compliance: ["SOX"],
+    tags: ["legacy", "orders", "migration"],
+    description: "Legacy order management system scheduled for migration",
+    connectionString: "oracle://legacy-orders:1521/orders",
+    lastSync: new Date("2024-01-15T09:00:00Z"),
+    nextSync: new Date("2024-01-15T12:00:00Z"),
+    syncFrequency: "3 hours",
+    dataVolume: 5.0,
+    recordCount: 3000000,
+    qualityScore: 75,
+    complianceScore: 70,
+    performanceScore: 65,
+    owner: "David Kim",
+    team: "Legacy Systems",
+    environment: "production",
+    region: "us-central-1",
+    version: "1.8.5",
+    health: {
+      status: "warning",
+      issues: ["Scheduled maintenance", "Performance degradation"],
+      metrics: {
+        uptime: 95.0,
+        responseTime: 300,
+        errorRate: 2.0,
+        throughput: 400,
+      },
+    },
+    metadata: {
+      schema: {},
+      lineage: [],
+      dependencies: [],
+      transformations: [],
+    },
+    access: {
+      users: ["david.kim"],
+      roles: ["admin"],
+      permissions: ["read"],
+    },
+    monitoring: {
+      alerts: ["Maintenance scheduled", "Performance alert"],
+      thresholds: [],
+      dashboards: ["legacy-monitoring"],
+    },
+  },
+]
+
+const phaseConfigs: PhaseConfig[] = [
+  {
+    id: "phase1",
+    name: "Foundation & Discovery",
+    description: "Establish data source inventory and basic governance",
+    features: [
+      "Data source discovery and cataloging",
+      "Basic metadata management",
+      "Initial security assessment",
+      "Compliance baseline establishment",
+      "Performance monitoring setup",
+    ],
+    requirements: [
+      "Complete data source inventory",
+      "Security assessment completed",
+      "Compliance requirements documented",
+      "Basic monitoring implemented",
+    ],
+    progress: 85,
+    status: "in_progress",
+    startDate: new Date("2024-01-01"),
+    endDate: new Date("2024-03-31"),
+    metrics: {
+      dataSources: 45,
+      compliance: 75,
+      performance: 70,
+      security: 80,
+    },
+  },
+  {
+    id: "phase2",
+    name: "Advanced Governance",
+    description: "Implement advanced governance and quality controls",
+    features: [
+      "Advanced data quality monitoring",
+      "Automated compliance checks",
+      "Performance optimization",
+      "Enhanced security controls",
+      "Data lineage tracking",
+    ],
+    requirements: [
+      "Data quality framework implemented",
+      "Automated compliance monitoring",
+      "Performance benchmarks established",
+      "Security controls enhanced",
+    ],
+    progress: 60,
+    status: "in_progress",
+    startDate: new Date("2024-04-01"),
+    endDate: new Date("2024-06-30"),
+    metrics: {
+      dataSources: 32,
+      compliance: 88,
+      performance: 85,
+      security: 92,
+    },
+  },
+  {
+    id: "phase3",
+    name: "Enterprise Excellence",
+    description: "Achieve enterprise-grade data governance maturity",
+    features: [
+      "Real-time data governance",
+      "Predictive analytics",
+      "Advanced automation",
+      "Enterprise-wide integration",
+      "Continuous optimization",
+    ],
+    requirements: [
+      "Real-time monitoring implemented",
+      "Predictive capabilities deployed",
+      "Full automation achieved",
+      "Enterprise integration complete",
+    ],
+    progress: 25,
+    status: "not_started",
+    startDate: new Date("2024-07-01"),
+    endDate: new Date("2024-12-31"),
+    metrics: {
+      dataSources: 18,
+      compliance: 95,
+      performance: 92,
+      security: 98,
+    },
+  },
+]
+
+const enterpriseMetrics: EnterpriseMetrics = {
+  totalDataSources: 95,
+  activeDataSources: 87,
+  complianceRate: 82,
+  performanceScore: 78,
+  securityScore: 85,
+  dataQualityScore: 81,
+  phaseProgress: {
+    phase1: 85,
+    phase2: 60,
+    phase3: 25,
+  },
+  recentActivity: [
+    { type: "sync", dataSource: "Customer Database", timestamp: new Date(), status: "success" },
+    { type: "alert", dataSource: "Product Catalog API", timestamp: new Date(), status: "warning" },
+    { type: "maintenance", dataSource: "Legacy Order System", timestamp: new Date(), status: "scheduled" },
+  ],
+  alerts: [
+    { severity: "warning", message: "High response time on Product Catalog API", dataSource: "ds-002" },
+    { severity: "info", message: "Maintenance scheduled for Legacy Order System", dataSource: "ds-003" },
+  ],
+  trends: {
+    dataGrowth: 12.5,
+    complianceImprovement: 8.2,
+    performanceOptimization: 15.3,
+  },
+}
+
+export function EnterpriseDataSourcesApp() {
+  const [dataSources, setDataSources] = useState<DataSource[]>(mockDataSources)
+  const [phases, setPhases] = useState<PhaseConfig[]>(phaseConfigs)
+  const [metrics, setMetrics] = useState<EnterpriseMetrics>(enterpriseMetrics)
+  const [selectedPhase, setSelectedPhase] = useState<"phase1" | "phase2" | "phase3">("phase1")
+  const [viewMode, setViewMode] = useState<"overview" | "details" | "phases" | "analytics">("overview")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState<string[]>([])
+  const [filterPhase, setFilterPhase] = useState<string[]>([])
+  const [filterPriority, setFilterPriority] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState<"name" | "status" | "phase" | "priority" | "lastSync">("name")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [loading, setLoading] = useState(false)
+  const [selectedDataSource, setSelectedDataSource] = useState<DataSource | null>(null)
+
+  // Filter and sort data sources
+  const filteredDataSources = useMemo(() => {
+    let filtered = dataSources
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(ds =>
+        ds.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ds.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ds.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    }
+
+    // Apply status filter
+    if (filterStatus.length > 0) {
+      filtered = filtered.filter(ds => filterStatus.includes(ds.status))
+    }
+
+    // Apply phase filter
+    if (filterPhase.length > 0) {
+      filtered = filtered.filter(ds => filterPhase.includes(ds.phase))
+    }
+
+    // Apply priority filter
+    if (filterPriority.length > 0) {
+      filtered = filtered.filter(ds => filterPriority.includes(ds.priority))
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case "name":
+          aValue = a.name
+          bValue = b.name
+          break
+        case "status":
+          aValue = a.status
+          bValue = b.status
+          break
+        case "phase":
+          aValue = a.phase
+          bValue = b.phase
+          break
+        case "priority":
+          aValue = a.priority
+          bValue = b.priority
+          break
+        case "lastSync":
+          aValue = a.lastSync
+          bValue = b.lastSync
+          break
+        default:
+          aValue = a.name
+          bValue = b.name
+      }
+
+      if (sortOrder === "asc") {
+        return aValue > bValue ? 1 : -1
+      } else {
+        return aValue < bValue ? 1 : -1
+      }
+    })
+
+    return filtered
+  }, [dataSources, searchQuery, filterStatus, filterPhase, filterPriority, sortBy, sortOrder])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-500"
+      case "inactive":
+        return "bg-gray-500"
+      case "error":
+        return "bg-red-500"
+      case "maintenance":
+        return "bg-yellow-500"
+      case "testing":
+        return "bg-blue-500"
+      default:
+        return "bg-gray-500"
     }
   }
 
-  // ========================================================================
-  // MAIN RENDER
-  // ========================================================================
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case "phase1":
+        return "bg-blue-500"
+      case "phase2":
+        return "bg-purple-500"
+      case "phase3":
+        return "bg-green-500"
+      default:
+        return "bg-gray-500"
+    }
+  }
 
-  return (
-    <EnterpriseWorkspaceContext.Provider value={enterpriseContextValue}>
-      <TooltipProvider>
-        <div className="flex h-screen bg-background">
-          {/* Enhanced Sidebar */}
-          <div className={`hidden md:flex flex-col ${sidebarCollapsed ? "w-16" : "w-80"} transition-all duration-300 border-r bg-card`}>
-            {/* User Profile Section */}
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={user?.avatar_url} />
-                  <AvatarFallback>
-                    {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                {!sidebarCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{user?.name || "User"}</p>
-                    <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">Enterprise</Badge>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-xs text-muted-foreground">Online</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critical":
+        return "bg-red-500"
+      case "high":
+        return "bg-orange-500"
+      case "medium":
+        return "bg-yellow-500"
+      case "low":
+        return "bg-green-500"
+      default:
+        return "bg-gray-500"
+    }
+  }
+
+  const getHealthColor = (health: string) => {
+    switch (health) {
+      case "healthy":
+        return "text-green-500"
+      case "warning":
+        return "text-yellow-500"
+      case "critical":
+        return "text-red-500"
+      default:
+        return "text-gray-500"
+    }
+  }
+
+  const handleRefresh = useCallback(() => {
+    setLoading(true)
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false)
+    }, 1000)
+  }, [])
+
+  const handleDataSourceAction = useCallback((action: string, dataSource: DataSource) => {
+    console.log(`${action} action for data source: ${dataSource.name}`)
+    // Implement action logic
+  }, [])
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Enterprise Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Data Sources</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.totalDataSources}</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600">+{metrics.trends.dataGrowth}%</span> from last month
             </div>
+            <Progress value={85} className="mt-2" />
+          </CardContent>
+        </Card>
 
-            {/* Enterprise Status */}
-            {!sidebarCollapsed && (
-              <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">System Health</span>
-                    <Badge variant="default">Optimal</Badge>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.complianceRate}%</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600">+{metrics.trends.complianceImprovement}%</span> improvement
+            </div>
+            <Progress value={metrics.complianceRate} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Performance Score</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.performanceScore}%</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 text-green-500" />
+              <span className="text-green-600">+{metrics.trends.performanceOptimization}%</span> optimization
+            </div>
+            <Progress value={metrics.performanceScore} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Security Score</CardTitle>
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.securityScore}%</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <CheckCircle className="h-3 w-3 text-green-500" />
+              <span className="text-green-600">Enterprise grade</span>
+            </div>
+            <Progress value={metrics.securityScore} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Phase Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Phase Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {phases.map((phase) => (
+              <div key={phase.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-3 h-3 rounded-full", getPhaseColor(phase.id))} />
+                    <span className="font-medium">{phase.name}</span>
+                    <Badge variant={phase.status === "completed" ? "default" : "secondary"}>
+                      {phase.status.replace("_", " ")}
+                    </Badge>
                   </div>
-                  <Progress value={95} className="h-2" />
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>Active Workflows: {activeWorkflows.length}</div>
-                    <div>Collaborators: {participants.length}</div>
-                    <div>Insights: {insights.length}</div>
-                    <div>Data Sources: {dataSources?.length || 0}</div>
-                  </div>
+                  <span className="text-sm text-muted-foreground">{phase.progress}%</span>
                 </div>
+                <Progress value={phase.progress} className="h-2" />
+                <p className="text-sm text-muted-foreground">{phase.description}</p>
               </div>
-            )}
-
-            {/* Navigation */}
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                {Object.entries(enterpriseNavigation).map(([key, nav]) => {
-                  const Icon = nav.icon
-                  const isActive = activeView === nav.component
-                  return (
-                    <Tooltip key={key}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={isActive ? "default" : "ghost"}
-                          className={`w-full justify-start mb-1 ${sidebarCollapsed ? "px-2" : ""}`}
-                          onClick={() => setActiveView(nav.component)}
-                        >
-                          <Icon className="h-4 w-4" />
-                          {!sidebarCollapsed && (
-                            <span className="ml-2 truncate">{nav.label}</span>
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>{nav.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-            </ScrollArea>
-
-            {/* Sidebar Footer */}
-            <div className="p-2 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              >
-                {sidebarCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <>
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Collapse
-                  </>
-                )}
-              </Button>
-            </div>
+            ))}
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Enhanced Header */}
-            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="flex h-16 items-center px-4 gap-4">
-                <div className="flex-1 max-w-md">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search data sources, workflows, insights..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Recent Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {metrics.recentActivity.map((activity, index) => (
+              <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{activity.dataSource}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activity.type} - {activity.timestamp.toLocaleString()}
+                  </p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {/* Real-time Indicators */}
-                  {activeWorkflows.length > 0 && (
-                    <Badge variant="outline" className="animate-pulse">
-                      <Workflow className="h-3 w-3 mr-1" />
-                      {activeWorkflows.length} Active
-                    </Badge>
-                  )}
-                  
-                  {participants.length > 0 && (
-                    <Badge variant="outline">
-                      <Users className="h-3 w-3 mr-1" />
-                      {participants.length} Online
-                    </Badge>
-                  )}
-
-                  {/* Notifications */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="relative">
-                        <Bell className="h-4 w-4" />
-                        {notifications.length > 0 && (
-                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs">
-                            {notifications.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80">
-                      <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                      <Separator />
-                      {notifications.length > 0 ? (
-                        notifications.slice(0, 5).map((notification) => (
-                          <DropdownMenuItem key={notification.id} className="flex-col items-start">
-                            <div className="font-medium">{notification.title}</div>
-                            <div className="text-sm text-muted-foreground">{notification.message}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {notification.timestamp.toLocaleString()}
-                            </div>
-                          </DropdownMenuItem>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center text-muted-foreground">
-                          No new notifications
-                        </div>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <Button variant="outline" size="sm" onClick={() => refetchDataSources()}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                </div>
+                <Badge variant={activity.status === "success" ? "default" : "secondary"}>
+                  {activity.status}
+                </Badge>
               </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 
-              {/* Breadcrumb */}
-              {selectedDataSource && (
-                <div className="px-4 py-2 border-t bg-muted/50">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <span>Enterprise Data Sources</span>
-                    <ChevronRight className="h-3 w-3 mx-1" />
-                    <span className="font-medium text-foreground">{selectedDataSource.name}</span>
-                    <ChevronRight className="h-3 w-3 mx-1" />
-                    <span className="font-medium text-foreground">
-                      {enterpriseNavigation[activeView as keyof typeof enterpriseNavigation]?.label}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </header>
-
-            {/* Main Content Area */}
-            <main className="flex-1 overflow-hidden">
-              <div className="h-full p-6 overflow-auto">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeView}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {dataSourcesLoading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-                          <p className="text-muted-foreground">Loading enterprise systems...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      renderEnterpriseComponent(activeView)
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </main>
+  const renderDataSourcesList = () => (
+    <div className="space-y-4">
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search data sources..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
         </div>
-      </TooltipProvider>
-    </EnterpriseWorkspaceContext.Provider>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Status</DropdownMenuLabel>
+              {["active", "inactive", "error", "maintenance", "testing"].map((status) => (
+                <DropdownMenuCheckboxItem
+                  key={status}
+                  checked={filterStatus.includes(status)}
+                  onCheckedChange={(checked) =>
+                    setFilterStatus(prev => checked ? [...prev, status] : prev.filter(s => s !== status))
+                  }
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Phase</DropdownMenuLabel>
+              {["phase1", "phase2", "phase3"].map((phase) => (
+                <DropdownMenuCheckboxItem
+                  key={phase}
+                  checked={filterPhase.includes(phase)}
+                  onCheckedChange={(checked) =>
+                    setFilterPhase(prev => checked ? [...prev, phase] : prev.filter(p => p !== phase))
+                  }
+                >
+                  Phase {phase.slice(-1)}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Priority</DropdownMenuLabel>
+              {["critical", "high", "medium", "low"].map((priority) => (
+                <DropdownMenuCheckboxItem
+                  key={priority}
+                  checked={filterPriority.includes(priority)}
+                  onCheckedChange={(checked) =>
+                    setFilterPriority(prev => checked ? [...prev, priority] : prev.filter(p => p !== priority))
+                  }
+                >
+                  {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Sort
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="status">Status</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="phase">Phase</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="priority">Priority</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="lastSync">Last Sync</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
+        </div>
+      </div>
+
+      {/* Data Sources Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredDataSources.map((dataSource) => (
+          <Card key={dataSource.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg truncate">{dataSource.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground truncate">{dataSource.description}</p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleDataSourceAction("view", dataSource)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDataSourceAction("edit", dataSource)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDataSourceAction("sync", dataSource)}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sync Now
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleDataSourceAction("delete", dataSource)}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Status and Phase */}
+              <div className="flex items-center gap-2">
+                <div className={cn("w-2 h-2 rounded-full", getStatusColor(dataSource.status))} />
+                <span className="text-sm capitalize">{dataSource.status}</span>
+                <div className={cn("w-2 h-2 rounded-full", getPhaseColor(dataSource.phase))} />
+                <span className="text-sm">Phase {dataSource.phase.slice(-1)}</span>
+                <div className={cn("w-2 h-2 rounded-full", getPriorityColor(dataSource.priority))} />
+                <span className="text-sm capitalize">{dataSource.priority}</span>
+              </div>
+
+              {/* Health Status */}
+              <div className="flex items-center gap-2">
+                <div className={cn("flex items-center gap-1", getHealthColor(dataSource.health.status))}>
+                  {dataSource.health.status === "healthy" ? (
+                    <CheckCircle className="h-4 w-4" />
+                  ) : dataSource.health.status === "warning" ? (
+                    <AlertTriangle className="h-4 w-4" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                  <span className="text-sm capitalize">{dataSource.health.status}</span>
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center">
+                  <div className="font-medium">{dataSource.qualityScore}%</div>
+                  <div className="text-muted-foreground">Quality</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">{dataSource.complianceScore}%</div>
+                  <div className="text-muted-foreground">Compliance</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">{dataSource.performanceScore}%</div>
+                  <div className="text-muted-foreground">Performance</div>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-1">
+                {dataSource.tags.slice(0, 3).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+                {dataSource.tags.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{dataSource.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Last Sync */}
+              <div className="text-xs text-muted-foreground">
+                Last sync: {dataSource.lastSync.toLocaleString()}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   )
-}
 
-// Export QueryClient wrapper
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 3,
-    },
-  },
-})
+  const renderPhaseDetails = () => (
+    <div className="space-y-6">
+      {/* Phase Selection */}
+      <div className="flex gap-2">
+        {phases.map((phase) => (
+          <Button
+            key={phase.id}
+            variant={selectedPhase === phase.id ? "default" : "outline"}
+            onClick={() => setSelectedPhase(phase.id)}
+          >
+            {phase.name}
+          </Button>
+        ))}
+      </div>
 
-export function EnterpriseDataSourcesAppWrapper() {
+      {/* Selected Phase Details */}
+      {phases.find(p => p.id === selectedPhase) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {phases.find(p => p.id === selectedPhase)?.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Phase Progress */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Progress</span>
+                <span className="text-sm text-muted-foreground">
+                  {phases.find(p => p.id === selectedPhase)?.progress}%
+                </span>
+              </div>
+              <Progress value={phases.find(p => p.id === selectedPhase)?.progress} className="h-3" />
+            </div>
+
+            {/* Features */}
+            <div className="space-y-3">
+              <h4 className="font-medium">Features</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {phases.find(p => p.id === selectedPhase)?.features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Requirements */}
+            <div className="space-y-3">
+              <h4 className="font-medium">Requirements</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {phases.find(p => p.id === selectedPhase)?.requirements.map((requirement, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm">{requirement}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Metrics */}
+            <div className="space-y-3">
+              <h4 className="font-medium">Phase Metrics</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(phases.find(p => p.id === selectedPhase)?.metrics || {}).map(([key, value]) => (
+                  <div key={key} className="text-center">
+                    <div className="text-2xl font-bold">{value}</div>
+                    <div className="text-sm text-muted-foreground capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+
+  const renderAnalytics = () => (
+    <div className="space-y-6">
+      {/* Analytics Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Data Growth Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.trends.dataGrowth}%</div>
+            <p className="text-xs text-muted-foreground">Monthly growth rate</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Compliance Improvement</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.trends.complianceImprovement}%</div>
+            <p className="text-xs text-muted-foreground">Quarterly improvement</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Performance Optimization</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.trends.performanceOptimization}%</div>
+            <p className="text-xs text-muted-foreground">Performance gains</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alerts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Active Alerts
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {metrics.alerts.map((alert, index) => (
+              <Alert key={index} variant={alert.severity === "warning" ? "destructive" : "default"}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>{alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)}</AlertTitle>
+                <AlertDescription>{alert.message}</AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <EnterpriseDataSourcesApp />
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Enterprise Data Sources</h1>
+          <p className="text-muted-foreground">
+            Manage and monitor your enterprise data sources across all phases
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Data Source
+          </Button>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as any)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="details">Data Sources</TabsTrigger>
+          <TabsTrigger value="phases">Phases</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {renderOverview()}
+        </TabsContent>
+
+        <TabsContent value="details" className="space-y-4">
+          {renderDataSourcesList()}
+        </TabsContent>
+
+        <TabsContent value="phases" className="space-y-4">
+          {renderPhaseDetails()}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          {renderAnalytics()}
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }
-
-// Export context for child components
-export { EnterpriseWorkspaceContext, type EnterpriseWorkflowContext }
