@@ -65,11 +65,13 @@ import EntityDetails from "@/components/data-catalog/entity-details"
 import EntityLineageView from "@/components/data-catalog/entity-lineage-view"
 import EntityManagementContent from "@/components/data-catalog/entity-management-content"
 import { DataSourcesApp } from "@/components/data-sources/data-sources-app"
+import { EnterpriseDataSourcesApp } from "@/components/data-sources/enterprise-data-sources-app"
 import { ScanSystemApp } from "@/components/scan-logic/scan-system-app"
 import { ScanRuleSetApp } from "@/components/Scan-Rule-Sets/ScanRuleSetApp"
 import { LoadingSpinner } from "@/components/Scan-Rule-Sets/components/LoadingSpinner"
 import { ErrorBoundary } from "@/components/Scan-Rule-Sets/components/ErrorBoundary"
 import { ComplianceRuleApp } from "@/components/Compliance-Rule/ComplianceRuleApp"
+import { UnifiedNavigation } from "@/components/data-governance/unified-navigation"
 
 // Enhanced Types
 interface SidebarItem {
@@ -753,143 +755,7 @@ export default function DataGovernancePage() {
     }
 
     if (activeSidebarItem === "overview") {
-      return (
-        <div className="space-y-6 h-full w-full">
-          {/* Welcome Section */}
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-6 text-white">
-            <div className="relative z-10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold mb-2">Welcome to Data Governance</h1>
-                  <p className="text-blue-100 mb-4">Manage, monitor, and govern your data ecosystem with confidence</p>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4" />
-                      <span>24 Data Sources</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      <span>98% Compliant</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
-                      <span>12 Active Workflows</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden md:block">
-                  <Sparkles className="h-16 w-16 text-white/20" />
-                </div>
-              </div>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              {
-                icon: Plus,
-                label: "Add Data Source",
-                color: "bg-green-500",
-                action: () => {},
-              },
-              {
-                icon: Scan,
-                label: "Run Scan",
-                color: "bg-blue-500",
-                action: () => {},
-              },
-              {
-                icon: FileText,
-                label: "Generate Report",
-                color: "bg-purple-500",
-                action: () => {},
-              },
-              {
-                icon: Settings,
-                label: "Configure Policies",
-                color: "bg-orange-500",
-                action: () => {},
-              },
-            ].map((action, index) => (
-              <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg text-white", action.color)}>
-                      <action.icon className="h-4 w-4" />
-                    </div>
-                    <span className="font-medium">{action.label}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Data Sources</CardTitle>
-                <Server className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">24</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <TrendingUp className="h-3 w-3 text-green-500" />
-                  <span className="text-green-600">+2</span> from last week
-                </div>
-                <Progress value={85} className="mt-2" />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Data Quality Score</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">98%</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <TrendingUp className="h-3 w-3 text-green-500" />
-                  <span className="text-green-600">+1.2%</span> improvement
-                </div>
-                <Progress value={98} className="mt-2" />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">96%</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <TrendingDown className="h-3 w-3 text-red-500" />
-                  <span className="text-red-600">-0.5%</span> needs attention
-                </div>
-                <Progress value={96} className="mt-2" />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-                <Workflow className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Play className="h-3 w-3 text-blue-500" />
-                  <span className="text-blue-600">5</span> running now
-                </div>
-                <Progress value={75} className="mt-2" />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )
+      return <UnifiedNavigation />
     } else if (secondSidebarContext === "data-catalog") {
       switch (activeSecondSidebarItem) {
         case "catalog-browser":
@@ -978,7 +844,7 @@ export default function DataGovernancePage() {
     } else if (secondSidebarContext === "data-map") {
       switch (activeSecondSidebarItem) {
         case "data-sources":
-          return <DataSourcesApp />
+          return <EnterpriseDataSourcesApp />
         case "scan":
           return <ScanSystemApp />
         case "scan-rules":
