@@ -1314,36 +1314,38 @@ async def get_backup_status(
 ):
     """Get backup status for a data source"""
     try:
-        # Mock backup data - replace with actual implementation
+        from app.services.backup_service import BackupService
+        
+        # Get backup operations from database
+        backups = BackupService.get_backup_operations_by_data_source(session, data_source_id)
+        stats = BackupService.get_backup_stats(session, data_source_id)
+        
         backup_data = {
             "backups": [
                 {
-                    "id": "backup-001",
-                    "name": "Full Backup - 2024-01-15",
-                    "size": "2.5GB",
-                    "status": "completed",
-                    "created_at": "2024-01-15T02:00:00Z",
-                    "type": "full",
-                    "retention_days": 30,
-                    "location": "S3://backups/prod/db-1"
-                },
-                {
-                    "id": "backup-002",
-                    "name": "Incremental Backup - 2024-01-14",
-                    "size": "150MB",
-                    "status": "completed",
-                    "created_at": "2024-01-14T02:00:00Z",
-                    "type": "incremental",
-                    "retention_days": 7,
-                    "location": "S3://backups/prod/db-01"
+                    "id": f"backup-{backup.id}",
+                    "name": backup.operation_name or f"{backup.backup_type.title()} Backup",
+                    "size": f"{backup.backup_size_gb:.2f}GB" if backup.backup_size_gb else "Unknown",
+                    "status": backup.status,
+                    "created_at": backup.started_at.isoformat(),
+                    "type": backup.backup_type,
+                    "retention_days": backup.retention_days,
+                    "location": backup.storage_location or "Default"
                 }
+                for backup in backups[:10]  # Latest 10 backups
             ],
-            "last_backup": "2024-01-15T02:00:00Z",
-            "next_backup": "2024-01-16T02:00:00Z",
+            "last_backup": backups[0].started_at.isoformat() if backups else None,
+            "next_backup": None,  # TODO: Calculate based on schedule
             "backup_enabled": True,
             "retention_policy": {
                 "full_backups": 30,
                 "incremental_backups": 7
+            },
+            "stats": {
+                "total_backups": stats.total_backups,
+                "successful_backups": stats.successful_backups,
+                "failed_backups": stats.failed_backups,
+                "total_size_gb": stats.total_size_gb
             }
         }
         
@@ -1366,37 +1368,31 @@ async def get_scheduled_tasks(
 ):
     """Get scheduled tasks for a data source"""
     try:
-        # Mock scheduled tasks data - replace with actual implementation
+        from app.services.task_service import TaskService
+        
+        # Get scheduled tasks from database
+        tasks = TaskService.get_tasks(session, data_source_id)
+        
         tasks_data = {
             "tasks": [
                 {
-                    "id": "task-001",
-                    "name": "Daily Backup",
-                    "description": "Automated daily backup at 2:00AM",
-                    "type": "backup",
-                    "schedule": "Daily at 2:00 AM",
-                    "status": "active",
-                    "last_run": "2024-01-15T02:00:00Z",
-                    "next_run": "2024-01-16T02:00:00Z",
-                    "cron_expression": "0 2 * * *",
-                    "enabled": True,
-                    "retry_count": 0,
-                    "max_retries": 3
-                },
-                {
-                    "id": "task-002",
-                    "name": "Weekly Security Scan",
-                    "description": "Comprehensive security scan every Sunday",
-                    "type": "security_scan",
-                    "schedule": "Weekly on Sunday at 3:00 AM",
-                    "status": "active",
-                    "last_run": "2024-01-14T03:00:00Z",
-                    "next_run": "2024-01-21T03:00:00Z",
-                    "cron_expression": "0 3 * * 0",
-                    "enabled": True,
-                    "retry_count": 0,
-                    "max_retries": 3
+                    "id": f"task-{task.id}",
+                    "name": task.name,
+                    "description": task.description,
+                    "type": task.task_type,
+                    "schedule": task.cron_expression,
+                    "status": task.status,
+                    "last_run": task.last_run.isoformat() if task.last_run else None,
+                    "next_run": task.next_run.isoformat() if task.next_run else None,
+                    "cron_expression": task.cron_expression,
+                    "enabled": task.is_enabled,
+                    "retry_count": task.retry_count,
+                    "max_retries": task.max_retries,
+                    "timeout_minutes": task.timeout_minutes,
+                    "created_by": task.created_by,
+                    "created_at": task.created_at.isoformat()
                 }
+                for task in tasks
             ]
         }
         
@@ -1419,31 +1415,26 @@ async def get_access_control(
 ):
     """Get access control information for a data source"""
     try:
-        # Mock access control data - replace with actual implementation
+        from app.services.access_control_service import AccessControlService
+        
+        # Get permissions from database
+        permissions = AccessControlService.get_permissions_by_data_source(session, data_source_id)
+        
         access_data = {
             "permissions": [
                 {
-                    "id": "perm-001",
-                    "user_id": "user-1",
-                    "username": "john.doe",
-                    "email": "john.doe@company.com",
-                    "role": "admin",
-                    "permissions": ["read", "write", "execute", "delete"],
-                    "granted_at": "2024-01-01T00:00:00Z",
-                    "granted_by": "system-admin",
-                    "status": "active"
-                },
-                {
-                    "id": "perm-002",
-                    "user_id": "user-2",
-                    "username": "jane.smith",
-                    "email": "jane.smith@company.com",
-                    "role": "analyst",
-                    "permissions": ["read", "execute"],
-                    "granted_at": "2024-01-05T00:00:00Z",
-                    "granted_by": "john.doe",
-                    "status": "active"
+                    "id": f"perm-{permission.id}",
+                    "user_id": permission.user_id,
+                    "role_id": permission.role_id,
+                    "permission_type": permission.permission_type,
+                    "access_level": permission.access_level,
+                    "granted_at": permission.granted_at.isoformat(),
+                    "granted_by": permission.granted_by,
+                    "expires_at": permission.expires_at.isoformat() if permission.expires_at else None,
+                    "conditions": permission.conditions,
+                    "status": "active" if not permission.expires_at or permission.expires_at > datetime.now() else "expired"
                 }
+                for permission in permissions
             ]
         }
         
@@ -1465,29 +1456,31 @@ async def get_notifications(
 ):
     """Get notifications for the current user"""
     try:
-        # Mock notifications data - replace with actual implementation
+        from app.services.notification_service import NotificationService
+        
+        # Get user ID from current user
+        user_id = current_user.get("user_id", "unknown")
+        
+        # Get notifications from database
+        notifications = NotificationService.get_notifications_by_user(session, user_id)
+        
         notifications_data = {
             "notifications": [
                 {
-                    "id": "notif-001",
-                    "title": "Backup Completed Successfully",
-                    "message": "Backup of production database completed at 2:00AM",
-                    "type": "success",
-                    "priority": "low",
-                    "created_at": "2024-01-15T02:05:00Z",
-                    "read": False,
-                    "category": "backup"
-                },
-                {
-                    "id": "notif-002",
-                    "title": "High CPU Usage Detected",
-                    "message": "CPU usage has exceeded 80% for the last 10 minutes",
-                    "type": "warning",
-                    "priority": "high",
-                    "created_at": "2024-01-15T10:30:00Z",
-                    "read": False,
-                    "category": "performance"
+                    "id": f"notif-{notification.id}",
+                    "title": notification.title,
+                    "message": notification.message,
+                    "type": notification.notification_type,
+                    "priority": notification.priority,
+                    "created_at": notification.created_at.isoformat(),
+                    "read": notification.read_at is not None,
+                    "read_at": notification.read_at.isoformat() if notification.read_at else None,
+                    "category": notification.category,
+                    "channel": notification.channel,
+                    "status": notification.status,
+                    "data_source_id": notification.data_source_id
                 }
+                for notification in notifications
             ]
         }
         
@@ -1509,29 +1502,28 @@ async def get_reports(
 ):
     """Get reports for a data source"""
     try:
-        # Mock reports data - replace with actual implementation
+        from app.services.report_service import ReportService
+        
+        # Get reports from database
+        reports = ReportService.get_reports_by_data_source(session, data_source_id)
+        
         reports_data = {
             "reports": [
                 {
-                    "id": "report-001",
-                    "name": "Monthly Performance Report",
-                    "type": "performance",
-                    "status": "completed",
-                    "created_at": "2024-01-01T00:00:00Z",
-                    "generated_at": "2024-01-01T01:00:00Z",
-                    "size": "2.5MB",
-                    "format": "pdf"
-                },
-                {
-                    "id": "report-002",
-                    "name": "Security Audit Report",
-                    "type": "security",
-                    "status": "completed",
-                    "created_at": "2024-01-01T00:00:00Z",
-                    "generated_at": "2024-01-01T01:30:00Z",
-                    "size": "1.8MB",
-                    "format": "pdf"
+                    "id": f"report-{report.id}",
+                    "name": report.name,
+                    "type": report.report_type,
+                    "status": report.status,
+                    "created_at": report.created_at.isoformat(),
+                    "generated_at": report.generated_at.isoformat() if report.generated_at else None,
+                    "size": f"{report.file_size / (1024*1024):.1f}MB" if report.file_size else "Unknown",
+                    "format": report.format,
+                    "description": report.description,
+                    "generated_by": report.generated_by,
+                    "is_scheduled": report.is_scheduled,
+                    "file_path": report.file_path
                 }
+                for report in reports
             ]
         }
         
@@ -1554,35 +1546,28 @@ async def get_version_history(
 ):
     """Get version history for a data source"""
     try:
-        # Mock version history data - replace with actual implementation
+        from app.services.version_service import VersionService
+        
+        # Get versions from database
+        versions = VersionService.get_versions_by_data_source(session, data_source_id)
+        
         version_data = {
             "versions": [
                 {
-                    "id": "v-001",
-                    "version": "1.2.3",
-                    "description": "Updated security configurations",
-                    "created_at": "2024-01-15T10:00:00Z",
-                    "created_by": "john.doe",
-                    "changes": [
-                        "Added new encryption settings",
-                        "Updated access control policies",
-                        "Fixed backup scheduling issue"
-                    ],
-                    "status": "active"
-                },
-                {
-                    "id": "v-002",
-                    "version": "1.2.2",
-                    "description": "Performance improvements",
-                    "created_at": "2024-01-10T14:30:00Z",
-                    "created_by": "jane.smith",
-                    "changes": [
-                        "Optimized query performance",
-                        "Reduced memory usage",
-                        "Updated indexing strategy"
-                    ],
-                    "status": "archived"
+                    "id": f"v-{version.id}",
+                    "version": version.version,
+                    "name": version.name,
+                    "description": version.description,
+                    "created_at": version.created_at.isoformat(),
+                    "created_by": version.created_by,
+                    "changes": [change.description for change in version.changes],
+                    "status": version.status,
+                    "is_current": version.is_current,
+                    "breaking_changes": version.breaking_changes,
+                    "changes_summary": version.changes_summary,
+                    "activated_at": version.activated_at.isoformat() if version.activated_at else None
                 }
+                for version in versions
             ]
         }
         
@@ -1605,30 +1590,28 @@ async def get_data_source_tags(
 ):
     """Get tags for a data source"""
     try:
-        # Mock tags data - replace with actual implementation
+        from app.services.tag_service import TagService
+        
+        # Get tags from database
+        tag_associations = TagService.get_data_source_tags(session, data_source_id)
+        
         tags_data = {
             "tags": [
                 {
-                    "id": "tag-001",
-                    "name": "production",
-                    "color": "#ff0000",
-                    "description": "Production environment",
-                    "created_at": "2024-01-01T00:00:00Z"
-                },
-                {
-                    "id": "tag-002",
-                    "name": "critical",
-                    "color": "#ff6600",
-                    "description": "Critical system component",
-                    "created_at": "2024-01-01T00:00:00Z"
-                },
-                {
-                    "id": "tag-003",
-                    "name": "database",
-                    "color": "#0066ff",
-                    "description": "Database system",
-                    "created_at": "2024-01-01T00:00:00Z"
+                    "id": f"tag-{association.tag.id}",
+                    "name": association.tag.name,
+                    "display_name": association.tag.display_name,
+                    "color": association.tag.color,
+                    "description": association.tag.description,
+                    "tag_type": association.tag.tag_type,
+                    "scope": association.tag.scope,
+                    "assigned_at": association.assigned_at.isoformat(),
+                    "assigned_by": association.assigned_by,
+                    "context": association.context,
+                    "auto_assigned": association.auto_assigned,
+                    "created_at": association.tag.created_at.isoformat()
                 }
+                for association in tag_associations
             ]
         }
         
@@ -1697,50 +1680,31 @@ async def get_data_source_catalog(
 ):
     """Get catalog data for a data source"""
     try:
+        from app.services.catalog_service import CatalogService
+        
+        # Get catalog items from database
+        catalog_items = CatalogService.get_catalog_items_by_data_source(session, data_source_id)
+        
         catalog_data = {
             "catalog": [
                 {
-                    "id": "cat-001",
-                    "name": "customer_profiles",
-                    "type": "table",
-                    "description": "Customer profile information",
-                    "tags": ["customer", "profile", "pii"],
-                    "owner": "john.doe@company.com",
-                    "classification": "confidential",
-                    "qualityScore": 92,
-                    "popularity": 85,
-                    "lastUpdated": "2024-01-15T10:30:00Z",
-                    "usageStats": {
-                        "queries": 1250,
-                        "users": 15,
-                        "avgResponseTime": 45
-                    },
-                    "dataProfile": {
-                        "rowCount": 125000,
-                        "columnCount": 25
-                    }
-                },
-                {
-                    "id": "cat-002",
-                    "name": "sales_transactions",
-                    "type": "table",
-                    "description": "Sales transaction records",
-                    "tags": ["sales", "transactions", "revenue"],
-                    "owner": "jane.smith@company.com",
-                    "classification": "internal",
-                    "qualityScore": 88,
-                    "popularity": 95,
-                    "lastUpdated": "2024-01-15T09:15:00Z",
-                    "usageStats": {
-                        "queries": 2100,
-                        "users": 25,
-                        "avgResponseTime": 32
-                    },
-                    "dataProfile": {
-                        "rowCount": 850000,
-                        "columnCount": 18
-                    }
+                    "id": f"cat-{item.id}",
+                    "name": item.table_name,
+                    "display_name": item.display_name,
+                    "type": item.item_type,
+                    "schema": item.schema_name,
+                    "description": item.description,
+                    "classification": item.classification,
+                    "sensitivity_level": item.sensitivity_level,
+                    "data_type": item.data_type,
+                    "business_glossary": item.business_glossary,
+                    "lastUpdated": item.updated_at.isoformat(),
+                    "created_by": item.created_by,
+                    "created_at": item.created_at.isoformat(),
+                    "is_active": item.is_active,
+                    "metadata": item.metadata
                 }
+                for item in catalog_items
             ]
         }
         
