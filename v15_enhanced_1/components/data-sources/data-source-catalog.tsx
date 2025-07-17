@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useDataSourceCatalogQuery } from "@/hooks/useDataSources"
 import { 
   Search, 
   Plus, 
@@ -58,15 +59,30 @@ interface CatalogItem {
 }
 
 export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalogProps) {
-  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [favoriteItems, setFavoriteItems] = useState<string[]>([])
 
-  useEffect(() => {
+  // Use API hook to fetch catalog data
+  const { 
+    data: catalogResponse, 
+    isLoading: loading, 
+    error, 
+    refetch 
+  } = useDataSourceCatalogQuery(dataSourceId)
+
+  const catalogItems = catalogResponse?.data?.catalog || []
+
+  // Handle refresh
+  const handleRefresh = () => {
+    refetch()
+    onRefresh?.()
+  }
+
+  // Remove the old useEffect with mock data
+  /*useEffect(() => {
     const mockCatalogItems: CatalogItem[] = [
       {
         id: "cat-001",
@@ -116,7 +132,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
       setCatalogItems(mockCatalogItems)
       setLoading(false)
     }, 1000)
-  }, [dataSourceId])
+  }, [dataSourceId])*/
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -194,7 +210,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onRefresh}>
+          <Button variant="outline" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

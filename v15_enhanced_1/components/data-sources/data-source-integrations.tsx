@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useDataSourceIntegrationsQuery } from "@/hooks/useDataSources"
 import { 
   Settings, 
   Plus, 
@@ -55,14 +56,29 @@ interface Integration {
 }
 
 export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIntegrationsProps) {
-  const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
-  useEffect(() => {
+  // Use API hook to fetch integrations
+  const { 
+    data: integrationsResponse, 
+    isLoading: loading, 
+    error, 
+    refetch 
+  } = useDataSourceIntegrationsQuery(dataSourceId)
+
+  const integrations = integrationsResponse?.data?.integrations || []
+
+  // Handle refresh
+  const handleRefresh = () => {
+    refetch()
+    onRefresh?.()
+  }
+
+  // Remove the old useEffect with mock data
+  /*useEffect(() => {
     const mockIntegrations: Integration[] = [
       {
         id: "int-001",
@@ -115,7 +131,7 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
       setIntegrations(mockIntegrations)
       setLoading(false)
     }, 1000)
-  }, [dataSourceId])
+  }, [dataSourceId])*/
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -179,7 +195,7 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onRefresh}>
+          <Button variant="outline" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

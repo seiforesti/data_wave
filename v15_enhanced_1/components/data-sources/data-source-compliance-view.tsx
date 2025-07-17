@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useDataSourceComplianceStatusQuery } from "@/hooks/useDataSources"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -309,7 +310,7 @@ import {
   SortDescMoveVertical,
 } from "lucide-react"
 
-import { useComplianceStatusQuery } from "./services/apis"
+import { useDataSourceComplianceStatusQuery } from "@/hooks/useDataSources"
 import { DataSource } from "./types"
 
 interface ComplianceViewProps {
@@ -361,13 +362,15 @@ export function DataSourceComplianceView({
 
   // Fetch compliance data
   const {
-    data: complianceData,
+    data: complianceResponse,
     isLoading,
     error,
     refetch,
-  } = useComplianceStatusQuery(dataSource.id, {
+  } = useDataSourceComplianceStatusQuery(dataSource.id, {
     refetchInterval: 30000, // 5 minutes
   })
+
+  const complianceData = complianceResponse?.data
 
   // Mock data for demonstration
   const mockComplianceData = useMemo(() => ({
@@ -492,6 +495,7 @@ export function DataSourceComplianceView({
     ],
   }), [])
 
+  // Use API data if available, otherwise fall back to mock data for development
   const data = complianceData || mockComplianceData
 
   const filteredRules = useMemo(() => {

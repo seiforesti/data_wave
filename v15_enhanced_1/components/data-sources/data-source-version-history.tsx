@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useDataSourceVersionHistoryQuery } from "@/hooks/useDataSources"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,11 +34,20 @@ export function DataSourceVersionHistory({
   dataSource,
   onNavigateToComponent,
   className = ""}: VersionHistoryProps) {
-  const [versions, setVersions] = useState<Version[]>([])
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null)
-  const showCreateVersion, setShowCreateVersion] = useState(false)
+  const [showCreateVersion, setShowCreateVersion] = useState(false)
 
-  // Mock data
+  // Use API hook to fetch version history
+  const { 
+    data: versionResponse, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useDataSourceVersionHistoryQuery(dataSource.id)
+
+  const versions = versionResponse?.data?.versions || []
+
+  // Mock data for fallback
   const mockVersions: Version[] = useMemo(() => ([
     {
       id: "1",
@@ -85,9 +95,10 @@ export function DataSourceVersionHistory({
     }
   ]), [])
 
-  useEffect(() => {
-    setVersions(mockVersions)
-  }, [mockVersions])
+  // Remove useEffect since we're using the API hook directly
+
+  // Use API data if available, otherwise fallback to mock data
+  const displayVersions = versions.length > 0 ? versions : mockVersions
 
   const getVersionTypeColor = (type: string) => {
     switch (type) {
@@ -135,8 +146,19 @@ export function DataSourceVersionHistory({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {versions.map((version) => (
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <Skeleton className="h-6 w-1/3 mb-2" />
+                  <Skeleton className="h-4 w-2/3 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayVersions.map((version) => (
               <div key={version.id} className="border rounded-lg p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -177,8 +199,9 @@ export function DataSourceVersionHistory({
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

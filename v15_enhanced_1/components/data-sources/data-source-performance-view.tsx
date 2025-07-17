@@ -32,7 +32,7 @@ import {
   PieChart,
 } from "lucide-react"
 
-import { usePerformanceMetricsQuery } from "./services/apis"
+import { useDataSourcePerformanceMetricsQuery } from "@/hooks/useDataSources"
 import { DataSource } from "./types"
 
 interface PerformanceViewProps {
@@ -80,13 +80,15 @@ export function DataSourcePerformanceView({
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
 
   const {
-    data: performanceData,
+    data: performanceResponse,
     isLoading,
     error,
     refetch,
-  } = usePerformanceMetricsQuery(dataSource.id, {
+  } = useDataSourcePerformanceMetricsQuery(dataSource.id, "24h", {
     refetchInterval: 30000, // 30 seconds
   })
+
+  const performanceData = performanceResponse?.data
 
   // Mock data for demonstration
   const mockPerformanceData: PerformanceData = useMemo(() => ({

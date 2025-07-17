@@ -310,7 +310,7 @@ import {
   SortDescMoveVertical,
 } from "lucide-react"
 
-import { useSecurityAuditQuery } from "./services/apis"
+import { useDataSourceSecurityAuditQuery } from "@/hooks/useDataSources"
 import { DataSource } from "./types"
 
 interface SecurityViewProps {
@@ -374,13 +374,15 @@ export function DataSourceSecurityView({
 
   // Fetch security data
   const {
-    data: securityData,
+    data: securityResponse,
     isLoading,
     error,
     refetch,
-  } = useSecurityAuditQuery(dataSource.id, {
+  } = useDataSourceSecurityAuditQuery(dataSource.id, {
     refetchInterval: 60000, // 1 minute
   })
+
+  const securityData = securityResponse?.data
 
   // Mock data for demonstration
   const mockSecurityData = useMemo(() => ({
