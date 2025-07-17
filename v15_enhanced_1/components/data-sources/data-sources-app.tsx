@@ -120,6 +120,8 @@ import {
   Frown,
   AlertCircle,
   XCircle,
+  Table as TableIcon,
+  Columns,
 } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -227,7 +229,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-// Import ALL data-sources components
+// Import ALL data-sources components (Main Directory)
 import { DataSourceList } from "./data-source-list"
 import { DataSourceGrid } from "./data-source-grid"
 import { DataSourceDetails } from "./data-source-details"
@@ -255,7 +257,12 @@ import { DataSourceNotifications } from "./data-source-notifications"
 import { DataSourceReports } from "./data-source-reports"
 import { DataSourceScheduler } from "./data-source-scheduler"
 
-// Types and services
+// Import Data Discovery Components (Subdirectory)
+import { DataDiscoveryWorkspace } from "./data-discovery/data-discovery-workspace"
+import { DataLineageGraph } from "./data-discovery/data-lineage-graph"
+import { SchemaDiscovery } from "./data-discovery/schema-discovery"
+
+// Types and services with full backend integration
 import { DataSource, ViewMode, PanelLayout, WorkspaceContext as WorkspaceContextType } from "./types"
 import { 
   useDataSourcesQuery, 
@@ -263,10 +270,23 @@ import {
   useNotificationsQuery,
   useWorkspaceQuery,
   useDataSourceMetricsQuery,
-  useSystemHealthQuery
+  useSystemHealthQuery,
+  useDataDiscoveryQuery,
+  useLineageDataQuery,
+  useSchemaAnalysisQuery,
+  useComplianceDataQuery,
+  useSecurityAssessmentQuery,
+  usePerformanceAnalyticsQuery,
+  useScanResultsQuery,
+  useTagsQuery,
+  useVersionHistoryQuery,
+  useBackupStatusQuery,
+  useAccessControlQuery,
+  useReportsQuery,
+  useSchedulerJobsQuery,
 } from "./services/apis"
 
-// Create a new QueryClient instance
+// Create a new QueryClient instance with enhanced configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -275,9 +295,15 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnMount: true,
+      refetchOnReconnect: true,
     },
     mutations: {
       retry: 2,
+      onError: (error) => {
+        console.error('Mutation error:', error)
+        // Global error handling can be added here
+      },
     },
   },
 })
@@ -310,7 +336,7 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
   removeQuickAction: () => {},
 })
 
-// Advanced navigation structure with nested modules
+// Enhanced navigation structure with ALL components including data-discovery
 const navigationStructure = {
   core: {
     label: "Core Management",
@@ -409,6 +435,30 @@ const navigationStructure = {
         shortcut: "⌘+F",
       },
       {
+        id: "discovery-workspace",
+        label: "Discovery Workspace",
+        icon: Workflow,
+        component: "discovery-workspace",
+        description: "Interactive data discovery workspace",
+        shortcut: "⌘+W",
+      },
+      {
+        id: "lineage-graph",
+        label: "Data Lineage",
+        icon: GitBranch,
+        component: "lineage-graph",
+        description: "Visual data lineage and dependencies",
+        shortcut: "⌘+L",
+      },
+      {
+        id: "schema-discovery",
+        label: "Schema Discovery",
+        icon: TableIcon,
+        component: "schema-discovery",
+        description: "Schema analysis and discovery",
+        shortcut: "⌘+H",
+      },
+      {
         id: "scan-results",
         label: "Scan Results",
         icon: ScanLine,
@@ -468,7 +518,7 @@ const navigationStructure = {
         icon: Calendar,
         component: "scheduler",
         description: "Automated tasks and scheduling",
-        shortcut: "⌘+H",
+        shortcut: "⌘+J",
       },
     ]
   },
@@ -482,7 +532,7 @@ const navigationStructure = {
         icon: Building,
         component: "workspaces",
         description: "Team collaboration spaces",
-        shortcut: "⌘+W",
+        shortcut: "⌘+U",
       },
       {
         id: "notifications",
@@ -528,7 +578,7 @@ const navigationStructure = {
         icon: Layers,
         component: "bulk-actions",
         description: "Mass operations on data sources",
-        shortcut: "⌘+U",
+        shortcut: "⌘+O",
       },
     ]
   }
@@ -571,33 +621,6 @@ function useWorkspaceContext() {
   return context
 }
 
-// Component registry for dynamic loading
-const componentRegistry = {
-  overview: () => import("./data-source-overview"),
-  grid: () => import("./data-source-grid"),
-  list: () => import("./data-source-list"),
-  details: () => import("./data-source-details"),
-  monitoring: () => import("./data-source-monitoring"),
-  dashboard: () => import("./data-source-monitoring-dashboard"),
-  performance: () => import("./data-source-performance-view"),
-  quality: () => import("./data-source-quality-analytics"),
-  growth: () => import("./data-source-growth-analytics"),
-  discovery: () => import("./data-source-discovery"),
-  "scan-results": () => import("./data-source-scan-results"),
-  compliance: () => import("./data-source-compliance-view"),
-  security: () => import("./data-source-security-view"),
-  "cloud-config": () => import("./data-source-cloud-config"),
-  "access-control": () => import("./data-source-access-control"),
-  tags: () => import("./data-source-tags-manager"),
-  scheduler: () => import("./data-source-scheduler"),
-  workspaces: () => import("./data-source-workspace-management"),
-  notifications: () => import("./data-source-notifications"),
-  reports: () => import("./data-source-reports"),
-  "version-history": () => import("./data-source-version-history"),
-  "backup-restore": () => import("./data-source-backup-restore"),
-  "bulk-actions": () => import("./data-source-bulk-actions"),
-}
-
 function DataSourcesAppContent({ className }: DataSourcesAppProps) {
   // Core state management
   const [selectedDataSource, setSelectedDataSource] = useState<DataSource | null>(null)
@@ -631,9 +654,10 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     bulk: false,
     settings: false,
     help: false,
+    discoveryWorkspace: false,
   })
 
-  // Data fetching
+  // Enhanced data fetching with full backend integration
   const { data: dataSources, isLoading: dataSourcesLoading, error: dataSourcesError } = useDataSourcesQuery({
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
   })
@@ -642,6 +666,21 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
   const { data: workspace } = useWorkspaceQuery()
   const { data: systemHealth } = useSystemHealthQuery()
   const { data: metrics } = useDataSourceMetricsQuery(selectedDataSource?.id)
+  
+  // Data Discovery specific queries
+  const { data: discoveryData } = useDataDiscoveryQuery(selectedDataSource?.id)
+  const { data: lineageData } = useLineageDataQuery(selectedDataSource?.id)
+  const { data: schemaData } = useSchemaAnalysisQuery(selectedDataSource?.id)
+  const { data: complianceData } = useComplianceDataQuery(selectedDataSource?.id)
+  const { data: securityData } = useSecurityAssessmentQuery(selectedDataSource?.id)
+  const { data: performanceData } = usePerformanceAnalyticsQuery(selectedDataSource?.id)
+  const { data: scanResults } = useScanResultsQuery(selectedDataSource?.id)
+  const { data: tagsData } = useTagsQuery(selectedDataSource?.id)
+  const { data: versionHistory } = useVersionHistoryQuery(selectedDataSource?.id)
+  const { data: backupStatus } = useBackupStatusQuery(selectedDataSource?.id)
+  const { data: accessControlData } = useAccessControlQuery(selectedDataSource?.id)
+  const { data: reportsData } = useReportsQuery(selectedDataSource?.id)
+  const { data: schedulerJobs } = useSchedulerJobsQuery(selectedDataSource?.id)
 
   // Advanced effects
   useEffect(() => {
@@ -650,7 +689,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     }
   }, [dataSources, selectedDataSource])
 
-  // Keyboard shortcuts
+  // Enhanced keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey) {
@@ -683,7 +722,35 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
             event.preventDefault()
             setActiveView("dashboard")
             break
-          // Add more shortcuts
+          case "f":
+            event.preventDefault()
+            setActiveView("discovery")
+            break
+          case "w":
+            event.preventDefault()
+            setActiveView("discovery-workspace")
+            break
+          case "l":
+            event.preventDefault()
+            setActiveView("lineage-graph")
+            break
+          case "h":
+            event.preventDefault()
+            setActiveView("schema-discovery")
+            break
+          case "s":
+            event.preventDefault()
+            setActiveView("scan-results")
+            break
+          case "c":
+            event.preventDefault()
+            setActiveView("compliance")
+            break
+          case "e":
+            event.preventDefault()
+            setActiveView("security")
+            break
+          // Add more shortcuts for all components
         }
       }
     }
@@ -692,7 +759,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  // Workspace context value
+  // Enhanced workspace context value
   const workspaceContextValue = useMemo(() => ({
     selectedDataSource,
     setSelectedDataSource,
@@ -760,7 +827,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     setModals(prev => ({ ...prev, [modalType]: false }))
   }
 
-  // Component renderer with error boundaries
+  // Enhanced component renderer with ALL components including data-discovery
   const renderComponent = (componentId: string, panelId?: string) => {
     const commonProps = {
       dataSource: selectedDataSource,
@@ -794,50 +861,90 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
         case "dashboard":
           return <DataSourceMonitoringDashboard {...commonProps} />
         case "performance":
-          return selectedDataSource ? <DataSourcePerformanceView {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourcePerformanceView {...commonProps} data={performanceData} /> : <div>Select a data source</div>
         case "quality":
           return selectedDataSource ? <DataSourceQualityAnalytics {...commonProps} /> : <div>Select a data source</div>
         case "growth":
           return selectedDataSource ? <DataSourceGrowthAnalytics {...commonProps} /> : <div>Select a data source</div>
         case "discovery":
-          return selectedDataSource ? <DataSourceDiscovery {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceDiscovery {...commonProps} data={discoveryData} /> : <div>Select a data source</div>
+        
+        // Data Discovery Components
+        case "discovery-workspace":
+          return selectedDataSource ? (
+            <DataDiscoveryWorkspace 
+              {...commonProps} 
+              isOpen={modals.discoveryWorkspace}
+              onClose={() => closeModal("discoveryWorkspace")}
+              discoveryData={discoveryData}
+              lineageData={lineageData}
+              schemaData={schemaData}
+            />
+          ) : <div>Select a data source</div>
+        case "lineage-graph":
+          return selectedDataSource ? (
+            <DataLineageGraph 
+              {...commonProps}
+              lineageData={lineageData}
+              onNodeClick={(nodeId) => console.log('Node clicked:', nodeId)}
+              onEdgeClick={(edgeId) => console.log('Edge clicked:', edgeId)}
+            />
+          ) : <div>Select a data source</div>
+        case "schema-discovery":
+          return selectedDataSource ? (
+            <SchemaDiscovery 
+              {...commonProps}
+              schemaData={schemaData}
+              onSchemaSelect={(schema) => console.log('Schema selected:', schema)}
+              onTableSelect={(table) => console.log('Table selected:', table)}
+            />
+          ) : <div>Select a data source</div>
+        
         case "scan-results":
-          return selectedDataSource ? <DataSourceScanResults {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceScanResults {...commonProps} data={scanResults} /> : <div>Select a data source</div>
         case "compliance":
-          return selectedDataSource ? <DataSourceComplianceView {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceComplianceView {...commonProps} data={complianceData} /> : <div>Select a data source</div>
         case "security":
-          return selectedDataSource ? <DataSourceSecurityView {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceSecurityView {...commonProps} data={securityData} /> : <div>Select a data source</div>
         case "cloud-config":
           return selectedDataSource ? <DataSourceCloudConfig {...commonProps} /> : <div>Select a data source</div>
         case "access-control":
-          return selectedDataSource ? <DataSourceAccessControl {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceAccessControl {...commonProps} data={accessControlData} /> : <div>Select a data source</div>
         case "tags":
-          return <DataSourceTagsManager {...commonProps} />
+          return <DataSourceTagsManager {...commonProps} data={tagsData} />
         case "scheduler":
-          return <DataSourceScheduler {...commonProps} />
+          return <DataSourceScheduler {...commonProps} jobs={schedulerJobs} />
         case "workspaces":
           return selectedDataSource ? <DataSourceWorkspaceManagement {...commonProps} /> : <div>Select a data source</div>
         case "notifications":
           return <DataSourceNotifications {...commonProps} />
         case "reports":
-          return <DataSourceReports {...commonProps} />
+          return <DataSourceReports {...commonProps} data={reportsData} />
         case "version-history":
-          return selectedDataSource ? <DataSourceVersionHistory {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceVersionHistory {...commonProps} data={versionHistory} /> : <div>Select a data source</div>
         case "backup-restore":
-          return selectedDataSource ? <DataSourceBackupRestore {...commonProps} /> : <div>Select a data source</div>
+          return selectedDataSource ? <DataSourceBackupRestore {...commonProps} status={backupStatus} /> : <div>Select a data source</div>
         case "bulk-actions":
           return <DataSourceBulkActions {...commonProps} />
         default:
-          return <div>Component not found: {componentId}</div>
+          return (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Component Not Found</AlertTitle>
+              <AlertDescription>
+                The component "{componentId}" could not be loaded. Please check the component name or contact support.
+              </AlertDescription>
+            </Alert>
+          )
       }
     } catch (error) {
       console.error(`Error rendering component ${componentId}:`, error)
       return (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>Component Error</AlertTitle>
           <AlertDescription>
-            Failed to load component: {componentId}
+            Failed to load component: {componentId}. Error: {error.message}
           </AlertDescription>
         </Alert>
       )
@@ -913,7 +1020,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Enhanced Navigation with all components */}
       <ScrollArea className="flex-1">
         <div className="p-2">
           {Object.entries(navigationStructure).map(([categoryKey, category]) => (
@@ -1081,7 +1188,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     </div>
   )
 
-  // Command Palette Component
+  // Enhanced Command Palette with all components
   const CommandPalette = () => (
     <Dialog open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen}>
       <DialogContent className="max-w-2xl">
@@ -1121,6 +1228,10 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
               <CommandItem onSelect={() => { openModal("bulk"); setCommandPaletteOpen(false) }}>
                 <Layers className="mr-2 h-4 w-4" />
                 Bulk Actions
+              </CommandItem>
+              <CommandItem onSelect={() => { openModal("discoveryWorkspace"); setCommandPaletteOpen(false) }}>
+                <Workflow className="mr-2 h-4 w-4" />
+                Open Discovery Workspace
               </CommandItem>
             </CommandGroup>
           </CommandList>
@@ -1286,6 +1397,10 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
                         <Layers className="h-4 w-4 mr-2" />
                         Bulk Actions
                       </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openModal("discoveryWorkspace")}>
+                        <Workflow className="h-4 w-4 mr-2" />
+                        Discovery Workspace
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1345,7 +1460,7 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
           {/* Command Palette */}
           <CommandPalette />
 
-          {/* Modals */}
+          {/* ALL Modals */}
           <DataSourceCreateModal
             open={modals.create}
             onClose={() => closeModal("create")}
@@ -1380,6 +1495,18 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
               setSelectedItems([])
             }}
           />
+
+          {/* Discovery Workspace Modal */}
+          {selectedDataSource && (
+            <DataDiscoveryWorkspace
+              dataSource={selectedDataSource}
+              isOpen={modals.discoveryWorkspace}
+              onClose={() => closeModal("discoveryWorkspace")}
+              discoveryData={discoveryData}
+              lineageData={lineageData}
+              schemaData={schemaData}
+            />
+          )}
 
           {/* Advanced Filters Sidebar */}
           <Sheet>

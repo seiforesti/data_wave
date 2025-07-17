@@ -665,3 +665,257 @@ export const useSaveWorkspaceMutation = () => {
     }
   });
 };
+
+// ============================================================================
+// MISSING QUERY HOOKS - SYSTEM & USER
+// ============================================================================
+
+export const useUserQuery = (options = {}) => {
+  return useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const response = await api.get('/auth/me')
+      return response.data
+    },
+    ...options,
+  })
+}
+
+export const useNotificationsQuery = (options = {}) => {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const response = await api.get('/notifications')
+      return response.data
+    },
+    ...options,
+  })
+}
+
+export const useWorkspaceQuery = (options = {}) => {
+  return useQuery({
+    queryKey: ['workspace'],
+    queryFn: async () => {
+      const response = await api.get('/workspace')
+      return response.data
+    },
+    ...options,
+  })
+}
+
+export const useSystemHealthQuery = (options = {}) => {
+  return useQuery({
+    queryKey: ['system-health'],
+    queryFn: async () => {
+      const response = await api.get('/system/health')
+      return response.data
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+    ...options,
+  })
+}
+
+export const useDataSourceMetricsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['data-source-metrics', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/metrics`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// DATA DISCOVERY QUERY HOOKS
+// ============================================================================
+
+export const useDataDiscoveryQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['data-discovery', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/discovery`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+export const useLineageDataQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['lineage-data', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/lineage`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+export const useSchemaAnalysisQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['schema-analysis', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/schema-analysis`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// COMPLIANCE & SECURITY QUERY HOOKS
+// ============================================================================
+
+export const useComplianceDataQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['compliance-data', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/compliance`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+export const useSecurityAssessmentQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['security-assessment', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/security`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// PERFORMANCE & ANALYTICS QUERY HOOKS
+// ============================================================================
+
+export const usePerformanceAnalyticsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['performance-analytics', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/performance`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// TAGS & METADATA QUERY HOOKS
+// ============================================================================
+
+export const useTagsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['tags', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/tags`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// VERSION & HISTORY QUERY HOOKS
+// ============================================================================
+
+export const useVersionHistoryQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['version-history', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/version-history`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// BACKUP & RESTORE QUERY HOOKS
+// ============================================================================
+
+export const useBackupStatusQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['backup-status', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/backup-status`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// ACCESS CONTROL QUERY HOOKS
+// ============================================================================
+
+export const useAccessControlQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['access-control', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/access-control`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// REPORTS QUERY HOOKS
+// ============================================================================
+
+export const useReportsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/reports`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+// ============================================================================
+// SCHEDULER QUERY HOOKS
+// ============================================================================
+
+export const useSchedulerJobsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['scheduler-jobs', dataSourceId],
+    queryFn: async () => {
+      if (!dataSourceId) return null
+      const response = await api.get(`/data-sources/${dataSourceId}/scheduler/jobs`)
+      return response.data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
