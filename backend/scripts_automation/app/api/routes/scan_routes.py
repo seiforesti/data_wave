@@ -977,27 +977,49 @@ async def get_performance_metrics(
 ):
     """Get performance metrics for a data source"""
     try:
-        # Mock performance data - replace with actual implementation
-        metrics = {
-            "overall_score": 92,
-            "response_time": {
-                "value": 45,
-                "unit": "ms",
-                "trend": "improving",
-                "threshold": 100,
-                "status": "good"
-            },
-            "throughput": {
-                "value": 1250,
-                "unit": "req/min",
-                "trend": "stable",
-                "threshold": 1000,
-                "status": "good"
-            },
-            "error_rate": {
-                "value": 0.2,
-                "unit": "%",
-                "trend": "stable",
+        from app.services.performance_service import PerformanceService
+        
+        # Get performance metrics from database
+        metrics = PerformanceService.get_performance_metrics(session, data_source_id, time_range)
+        
+        # Convert to expected format for frontend compatibility
+        formatted_metrics = {
+            "overall_score": metrics.overall_score,
+            "metrics": [
+                {
+                    "type": metric.metric_type.value,
+                    "value": metric.value,
+                    "unit": metric.unit,
+                    "trend": metric.trend,
+                    "threshold": metric.threshold,
+                    "status": metric.status.value,
+                    "change_percentage": metric.change_percentage,
+                    "measurement_time": metric.measurement_time.isoformat()
+                }
+                for metric in metrics.metrics
+            ],
+            "alerts": [
+                {
+                    "id": alert.id,
+                    "type": alert.alert_type,
+                    "severity": alert.severity,
+                    "title": alert.title,
+                    "description": alert.description,
+                    "status": alert.status,
+                    "created_at": alert.created_at.isoformat()
+                }
+                for alert in metrics.alerts
+            ],
+            "trends": metrics.trends,
+            "recommendations": metrics.recommendations
+        }
+        
+        return {
+            "success": True,
+            "data": formatted_metrics,
+            "data_source_id": data_source_id,
+            "time_range": time_range
+        }
                 "threshold": 1.0,
                 "status": "good"
             },
@@ -1066,36 +1088,89 @@ async def get_security_audit(
 ):
     """Get security audit data for a data source"""
     try:
-        # Mock security data - replace with actual implementation
+        from app.services.security_service import SecurityService
+        
+        # Get security audit from database
+        security_audit = SecurityService.get_security_audit(session, data_source_id)
+        
+        # Convert to expected format for frontend compatibility
         security_data = {
-            "security_score": 78,
-            "last_scan": datetime.now().isoformat(),
+            "security_score": security_audit.security_score,
+            "last_scan": security_audit.last_scan.isoformat() if security_audit.last_scan else None,
             "vulnerabilities": [
                 {
-                    "id": "vuln-001",
-                    "name": "SQL Injection Vulnerability",
-                    "description": "Potential SQL injection in user input validation",
-                    "category": "Application Security",
-                    "severity": "high",
-                    "status": "open",
-                    "cve_id": "CVE-2024-1234",
-                    "cvss_score": 8.5,
-                    "discovered_at": (datetime.now() - timedelta(days=1)).isoformat(),
-                    "last_updated": datetime.now().isoformat(),
-                    "remediation": "Implement parameterized queries and input validation",
-                    "affected_components": ["user_management", "authentication"]
+                    "id": vuln.id,
+                    "name": vuln.name,
+                    "description": vuln.description,
+                    "category": vuln.category,
+                    "severity": vuln.severity.value,
+                    "status": vuln.status.value,
+                    "cve_id": vuln.cve_id,
+                    "cvss_score": vuln.cvss_score,
+                    "discovered_at": vuln.discovered_at.isoformat(),
+                    "last_updated": vuln.last_updated.isoformat(),
+                    "remediation": vuln.remediation,
+                    "affected_components": vuln.affected_components,
+                    "assigned_to": vuln.assigned_to,
+                    "resolved_at": vuln.resolved_at.isoformat() if vuln.resolved_at else None
                 }
+                for vuln in security_audit.vulnerabilities
             ],
             "controls": [
                 {
-                    "id": "control-01",
-                    "name": "Multi-Factor Authentication",
-                    "description": "Require MFA for all user accounts",
-                    "category": "Access Control",
-                    "status": "enabled",
-                    "effectiveness": 95,
-                    "last_tested": (datetime.now() - timedelta(days=7)).isoformat(),
-                    "next_test": (datetime.now() + timedelta(days=30)).isoformat()
+                    "id": control.id,
+                    "name": control.name,
+                    "description": control.description,
+                    "category": control.category,
+                    "framework": control.framework,
+                    "control_id": control.control_id,
+                    "status": control.status.value,
+                    "compliance_status": control.compliance_status,
+                    "implementation_notes": control.implementation_notes,
+                    "last_assessed": control.last_assessed.isoformat() if control.last_assessed else None,
+                    "next_assessment": control.next_assessment.isoformat() if control.next_assessment else None,
+                    "assessor": control.assessor
+                }
+                for control in security_audit.controls
+            ],
+            "recent_scans": [
+                {
+                    "id": scan.id,
+                    "scan_type": scan.scan_type,
+                    "scan_tool": scan.scan_tool,
+                    "status": scan.status,
+                    "vulnerabilities_found": scan.vulnerabilities_found,
+                    "critical_count": scan.critical_count,
+                    "high_count": scan.high_count,
+                    "medium_count": scan.medium_count,
+                    "low_count": scan.low_count,
+                    "started_at": scan.started_at.isoformat() if scan.started_at else None,
+                    "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
+                    "duration_seconds": scan.duration_seconds
+                }
+                for scan in security_audit.recent_scans
+            ],
+            "incidents": [
+                {
+                    "id": incident.id,
+                    "title": incident.title,
+                    "description": incident.description,
+                    "severity": incident.severity.value,
+                    "category": incident.category,
+                    "status": incident.status,
+                    "assigned_to": incident.assigned_to,
+                    "reporter": incident.reporter,
+                    "occurred_at": incident.occurred_at.isoformat(),
+                    "detected_at": incident.detected_at.isoformat() if incident.detected_at else None,
+                    "resolved_at": incident.resolved_at.isoformat() if incident.resolved_at else None,
+                    "impact_assessment": incident.impact_assessment,
+                    "affected_systems": incident.affected_systems,
+                    "response_actions": incident.response_actions
+                }
+                for incident in security_audit.incidents
+            ],
+            "recommendations": security_audit.recommendations,
+            "compliance_frameworks": security_audit.compliance_frameworks
                 }
             ],
             "incidents": [
