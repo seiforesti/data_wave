@@ -20,7 +20,7 @@ from app.api.security.rbac import (
     PERMISSION_SCAN_EDIT, PERMISSION_SCAN_DELETE
 )
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 # Setup logging
@@ -961,3 +961,794 @@ async def delete_scan_schedule(schedule_id: int, session: Session = Depends(get_
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan schedule not found")
     return None
+
+
+# ============================================================================
+# NEW: Additional API endpoints for enhanced functionality
+# ============================================================================
+
+# Performance Metrics Endpoints
+@router.get("/data-sources/{data_source_id}/performance-metrics")
+async def get_performance_metrics(
+    data_source_id: int,
+    time_range: str = Query("24h", description="Time range for metrics"),
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get performance metrics for a data source"""
+    try:
+        from app.services.performance_service import PerformanceService
+        
+        # Get performance metrics from database
+        metrics = PerformanceService.get_performance_metrics(session, data_source_id, time_range)
+        
+        # Convert to expected format for frontend compatibility
+        formatted_metrics = {
+            "overall_score": metrics.overall_score,
+            "metrics": [
+                {
+                    "type": metric.metric_type.value,
+                    "value": metric.value,
+                    "unit": metric.unit,
+                    "trend": metric.trend,
+                    "threshold": metric.threshold,
+                    "status": metric.status.value,
+                    "change_percentage": metric.change_percentage,
+                    "measurement_time": metric.measurement_time.isoformat()
+                }
+                for metric in metrics.metrics
+            ],
+            "alerts": [
+                {
+                    "id": alert.id,
+                    "type": alert.alert_type,
+                    "severity": alert.severity,
+                    "title": alert.title,
+                    "description": alert.description,
+                    "status": alert.status,
+                    "created_at": alert.created_at.isoformat()
+                }
+                for alert in metrics.alerts
+            ],
+            "trends": metrics.trends,
+            "recommendations": metrics.recommendations
+        }
+        
+        return {
+            "success": True,
+            "data": formatted_metrics,
+            "data_source_id": data_source_id,
+            "time_range": time_range
+        }
+                "threshold": 1.0,
+                "status": "good"
+            },
+            "uptime": {
+                "value": 99.8,
+                "unit": "%",
+                "trend": "stable",
+                "threshold": 99.5,
+                "status": "good"
+            },
+            "cpu_usage": {
+                "value": 75,
+                "unit": "%",
+                "trend": "increasing",
+                "threshold": 80,
+                "status": "warning"
+            },
+            "memory_usage": {
+                "value": 68,
+                "unit": "%",
+                "trend": "stable",
+                "threshold": 85,
+                "status": "warning"
+            },
+            "disk_usage": {
+                "value": 45,
+                "unit": "%",
+                "trend": "stable",
+                "threshold": 90,
+                "status": "good"
+            },
+            "network_latency": {
+                "value": 12,
+                "unit": "ms",
+                "trend": "stable",
+                "threshold": 50,
+                "status": "good"
+            },
+            "active_connections": {
+                "value": 156,
+                "unit": "connections",
+                "trend": "stable",
+                "threshold": 500,
+                "status": "good"
+            },
+            "historical_data": []
+        }
+        
+        return {
+            "success": True,
+            "data": metrics,
+            "data_source_id": data_source_id,
+            "time_range": time_range
+        }
+    except Exception as e:
+        logger.error(f"Error getting performance metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get performance metrics")
+
+
+# Security Audit Endpoints
+@router.get("/data-sources/{data_source_id}/security-audit")
+async def get_security_audit(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get security audit data for a data source"""
+    try:
+        from app.services.security_service import SecurityService
+        
+        # Get security audit from database
+        security_audit = SecurityService.get_security_audit(session, data_source_id)
+        
+        # Convert to expected format for frontend compatibility
+        security_data = {
+            "security_score": security_audit.security_score,
+            "last_scan": security_audit.last_scan.isoformat() if security_audit.last_scan else None,
+            "vulnerabilities": [
+                {
+                    "id": vuln.id,
+                    "name": vuln.name,
+                    "description": vuln.description,
+                    "category": vuln.category,
+                    "severity": vuln.severity.value,
+                    "status": vuln.status.value,
+                    "cve_id": vuln.cve_id,
+                    "cvss_score": vuln.cvss_score,
+                    "discovered_at": vuln.discovered_at.isoformat(),
+                    "last_updated": vuln.last_updated.isoformat(),
+                    "remediation": vuln.remediation,
+                    "affected_components": vuln.affected_components,
+                    "assigned_to": vuln.assigned_to,
+                    "resolved_at": vuln.resolved_at.isoformat() if vuln.resolved_at else None
+                }
+                for vuln in security_audit.vulnerabilities
+            ],
+            "controls": [
+                {
+                    "id": control.id,
+                    "name": control.name,
+                    "description": control.description,
+                    "category": control.category,
+                    "framework": control.framework,
+                    "control_id": control.control_id,
+                    "status": control.status.value,
+                    "compliance_status": control.compliance_status,
+                    "implementation_notes": control.implementation_notes,
+                    "last_assessed": control.last_assessed.isoformat() if control.last_assessed else None,
+                    "next_assessment": control.next_assessment.isoformat() if control.next_assessment else None,
+                    "assessor": control.assessor
+                }
+                for control in security_audit.controls
+            ],
+            "recent_scans": [
+                {
+                    "id": scan.id,
+                    "scan_type": scan.scan_type,
+                    "scan_tool": scan.scan_tool,
+                    "status": scan.status,
+                    "vulnerabilities_found": scan.vulnerabilities_found,
+                    "critical_count": scan.critical_count,
+                    "high_count": scan.high_count,
+                    "medium_count": scan.medium_count,
+                    "low_count": scan.low_count,
+                    "started_at": scan.started_at.isoformat() if scan.started_at else None,
+                    "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
+                    "duration_seconds": scan.duration_seconds
+                }
+                for scan in security_audit.recent_scans
+            ],
+            "incidents": [
+                {
+                    "id": incident.id,
+                    "title": incident.title,
+                    "description": incident.description,
+                    "severity": incident.severity.value,
+                    "category": incident.category,
+                    "status": incident.status,
+                    "assigned_to": incident.assigned_to,
+                    "reporter": incident.reporter,
+                    "occurred_at": incident.occurred_at.isoformat(),
+                    "detected_at": incident.detected_at.isoformat() if incident.detected_at else None,
+                    "resolved_at": incident.resolved_at.isoformat() if incident.resolved_at else None,
+                    "impact_assessment": incident.impact_assessment,
+                    "affected_systems": incident.affected_systems,
+                    "response_actions": incident.response_actions
+                }
+                for incident in security_audit.incidents
+            ],
+            "recommendations": security_audit.recommendations,
+            "compliance_frameworks": security_audit.compliance_frameworks
+                }
+            ],
+            "incidents": [
+                {
+                    "id": "incident-001",
+                    "title": "Unauthorized Access Attempt",
+                    "description": "Multiple failed login attempts detected",
+                    "severity": "medium",
+                    "status": "resolved",
+                    "discovered_at": (datetime.now() - timedelta(hours=1)).isoformat(),
+                    "resolved_at": (datetime.now() - timedelta(minutes=30)).isoformat(),
+                    "affected_data": ["user_profiles", "access_logs"],
+                    "remediation": "Account locked and IP blocked"
+                }
+            ],
+            "threat_intelligence": {
+                "recent_threats": 12,
+                "blocked_attacks": 156,
+                "suspicious_activities": 8,
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+        
+        return {
+            "success": True,
+            "data": security_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting security audit: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get security audit")
+
+
+# Compliance Status Endpoints
+@router.get("/data-sources/{data_source_id}/compliance-status")
+async def get_compliance_status(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get compliance status for a data source"""
+    try:
+        from app.services.compliance_service import ComplianceService
+        
+        # Get compliance status from database
+        compliance_status = ComplianceService.get_compliance_status(session, data_source_id)
+        
+        # Convert to expected format for frontend compatibility
+        compliance_data = {
+            "overall_score": compliance_status.overall_score,
+            "last_assessment": compliance_status.recent_assessments[0].completed_date.isoformat() if compliance_status.recent_assessments else None,
+            "frameworks": {
+                framework["name"]: {
+                    "score": framework["compliance_percentage"],
+                    "status": "compliant" if framework["compliance_percentage"] >= 80 else "partial" if framework["compliance_percentage"] >= 60 else "non_compliant",
+                    "last_checked": framework["last_assessment"].isoformat() if framework["last_assessment"] else None,
+                    "next_check": compliance_status.next_assessment_due.isoformat() if compliance_status.next_assessment_due else None,
+                    "total_requirements": framework["total_requirements"],
+                    "compliant": framework["compliant"],
+                    "non_compliant": framework["non_compliant"],
+                    "partially_compliant": framework["partially_compliant"],
+                    "not_assessed": framework["not_assessed"]
+                }
+                for framework in compliance_status.frameworks
+            },
+            "requirements": [
+                {
+                    "id": req.id,
+                    "framework": req.framework.value,
+                    "requirement_id": req.requirement_id,
+                    "title": req.title,
+                    "description": req.description,
+                    "category": req.category,
+                    "status": req.status.value,
+                    "compliance_percentage": req.compliance_percentage,
+                    "last_assessed": req.last_assessed.isoformat() if req.last_assessed else None,
+                    "next_assessment": req.next_assessment.isoformat() if req.next_assessment else None,
+                    "risk_level": req.risk_level,
+                    "remediation_plan": req.remediation_plan,
+                    "remediation_deadline": req.remediation_deadline.isoformat() if req.remediation_deadline else None,
+                    "remediation_owner": req.remediation_owner
+                }
+                for req in compliance_status.requirements
+            ],
+            "gaps": [
+                {
+                    "id": gap.id,
+                    "gap_title": gap.gap_title,
+                    "gap_description": gap.gap_description,
+                    "severity": gap.severity,
+                    "status": gap.status,
+                    "remediation_plan": gap.remediation_plan,
+                    "assigned_to": gap.assigned_to,
+                    "due_date": gap.due_date.isoformat() if gap.due_date else None,
+                    "progress_percentage": gap.progress_percentage
+                }
+                for gap in compliance_status.gaps
+            ],
+            "recent_assessments": [
+                {
+                    "id": assessment.id,
+                    "framework": assessment.framework.value,
+                    "title": assessment.title,
+                    "status": assessment.status.value,
+                    "overall_score": assessment.overall_score,
+                    "completed_date": assessment.completed_date.isoformat() if assessment.completed_date else None,
+                    "assessor": assessment.assessor
+                }
+                for assessment in compliance_status.recent_assessments
+            ],
+            "recommendations": compliance_status.recommendations,
+            "next_assessment_due": compliance_status.next_assessment_due.isoformat() if compliance_status.next_assessment_due else None,
+            "data_classification": {
+                "public": 25,
+                "internal": 40,
+                "confidential": 30,
+                "restricted": 15
+            },
+            "retention_policies": {
+                "compliant": 85,
+                "non_compliant": 15
+            }
+        }
+        
+        return {
+            "success": True,
+            "data": compliance_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting compliance status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get compliance status")
+
+
+# Backup Status Endpoints
+@router.get("/data-sources/{data_source_id}/backup-status")
+async def get_backup_status(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get backup status for a data source"""
+    try:
+        # Mock backup data - replace with actual implementation
+        backup_data = {
+            "backups": [
+                {
+                    "id": "backup-001",
+                    "name": "Full Backup - 2024-01-15",
+                    "size": "2.5GB",
+                    "status": "completed",
+                    "created_at": "2024-01-15T02:00:00Z",
+                    "type": "full",
+                    "retention_days": 30,
+                    "location": "S3://backups/prod/db-1"
+                },
+                {
+                    "id": "backup-002",
+                    "name": "Incremental Backup - 2024-01-14",
+                    "size": "150MB",
+                    "status": "completed",
+                    "created_at": "2024-01-14T02:00:00Z",
+                    "type": "incremental",
+                    "retention_days": 7,
+                    "location": "S3://backups/prod/db-01"
+                }
+            ],
+            "last_backup": "2024-01-15T02:00:00Z",
+            "next_backup": "2024-01-16T02:00:00Z",
+            "backup_enabled": True,
+            "retention_policy": {
+                "full_backups": 30,
+                "incremental_backups": 7
+            }
+        }
+        
+        return {
+            "success": True,
+            "data": backup_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting backup status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get backup status")
+
+
+# Scheduled Tasks Endpoints
+@router.get("/data-sources/{data_source_id}/scheduled-tasks")
+async def get_scheduled_tasks(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get scheduled tasks for a data source"""
+    try:
+        # Mock scheduled tasks data - replace with actual implementation
+        tasks_data = {
+            "tasks": [
+                {
+                    "id": "task-001",
+                    "name": "Daily Backup",
+                    "description": "Automated daily backup at 2:00AM",
+                    "type": "backup",
+                    "schedule": "Daily at 2:00 AM",
+                    "status": "active",
+                    "last_run": "2024-01-15T02:00:00Z",
+                    "next_run": "2024-01-16T02:00:00Z",
+                    "cron_expression": "0 2 * * *",
+                    "enabled": True,
+                    "retry_count": 0,
+                    "max_retries": 3
+                },
+                {
+                    "id": "task-002",
+                    "name": "Weekly Security Scan",
+                    "description": "Comprehensive security scan every Sunday",
+                    "type": "security_scan",
+                    "schedule": "Weekly on Sunday at 3:00 AM",
+                    "status": "active",
+                    "last_run": "2024-01-14T03:00:00Z",
+                    "next_run": "2024-01-21T03:00:00Z",
+                    "cron_expression": "0 3 * * 0",
+                    "enabled": True,
+                    "retry_count": 0,
+                    "max_retries": 3
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": tasks_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting scheduled tasks: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get scheduled tasks")
+
+
+# Access Control Endpoints
+@router.get("/data-sources/{data_source_id}/access-control")
+async def get_access_control(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get access control information for a data source"""
+    try:
+        # Mock access control data - replace with actual implementation
+        access_data = {
+            "permissions": [
+                {
+                    "id": "perm-001",
+                    "user_id": "user-1",
+                    "username": "john.doe",
+                    "email": "john.doe@company.com",
+                    "role": "admin",
+                    "permissions": ["read", "write", "execute", "delete"],
+                    "granted_at": "2024-01-01T00:00:00Z",
+                    "granted_by": "system-admin",
+                    "status": "active"
+                },
+                {
+                    "id": "perm-002",
+                    "user_id": "user-2",
+                    "username": "jane.smith",
+                    "email": "jane.smith@company.com",
+                    "role": "analyst",
+                    "permissions": ["read", "execute"],
+                    "granted_at": "2024-01-05T00:00:00Z",
+                    "granted_by": "john.doe",
+                    "status": "active"
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": access_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting access control: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get access control")
+
+
+# Notifications Endpoints
+@router.get("/notifications")
+async def get_notifications(
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get notifications for the current user"""
+    try:
+        # Mock notifications data - replace with actual implementation
+        notifications_data = {
+            "notifications": [
+                {
+                    "id": "notif-001",
+                    "title": "Backup Completed Successfully",
+                    "message": "Backup of production database completed at 2:00AM",
+                    "type": "success",
+                    "priority": "low",
+                    "created_at": "2024-01-15T02:05:00Z",
+                    "read": False,
+                    "category": "backup"
+                },
+                {
+                    "id": "notif-002",
+                    "title": "High CPU Usage Detected",
+                    "message": "CPU usage has exceeded 80% for the last 10 minutes",
+                    "type": "warning",
+                    "priority": "high",
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "read": False,
+                    "category": "performance"
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": notifications_data
+        }
+    except Exception as e:
+        logger.error(f"Error getting notifications: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get notifications")
+
+
+# Reports Endpoints
+@router.get("/data-sources/{data_source_id}/reports")
+async def get_reports(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get reports for a data source"""
+    try:
+        # Mock reports data - replace with actual implementation
+        reports_data = {
+            "reports": [
+                {
+                    "id": "report-001",
+                    "name": "Monthly Performance Report",
+                    "type": "performance",
+                    "status": "completed",
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "generated_at": "2024-01-01T01:00:00Z",
+                    "size": "2.5MB",
+                    "format": "pdf"
+                },
+                {
+                    "id": "report-002",
+                    "name": "Security Audit Report",
+                    "type": "security",
+                    "status": "completed",
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "generated_at": "2024-01-01T01:30:00Z",
+                    "size": "1.8MB",
+                    "format": "pdf"
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": reports_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting reports: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get reports")
+
+
+# Version History Endpoints
+@router.get("/data-sources/{data_source_id}/version-history")
+async def get_version_history(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get version history for a data source"""
+    try:
+        # Mock version history data - replace with actual implementation
+        version_data = {
+            "versions": [
+                {
+                    "id": "v-001",
+                    "version": "1.2.3",
+                    "description": "Updated security configurations",
+                    "created_at": "2024-01-15T10:00:00Z",
+                    "created_by": "john.doe",
+                    "changes": [
+                        "Added new encryption settings",
+                        "Updated access control policies",
+                        "Fixed backup scheduling issue"
+                    ],
+                    "status": "active"
+                },
+                {
+                    "id": "v-002",
+                    "version": "1.2.2",
+                    "description": "Performance improvements",
+                    "created_at": "2024-01-10T14:30:00Z",
+                    "created_by": "jane.smith",
+                    "changes": [
+                        "Optimized query performance",
+                        "Reduced memory usage",
+                        "Updated indexing strategy"
+                    ],
+                    "status": "archived"
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": version_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting version history: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get version history")
+
+
+# Tags Management Endpoints
+@router.get("/data-sources/{data_source_id}/tags")
+async def get_data_source_tags(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get tags for a data source"""
+    try:
+        # Mock tags data - replace with actual implementation
+        tags_data = {
+            "tags": [
+                {
+                    "id": "tag-001",
+                    "name": "production",
+                    "color": "#ff0000",
+                    "description": "Production environment",
+                    "created_at": "2024-01-01T00:00:00Z"
+                },
+                {
+                    "id": "tag-002",
+                    "name": "critical",
+                    "color": "#ff6600",
+                    "description": "Critical system component",
+                    "created_at": "2024-01-01T00:00:00Z"
+                },
+                {
+                    "id": "tag-003",
+                    "name": "database",
+                    "color": "#0066ff",
+                    "description": "Database system",
+                    "created_at": "2024-01-01T00:00:00Z"
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": tags_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting tags: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get tags")
+
+
+# Integrations Endpoints
+@router.get("/data-sources/{data_source_id}/integrations")
+async def get_data_source_integrations(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get integrations for a data source"""
+    try:
+        from app.services.integration_service import IntegrationService
+        
+        # Get integrations from database
+        integrations = IntegrationService.get_integrations_by_data_source(session, data_source_id)
+        
+        # Convert to response format
+        integrations_data = {
+            "integrations": [
+                {
+                    "id": str(integration.id),
+                    "name": integration.name,
+                    "type": integration.type,
+                    "provider": integration.provider,
+                    "status": integration.status,
+                    "description": integration.description,
+                    "lastSync": integration.last_sync.isoformat() if integration.last_sync else None,
+                    "nextSync": integration.next_sync.isoformat() if integration.next_sync else None,
+                    "syncFrequency": integration.sync_frequency,
+                    "successRate": integration.success_rate,
+                    "dataVolume": integration.data_volume,
+                    "errorCount": integration.error_count,
+                    "createdAt": integration.created_at.isoformat()
+                }
+                for integration in integrations
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": integrations_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting integrations: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get integrations")
+
+
+# Catalog Endpoints
+@router.get("/data-sources/{data_source_id}/catalog")
+async def get_data_source_catalog(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get catalog data for a data source"""
+    try:
+        catalog_data = {
+            "catalog": [
+                {
+                    "id": "cat-001",
+                    "name": "customer_profiles",
+                    "type": "table",
+                    "description": "Customer profile information",
+                    "tags": ["customer", "profile", "pii"],
+                    "owner": "john.doe@company.com",
+                    "classification": "confidential",
+                    "qualityScore": 92,
+                    "popularity": 85,
+                    "lastUpdated": "2024-01-15T10:30:00Z",
+                    "usageStats": {
+                        "queries": 1250,
+                        "users": 15,
+                        "avgResponseTime": 45
+                    },
+                    "dataProfile": {
+                        "rowCount": 125000,
+                        "columnCount": 25
+                    }
+                },
+                {
+                    "id": "cat-002",
+                    "name": "sales_transactions",
+                    "type": "table",
+                    "description": "Sales transaction records",
+                    "tags": ["sales", "transactions", "revenue"],
+                    "owner": "jane.smith@company.com",
+                    "classification": "internal",
+                    "qualityScore": 88,
+                    "popularity": 95,
+                    "lastUpdated": "2024-01-15T09:15:00Z",
+                    "usageStats": {
+                        "queries": 2100,
+                        "users": 25,
+                        "avgResponseTime": 32
+                    },
+                    "dataProfile": {
+                        "rowCount": 850000,
+                        "columnCount": 18
+                    }
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": catalog_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting catalog: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get catalog")

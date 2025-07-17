@@ -13,7 +13,21 @@ import {
   useCreateDataSourceMutation,
   useUpdateDataSourceMutation,
   useDeleteDataSourceMutation,
-  useTestDataSourceConnectionMutation
+  useTestDataSourceConnectionMutation,
+  // NEW: Import additional hooks
+  useDataSourcePerformanceMetricsQuery,
+  useDataSourceSecurityAuditQuery,
+  useDataSourceComplianceStatusQuery,
+  useDataSourceBackupStatusQuery,
+  useDataSourceScheduledTasksQuery,
+  useDataSourceAccessControlQuery,
+  useNotificationsQuery,
+  useDataSourceReportsQuery,
+  useDataSourceVersionHistoryQuery,
+  useDataSourceTagsQuery,
+  // NEW: Additional hooks for integrations and catalog
+  useDataSourceIntegrationsQuery,
+  useDataSourceCatalogQuery
 } from '../api/dataSources';
 
 // Types are imported from dataSources.ts
@@ -173,7 +187,21 @@ export function useDataSources(options: UseDataSourcesOptions = {}) {
       canViewDataSources,
       canCreateDataSource,
       canEditDataSource,
-      canDeleteDataSource
+      canDeleteDataSource,
+      
+      // NEW: Additional hooks for enhanced functionality
+      usePerformanceMetrics: useDataSourcePerformanceMetricsQuery,
+      useSecurityAudit: useDataSourceSecurityAuditQuery,
+      useComplianceStatus: useDataSourceComplianceStatusQuery,
+      useBackupStatus: useDataSourceBackupStatusQuery,
+      useScheduledTasks: useDataSourceScheduledTasksQuery,
+      useAccessControl: useDataSourceAccessControlQuery,
+      useNotifications: useNotificationsQuery,
+      useReports: useDataSourceReportsQuery,
+      useVersionHistory: useDataSourceVersionHistoryQuery,
+      useTags: useDataSourceTagsQuery,
+      useIntegrations: useDataSourceIntegrationsQuery,
+      useCatalog: useDataSourceCatalogQuery
     }),
     [
       dataSources,

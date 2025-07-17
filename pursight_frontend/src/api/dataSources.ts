@@ -243,3 +243,252 @@ export const useDataSourceHealthCheckQuery = (dataSourceId: number, options = {}
     ...options
   });
 };
+
+// ============================================================================
+// NEW: Additional API endpoints for enhanced functionality
+// ============================================================================
+
+/**
+ * Get performance metrics for a data source
+ */
+export const getDataSourcePerformanceMetrics = async (dataSourceId: number, timeRange: string = '24h') => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/performance-metrics?time_range=${timeRange}`);
+  return response.data;
+};
+
+/**
+ * Get security audit data for a data source
+ */
+export const getDataSourceSecurityAudit = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/security-audit`);
+  return response.data;
+};
+
+/**
+ * Get compliance status for a data source
+ */
+export const getDataSourceComplianceStatus = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/compliance-status`);
+  return response.data;
+};
+
+/**
+ * Get backup status for a data source
+ */
+export const getDataSourceBackupStatus = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/backup-status`);
+  return response.data;
+};
+
+/**
+ * Get scheduled tasks for a data source
+ */
+export const getDataSourceScheduledTasks = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/scheduled-tasks`);
+  return response.data;
+};
+
+/**
+ * Get access control information for a data source
+ */
+export const getDataSourceAccessControl = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/access-control`);
+  return response.data;
+};
+
+/**
+ * Get notifications for the current user
+ */
+export const getNotifications = async () => {
+  const response = await axios.get('/scan/notifications');
+  return response.data;
+};
+
+/**
+ * Get reports for a data source
+ */
+export const getDataSourceReports = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/reports`);
+  return response.data;
+};
+
+/**
+ * Get version history for a data source
+ */
+export const getDataSourceVersionHistory = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/version-history`);
+  return response.data;
+};
+
+/**
+ * Get tags for a data source
+ */
+export const getDataSourceTags = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/tags`);
+  return response.data;
+};
+
+// React Query Hooks for the new endpoints
+
+/**
+ * Hook for fetching performance metrics with React Query
+ */
+export const useDataSourcePerformanceMetricsQuery = (dataSourceId: number, timeRange: string = '24h', options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourcePerformanceMetrics', dataSourceId, timeRange],
+    queryFn: () => getDataSourcePerformanceMetrics(dataSourceId, timeRange),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching security audit with React Query
+ */
+export const useDataSourceSecurityAuditQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceSecurityAudit', dataSourceId],
+    queryFn: () => getDataSourceSecurityAudit(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching compliance status with React Query
+ */
+export const useDataSourceComplianceStatusQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceComplianceStatus', dataSourceId],
+    queryFn: () => getDataSourceComplianceStatus(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching backup status with React Query
+ */
+export const useDataSourceBackupStatusQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceBackupStatus', dataSourceId],
+    queryFn: () => getDataSourceBackupStatus(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching scheduled tasks with React Query
+ */
+export const useDataSourceScheduledTasksQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceScheduledTasks', dataSourceId],
+    queryFn: () => getDataSourceScheduledTasks(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching access control with React Query
+ */
+export const useDataSourceAccessControlQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceAccessControl', dataSourceId],
+    queryFn: () => getDataSourceAccessControl(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching notifications with React Query
+ */
+export const useNotificationsQuery = (options = {}) => {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: getNotifications,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching reports with React Query
+ */
+export const useDataSourceReportsQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceReports', dataSourceId],
+    queryFn: () => getDataSourceReports(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching version history with React Query
+ */
+export const useDataSourceVersionHistoryQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceVersionHistory', dataSourceId],
+    queryFn: () => getDataSourceVersionHistory(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching tags with React Query
+ */
+export const useDataSourceTagsQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceTags', dataSourceId],
+    queryFn: () => getDataSourceTags(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+// ============================================================================
+// NEW: Additional missing endpoints for integrations and catalog
+// ============================================================================
+
+/**
+ * Get integrations for a data source
+ */
+export const getDataSourceIntegrations = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/integrations`);
+  return response.data;
+};
+
+/**
+ * Get catalog data for a data source
+ */
+export const getDataSourceCatalog = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/catalog`);
+  return response.data;
+};
+
+/**
+ * Hook for fetching integrations with React Query
+ */
+export const useDataSourceIntegrationsQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceIntegrations', dataSourceId],
+    queryFn: () => getDataSourceIntegrations(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching catalog with React Query
+ */
+export const useDataSourceCatalogQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceCatalog', dataSourceId],
+    queryFn: () => getDataSourceCatalog(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};

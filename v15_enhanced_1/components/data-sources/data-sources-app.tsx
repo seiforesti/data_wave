@@ -274,6 +274,8 @@ const DataSourceAccessControl = React.lazy(() => import("./data-source-access-co
 const DataSourceNotifications = React.lazy(() => import("./data-source-notifications").catch(() => ({ default: () => <div>Notifications - Component not found</div> })))
 const DataSourceReports = React.lazy(() => import("./data-source-reports").catch(() => ({ default: () => <div>Reports - Component not found</div> })))
 const DataSourceScheduler = React.lazy(() => import("./data-source-scheduler").catch(() => ({ default: () => <div>Scheduler - Component not found</div> })))
+const DataSourceIntegrations = React.lazy(() => import("./data-source-integrations").catch(() => ({ default: () => <div>Integrations - Component not found</div> })))
+const DataSourceCatalog = React.lazy(() => import("./data-source-catalog").catch(() => ({ default: () => <div>Catalog - Component not found</div> })))
 
 // Types and services - FULL BACKEND INTEGRATION
 import { DataSource, ViewMode, PanelLayout, WorkspaceContext as WorkspaceContextType } from "./types"
@@ -999,6 +1001,18 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
           return selectedDataSource ? (
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <DataSourceBackupRestore {...commonProps} />
+            </Suspense>
+          ) : <div>Select a data source</div>
+        case "integrations":
+          return selectedDataSource ? (
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <DataSourceIntegrations {...commonProps} />
+            </Suspense>
+          ) : <div>Select a data source</div>
+        case "catalog":
+          return selectedDataSource ? (
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <DataSourceCatalog {...commonProps} />
             </Suspense>
           ) : <div>Select a data source</div>
         case "bulk-actions":
