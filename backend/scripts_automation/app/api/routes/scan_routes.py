@@ -1213,40 +1213,76 @@ async def get_compliance_status(
 ):
     """Get compliance status for a data source"""
     try:
-        # Mock compliance data - replace with actual implementation
+        from app.services.compliance_service import ComplianceService
+        
+        # Get compliance status from database
+        compliance_status = ComplianceService.get_compliance_status(session, data_source_id)
+        
+        # Convert to expected format for frontend compatibility
         compliance_data = {
-            "overall_score": 85,
-            "last_assessment": datetime.now().isoformat(),
+            "overall_score": compliance_status.overall_score,
+            "last_assessment": compliance_status.recent_assessments[0].completed_date.isoformat() if compliance_status.recent_assessments else None,
             "frameworks": {
-                "gdpr": {
-                    "score": 92,
-                    "status": "compliant",
-                    "last_checked": datetime.now().isoformat(),
-                    "next_check": (datetime.now() + timedelta(days=30)).isoformat(),
-                    "issues": []
-                },
-                "sox": {
-                    "score": 78,
-                    "status": "partial",
-                    "last_checked": datetime.now().isoformat(),
-                    "next_check": (datetime.now() + timedelta(days=15)).isoformat(),
-                    "issues": [
-                        {
-                            "id": "sox-001",
-                            "description": "Missing audit trail for data modifications",
-                            "severity": "medium",
-                            "status": "open"
-                        }
-                    ]
-                },
-                "hipaa": {
-                    "score": 88,
-                    "status": "compliant",
-                    "last_checked": datetime.now().isoformat(),
-                    "next_check": (datetime.now() + timedelta(days=60)).isoformat(),
-                    "issues": []
+                framework["name"]: {
+                    "score": framework["compliance_percentage"],
+                    "status": "compliant" if framework["compliance_percentage"] >= 80 else "partial" if framework["compliance_percentage"] >= 60 else "non_compliant",
+                    "last_checked": framework["last_assessment"].isoformat() if framework["last_assessment"] else None,
+                    "next_check": compliance_status.next_assessment_due.isoformat() if compliance_status.next_assessment_due else None,
+                    "total_requirements": framework["total_requirements"],
+                    "compliant": framework["compliant"],
+                    "non_compliant": framework["non_compliant"],
+                    "partially_compliant": framework["partially_compliant"],
+                    "not_assessed": framework["not_assessed"]
                 }
+                for framework in compliance_status.frameworks
             },
+            "requirements": [
+                {
+                    "id": req.id,
+                    "framework": req.framework.value,
+                    "requirement_id": req.requirement_id,
+                    "title": req.title,
+                    "description": req.description,
+                    "category": req.category,
+                    "status": req.status.value,
+                    "compliance_percentage": req.compliance_percentage,
+                    "last_assessed": req.last_assessed.isoformat() if req.last_assessed else None,
+                    "next_assessment": req.next_assessment.isoformat() if req.next_assessment else None,
+                    "risk_level": req.risk_level,
+                    "remediation_plan": req.remediation_plan,
+                    "remediation_deadline": req.remediation_deadline.isoformat() if req.remediation_deadline else None,
+                    "remediation_owner": req.remediation_owner
+                }
+                for req in compliance_status.requirements
+            ],
+            "gaps": [
+                {
+                    "id": gap.id,
+                    "gap_title": gap.gap_title,
+                    "gap_description": gap.gap_description,
+                    "severity": gap.severity,
+                    "status": gap.status,
+                    "remediation_plan": gap.remediation_plan,
+                    "assigned_to": gap.assigned_to,
+                    "due_date": gap.due_date.isoformat() if gap.due_date else None,
+                    "progress_percentage": gap.progress_percentage
+                }
+                for gap in compliance_status.gaps
+            ],
+            "recent_assessments": [
+                {
+                    "id": assessment.id,
+                    "framework": assessment.framework.value,
+                    "title": assessment.title,
+                    "status": assessment.status.value,
+                    "overall_score": assessment.overall_score,
+                    "completed_date": assessment.completed_date.isoformat() if assessment.completed_date else None,
+                    "assessor": assessment.assessor
+                }
+                for assessment in compliance_status.recent_assessments
+            ],
+            "recommendations": compliance_status.recommendations,
+            "next_assessment_due": compliance_status.next_assessment_due.isoformat() if compliance_status.next_assessment_due else None,
             "data_classification": {
                 "public": 25,
                 "internal": 40,

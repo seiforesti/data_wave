@@ -1,792 +1,434 @@
-from typing import Dict, List, Any, Optional, Union
-import logging
+from sqlmodel import Session, select, func, and_, or_
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-from sqlmodel import Session, select, func
-from app.models.scan_models import Scan, ScanResult, DataSource, ScanRuleSet
-import json
+from app.models.compliance_models import (
+    ComplianceRequirement, ComplianceAssessment, ComplianceGap, ComplianceEvidence,
+    ComplianceRequirementResponse, ComplianceAssessmentResponse, ComplianceGapResponse,
+    ComplianceStatusResponse, ComplianceRequirementCreate, ComplianceAssessmentCreate,
+    ComplianceGapCreate, ComplianceRequirementUpdate, ComplianceGapUpdate,
+    ComplianceFramework, ComplianceStatus, AssessmentStatus
+)
+from app.models.scan_models import DataSource
+import logging
+import statistics
 
-# Setup logging
 logger = logging.getLogger(__name__)
 
+
 class ComplianceService:
-    """Service for generating compliance reports and metrics."""
-    
-    # Define compliance standards and their requirements
-    COMPLIANCE_STANDARDS = {
-        "gdpr": {
-            "name": "General Data Protection Regulation",
-            "description": "EU regulation on data protection and privacy",
-            "requirements": [
-                {"id": "gdpr_1", "name": "Personal Data Identification", "description": "Identify all personal data in the system"},
-                {"id": "gdpr_2", "name": "Data Encryption", "description": "Ensure personal data is encrypted"},
-                {"id": "gdpr_3", "name": "Access Controls", "description": "Implement appropriate access controls"},
-                {"id": "gdpr_4", "name": "Data Retention", "description": "Implement data retention policies"},
-                {"id": "gdpr_5", "name": "Data Subject Rights", "description": "Support data subject rights (access, rectification, erasure, etc.)"},
-            ]
-        },
-        "hipaa": {
-            "name": "Health Insurance Portability and Accountability Act",
-            "description": "US regulation for medical information privacy",
-            "requirements": [
-                {"id": "hipaa_1", "name": "PHI Identification", "description": "Identify all protected health information"},
-                {"id": "hipaa_2", "name": "Data Encryption", "description": "Ensure PHI is encrypted"},
-                {"id": "hipaa_3", "name": "Access Controls", "description": "Implement appropriate access controls"},
-                {"id": "hipaa_4", "name": "Audit Logging", "description": "Maintain audit logs of PHI access"},
-                {"id": "hipaa_5", "name": "Business Associate Agreements", "description": "Ensure proper agreements with business associates"},
-            ]
-        },
-        "pci_dss": {
-            "name": "Payment Card Industry Data Security Standard",
-            "description": "Security standard for organizations that handle credit card data",
-            "requirements": [
-                {"id": "pci_1", "name": "Cardholder Data Identification", "description": "Identify all cardholder data"},
-                {"id": "pci_2", "name": "Data Encryption", "description": "Ensure cardholder data is encrypted"},
-                {"id": "pci_3", "name": "Access Controls", "description": "Implement appropriate access controls"},
-                {"id": "pci_4", "name": "Network Security", "description": "Maintain secure network infrastructure"},
-                {"id": "pci_5", "name": "Vulnerability Management", "description": "Implement vulnerability management program"},
-            ]
-        },
-        "ccpa": {
-            "name": "California Consumer Privacy Act",
-            "description": "California law on consumer privacy rights",
-            "requirements": [
-                {"id": "ccpa_1", "name": "Personal Information Identification", "description": "Identify all personal information"},
-                {"id": "ccpa_2", "name": "Consumer Rights", "description": "Support consumer rights (access, deletion, opt-out)"},
-                {"id": "ccpa_3", "name": "Data Sharing Disclosure", "description": "Disclose data sharing practices"},
-                {"id": "ccpa_4", "name": "Data Security", "description": "Implement reasonable security measures"},
-                {"id": "ccpa_5", "name": "Non-Discrimination", "description": "Ensure non-discrimination for exercising rights"},
-            ]
-        },
-        "sox": {
-            "name": "Sarbanes-Oxley Act",
-            "description": "US law on corporate governance and financial disclosure",
-            "requirements": [
-                {"id": "sox_1", "name": "Financial Data Identification", "description": "Identify all financial data"},
-                {"id": "sox_2", "name": "Data Integrity", "description": "Ensure financial data integrity"},
-                {"id": "sox_3", "name": "Access Controls", "description": "Implement appropriate access controls"},
-                {"id": "sox_4", "name": "Audit Trails", "description": "Maintain audit trails for financial data"},
-                {"id": "sox_5", "name": "Change Management", "description": "Implement change management processes"},
-            ]
-        }
-    }
-    
-    # Define data sensitivity levels
-    SENSITIVITY_LEVELS = {
-        "public": {
-            "name": "Public",
-            "description": "Data that can be freely shared with the public",
-            "risk_level": 0
-        },
-        "internal": {
-            "name": "Internal",
-            "description": "Data that should only be shared within the organization",
-            "risk_level": 1
-        },
-        "confidential": {
-            "name": "Confidential",
-            "description": "Sensitive data that requires protection",
-            "risk_level": 2
-        },
-        "restricted": {
-            "name": "Restricted",
-            "description": "Highly sensitive data with strict access controls",
-            "risk_level": 3
-        }
-    }
+    """Service layer for compliance management"""
     
     @staticmethod
-    def get_compliance_standards() -> Dict[str, Any]:
-        """Get all supported compliance standards.
-        
-        Returns:
-            A dictionary containing all supported compliance standards
-        """
-        return ComplianceService.COMPLIANCE_STANDARDS
-    
-    @staticmethod
-    def get_sensitivity_levels() -> Dict[str, Any]:
-        """Get all supported data sensitivity levels.
-        
-        Returns:
-            A dictionary containing all supported data sensitivity levels
-        """
-        return ComplianceService.SENSITIVITY_LEVELS
-    
-    @staticmethod
-    def generate_compliance_report(session: Session, standard_id: str, data_source_id: Optional[int] = None) -> Dict[str, Any]:
-        """Generate a compliance report for a specific standard.
-        
-        Args:
-            session: The database session
-            standard_id: The ID of the compliance standard (e.g., "gdpr", "hipaa")
-            data_source_id: Optional ID of the data source to filter by
-            
-        Returns:
-            A dictionary containing the compliance report
-        """
+    def get_compliance_status(session: Session, data_source_id: int) -> ComplianceStatusResponse:
+        """Get comprehensive compliance status for a data source"""
         try:
-            # Check if the standard exists
-            if standard_id not in ComplianceService.COMPLIANCE_STANDARDS:
-                return {"error": f"Compliance standard not found: {standard_id}"}
+            # Verify data source exists
+            data_source = session.get(DataSource, data_source_id)
+            if not data_source:
+                raise ValueError(f"Data source {data_source_id} not found")
             
-            standard = ComplianceService.COMPLIANCE_STANDARDS[standard_id]
+            # Get requirements
+            requirements = ComplianceService.get_requirements(session, data_source_id)
             
-            # Get the latest scan result for each data source
-            subq = select(
-                ScanResult.scan_id,
-                func.max(ScanResult.created_at).label("max_created_at")
-            ).join(
-                Scan, ScanResult.scan_id == Scan.id
-            ).where(
-                Scan.status == "completed"
+            # Get recent assessments
+            recent_assessments = ComplianceService.get_recent_assessments(session, data_source_id)
+            
+            # Get gaps
+            gaps = ComplianceService.get_compliance_gaps(session, data_source_id)
+            
+            # Calculate overall score
+            overall_score = ComplianceService._calculate_overall_score(requirements)
+            
+            # Get framework summary
+            frameworks = ComplianceService._get_framework_summary(session, data_source_id)
+            
+            # Generate recommendations
+            recommendations = ComplianceService._generate_recommendations(
+                requirements, gaps, recent_assessments
             )
             
-            if data_source_id is not None:
-                subq = subq.where(Scan.data_source_id == data_source_id)
+            # Get next assessment due
+            next_assessment_due = ComplianceService._get_next_assessment_due(session, data_source_id)
             
-            subq = subq.group_by(Scan.data_source_id).subquery()
-            
-            stmt = select(ScanResult, Scan, DataSource).join(
-                subq,
-                (ScanResult.scan_id == subq.c.scan_id) & 
-                (ScanResult.created_at == subq.c.max_created_at)
-            ).join(
-                Scan, ScanResult.scan_id == Scan.id
-            ).join(
-                DataSource, Scan.data_source_id == DataSource.id
+            return ComplianceStatusResponse(
+                overall_score=overall_score,
+                frameworks=frameworks,
+                requirements=requirements,
+                recent_assessments=recent_assessments,
+                gaps=gaps,
+                recommendations=recommendations,
+                next_assessment_due=next_assessment_due
             )
-            
-            results = session.exec(stmt).all()
-            
-            # Initialize the report
-            report = {
-                "standard": standard,
-                "generated_at": datetime.utcnow().isoformat(),
-                "overall_compliance": {
-                    "compliant_count": 0,
-                    "non_compliant_count": 0,
-                    "compliance_percentage": 0,
-                    "risk_level": "low"
-                },
-                "requirements": {},
-                "data_sources": []
-            }
-            
-            # Initialize requirements
-            for req in standard["requirements"]:
-                report["requirements"][req["id"]] = {
-                    "name": req["name"],
-                    "description": req["description"],
-                    "compliant_count": 0,
-                    "non_compliant_count": 0,
-                    "compliance_percentage": 0,
-                    "issues": []
-                }
-            
-            # Process each scan result
-            for result, scan, data_source in results:
-                # Evaluate compliance for this data source
-                source_compliance = ComplianceService._evaluate_compliance(
-                    result.scan_metadata, standard_id, data_source.name, data_source.source_type
-                )
-                
-                # Update overall compliance
-                if source_compliance["is_compliant"]:
-                    report["overall_compliance"]["compliant_count"] += 1
-                else:
-                    report["overall_compliance"]["non_compliant_count"] += 1
-                
-                # Update requirement-specific compliance
-                for req_id, req_result in source_compliance["requirements"].items():
-                    if req_id in report["requirements"]:
-                        if req_result["is_compliant"]:
-                            report["requirements"][req_id]["compliant_count"] += 1
-                        else:
-                            report["requirements"][req_id]["non_compliant_count"] += 1
-                            
-                            # Add issues to the requirement
-                            for issue in req_result["issues"]:
-                                report["requirements"][req_id]["issues"].append({
-                                    "data_source_id": data_source.id,
-                                    "data_source_name": data_source.name,
-                                    "issue": issue
-                                })
-                
-                # Add data source details
-                source_type = data_source.source_type.value if hasattr(data_source.source_type, 'value') else str(data_source.source_type)
-                report["data_sources"].append({
-                    "id": data_source.id,
-                    "name": data_source.name,
-                    "source_type": source_type,
-                    "is_compliant": source_compliance["is_compliant"],
-                    "compliance_percentage": source_compliance["compliance_percentage"],
-                    "requirements": source_compliance["requirements"],
-                    "issues": source_compliance["issues"],
-                    "last_scan_date": scan.completed_at.isoformat() if scan.completed_at else None
-                })
-            
-            # Calculate overall compliance percentage
-            total_sources = report["overall_compliance"]["compliant_count"] + report["overall_compliance"]["non_compliant_count"]
-            if total_sources > 0:
-                report["overall_compliance"]["compliance_percentage"] = round(
-                    (report["overall_compliance"]["compliant_count"] / total_sources) * 100, 2
-                )
-            
-            # Calculate requirement-specific compliance percentages
-            for req_id in report["requirements"]:
-                total_req = report["requirements"][req_id]["compliant_count"] + report["requirements"][req_id]["non_compliant_count"]
-                if total_req > 0:
-                    report["requirements"][req_id]["compliance_percentage"] = round(
-                        (report["requirements"][req_id]["compliant_count"] / total_req) * 100, 2
-                    )
-            
-            # Determine overall risk level
-            if report["overall_compliance"]["compliance_percentage"] >= 90:
-                report["overall_compliance"]["risk_level"] = "low"
-            elif report["overall_compliance"]["compliance_percentage"] >= 70:
-                report["overall_compliance"]["risk_level"] = "medium"
-            else:
-                report["overall_compliance"]["risk_level"] = "high"
-            
-            return report
             
         except Exception as e:
-            logger.error(f"Error generating compliance report: {str(e)}")
-            return {"error": str(e)}
+            logger.error(f"Error getting compliance status for data source {data_source_id}: {str(e)}")
+            raise
     
     @staticmethod
-    def _evaluate_compliance(metadata: Dict[str, Any], standard_id: str, source_name: str, source_type: str) -> Dict[str, Any]:
-        """Evaluate compliance for a specific data source.
-        
-        Args:
-            metadata: The scan result metadata
-            standard_id: The ID of the compliance standard
-            source_name: The name of the data source
-            source_type: The type of the data source
+    def get_requirements(
+        session: Session, 
+        data_source_id: int,
+        framework: Optional[ComplianceFramework] = None
+    ) -> List[ComplianceRequirementResponse]:
+        """Get compliance requirements for a data source"""
+        try:
+            query = select(ComplianceRequirement).where(
+                ComplianceRequirement.data_source_id == data_source_id
+            )
             
-        Returns:
-            A dictionary containing compliance evaluation results
-        """
-        # Get the standard requirements
-        standard = ComplianceService.COMPLIANCE_STANDARDS.get(standard_id, {})
-        requirements = standard.get("requirements", [])
+            if framework:
+                query = query.where(ComplianceRequirement.framework == framework)
+            
+            requirements = session.exec(
+                query.order_by(ComplianceRequirement.framework, ComplianceRequirement.category)
+            ).all()
+            
+            return [ComplianceRequirementResponse.from_orm(req) for req in requirements]
+            
+        except Exception as e:
+            logger.error(f"Error getting requirements for data source {data_source_id}: {str(e)}")
+            return []
+    
+    @staticmethod
+    def get_recent_assessments(
+        session: Session, 
+        data_source_id: int,
+        limit: int = 10
+    ) -> List[ComplianceAssessmentResponse]:
+        """Get recent compliance assessments for a data source"""
+        try:
+            query = select(ComplianceAssessment).where(
+                ComplianceAssessment.data_source_id == data_source_id
+            ).order_by(ComplianceAssessment.created_at.desc()).limit(limit)
+            
+            assessments = session.exec(query).all()
+            
+            return [ComplianceAssessmentResponse.from_orm(assessment) for assessment in assessments]
+            
+        except Exception as e:
+            logger.error(f"Error getting assessments for data source {data_source_id}: {str(e)}")
+            return []
+    
+    @staticmethod
+    def get_compliance_gaps(
+        session: Session, 
+        data_source_id: int,
+        status: Optional[str] = None
+    ) -> List[ComplianceGapResponse]:
+        """Get compliance gaps for a data source"""
+        try:
+            query = select(ComplianceGap).where(
+                ComplianceGap.data_source_id == data_source_id
+            )
+            
+            if status:
+                query = query.where(ComplianceGap.status == status)
+            
+            gaps = session.exec(
+                query.order_by(ComplianceGap.severity.desc(), ComplianceGap.created_at.desc())
+            ).all()
+            
+            return [ComplianceGapResponse.from_orm(gap) for gap in gaps]
+            
+        except Exception as e:
+            logger.error(f"Error getting gaps for data source {data_source_id}: {str(e)}")
+            return []
+    
+    @staticmethod
+    def create_requirement(
+        session: Session,
+        req_data: ComplianceRequirementCreate,
+        user_id: str
+    ) -> ComplianceRequirementResponse:
+        """Create a new compliance requirement"""
+        try:
+            # Verify data source exists
+            data_source = session.get(DataSource, req_data.data_source_id)
+            if not data_source:
+                raise ValueError(f"Data source {req_data.data_source_id} not found")
+            
+            requirement = ComplianceRequirement(
+                data_source_id=req_data.data_source_id,
+                framework=req_data.framework,
+                requirement_id=req_data.requirement_id,
+                title=req_data.title,
+                description=req_data.description,
+                category=req_data.category,
+                risk_level=req_data.risk_level,
+                remediation_plan=req_data.remediation_plan,
+                remediation_deadline=req_data.remediation_deadline,
+                metadata=req_data.metadata
+            )
+            
+            session.add(requirement)
+            session.commit()
+            session.refresh(requirement)
+            
+            return ComplianceRequirementResponse.from_orm(requirement)
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error creating compliance requirement: {str(e)}")
+            raise
+    
+    @staticmethod
+    def update_requirement(
+        session: Session,
+        requirement_id: int,
+        update_data: ComplianceRequirementUpdate,
+        user_id: str
+    ) -> ComplianceRequirementResponse:
+        """Update a compliance requirement"""
+        try:
+            requirement = session.get(ComplianceRequirement, requirement_id)
+            if not requirement:
+                raise ValueError(f"Requirement {requirement_id} not found")
+            
+            # Update fields
+            if update_data.status is not None:
+                requirement.status = update_data.status
+                requirement.last_assessed = datetime.now()
+            
+            if update_data.compliance_percentage is not None:
+                requirement.compliance_percentage = update_data.compliance_percentage
+            
+            if update_data.assessment_notes is not None:
+                requirement.assessment_notes = update_data.assessment_notes
+            
+            if update_data.remediation_plan is not None:
+                requirement.remediation_plan = update_data.remediation_plan
+            
+            if update_data.remediation_deadline is not None:
+                requirement.remediation_deadline = update_data.remediation_deadline
+            
+            if update_data.remediation_owner is not None:
+                requirement.remediation_owner = update_data.remediation_owner
+            
+            requirement.updated_at = datetime.now()
+            
+            session.add(requirement)
+            session.commit()
+            session.refresh(requirement)
+            
+            return ComplianceRequirementResponse.from_orm(requirement)
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error updating requirement {requirement_id}: {str(e)}")
+            raise
+    
+    @staticmethod
+    def start_assessment(
+        session: Session,
+        assessment_data: ComplianceAssessmentCreate,
+        user_id: str
+    ) -> ComplianceAssessmentResponse:
+        """Start a new compliance assessment"""
+        try:
+            # Verify data source exists
+            data_source = session.get(DataSource, assessment_data.data_source_id)
+            if not data_source:
+                raise ValueError(f"Data source {assessment_data.data_source_id} not found")
+            
+            assessment = ComplianceAssessment(
+                data_source_id=assessment_data.data_source_id,
+                framework=assessment_data.framework,
+                assessment_type=assessment_data.assessment_type,
+                title=assessment_data.title,
+                description=assessment_data.description,
+                scheduled_date=assessment_data.scheduled_date,
+                assessor=assessment_data.assessor,
+                status=AssessmentStatus.IN_PROGRESS,
+                started_date=datetime.now()
+            )
+            
+            session.add(assessment)
+            session.commit()
+            session.refresh(assessment)
+            
+            return ComplianceAssessmentResponse.from_orm(assessment)
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error starting assessment: {str(e)}")
+            raise
+    
+    @staticmethod
+    def create_gap(
+        session: Session,
+        gap_data: ComplianceGapCreate,
+        user_id: str
+    ) -> ComplianceGapResponse:
+        """Create a new compliance gap"""
+        try:
+            # Verify data source and requirement exist
+            data_source = session.get(DataSource, gap_data.data_source_id)
+            if not data_source:
+                raise ValueError(f"Data source {gap_data.data_source_id} not found")
+            
+            requirement = session.get(ComplianceRequirement, gap_data.requirement_id)
+            if not requirement:
+                raise ValueError(f"Requirement {gap_data.requirement_id} not found")
+            
+            gap = ComplianceGap(
+                data_source_id=gap_data.data_source_id,
+                requirement_id=gap_data.requirement_id,
+                gap_title=gap_data.gap_title,
+                gap_description=gap_data.gap_description,
+                severity=gap_data.severity,
+                remediation_plan=gap_data.remediation_plan,
+                assigned_to=gap_data.assigned_to,
+                due_date=gap_data.due_date
+            )
+            
+            session.add(gap)
+            session.commit()
+            session.refresh(gap)
+            
+            return ComplianceGapResponse.from_orm(gap)
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error creating compliance gap: {str(e)}")
+            raise
+    
+    @staticmethod
+    def _calculate_overall_score(requirements: List[ComplianceRequirementResponse]) -> float:
+        """Calculate overall compliance score"""
+        if not requirements:
+            return 0.0
         
-        # Initialize the result
-        result = {
-            "is_compliant": True,
-            "compliance_percentage": 100,
-            "requirements": {},
-            "issues": []
-        }
-        
-        # Initialize requirements
+        total_score = 0.0
         for req in requirements:
-            result["requirements"][req["id"]] = {
-                "is_compliant": True,
-                "issues": []
-            }
+            if req.status == ComplianceStatus.COMPLIANT:
+                total_score += 100
+            elif req.status == ComplianceStatus.PARTIALLY_COMPLIANT:
+                total_score += req.compliance_percentage
+            elif req.status == ComplianceStatus.NON_COMPLIANT:
+                total_score += 0
+            else:  # NOT_ASSESSED or IN_PROGRESS
+                total_score += 50  # Neutral score
         
-        # Evaluate each requirement based on the standard
-        if standard_id == "gdpr":
-            ComplianceService._evaluate_gdpr_compliance(metadata, source_name, source_type, result)
-        elif standard_id == "hipaa":
-            ComplianceService._evaluate_hipaa_compliance(metadata, source_name, source_type, result)
-        elif standard_id == "pci_dss":
-            ComplianceService._evaluate_pci_compliance(metadata, source_name, source_type, result)
-        elif standard_id == "ccpa":
-            ComplianceService._evaluate_ccpa_compliance(metadata, source_name, source_type, result)
-        elif standard_id == "sox":
-            ComplianceService._evaluate_sox_compliance(metadata, source_name, source_type, result)
-        
-        # Calculate compliance percentage
-        compliant_count = 0
-        total_count = len(result["requirements"])
-        
-        for req_id, req_result in result["requirements"].items():
-            if req_result["is_compliant"]:
-                compliant_count += 1
-            else:
-                # Add requirement issues to the overall issues list
-                result["issues"].extend(req_result["issues"])
-        
-        if total_count > 0:
-            result["compliance_percentage"] = round((compliant_count / total_count) * 100, 2)
-        
-        # Update overall compliance status
-        result["is_compliant"] = (compliant_count == total_count)
-        
-        return result
+        return total_score / len(requirements)
     
     @staticmethod
-    def _evaluate_gdpr_compliance(metadata: Dict[str, Any], source_name: str, source_type: str, result: Dict[str, Any]):
-        """Evaluate GDPR compliance.
-        
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
-            result: The compliance result to update
-        """
-        # Check for personal data identification (gdpr_1)
-        personal_data_identified = False
-        personal_data_encrypted = True
-        personal_data_access_controlled = True
-        personal_data_retention_policy = True
-        personal_data_subject_rights = True
-        
-        # Process relational database metadata
-        for schema in metadata.get("schemas", []):
-            for table in schema.get("tables", []):
-                for column in table.get("columns", []):
-                    # Check for personal data classifications
-                    classifications = column.get("classifications", [])
-                    is_personal_data = False
-                    
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["pii", "personal", "sensitive"]:
-                            is_personal_data = True
-                            personal_data_identified = True
-                            
-                            # Check if personal data is encrypted
-                            if is_personal_data and not column.get("is_encrypted", False):
-                                personal_data_encrypted = False
-                                issue = f"Personal data column {schema.get('name')}.{table.get('name')}.{column.get('name')} is not encrypted"
-                                result["requirements"]["gdpr_2"]["issues"].append(issue)
-                            
-                            # Check if personal data has access controls
-                            if is_personal_data and not column.get("has_access_controls", False):
-                                personal_data_access_controlled = False
-                                issue = f"Personal data column {schema.get('name')}.{table.get('name')}.{column.get('name')} lacks access controls"
-                                result["requirements"]["gdpr_3"]["issues"].append(issue)
-                            
-                            # Check if personal data has retention policy
-                            if is_personal_data and not column.get("has_retention_policy", False):
-                                personal_data_retention_policy = False
-                                issue = f"Personal data column {schema.get('name')}.{table.get('name')}.{column.get('name')} lacks retention policy"
-                                result["requirements"]["gdpr_4"]["issues"].append(issue)
-                            
-                            # Check if personal data supports subject rights
-                            if is_personal_data and not column.get("supports_subject_rights", False):
-                                personal_data_subject_rights = False
-                                issue = f"Personal data column {schema.get('name')}.{table.get('name')}.{column.get('name')} does not support subject rights"
-                                result["requirements"]["gdpr_5"]["issues"].append(issue)
-        
-        # Process MongoDB metadata
-        for db in metadata.get("databases", []):
-            for collection in db.get("collections", []):
-                for field in collection.get("fields", []):
-                    # Check for personal data classifications
-                    classifications = field.get("classifications", [])
-                    is_personal_data = False
-                    
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["pii", "personal", "sensitive"]:
-                            is_personal_data = True
-                            personal_data_identified = True
-                            
-                            # Check if personal data is encrypted
-                            if is_personal_data and not field.get("is_encrypted", False):
-                                personal_data_encrypted = False
-                                issue = f"Personal data field {db.get('name')}.{collection.get('name')}.{field.get('name')} is not encrypted"
-                                result["requirements"]["gdpr_2"]["issues"].append(issue)
-                            
-                            # Check if personal data has access controls
-                            if is_personal_data and not field.get("has_access_controls", False):
-                                personal_data_access_controlled = False
-                                issue = f"Personal data field {db.get('name')}.{collection.get('name')}.{field.get('name')} lacks access controls"
-                                result["requirements"]["gdpr_3"]["issues"].append(issue)
-                            
-                            # Check if personal data has retention policy
-                            if is_personal_data and not field.get("has_retention_policy", False):
-                                personal_data_retention_policy = False
-                                issue = f"Personal data field {db.get('name')}.{collection.get('name')}.{field.get('name')} lacks retention policy"
-                                result["requirements"]["gdpr_4"]["issues"].append(issue)
-                            
-                            # Check if personal data supports subject rights
-                            if is_personal_data and not field.get("supports_subject_rights", False):
-                                personal_data_subject_rights = False
-                                issue = f"Personal data field {db.get('name')}.{collection.get('name')}.{field.get('name')} does not support subject rights"
-                                result["requirements"]["gdpr_5"]["issues"].append(issue)
-        
-        # Update requirement compliance status
-        if not personal_data_identified:
-            # If no personal data is identified, all requirements are compliant by default
-            pass
-        else:
-            # Update requirement compliance status based on the checks
-            result["requirements"]["gdpr_1"]["is_compliant"] = personal_data_identified
-            result["requirements"]["gdpr_2"]["is_compliant"] = personal_data_encrypted
-            result["requirements"]["gdpr_3"]["is_compliant"] = personal_data_access_controlled
-            result["requirements"]["gdpr_4"]["is_compliant"] = personal_data_retention_policy
-            result["requirements"]["gdpr_5"]["is_compliant"] = personal_data_subject_rights
-    
-    @staticmethod
-    def _evaluate_hipaa_compliance(metadata: Dict[str, Any], source_name: str, source_type: str, result: Dict[str, Any]):
-        """Evaluate HIPAA compliance.
-        
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
-            result: The compliance result to update
-        """
-        # Check for PHI identification (hipaa_1)
-        phi_identified = False
-        phi_encrypted = True
-        phi_access_controlled = True
-        phi_audit_logging = True
-        phi_business_associates = True
-        
-        # Process relational database metadata
-        for schema in metadata.get("schemas", []):
-            for table in schema.get("tables", []):
-                for column in table.get("columns", []):
-                    # Check for PHI classifications
-                    classifications = column.get("classifications", [])
-                    is_phi = False
-                    
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["phi", "health", "medical"]:
-                            is_phi = True
-                            phi_identified = True
-                            
-                            # Check if PHI is encrypted
-                            if is_phi and not column.get("is_encrypted", False):
-                                phi_encrypted = False
-                                issue = f"PHI column {schema.get('name')}.{table.get('name')}.{column.get('name')} is not encrypted"
-                                result["requirements"]["hipaa_2"]["issues"].append(issue)
-                            
-                            # Check if PHI has access controls
-                            if is_phi and not column.get("has_access_controls", False):
-                                phi_access_controlled = False
-                                issue = f"PHI column {schema.get('name')}.{table.get('name')}.{column.get('name')} lacks access controls"
-                                result["requirements"]["hipaa_3"]["issues"].append(issue)
-                            
-                            # Check if PHI has audit logging
-                            if is_phi and not column.get("has_audit_logging", False):
-                                phi_audit_logging = False
-                                issue = f"PHI column {schema.get('name')}.{table.get('name')}.{column.get('name')} lacks audit logging"
-                                result["requirements"]["hipaa_4"]["issues"].append(issue)
-        
-        # Process MongoDB metadata
-        for db in metadata.get("databases", []):
-            for collection in db.get("collections", []):
-                for field in collection.get("fields", []):
-                    # Check for PHI classifications
-                    classifications = field.get("classifications", [])
-                    is_phi = False
-                    
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["phi", "health", "medical"]:
-                            is_phi = True
-                            phi_identified = True
-                            
-                            # Check if PHI is encrypted
-                            if is_phi and not field.get("is_encrypted", False):
-                                phi_encrypted = False
-                                issue = f"PHI field {db.get('name')}.{collection.get('name')}.{field.get('name')} is not encrypted"
-                                result["requirements"]["hipaa_2"]["issues"].append(issue)
-                            
-                            # Check if PHI has access controls
-                            if is_phi and not field.get("has_access_controls", False):
-                                phi_access_controlled = False
-                                issue = f"PHI field {db.get('name')}.{collection.get('name')}.{field.get('name')} lacks access controls"
-                                result["requirements"]["hipaa_3"]["issues"].append(issue)
-                            
-                            # Check if PHI has audit logging
-                            if is_phi and not field.get("has_audit_logging", False):
-                                phi_audit_logging = False
-                                issue = f"PHI field {db.get('name')}.{collection.get('name')}.{field.get('name')} lacks audit logging"
-                                result["requirements"]["hipaa_4"]["issues"].append(issue)
-        
-        # Check for business associate agreements
-        if phi_identified and not metadata.get("has_business_associate_agreements", False):
-            phi_business_associates = False
-            issue = f"Data source {source_name} lacks business associate agreements"
-            result["requirements"]["hipaa_5"]["issues"].append(issue)
-        
-        # Update requirement compliance status
-        if not phi_identified:
-            # If no PHI is identified, all requirements are compliant by default
-            pass
-        else:
-            # Update requirement compliance status based on the checks
-            result["requirements"]["hipaa_1"]["is_compliant"] = phi_identified
-            result["requirements"]["hipaa_2"]["is_compliant"] = phi_encrypted
-            result["requirements"]["hipaa_3"]["is_compliant"] = phi_access_controlled
-            result["requirements"]["hipaa_4"]["is_compliant"] = phi_audit_logging
-            result["requirements"]["hipaa_5"]["is_compliant"] = phi_business_associates
-    
-    @staticmethod
-    def _evaluate_pci_compliance(metadata: Dict[str, Any], source_name: str, source_type: str, result: Dict[str, Any]):
-        """Evaluate PCI DSS compliance.
-        
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
-            result: The compliance result to update
-        """
-        # Similar implementation as GDPR and HIPAA, but for PCI DSS requirements
-        # This is a placeholder implementation
-        pass
-    
-    @staticmethod
-    def _evaluate_ccpa_compliance(metadata: Dict[str, Any], source_name: str, source_type: str, result: Dict[str, Any]):
-        """Evaluate CCPA compliance.
-        
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
-            result: The compliance result to update
-        """
-        # Similar implementation as GDPR and HIPAA, but for CCPA requirements
-        # This is a placeholder implementation
-        pass
-    
-    @staticmethod
-    def _evaluate_sox_compliance(metadata: Dict[str, Any], source_name: str, source_type: str, result: Dict[str, Any]):
-        """Evaluate SOX compliance.
-        
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
-            result: The compliance result to update
-        """
-        # Similar implementation as GDPR and HIPAA, but for SOX requirements
-        # This is a placeholder implementation
-        pass
-    
-    @staticmethod
-    def generate_data_sensitivity_report(session: Session, data_source_id: Optional[int] = None) -> Dict[str, Any]:
-        """Generate a data sensitivity report.
-        
-        Args:
-            session: The database session
-            data_source_id: Optional ID of the data source to filter by
-            
-        Returns:
-            A dictionary containing the data sensitivity report
-        """
+    def _get_framework_summary(session: Session, data_source_id: int) -> List[Dict[str, Any]]:
+        """Get framework compliance summary"""
         try:
-            # Get the latest scan result for each data source
-            subq = select(
-                ScanResult.scan_id,
-                func.max(ScanResult.created_at).label("max_created_at")
-            ).join(
-                Scan, ScanResult.scan_id == Scan.id
-            ).where(
-                Scan.status == "completed"
+            # Get all requirements grouped by framework
+            query = select(ComplianceRequirement).where(
+                ComplianceRequirement.data_source_id == data_source_id
             )
             
-            if data_source_id is not None:
-                subq = subq.where(Scan.data_source_id == data_source_id)
+            requirements = session.exec(query).all()
             
-            subq = subq.group_by(Scan.data_source_id).subquery()
-            
-            stmt = select(ScanResult, Scan, DataSource).join(
-                subq,
-                (ScanResult.scan_id == subq.c.scan_id) & 
-                (ScanResult.created_at == subq.c.max_created_at)
-            ).join(
-                Scan, ScanResult.scan_id == Scan.id
-            ).join(
-                DataSource, Scan.data_source_id == DataSource.id
-            )
-            
-            results = session.exec(stmt).all()
-            
-            # Initialize the report
-            report = {
-                "generated_at": datetime.utcnow().isoformat(),
-                "overall_summary": {
-                    "total_fields": 0,
-                    "sensitivity_levels": {
-                        "public": 0,
-                        "internal": 0,
-                        "confidential": 0,
-                        "restricted": 0
-                    },
-                    "classification_categories": {
-                        "pii": 0,
-                        "phi": 0,
-                        "financial": 0,
-                        "other": 0
+            frameworks = {}
+            for req in requirements:
+                if req.framework not in frameworks:
+                    frameworks[req.framework] = {
+                        "name": req.framework.value,
+                        "display_name": req.framework.value.upper(),
+                        "total_requirements": 0,
+                        "compliant": 0,
+                        "non_compliant": 0,
+                        "partially_compliant": 0,
+                        "not_assessed": 0,
+                        "compliance_percentage": 0.0,
+                        "last_assessment": None
                     }
-                },
-                "data_sources": []
-            }
-            
-            # Process each scan result
-            for result, scan, data_source in results:
-                # Extract sensitivity information from metadata
-                source_sensitivity = ComplianceService._extract_sensitivity_from_metadata(
-                    result.scan_metadata, data_source.name, data_source.source_type
-                )
                 
-                # Update overall summary
-                report["overall_summary"]["total_fields"] += source_sensitivity["total_fields"]
+                frameworks[req.framework]["total_requirements"] += 1
                 
-                for level, count in source_sensitivity["sensitivity_levels"].items():
-                    report["overall_summary"]["sensitivity_levels"][level] += count
+                if req.status == ComplianceStatus.COMPLIANT:
+                    frameworks[req.framework]["compliant"] += 1
+                elif req.status == ComplianceStatus.NON_COMPLIANT:
+                    frameworks[req.framework]["non_compliant"] += 1
+                elif req.status == ComplianceStatus.PARTIALLY_COMPLIANT:
+                    frameworks[req.framework]["partially_compliant"] += 1
+                else:
+                    frameworks[req.framework]["not_assessed"] += 1
                 
-                for category, count in source_sensitivity["classification_categories"].items():
-                    if category in report["overall_summary"]["classification_categories"]:
-                        report["overall_summary"]["classification_categories"][category] += count
-                    else:
-                        report["overall_summary"]["classification_categories"]["other"] += count
-                
-                # Add data source details
-                source_type = data_source.source_type.value if hasattr(data_source.source_type, 'value') else str(data_source.source_type)
-                report["data_sources"].append({
-                    "id": data_source.id,
-                    "name": data_source.name,
-                    "source_type": source_type,
-                    "total_fields": source_sensitivity["total_fields"],
-                    "sensitivity_levels": source_sensitivity["sensitivity_levels"],
-                    "classification_categories": source_sensitivity["classification_categories"],
-                    "sensitive_fields": source_sensitivity["sensitive_fields"],
-                    "last_scan_date": scan.completed_at.isoformat() if scan.completed_at else None
-                })
+                # Track latest assessment
+                if req.last_assessed:
+                    if (not frameworks[req.framework]["last_assessment"] or 
+                        req.last_assessed > frameworks[req.framework]["last_assessment"]):
+                        frameworks[req.framework]["last_assessment"] = req.last_assessed
             
-            # Calculate percentages for sensitivity levels
-            if report["overall_summary"]["total_fields"] > 0:
-                for level in report["overall_summary"]["sensitivity_levels"]:
-                    report["overall_summary"]["sensitivity_levels"][f"{level}_percentage"] = round(
-                        (report["overall_summary"]["sensitivity_levels"][level] / report["overall_summary"]["total_fields"]) * 100, 2
-                    )
+            # Calculate compliance percentages
+            for framework in frameworks.values():
+                if framework["total_requirements"] > 0:
+                    framework["compliance_percentage"] = (
+                        (framework["compliant"] + framework["partially_compliant"] * 0.5) / 
+                        framework["total_requirements"]
+                    ) * 100
             
-            # Calculate overall risk level
-            restricted_percentage = 0
-            if report["overall_summary"]["total_fields"] > 0:
-                restricted_percentage = round(
-                    (report["overall_summary"]["sensitivity_levels"]["restricted"] / report["overall_summary"]["total_fields"]) * 100, 2
-                )
-            
-            if restricted_percentage >= 10:
-                report["overall_summary"]["risk_level"] = "high"
-            elif restricted_percentage >= 5:
-                report["overall_summary"]["risk_level"] = "medium"
-            else:
-                report["overall_summary"]["risk_level"] = "low"
-            
-            return report
+            return list(frameworks.values())
             
         except Exception as e:
-            logger.error(f"Error generating data sensitivity report: {str(e)}")
-            return {"error": str(e)}
+            logger.error(f"Error getting framework summary: {str(e)}")
+            return []
     
     @staticmethod
-    def _extract_sensitivity_from_metadata(metadata: Dict[str, Any], source_name: str, source_type: str) -> Dict[str, Any]:
-        """Extract sensitivity information from metadata.
+    def _generate_recommendations(
+        requirements: List[ComplianceRequirementResponse],
+        gaps: List[ComplianceGapResponse],
+        assessments: List[ComplianceAssessmentResponse]
+    ) -> List[str]:
+        """Generate compliance recommendations"""
+        recommendations = []
         
-        Args:
-            metadata: The scan result metadata
-            source_name: The name of the data source
-            source_type: The type of the data source
+        # Check for non-compliant requirements
+        non_compliant = [r for r in requirements if r.status == ComplianceStatus.NON_COMPLIANT]
+        if non_compliant:
+            recommendations.append(f"Address {len(non_compliant)} non-compliant requirements")
+        
+        # Check for overdue remediation
+        overdue = [
+            r for r in requirements 
+            if r.remediation_deadline and r.remediation_deadline < datetime.now()
+        ]
+        if overdue:
+            recommendations.append(f"Complete {len(overdue)} overdue remediation tasks")
+        
+        # Check for open gaps
+        open_gaps = [g for g in gaps if g.status == "open"]
+        if open_gaps:
+            recommendations.append(f"Resolve {len(open_gaps)} open compliance gaps")
+        
+        # Check for missing assessments
+        not_assessed = [r for r in requirements if r.status == ComplianceStatus.NOT_ASSESSED]
+        if not_assessed:
+            recommendations.append(f"Complete assessments for {len(not_assessed)} requirements")
+        
+        # Check for outdated assessments
+        outdated = [
+            r for r in requirements 
+            if r.last_assessed and r.last_assessed < datetime.now() - timedelta(days=365)
+        ]
+        if outdated:
+            recommendations.append(f"Update {len(outdated)} outdated assessments")
+        
+        # Check for failed assessments
+        failed_assessments = [a for a in assessments if a.status == AssessmentStatus.FAILED]
+        if failed_assessments:
+            recommendations.append("Review and address failed assessments")
+        
+        return recommendations
+    
+    @staticmethod
+    def _get_next_assessment_due(session: Session, data_source_id: int) -> Optional[datetime]:
+        """Get the next assessment due date"""
+        try:
+            query = select(ComplianceRequirement).where(
+                and_(
+                    ComplianceRequirement.data_source_id == data_source_id,
+                    ComplianceRequirement.next_assessment.is_not(None)
+                )
+            ).order_by(ComplianceRequirement.next_assessment.asc()).limit(1)
             
-        Returns:
-            A dictionary containing sensitivity information
-        """
-        sensitivity_info = {
-            "total_fields": 0,
-            "sensitivity_levels": {
-                "public": 0,
-                "internal": 0,
-                "confidential": 0,
-                "restricted": 0
-            },
-            "classification_categories": {
-                "pii": 0,
-                "phi": 0,
-                "financial": 0,
-                "other": 0
-            },
-            "sensitive_fields": []
-        }
-        
-        # Process relational database metadata
-        for schema in metadata.get("schemas", []):
-            for table in schema.get("tables", []):
-                for column in table.get("columns", []):
-                    sensitivity_info["total_fields"] += 1
-                    
-                    # Get sensitivity level
-                    sensitivity_level = column.get("sensitivity_level", "public").lower()
-                    if sensitivity_level in sensitivity_info["sensitivity_levels"]:
-                        sensitivity_info["sensitivity_levels"][sensitivity_level] += 1
-                    else:
-                        sensitivity_info["sensitivity_levels"]["public"] += 1
-                    
-                    # Get classification categories
-                    classifications = column.get("classifications", [])
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["pii", "personal", "sensitive"]:
-                            sensitivity_info["classification_categories"]["pii"] += 1
-                        elif category in ["phi", "health", "medical"]:
-                            sensitivity_info["classification_categories"]["phi"] += 1
-                        elif category in ["financial", "payment", "credit"]:
-                            sensitivity_info["classification_categories"]["financial"] += 1
-                        else:
-                            sensitivity_info["classification_categories"]["other"] += 1
-                    
-                    # Add sensitive field details
-                    if sensitivity_level in ["confidential", "restricted"]:
-                        sensitivity_info["sensitive_fields"].append({
-                            "name": column.get("name", ""),
-                            "path": f"{schema.get('name')}.{table.get('name')}.{column.get('name')}",
-                            "type": "column",
-                            "data_type": column.get("data_type", ""),
-                            "sensitivity_level": sensitivity_level,
-                            "classifications": classifications,
-                            "is_encrypted": column.get("is_encrypted", False),
-                            "has_access_controls": column.get("has_access_controls", False)
-                        })
-        
-        # Process MongoDB metadata
-        for db in metadata.get("databases", []):
-            for collection in db.get("collections", []):
-                for field in collection.get("fields", []):
-                    sensitivity_info["total_fields"] += 1
-                    
-                    # Get sensitivity level
-                    sensitivity_level = field.get("sensitivity_level", "public").lower()
-                    if sensitivity_level in sensitivity_info["sensitivity_levels"]:
-                        sensitivity_info["sensitivity_levels"][sensitivity_level] += 1
-                    else:
-                        sensitivity_info["sensitivity_levels"]["public"] += 1
-                    
-                    # Get classification categories
-                    classifications = field.get("classifications", [])
-                    for classification in classifications:
-                        category = classification.get("category", "").lower()
-                        if category in ["pii", "personal", "sensitive"]:
-                            sensitivity_info["classification_categories"]["pii"] += 1
-                        elif category in ["phi", "health", "medical"]:
-                            sensitivity_info["classification_categories"]["phi"] += 1
-                        elif category in ["financial", "payment", "credit"]:
-                            sensitivity_info["classification_categories"]["financial"] += 1
-                        else:
-                            sensitivity_info["classification_categories"]["other"] += 1
-                    
-                    # Add sensitive field details
-                    if sensitivity_level in ["confidential", "restricted"]:
-                        sensitivity_info["sensitive_fields"].append({
-                            "name": field.get("name", ""),
-                            "path": f"{db.get('name')}.{collection.get('name')}.{field.get('name')}",
-                            "type": "field",
-                            "data_type": field.get("data_type", ""),
-                            "sensitivity_level": sensitivity_level,
-                            "classifications": classifications,
-                            "is_encrypted": field.get("is_encrypted", False),
-                            "has_access_controls": field.get("has_access_controls", False)
-                        })
-        
-        return sensitivity_info
+            requirement = session.exec(query).first()
+            return requirement.next_assessment if requirement else None
+            
+        except Exception as e:
+            logger.error(f"Error getting next assessment due: {str(e)}")
+            return None
