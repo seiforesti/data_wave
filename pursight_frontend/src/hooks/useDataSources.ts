@@ -24,7 +24,10 @@ import {
   useNotificationsQuery,
   useDataSourceReportsQuery,
   useDataSourceVersionHistoryQuery,
-  useDataSourceTagsQuery
+  useDataSourceTagsQuery,
+  // NEW: Additional hooks for integrations and catalog
+  useDataSourceIntegrationsQuery,
+  useDataSourceCatalogQuery
 } from '../api/dataSources';
 
 // Types are imported from dataSources.ts
@@ -196,7 +199,9 @@ export function useDataSources(options: UseDataSourcesOptions = {}) {
       useNotifications: useNotificationsQuery,
       useReports: useDataSourceReportsQuery,
       useVersionHistory: useDataSourceVersionHistoryQuery,
-      useTags: useDataSourceTagsQuery
+      useTags: useDataSourceTagsQuery,
+      useIntegrations: useDataSourceIntegrationsQuery,
+      useCatalog: useDataSourceCatalogQuery
     }),
     [
       dataSources,

@@ -448,3 +448,47 @@ export const useDataSourceTagsQuery = (dataSourceId: number, options = {}) => {
     ...options
   });
 };
+
+// ============================================================================
+// NEW: Additional missing endpoints for integrations and catalog
+// ============================================================================
+
+/**
+ * Get integrations for a data source
+ */
+export const getDataSourceIntegrations = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/integrations`);
+  return response.data;
+};
+
+/**
+ * Get catalog data for a data source
+ */
+export const getDataSourceCatalog = async (dataSourceId: number) => {
+  const response = await axios.get(`/scan/data-sources/${dataSourceId}/catalog`);
+  return response.data;
+};
+
+/**
+ * Hook for fetching integrations with React Query
+ */
+export const useDataSourceIntegrationsQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceIntegrations', dataSourceId],
+    queryFn: () => getDataSourceIntegrations(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};
+
+/**
+ * Hook for fetching catalog with React Query
+ */
+export const useDataSourceCatalogQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['dataSourceCatalog', dataSourceId],
+    queryFn: () => getDataSourceCatalog(dataSourceId),
+    enabled: !!dataSourceId,
+    ...options
+  });
+};

@@ -1529,3 +1529,115 @@ async def get_data_source_tags(
     except Exception as e:
         logger.error(f"Error getting tags: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get tags")
+
+
+# Integrations Endpoints
+@router.get("/data-sources/{data_source_id}/integrations")
+async def get_data_source_integrations(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get integrations for a data source"""
+    try:
+        from app.services.integration_service import IntegrationService
+        
+        # Get integrations from database
+        integrations = IntegrationService.get_integrations_by_data_source(session, data_source_id)
+        
+        # Convert to response format
+        integrations_data = {
+            "integrations": [
+                {
+                    "id": str(integration.id),
+                    "name": integration.name,
+                    "type": integration.type,
+                    "provider": integration.provider,
+                    "status": integration.status,
+                    "description": integration.description,
+                    "lastSync": integration.last_sync.isoformat() if integration.last_sync else None,
+                    "nextSync": integration.next_sync.isoformat() if integration.next_sync else None,
+                    "syncFrequency": integration.sync_frequency,
+                    "successRate": integration.success_rate,
+                    "dataVolume": integration.data_volume,
+                    "errorCount": integration.error_count,
+                    "createdAt": integration.created_at.isoformat()
+                }
+                for integration in integrations
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": integrations_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting integrations: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get integrations")
+
+
+# Catalog Endpoints
+@router.get("/data-sources/{data_source_id}/catalog")
+async def get_data_source_catalog(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """Get catalog data for a data source"""
+    try:
+        catalog_data = {
+            "catalog": [
+                {
+                    "id": "cat-001",
+                    "name": "customer_profiles",
+                    "type": "table",
+                    "description": "Customer profile information",
+                    "tags": ["customer", "profile", "pii"],
+                    "owner": "john.doe@company.com",
+                    "classification": "confidential",
+                    "qualityScore": 92,
+                    "popularity": 85,
+                    "lastUpdated": "2024-01-15T10:30:00Z",
+                    "usageStats": {
+                        "queries": 1250,
+                        "users": 15,
+                        "avgResponseTime": 45
+                    },
+                    "dataProfile": {
+                        "rowCount": 125000,
+                        "columnCount": 25
+                    }
+                },
+                {
+                    "id": "cat-002",
+                    "name": "sales_transactions",
+                    "type": "table",
+                    "description": "Sales transaction records",
+                    "tags": ["sales", "transactions", "revenue"],
+                    "owner": "jane.smith@company.com",
+                    "classification": "internal",
+                    "qualityScore": 88,
+                    "popularity": 95,
+                    "lastUpdated": "2024-01-15T09:15:00Z",
+                    "usageStats": {
+                        "queries": 2100,
+                        "users": 25,
+                        "avgResponseTime": 32
+                    },
+                    "dataProfile": {
+                        "rowCount": 850000,
+                        "columnCount": 18
+                    }
+                }
+            ]
+        }
+        
+        return {
+            "success": True,
+            "data": catalog_data,
+            "data_source_id": data_source_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting catalog: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get catalog")

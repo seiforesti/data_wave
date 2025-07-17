@@ -11,12 +11,10 @@ import {
   Check,
   X,
   AlertTriangle,
-  Info,
   Play,
   Pause,
   MoreHorizontal,
   Link,
-  Unlink,
   Globe,
   Database,
   Cloud,
@@ -29,17 +27,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface DataSourceIntegrationsProps {
   dataSourceId: number
@@ -53,7 +45,6 @@ interface Integration {
   provider: string
   status: 'active' | 'inactive' | 'error' | 'connecting'
   description: string
-  config: Record<string, any>
   lastSync: string
   nextSync: string
   syncFrequency: string
@@ -61,32 +52,16 @@ interface Integration {
   errorCount: number
   successRate: number
   createdAt: string
-  updatedAt: string
-}
-
-interface IntegrationTemplate {
-  id: string
-  name: string
-  provider: string
-  type: string
-  description: string
-  icon: string
-  category: string
-  features: string[]
-  configSchema: Record<string, any>
 }
 
 export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIntegrationsProps) {
   const [integrations, setIntegrations] = useState<Integration[]>([])
-  const [templates, setTemplates] = useState<IntegrationTemplate[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null)
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
-  // Mock data
   useEffect(() => {
     const mockIntegrations: Integration[] = [
       {
@@ -96,15 +71,13 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
         provider: "salesforce",
         status: "active",
         description: "Customer relationship management data sync",
-        config: { apiKey: "***", endpoint: "https://api.salesforce.com" },
         lastSync: "2024-01-15T10:30:00Z",
         nextSync: "2024-01-15T14:30:00Z",
         syncFrequency: "4h",
         dataVolume: 125000,
         errorCount: 2,
         successRate: 98.5,
-        createdAt: "2024-01-01T00:00:00Z",
-        updatedAt: "2024-01-15T10:30:00Z"
+        createdAt: "2024-01-01T00:00:00Z"
       },
       {
         id: "int-002",
@@ -113,15 +86,13 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
         provider: "aws",
         status: "active",
         description: "Cloud storage integration for data archival",
-        config: { accessKey: "***", secretKey: "***", bucket: "data-archive" },
         lastSync: "2024-01-15T09:00:00Z",
         nextSync: "2024-01-16T09:00:00Z",
         syncFrequency: "24h",
         dataVolume: 2500000,
         errorCount: 0,
         successRate: 100,
-        createdAt: "2024-01-01T00:00:00Z",
-        updatedAt: "2024-01-15T09:00:00Z"
+        createdAt: "2024-01-01T00:00:00Z"
       },
       {
         id: "int-003",
@@ -130,54 +101,18 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
         provider: "slack",
         status: "error",
         description: "Real-time alerts and notifications",
-        config: { webhook: "https://hooks.slack.com/services/***" },
         lastSync: "2024-01-14T15:00:00Z",
         nextSync: "2024-01-15T15:00:00Z",
         syncFrequency: "1h",
         dataVolume: 450,
         errorCount: 15,
         successRate: 85.2,
-        createdAt: "2024-01-01T00:00:00Z",
-        updatedAt: "2024-01-14T15:00:00Z"
-      }
-    ]
-
-    const mockTemplates: IntegrationTemplate[] = [
-      {
-        id: "tmpl-001",
-        name: "Salesforce CRM",
-        provider: "salesforce",
-        type: "crm",
-        description: "Connect to Salesforce for CRM data synchronization",
-        icon: "salesforce",
-        category: "CRM",
-        features: ["Data Sync", "Real-time Updates", "Custom Fields"],
-        configSchema: {
-          apiKey: { type: "string", required: true },
-          endpoint: { type: "string", required: true },
-          syncFrequency: { type: "select", options: ["1h", "4h", "24h"] }
-        }
-      },
-      {
-        id: "tmpl-002",
-        name: "AWS S3",
-        provider: "aws",
-        type: "storage",
-        description: "Connect to AWS S3 for data storage and archival",
-        icon: "aws",
-        category: "Storage",
-        features: ["Data Backup", "Archival", "Lifecycle Management"],
-        configSchema: {
-          accessKey: { type: "string", required: true },
-          secretKey: { type: "password", required: true },
-          bucket: { type: "string", required: true }
-        }
+        createdAt: "2024-01-01T00:00:00Z"
       }
     ]
 
     setTimeout(() => {
       setIntegrations(mockIntegrations)
-      setTemplates(mockTemplates)
       setLoading(false)
     }, 1000)
   }, [dataSourceId])
@@ -236,7 +171,6 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Integrations</h2>
@@ -256,41 +190,50 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
                 Add Integration
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Integration</DialogTitle>
                 <DialogDescription>
-                  Choose from available integration templates
+                  Configure a new third-party integration
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                {templates.map((template) => (
-                  <Card key={template.id} className="cursor-pointer hover:bg-muted/50">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        {getTypeIcon(template.type)}
-                        <div>
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
-                          <CardDescription>{template.description}</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {template.features.map((feature) => (
-                          <Badge key={feature} variant="secondary">{feature}</Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="space-y-4">
+                <div>
+                  <Label>Integration Type</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="crm">CRM</SelectItem>
+                      <SelectItem value="storage">Storage</SelectItem>
+                      <SelectItem value="notification">Notification</SelectItem>
+                      <SelectItem value="security">Security</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Name</Label>
+                  <Input placeholder="Integration name" />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Input placeholder="Integration description" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => setShowCreateDialog(false)}>
+                    Create
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <Input
@@ -325,7 +268,6 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
         </Select>
       </div>
 
-      {/* Integrations Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredIntegrations.map((integration) => (
           <Card key={integration.id} className="cursor-pointer hover:bg-muted/50">
