@@ -277,15 +277,15 @@ const DataSourceScheduler = React.lazy(() => import("./data-source-scheduler").c
 const DataSourceIntegrations = React.lazy(() => import("./data-source-integrations").catch(() => ({ default: () => <div>Integrations - Component not found</div> })))
 const DataSourceCatalog = React.lazy(() => import("./data-source-catalog").catch(() => ({ default: () => <div>Catalog - Component not found</div> })))
 
-// Types and services - FULL BACKEND INTEGRATION
+// Types and services - FULL BACKEND INTEGRATION (NO MOCK DATA)
 import { DataSource, ViewMode, PanelLayout, WorkspaceContext as WorkspaceContextType } from "./types"
 import { 
+  // Core Data Source APIs
   useDataSourcesQuery, 
   useUserQuery, 
   useNotificationsQuery,
   useWorkspaceQuery,
   useDataSourceMetricsQuery,
-  useSystemHealthQuery,
   useDataSourceHealthQuery,
   useConnectionPoolStatsQuery,
   useDiscoveryHistoryQuery,
@@ -294,16 +294,37 @@ import {
   useGrowthMetricsQuery,
   useSchemaDiscoveryQuery,
   useDataLineageQuery,
-  useComplianceStatusQuery,
-  useSecurityAuditQuery,
-  usePerformanceMetricsQuery,
   useBackupStatusQuery,
   useScheduledTasksQuery,
   useAuditLogsQuery,
   useUserPermissionsQuery,
-  useWorkspaceActivityQuery,
   useDataCatalogQuery,
-} from "./services/apis"
+  
+  // NEW ENTERPRISE APIs - REAL BACKEND INTEGRATION 
+  // Collaboration APIs
+  useCollaborationWorkspacesQuery,
+  useActiveCollaborationSessionsQuery,
+  // Workflow APIs  
+  useWorkflowDefinitionsQuery,
+  useWorkflowExecutionsQuery,
+  usePendingApprovalsQuery,
+  useWorkflowTemplatesQuery,
+  // Enhanced Performance APIs
+  useSystemHealthQuery,
+  useEnhancedPerformanceMetricsQuery,
+  usePerformanceAlertsQuery,
+  usePerformanceTrendsQuery,
+  useOptimizationRecommendationsQuery,
+  usePerformanceSummaryReportQuery,
+  // Enhanced Security APIs
+  useEnhancedSecurityAuditQuery,
+  useVulnerabilityAssessmentsQuery,
+  useSecurityIncidentsQuery,
+  useComplianceChecksQuery,
+  useThreatDetectionQuery,
+  useSecurityAnalyticsDashboardQuery,
+  useRiskAssessmentReportQuery,
+} from "./services/enterprise-apis"
 
 // Create a new QueryClient instance with comprehensive error handling
 const queryClient = new QueryClient({
@@ -678,17 +699,16 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
     help: false,
   })
 
-  // COMPREHENSIVE Data fetching with full backend integration
+  // COMPREHENSIVE Data fetching with full backend integration - NO MOCK DATA
   const { data: dataSources, isLoading: dataSourcesLoading, error: dataSourcesError, refetch: refetchDataSources } = useDataSourcesQuery({
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
   })
   const { data: user, isLoading: userLoading } = useUserQuery()
   const { data: userNotifications } = useNotificationsQuery()
   const { data: workspace } = useWorkspaceQuery()
-  const { data: systemHealth } = useSystemHealthQuery()
   const { data: metrics } = useDataSourceMetricsQuery(selectedDataSource?.id)
   
-  // Additional backend integrations
+  // Core data source backend integrations
   const { data: dataSourceHealth } = useDataSourceHealthQuery(selectedDataSource?.id)
   const { data: connectionPoolStats } = useConnectionPoolStatsQuery(selectedDataSource?.id)
   const { data: discoveryHistory } = useDiscoveryHistoryQuery(selectedDataSource?.id)
@@ -697,15 +717,48 @@ function DataSourcesAppContent({ className }: DataSourcesAppProps) {
   const { data: growthMetrics } = useGrowthMetricsQuery(selectedDataSource?.id)
   const { data: schemaDiscoveryData } = useSchemaDiscoveryQuery(selectedDataSource?.id)
   const { data: dataLineage } = useDataLineageQuery(selectedDataSource?.id)
-  const { data: complianceStatus } = useComplianceStatusQuery(selectedDataSource?.id)
-  const { data: securityAudit } = useSecurityAuditQuery(selectedDataSource?.id)
-  const { data: performanceData } = usePerformanceMetricsQuery(selectedDataSource?.id)
   const { data: backupStatus } = useBackupStatusQuery(selectedDataSource?.id)
   const { data: scheduledTasks } = useScheduledTasksQuery()
   const { data: auditLogs } = useAuditLogsQuery()
   const { data: userPermissions } = useUserPermissionsQuery()
-  const { data: workspaceActivity } = useWorkspaceActivityQuery(workspace?.id)
   const { data: dataCatalog } = useDataCatalogQuery()
+
+  // =====================================================================================
+  // NEW ENTERPRISE APIs - REAL BACKEND INTEGRATION (NO MOCK DATA)
+  // =====================================================================================
+  
+  // COLLABORATION APIs
+  const { data: collaborationWorkspaces } = useCollaborationWorkspacesQuery()
+  const { data: activeCollaborationSessions } = useActiveCollaborationSessionsQuery()
+  
+  // WORKFLOW APIs
+  const { data: workflowDefinitions } = useWorkflowDefinitionsQuery()
+  const { data: workflowExecutions } = useWorkflowExecutionsQuery({ days: 7 })
+  const { data: pendingApprovals } = usePendingApprovalsQuery()
+  const { data: workflowTemplates } = useWorkflowTemplatesQuery()
+  
+  // ENHANCED PERFORMANCE APIs
+  const { data: systemHealth } = useSystemHealthQuery(true) // Enhanced with detailed metrics
+  const { data: enhancedPerformanceMetrics } = useEnhancedPerformanceMetricsQuery(
+    selectedDataSource?.id || 0,
+    { time_range: '24h', metric_types: ['cpu', 'memory', 'io', 'network'] }
+  )
+  const { data: performanceAlerts } = usePerformanceAlertsQuery({ severity: 'all', days: 7 })
+  const { data: performanceTrends } = usePerformanceTrendsQuery(selectedDataSource?.id, '30d')
+  const { data: optimizationRecommendations } = useOptimizationRecommendationsQuery(selectedDataSource?.id)
+  const { data: performanceSummaryReport } = usePerformanceSummaryReportQuery({ time_range: '7d' })
+  
+  // ENHANCED SECURITY APIs
+  const { data: enhancedSecurityAudit } = useEnhancedSecurityAuditQuery(
+    selectedDataSource?.id || 0,
+    { include_vulnerabilities: true, include_compliance: true }
+  )
+  const { data: vulnerabilityAssessments } = useVulnerabilityAssessmentsQuery({ severity: 'all' })
+  const { data: securityIncidents } = useSecurityIncidentsQuery({ days: 30 })
+  const { data: complianceChecks } = useComplianceChecksQuery()
+  const { data: threatDetection } = useThreatDetectionQuery({ days: 7 })
+  const { data: securityAnalyticsDashboard } = useSecurityAnalyticsDashboardQuery('7d')
+  const { data: riskAssessmentReport } = useRiskAssessmentReportQuery()
 
   // Advanced effects
   useEffect(() => {

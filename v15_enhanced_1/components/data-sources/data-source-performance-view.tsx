@@ -37,7 +37,14 @@ import { DataSource } from "./types"
 
 // Import enterprise hooks for better backend integration
 import { useEnterpriseFeatures, useMonitoringFeatures } from "./hooks/use-enterprise-features"
-import { usePerformanceMetricsQuery } from "./services/enterprise-apis"
+import { 
+  useEnhancedPerformanceMetricsQuery,
+  useSystemHealthQuery,
+  usePerformanceAlertsQuery,
+  usePerformanceTrendsQuery,
+  useOptimizationRecommendationsQuery,
+  usePerformanceSummaryReportQuery,
+} from "./services/enterprise-apis"
 
 interface PerformanceViewProps {
   dataSource: DataSource
@@ -100,54 +107,152 @@ export function DataSourcePerformanceView({
     enableHealthChecks: true
   })
 
-  // Use enterprise API for performance metrics
+  // =====================================================================================
+  // ENHANCED PERFORMANCE APIs - REAL BACKEND INTEGRATION (NO MOCK DATA)
+  // =====================================================================================
+  
+  // Enhanced Performance Metrics with detailed insights
   const {
-    data: performanceMetrics,
-    isLoading,
-    error,
-    refetch,
-  } = usePerformanceMetricsQuery(`data-source-${dataSource.id}`, {
+    data: enhancedPerformanceMetrics,
+    isLoading: metricsLoading,
+    error: metricsError,
+    refetch: refetchMetrics,
+  } = useEnhancedPerformanceMetricsQuery(dataSource.id, {
+    time_range: '24h',
+    metric_types: ['cpu', 'memory', 'io', 'network', 'response_time', 'throughput', 'error_rate']
+  }, {
     refetchInterval: 30000, // 30 seconds
   })
 
-  // Use real performance data or fallback to component metrics
+  // System Health
+  const {
+    data: systemHealth,
+    isLoading: healthLoading,
+    refetch: refetchHealth,
+  } = useSystemHealthQuery(true) // Include detailed metrics
+
+  // Performance Alerts
+  const {
+    data: performanceAlerts,
+    isLoading: alertsLoading,
+    refetch: refetchAlerts,
+  } = usePerformanceAlertsQuery({
+    severity: 'all',
+    status: 'open',
+    days: 7
+  })
+
+  // Performance Trends
+  const {
+    data: performanceTrends,
+    isLoading: trendsLoading,
+  } = usePerformanceTrendsQuery(dataSource.id, '30d')
+
+  // Optimization Recommendations
+  const {
+    data: optimizationRecommendations,
+    isLoading: recommendationsLoading,
+  } = useOptimizationRecommendationsQuery(dataSource.id)
+
+  // Performance Summary Report
+  const {
+    data: performanceReport,
+    isLoading: reportLoading,
+  } = usePerformanceSummaryReportQuery({
+    time_range: '7d',
+    data_sources: [dataSource.id]
+  })
+
+  // Consolidated loading and error states
+  const isLoading = metricsLoading || healthLoading || alertsLoading || trendsLoading || recommendationsLoading || reportLoading
+  const error = metricsError
+  const refetch = () => {
+    refetchMetrics()
+    refetchHealth()
+    refetchAlerts()
+  }
+
+  // Use real performance data from enhanced APIs (NO MOCK DATA)
   const performanceData = useMemo(() => {
-    if (performanceMetrics) {
-      return {
-        overallScore: performanceMetrics.overall_score || 85,
-        responseTime: {
-          name: "Response Time",
-          value: performanceMetrics.response_time || 45,
-          unit: "ms",
-          trend: performanceMetrics.response_time_trend || "stable",
-          threshold: 100,
-          status: performanceMetrics.response_time < 100 ? "good" : "warning",
-          timestamp: new Date().toISOString(),
-        },
-        throughput: {
-          name: "Throughput",
-          value: performanceMetrics.throughput || 0,
-          unit: "ops/s",
-          trend: performanceMetrics.throughput_trend || "stable",
-          threshold: 100,
-          status: "good",
-          timestamp: new Date().toISOString(),
-        },
-        errorRate: {
-          name: "Error Rate",
-          value: performanceMetrics.error_rate || 0,
-          unit: "%",
-          trend: performanceMetrics.error_trend || "stable",
-          threshold: 5,
-          status: performanceMetrics.error_rate < 5 ? "good" : "critical",
-          timestamp: new Date().toISOString(),
-        }
+    if (!enhancedPerformanceMetrics && !systemHealth) return null
+
+    // Extract real metrics from backend data
+    const metrics = enhancedPerformanceMetrics?.data || {}
+    const health = systemHealth?.performance_summary || {}
+    
+    return {
+      overallScore: metrics.overall_score || health.overall_score || 0,
+      responseTime: {
+        name: "Response Time",
+        value: metrics.response_time || health.response_time || 0,
+        unit: "ms",
+        trend: metrics.response_time_trend || "stable",
+        threshold: 100,
+        status: (metrics.response_time || 0) < 100 ? "good" : "warning",
+        timestamp: new Date().toISOString(),
+      },
+      throughput: {
+        name: "Throughput",
+        value: metrics.throughput || health.throughput || 0,
+        unit: "ops/s",
+        trend: metrics.throughput_trend || "stable",
+        threshold: 100,
+        status: "good",
+        timestamp: new Date().toISOString(),
+      },
+      errorRate: {
+        name: "Error Rate",
+        value: metrics.error_rate || health.error_rate || 0,
+        unit: "%",
+        trend: metrics.error_trend || "stable",
+        threshold: 5,
+        status: (metrics.error_rate || 0) < 5 ? "good" : "critical",
+        timestamp: new Date().toISOString(),
+      },
+      cpuUsage: {
+        name: "CPU Usage",
+        value: metrics.cpu_usage || health.cpu_usage || 0,
+        unit: "%",
+        trend: metrics.cpu_trend || "stable",
+        threshold: 80,
+        status: (metrics.cpu_usage || 0) < 80 ? "good" : "warning",
+        timestamp: new Date().toISOString(),
+      },
+      memoryUsage: {
+        name: "Memory Usage", 
+        value: metrics.memory_usage || health.memory_usage || 0,
+        unit: "%",
+        trend: metrics.memory_trend || "stable",
+        threshold: 85,
+        status: (metrics.memory_usage || 0) < 85 ? "good" : "warning",
+        timestamp: new Date().toISOString(),
       }
     }
-    
-    // Fallback data structure if no backend data available
-    return {
-    overallScore: 92,
+  }, [enhancedPerformanceMetrics, systemHealth])
+
+  // Return loading state if no data yet
+  if (isLoading && !performanceData) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-1/2 mb-2" />
+                <Skeleton className="h-3 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Return null if no data available
+  if (!performanceData) return null
     responseTime: {
       name: "Response Time",
       value: 45,
