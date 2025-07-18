@@ -311,6 +311,10 @@ import {
 } from "lucide-react"
 
 import { useDataSourceSecurityAuditQuery } from "@/hooks/useDataSources"
+
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures, useSecurityFeatures } from "./hooks/use-enterprise-features"
+import { useSecurityAuditQuery } from "./services/enterprise-apis"
 import { DataSource } from "./types"
 
 interface SecurityViewProps {

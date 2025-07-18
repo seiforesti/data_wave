@@ -43,6 +43,25 @@ import { Line, Bar, Scatter, Doughnut, Radar } from 'react-chartjs-2'
 import { correlationEngine } from '../../analytics/correlation-engine'
 import { eventBus } from '../../core/event-bus'
 
+// Import enterprise hooks and APIs
+import { 
+  useEnterpriseFeatures, 
+  useAnalyticsIntegration, 
+  useMonitoringFeatures 
+} from '../../hooks/use-enterprise-features'
+import { 
+  useDataSourcesQuery,
+  useDataSourceStatsQuery,
+  useMetadataStatsQuery
+} from '../../services/apis'
+import { 
+  useAnalyticsCorrelationsQuery,
+  useAnalyticsInsightsQuery,
+  useAnalyticsPredictionsQuery,
+  useAnalyticsPatternsQuery,
+  usePerformanceMetricsQuery
+} from '../../services/enterprise-apis'
+
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -285,24 +304,18 @@ interface AnalysisResult {
 // ============================================================================
 
 export const AnalyticsWorkbench: React.FC = () => {
-  const [state, setState] = useState<AnalyticsWorkbenchState>({
-    datasets: [],
-    analyses: [],
-    correlations: [],
-    insights: [],
-    predictions: [],
-    patterns: [],
-    isAnalysisRunning: false,
-    viewMode: 'explore',
-    filters: {},
-    timeRange: {
-      start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-      end: new Date(),
-      granularity: 'hour'
-    },
-    refreshInterval: 30000, // 30 seconds
-    isRealTime: true
+  const [selectedDataset, setSelectedDataset] = useState<string>('')
+  const [selectedAnalysis, setSelectedAnalysis] = useState<string>('')
+  const [isAnalysisRunning, setIsAnalysisRunning] = useState(false)
+  const [viewMode, setViewMode] = useState<'explore' | 'correlations' | 'insights' | 'predictions' | 'patterns'>('explore')
+  const [filters, setFilters] = useState<FilterConfig>({})
+  const [timeRange, setTimeRange] = useState<TimeRange>({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    end: new Date(),
+    granularity: 'hour'
   })
+  const [refreshInterval, setRefreshInterval] = useState(30000)
+  const [isRealTime, setIsRealTime] = useState(true)
 
   const [selectedVisualization, setSelectedVisualization] = useState<string>('overview')
   const [analysisProgress, setAnalysisProgress] = useState<Record<string, number>>({})
@@ -310,14 +323,103 @@ export const AnalyticsWorkbench: React.FC = () => {
 
   const intervalRef = useRef<NodeJS.Timeout>()
 
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'AnalyticsWorkbench',
+    enableAnalytics: true,
+    enableCollaboration: true,
+    enableWorkflows: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  const analyticsIntegration = useAnalyticsIntegration({
+    componentId: 'analytics-workbench',
+    enableCorrelations: true,
+    enablePredictions: true,
+    enableInsights: true,
+    enablePatterns: true
+  })
+
+  const monitoringFeatures = useMonitoringFeatures({
+    componentId: 'analytics-workbench',
+    enablePerformanceTracking: true,
+    enableResourceMonitoring: true,
+    enableHealthChecks: true
+  })
+
+  // Backend data queries
+  const { data: dataSources, isLoading: dataSourcesLoading } = useDataSourcesQuery()
+  const { data: dataSourceStats } = useDataSourceStatsQuery()
+  const { data: metadataStats } = useMetadataStatsQuery()
+  const { data: performanceMetrics } = usePerformanceMetricsQuery('analytics')
+
+  // Analytics queries
+  const { data: correlations, isLoading: correlationsLoading } = useAnalyticsCorrelationsQuery(selectedDataset)
+  const { data: insights, isLoading: insightsLoading } = useAnalyticsInsightsQuery(selectedDataset)
+  const { data: predictions, isLoading: predictionsLoading } = useAnalyticsPredictionsQuery(selectedDataset)
+  const { data: patterns, isLoading: patternsLoading } = useAnalyticsPatternsQuery(selectedDataset)
+
+  // Derive datasets from real data sources
+  const datasets = useMemo<Dataset[]>(() => {
+    if (!dataSources) return []
+
+    return dataSources.map(ds => ({
+      id: ds.id.toString(),
+      name: ds.name,
+      description: ds.description || `${ds.source_type} database`,
+      source: ds.source_type,
+      schema: [], // Would be populated from actual schema discovery
+      rowCount: ds.entity_count || 0,
+      lastUpdated: new Date(ds.updated_at),
+      quality: {
+        completeness: ds.compliance_score || 85,
+        accuracy: 90, // Would come from quality metrics
+        consistency: 88,
+        freshness: 92,
+        overall: ds.health_score || 85
+      },
+      preview: {
+        rows: [], // Would be populated from actual preview data
+        summary: {
+          total_entities: ds.entity_count,
+          last_scan: ds.last_scan,
+          status: ds.status
+        }
+      }
+    }))
+  }, [dataSources])
+
+  // Derive analyses from enterprise features
+  const analyses = useMemo<Analysis[]>(() => {
+    const items: Analysis[] = []
+    
+    if (analyticsIntegration.runningAnalyses) {
+      analyticsIntegration.runningAnalyses.forEach(analysis => {
+        items.push({
+          id: analysis.id,
+          name: analysis.name,
+          type: analysis.type as AnalysisType,
+          status: analysis.status as any,
+          progress: analysis.progress || 0,
+          config: analysis.config || {},
+          results: analysis.results,
+          createdAt: new Date(analysis.created_at),
+          duration: analysis.duration
+        })
+      })
+    }
+
+    return items
+  }, [analyticsIntegration.runningAnalyses])
+
   // ========================================================================
-  // DATA INITIALIZATION
+  // REAL-TIME UPDATES AND BACKEND SYNC
   // ========================================================================
 
   useEffect(() => {
-    initializeData()
-    
-    if (state.isRealTime) {
+    if (isRealTime) {
       startRealTimeUpdates()
     }
 
@@ -326,9 +428,9 @@ export const AnalyticsWorkbench: React.FC = () => {
         clearInterval(intervalRef.current)
       }
     }
-  }, [state.isRealTime, state.refreshInterval])
+  }, [isRealTime, refreshInterval])
 
-  const initializeData = async () => {
+  const startRealTimeUpdates = () => {
     // Initialize with sample datasets
     const sampleDatasets: Dataset[] = [
       {
