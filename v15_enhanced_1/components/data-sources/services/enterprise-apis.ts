@@ -1100,6 +1100,1416 @@ declare global {
   }
 }
 
+// ============================================================================
+// COLLABORATION ENTERPRISE APIs - NEW IMPLEMENTATION
+// ============================================================================
+
+export interface CollaborationWorkspace {
+  id: string
+  name: string
+  description?: string
+  type: 'data_analysis' | 'data_governance' | 'compliance' | 'security'
+  owner_id: string
+  members: CollaborationMember[]
+  documents: SharedDocument[]
+  created_at: string
+  updated_at: string
+  last_activity: string
+  permissions: WorkspacePermissions
+  settings: WorkspaceSettings
+}
+
+export interface CollaborationMember {
+  user_id: string
+  username: string
+  email: string
+  role: 'owner' | 'admin' | 'editor' | 'viewer'
+  joined_at: string
+  last_active: string
+  permissions: string[]
+}
+
+export interface SharedDocument {
+  id: string
+  workspace_id: string
+  title: string
+  type: 'report' | 'analysis' | 'dashboard' | 'workflow' | 'policy'
+  content: any
+  version: number
+  author_id: string
+  collaborators: string[]
+  comments: DocumentComment[]
+  created_at: string
+  updated_at: string
+  last_edited_by: string
+}
+
+export interface DocumentComment {
+  id: string
+  document_id: string
+  author_id: string
+  author_name: string
+  content: string
+  position?: { line: number; column: number }
+  thread_id?: string
+  replies: DocumentComment[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ActiveCollaborationSession {
+  id: string
+  workspace_id: string
+  document_id?: string
+  participants: SessionParticipant[]
+  activity_type: 'editing' | 'viewing' | 'commenting' | 'reviewing'
+  started_at: string
+  last_activity: string
+}
+
+export interface SessionParticipant {
+  user_id: string
+  username: string
+  cursor_position?: { line: number; column: number }
+  selection?: { start: any; end: any }
+  status: 'active' | 'idle' | 'away'
+  last_seen: string
+}
+
+// Collaboration API functions
+export const getCollaborationWorkspaces = async (filters?: {
+  user_id?: string
+  workspace_type?: string
+}): Promise<CollaborationWorkspace[]> => {
+  const params = new URLSearchParams()
+  if (filters?.user_id) params.append('user_id', filters.user_id)
+  if (filters?.workspace_type) params.append('workspace_type', filters.workspace_type)
+  
+  const { data } = await enterpriseApi.get(`/collaboration/workspaces?${params.toString()}`)
+  return data.data || data
+}
+
+export const createCollaborationWorkspace = async (workspaceData: {
+  name: string
+  description?: string
+  type: string
+  settings?: any
+}): Promise<CollaborationWorkspace> => {
+  const { data } = await enterpriseApi.post('/collaboration/workspaces', workspaceData)
+  return data.data || data
+}
+
+export const getSharedDocuments = async (workspaceId: string, filters?: {
+  document_type?: string
+}): Promise<SharedDocument[]> => {
+  const params = new URLSearchParams()
+  if (filters?.document_type) params.append('document_type', filters.document_type)
+  
+  const { data } = await enterpriseApi.get(`/collaboration/workspaces/${workspaceId}/documents?${params.toString()}`)
+  return data.data || data
+}
+
+export const createSharedDocument = async (workspaceId: string, documentData: {
+  title: string
+  type: string
+  content: any
+}): Promise<SharedDocument> => {
+  const { data } = await enterpriseApi.post(`/collaboration/workspaces/${workspaceId}/documents`, documentData)
+  return data.data || data
+}
+
+export const getActiveCollaborationSessions = async (filters?: {
+  workspace_id?: string
+}): Promise<ActiveCollaborationSession[]> => {
+  const params = new URLSearchParams()
+  if (filters?.workspace_id) params.append('workspace_id', filters.workspace_id)
+  
+  const { data } = await enterpriseApi.get(`/collaboration/sessions/active?${params.toString()}`)
+  return data.data || data
+}
+
+export const addDocumentComment = async (documentId: string, commentData: {
+  content: string
+  position?: any
+  thread_id?: string
+}): Promise<DocumentComment> => {
+  const { data } = await enterpriseApi.post(`/collaboration/documents/${documentId}/comments`, commentData)
+  return data.data || data
+}
+
+export const getDocumentComments = async (documentId: string): Promise<DocumentComment[]> => {
+  const { data } = await enterpriseApi.get(`/collaboration/documents/${documentId}/comments`)
+  return data.data || data
+}
+
+export const inviteToWorkspace = async (workspaceId: string, invitationData: {
+  email: string
+  role: string
+  message?: string
+}): Promise<any> => {
+  const { data } = await enterpriseApi.post(`/collaboration/workspaces/${workspaceId}/invite`, invitationData)
+  return data.data || data
+}
+
+export const getWorkspaceActivity = async (workspaceId: string, days: number = 7): Promise<any> => {
+  const { data } = await enterpriseApi.get(`/collaboration/workspaces/${workspaceId}/activity?days=${days}`)
+  return data.data || data
+}
+
+// ============================================================================
+// WORKFLOW ENTERPRISE APIs - NEW IMPLEMENTATION
+// ============================================================================
+
+export interface WorkflowDefinition {
+  id: string
+  name: string
+  description?: string
+  type: 'data_processing' | 'approval' | 'compliance' | 'security' | 'custom'
+  status: 'draft' | 'active' | 'deprecated' | 'archived'
+  version: number
+  steps: WorkflowStep[]
+  triggers: WorkflowTrigger[]
+  permissions: WorkflowPermissions
+  created_by: string
+  created_at: string
+  updated_at: string
+  execution_count: number
+  success_rate: number
+}
+
+export interface WorkflowStep {
+  id: string
+  name: string
+  type: 'action' | 'condition' | 'approval' | 'notification' | 'script'
+  configuration: any
+  dependencies: string[]
+  timeout?: number
+  retry_policy?: RetryPolicy
+  position: { x: number; y: number }
+}
+
+export interface WorkflowExecution {
+  id: string
+  workflow_id: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  started_at: string
+  completed_at?: string
+  triggered_by: string
+  input_data: any
+  output_data?: any
+  steps_completed: number
+  total_steps: number
+  current_step?: string
+  error_message?: string
+  execution_log: ExecutionLogEntry[]
+}
+
+export interface ApprovalWorkflow {
+  id: string
+  title: string
+  description: string
+  request_type: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  requested_by: string
+  approvers: ApprovalStep[]
+  current_step: number
+  data: any
+  created_at: string
+  due_date?: string
+  completed_at?: string
+}
+
+export interface ApprovalStep {
+  step_number: number
+  approver_id: string
+  approver_name: string
+  status: 'pending' | 'approved' | 'rejected'
+  comments?: string
+  approved_at?: string
+  required: boolean
+}
+
+export interface BulkOperation {
+  id: string
+  operation_type: 'update' | 'delete' | 'scan' | 'backup' | 'sync'
+  target_type: 'data_sources' | 'scan_rules' | 'policies' | 'users'
+  targets: string[]
+  parameters: any
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  progress: number
+  total_items: number
+  completed_items: number
+  failed_items: number
+  started_at: string
+  completed_at?: string
+  created_by: string
+  results: BulkOperationResult[]
+}
+
+export interface BulkOperationResult {
+  target_id: string
+  status: 'success' | 'failed' | 'skipped'
+  message?: string
+  details?: any
+}
+
+export interface WorkflowTemplate {
+  id: string
+  name: string
+  description: string
+  category: string
+  version: string
+  template_data: WorkflowDefinition
+  usage_count: number
+  created_by: string
+  created_at: string
+}
+
+// Workflow API functions
+export const getWorkflowDefinitions = async (filters?: {
+  workflow_type?: string
+  status?: string
+}): Promise<WorkflowDefinition[]> => {
+  const params = new URLSearchParams()
+  if (filters?.workflow_type) params.append('workflow_type', filters.workflow_type)
+  if (filters?.status) params.append('status', filters.status)
+  
+  const { data } = await enterpriseApi.get(`/workflow/designer/workflows?${params.toString()}`)
+  return data.data || data
+}
+
+export const createWorkflowDefinition = async (workflowData: {
+  name: string
+  description?: string
+  type: string
+  steps: any[]
+  triggers: any[]
+}): Promise<WorkflowDefinition> => {
+  const { data } = await enterpriseApi.post('/workflow/designer/workflows', workflowData)
+  return data.data || data
+}
+
+export const getWorkflowDefinition = async (workflowId: string): Promise<WorkflowDefinition> => {
+  const { data } = await enterpriseApi.get(`/workflow/designer/workflows/${workflowId}`)
+  return data.data || data
+}
+
+export const updateWorkflowDefinition = async (workflowId: string, workflowData: any): Promise<WorkflowDefinition> => {
+  const { data } = await enterpriseApi.put(`/workflow/designer/workflows/${workflowId}`, workflowData)
+  return data.data || data
+}
+
+export const executeWorkflow = async (workflowId: string, executionData: {
+  input_data?: any
+  parameters?: any
+}): Promise<WorkflowExecution> => {
+  const { data } = await enterpriseApi.post(`/workflow/workflows/${workflowId}/execute`, executionData)
+  return data.data || data
+}
+
+export const getWorkflowExecutions = async (filters?: {
+  workflow_id?: string
+  status?: string
+  days?: number
+}): Promise<WorkflowExecution[]> => {
+  const params = new URLSearchParams()
+  if (filters?.workflow_id) params.append('workflow_id', filters.workflow_id)
+  if (filters?.status) params.append('status', filters.status)
+  if (filters?.days) params.append('days', filters.days.toString())
+  
+  const { data } = await enterpriseApi.get(`/workflow/executions?${params.toString()}`)
+  return data.data || data
+}
+
+export const getWorkflowExecutionDetails = async (executionId: string): Promise<WorkflowExecution> => {
+  const { data } = await enterpriseApi.get(`/workflow/executions/${executionId}`)
+  return data.data || data
+}
+
+export const createApprovalWorkflow = async (approvalData: {
+  title: string
+  description: string
+  request_type: string
+  approvers: any[]
+  data: any
+}): Promise<ApprovalWorkflow> => {
+  const { data } = await enterpriseApi.post('/workflow/approvals/workflows', approvalData)
+  return data.data || data
+}
+
+export const getPendingApprovals = async (approver_id?: string): Promise<ApprovalWorkflow[]> => {
+  const params = new URLSearchParams()
+  if (approver_id) params.append('approver_id', approver_id)
+  
+  const { data } = await enterpriseApi.get(`/workflow/approvals/pending?${params.toString()}`)
+  return data.data || data
+}
+
+export const approveRequest = async (approvalId: string, approvalData: {
+  comments?: string
+}): Promise<ApprovalWorkflow> => {
+  const { data } = await enterpriseApi.post(`/workflow/approvals/${approvalId}/approve`, approvalData)
+  return data.data || data
+}
+
+export const rejectRequest = async (approvalId: string, rejectionData: {
+  comments: string
+  reason?: string
+}): Promise<ApprovalWorkflow> => {
+  const { data } = await enterpriseApi.post(`/workflow/approvals/${approvalId}/reject`, rejectionData)
+  return data.data || data
+}
+
+export const createBulkOperation = async (operationData: {
+  operation_type: string
+  target_type: string
+  targets: string[]
+  parameters: any
+}): Promise<BulkOperation> => {
+  const { data } = await enterpriseApi.post('/workflow/bulk-operations', operationData)
+  return data.data || data
+}
+
+export const getBulkOperationStatus = async (operationId: string): Promise<BulkOperation> => {
+  const { data } = await enterpriseApi.get(`/workflow/bulk-operations/${operationId}/status`)
+  return data.data || data
+}
+
+export const getWorkflowTemplates = async (category?: string): Promise<WorkflowTemplate[]> => {
+  const params = new URLSearchParams()
+  if (category) params.append('category', category)
+  
+  const { data } = await enterpriseApi.get(`/workflow/templates?${params.toString()}`)
+  return data.data || data
+}
+
+// ============================================================================
+// ENHANCED PERFORMANCE ENTERPRISE APIs - NEW IMPLEMENTATION
+// ============================================================================
+
+export interface SystemHealth {
+  overall_score: number
+  status: 'healthy' | 'warning' | 'critical' | 'unknown'
+  components: ComponentHealth[]
+  last_updated: string
+  uptime: number
+  performance_summary: PerformanceSummary
+}
+
+export interface ComponentHealth {
+  component: string
+  status: 'healthy' | 'warning' | 'critical' | 'unknown'
+  score: number
+  metrics: Record<string, number>
+  last_check: string
+  issues: HealthIssue[]
+}
+
+export interface PerformanceSummary {
+  response_time: number
+  throughput: number
+  error_rate: number
+  cpu_usage: number
+  memory_usage: number
+  disk_usage: number
+}
+
+export interface EnhancedPerformanceAlert {
+  id: number
+  data_source_id?: number
+  alert_type: string
+  severity: 'info' | 'warning' | 'critical' | 'error'
+  title: string
+  description: string
+  status: 'open' | 'acknowledged' | 'resolved' | 'closed'
+  tags: string[]
+  conditions: AlertCondition[]
+  triggered_at: string
+  acknowledged_at?: string
+  acknowledged_by?: string
+  resolved_at?: string
+  escalation_level: number
+  correlation_id?: string
+}
+
+export interface PerformanceThreshold {
+  id: number
+  metric_name: string
+  data_source_id?: number
+  warning_threshold: number
+  critical_threshold: number
+  operator: 'gt' | 'lt' | 'eq' | 'ne'
+  enabled: boolean
+  conditions: ThresholdCondition[]
+  created_by: string
+  created_at: string
+}
+
+export interface PerformanceTrend {
+  metric_name: string
+  time_series: TimeSeriesPoint[]
+  trend_direction: 'increasing' | 'decreasing' | 'stable' | 'volatile'
+  forecast: ForecastPoint[]
+  anomalies: AnomalyPoint[]
+  seasonality: SeasonalityInfo
+}
+
+export interface OptimizationRecommendation {
+  id: string
+  category: 'performance' | 'resource' | 'cost' | 'security'
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  title: string
+  description: string
+  current_state: any
+  recommended_state: any
+  expected_impact: ImpactEstimate
+  implementation_effort: 'low' | 'medium' | 'high'
+  estimated_savings: CostSavings
+  prerequisites: string[]
+  implementation_steps: ImplementationStep[]
+}
+
+export interface PerformanceReport {
+  id: string
+  report_type: 'summary' | 'detailed' | 'trend' | 'comparison'
+  time_range: string
+  data_sources: number[]
+  metrics: ReportMetric[]
+  insights: ReportInsight[]
+  recommendations: string[]
+  generated_at: string
+  generated_by: string
+}
+
+// Enhanced Performance API functions
+export const getSystemHealth = async (include_detailed: boolean = false): Promise<SystemHealth> => {
+  const params = new URLSearchParams()
+  if (include_detailed) params.append('include_detailed', 'true')
+  
+  const { data } = await enterpriseApi.get(`/performance/system/health?${params.toString()}`)
+  return data.data || data
+}
+
+export const getEnhancedPerformanceMetrics = async (dataSourceId: number, options?: {
+  time_range?: string
+  metric_types?: string[]
+}): Promise<any> => {
+  const params = new URLSearchParams()
+  if (options?.time_range) params.append('time_range', options.time_range)
+  if (options?.metric_types) {
+    options.metric_types.forEach(type => params.append('metric_types', type))
+  }
+  
+  const { data } = await enterpriseApi.get(`/performance/metrics/${dataSourceId}?${params.toString()}`)
+  return data.data || data
+}
+
+export const getPerformanceAlerts = async (filters?: {
+  severity?: string
+  status?: string
+  days?: number
+}): Promise<EnhancedPerformanceAlert[]> => {
+  const params = new URLSearchParams()
+  if (filters?.severity) params.append('severity', filters.severity)
+  if (filters?.status) params.append('status', filters.status)
+  if (filters?.days) params.append('days', filters.days.toString())
+  
+  const { data } = await enterpriseApi.get(`/performance/alerts?${params.toString()}`)
+  return data.data || data
+}
+
+export const acknowledgePerformanceAlert = async (alertId: number, acknowledgmentData: {
+  comments?: string
+}): Promise<EnhancedPerformanceAlert> => {
+  const { data } = await enterpriseApi.post(`/performance/alerts/${alertId}/acknowledge`, acknowledgmentData)
+  return data.data || data
+}
+
+export const resolvePerformanceAlert = async (alertId: number, resolutionData: {
+  resolution: string
+  comments?: string
+}): Promise<EnhancedPerformanceAlert> => {
+  const { data } = await enterpriseApi.post(`/performance/alerts/${alertId}/resolve`, resolutionData)
+  return data.data || data
+}
+
+export const getPerformanceThresholds = async (dataSourceId?: number): Promise<PerformanceThreshold[]> => {
+  const params = new URLSearchParams()
+  if (dataSourceId) params.append('data_source_id', dataSourceId.toString())
+  
+  const { data } = await enterpriseApi.get(`/performance/thresholds?${params.toString()}`)
+  return data.data || data
+}
+
+export const createPerformanceThreshold = async (thresholdData: {
+  metric_name: string
+  data_source_id?: number
+  warning_threshold: number
+  critical_threshold: number
+  operator: string
+}): Promise<PerformanceThreshold> => {
+  const { data } = await enterpriseApi.post('/performance/thresholds', thresholdData)
+  return data.data || data
+}
+
+export const getPerformanceTrends = async (dataSourceId?: number, time_range: string = '30d'): Promise<PerformanceTrend[]> => {
+  const params = new URLSearchParams()
+  if (dataSourceId) params.append('data_source_id', dataSourceId.toString())
+  params.append('time_range', time_range)
+  
+  const { data } = await enterpriseApi.get(`/performance/analytics/trends?${params.toString()}`)
+  return data.data || data
+}
+
+export const getOptimizationRecommendations = async (dataSourceId?: number): Promise<OptimizationRecommendation[]> => {
+  const params = new URLSearchParams()
+  if (dataSourceId) params.append('data_source_id', dataSourceId.toString())
+  
+  const { data } = await enterpriseApi.get(`/performance/optimization/recommendations?${params.toString()}`)
+  return data.data || data
+}
+
+export const startRealTimeMonitoring = async (monitoringConfig: {
+  data_source_ids?: number[]
+  metrics?: string[]
+  interval?: number
+}): Promise<any> => {
+  const { data } = await enterpriseApi.post('/performance/monitoring/start', monitoringConfig)
+  return data.data || data
+}
+
+export const stopRealTimeMonitoring = async (dataSourceId: number): Promise<any> => {
+  const { data } = await enterpriseApi.post('/performance/monitoring/stop', { data_source_id: dataSourceId })
+  return data.data || data
+}
+
+export const getPerformanceSummaryReport = async (options?: {
+  time_range?: string
+  data_sources?: number[]
+}): Promise<PerformanceReport> => {
+  const params = new URLSearchParams()
+  if (options?.time_range) params.append('time_range', options.time_range)
+  if (options?.data_sources) {
+    options.data_sources.forEach(id => params.append('data_sources', id.toString()))
+  }
+  
+  const { data } = await enterpriseApi.get(`/performance/reports/summary?${params.toString()}`)
+  return data.data || data
+}
+
+// ============================================================================
+// ENHANCED SECURITY ENTERPRISE APIs - NEW IMPLEMENTATION
+// ============================================================================
+
+export interface EnhancedVulnerabilityAssessment {
+  id: string
+  data_source_id?: number
+  vulnerability_type: string
+  severity: 'info' | 'low' | 'medium' | 'high' | 'critical'
+  cvss_score?: number
+  cve_id?: string
+  title: string
+  description: string
+  affected_components: string[]
+  discovery_method: string
+  status: 'open' | 'in_progress' | 'resolved' | 'false_positive'
+  remediation_steps: RemediationStep[]
+  business_impact: BusinessImpact
+  discovered_at: string
+  last_updated: string
+  remediated_at?: string
+  remediated_by?: string
+}
+
+export interface SecurityIncident {
+  id: string
+  incident_type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'open' | 'investigating' | 'contained' | 'resolved' | 'closed'
+  title: string
+  description: string
+  affected_systems: string[]
+  attack_vector?: string
+  indicators_of_compromise: IOC[]
+  timeline: IncidentTimelineEvent[]
+  assigned_to?: string
+  created_at: string
+  updated_at: string
+  resolved_at?: string
+}
+
+export interface ComplianceCheck {
+  id: string
+  framework: string
+  control_id: string
+  title: string
+  description: string
+  data_source_id?: number
+  status: 'compliant' | 'non_compliant' | 'partially_compliant' | 'not_assessed'
+  evidence: ComplianceEvidence[]
+  gaps: ComplianceGap[]
+  last_assessment: string
+  next_assessment: string
+  assessor: string
+  risk_level: 'low' | 'medium' | 'high' | 'critical'
+}
+
+export interface ThreatDetection {
+  id: string
+  threat_type: string
+  confidence_score: number
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  detection_method: 'signature' | 'behavioral' | 'ml' | 'heuristic'
+  threat_indicators: ThreatIndicator[]
+  affected_assets: string[]
+  mitigation_actions: MitigationAction[]
+  detected_at: string
+  status: 'active' | 'mitigated' | 'false_positive'
+}
+
+export interface SecurityAnalyticsDashboard {
+  security_posture: SecurityPosture
+  threat_landscape: ThreatLandscape
+  risk_metrics: RiskMetrics
+  compliance_status: ComplianceStatus
+  incident_trends: IncidentTrends
+  vulnerability_trends: VulnerabilityTrends
+  generated_at: string
+}
+
+export interface RiskAssessmentReport {
+  id: string
+  assessment_type: 'comprehensive' | 'targeted' | 'periodic'
+  scope: string[]
+  risk_categories: RiskCategory[]
+  overall_risk_score: number
+  risk_appetite: RiskAppetite
+  mitigation_strategies: MitigationStrategy[]
+  executive_summary: string
+  recommendations: RecommendationItem[]
+  assessed_by: string
+  assessed_at: string
+}
+
+// Enhanced Security API functions
+export const getEnhancedSecurityAudit = async (dataSourceId: number, options?: {
+  include_vulnerabilities?: boolean
+  include_compliance?: boolean
+}): Promise<any> => {
+  const params = new URLSearchParams()
+  if (options?.include_vulnerabilities) params.append('include_vulnerabilities', 'true')
+  if (options?.include_compliance) params.append('include_compliance', 'true')
+  
+  const { data } = await enterpriseApi.get(`/security/audit/${dataSourceId}?${params.toString()}`)
+  return data.data || data
+}
+
+export const createEnhancedSecurityScan = async (scanRequest: {
+  data_source_ids?: number[]
+  scan_types?: string[]
+  priority?: string
+  schedule?: any
+}): Promise<any> => {
+  const { data } = await enterpriseApi.post('/security/scans', scanRequest)
+  return data.data || data
+}
+
+export const getSecurityScans = async (filters?: {
+  data_source_id?: number
+  scan_type?: string
+  status?: string
+  days?: number
+}): Promise<any[]> => {
+  const params = new URLSearchParams()
+  if (filters?.data_source_id) params.append('data_source_id', filters.data_source_id.toString())
+  if (filters?.scan_type) params.append('scan_type', filters.scan_type)
+  if (filters?.status) params.append('status', filters.status)
+  if (filters?.days) params.append('days', filters.days.toString())
+  
+  const { data } = await enterpriseApi.get(`/security/scans?${params.toString()}`)
+  return data.data || data
+}
+
+export const getVulnerabilityAssessments = async (filters?: {
+  severity?: string
+  data_source_id?: number
+  status?: string
+}): Promise<EnhancedVulnerabilityAssessment[]> => {
+  const params = new URLSearchParams()
+  if (filters?.severity) params.append('severity', filters.severity)
+  if (filters?.data_source_id) params.append('data_source_id', filters.data_source_id.toString())
+  if (filters?.status) params.append('status', filters.status)
+  
+  const { data } = await enterpriseApi.get(`/security/vulnerabilities?${params.toString()}`)
+  return data.data || data
+}
+
+export const remediateVulnerability = async (vulnerabilityId: string, remediationData: {
+  remediation_method: string
+  comments?: string
+  verification_required?: boolean
+}): Promise<EnhancedVulnerabilityAssessment> => {
+  const { data } = await enterpriseApi.post(`/security/vulnerabilities/${vulnerabilityId}/remediate`, remediationData)
+  return data.data || data
+}
+
+export const getSecurityIncidents = async (filters?: {
+  severity?: string
+  status?: string
+  days?: number
+}): Promise<SecurityIncident[]> => {
+  const params = new URLSearchParams()
+  if (filters?.severity) params.append('severity', filters.severity)
+  if (filters?.status) params.append('status', filters.status)
+  if (filters?.days) params.append('days', filters.days.toString())
+  
+  const { data } = await enterpriseApi.get(`/security/incidents?${params.toString()}`)
+  return data.data || data
+}
+
+export const createSecurityIncident = async (incidentData: {
+  incident_type: string
+  severity: string
+  title: string
+  description: string
+  affected_systems?: string[]
+}): Promise<SecurityIncident> => {
+  const { data } = await enterpriseApi.post('/security/incidents', incidentData)
+  return data.data || data
+}
+
+export const getComplianceChecks = async (filters?: {
+  framework?: string
+  data_source_id?: number
+  status?: string
+}): Promise<ComplianceCheck[]> => {
+  const params = new URLSearchParams()
+  if (filters?.framework) params.append('framework', filters.framework)
+  if (filters?.data_source_id) params.append('data_source_id', filters.data_source_id.toString())
+  if (filters?.status) params.append('status', filters.status)
+  
+  const { data } = await enterpriseApi.get(`/security/compliance/checks?${params.toString()}`)
+  return data.data || data
+}
+
+export const runComplianceCheck = async (checkRequest: {
+  framework: string
+  controls?: string[]
+  data_source_ids?: number[]
+}): Promise<any> => {
+  const { data } = await enterpriseApi.post('/security/compliance/checks', checkRequest)
+  return data.data || data
+}
+
+export const getThreatDetection = async (filters?: {
+  threat_type?: string
+  severity?: string
+  days?: number
+}): Promise<ThreatDetection[]> => {
+  const params = new URLSearchParams()
+  if (filters?.threat_type) params.append('threat_type', filters.threat_type)
+  if (filters?.severity) params.append('severity', filters.severity)
+  if (filters?.days) params.append('days', filters.days.toString())
+  
+  const { data } = await enterpriseApi.get(`/security/threat-detection?${params.toString()}`)
+  return data.data || data
+}
+
+export const getSecurityAnalyticsDashboard = async (time_range: string = '7d'): Promise<SecurityAnalyticsDashboard> => {
+  const { data } = await enterpriseApi.get(`/security/analytics/dashboard?time_range=${time_range}`)
+  return data.data || data
+}
+
+export const getRiskAssessmentReport = async (filters?: {
+  data_source_id?: number
+  risk_level?: string
+}): Promise<RiskAssessmentReport> => {
+  const params = new URLSearchParams()
+  if (filters?.data_source_id) params.append('data_source_id', filters.data_source_id.toString())
+  if (filters?.risk_level) params.append('risk_level', filters.risk_level)
+  
+  const { data } = await enterpriseApi.get(`/security/reports/risk-assessment?${params.toString()}`)
+  return data.data || data
+}
+
+export const startSecurityMonitoring = async (monitoringConfig: {
+  data_source_ids?: number[]
+  monitoring_types?: string[]
+  alert_thresholds?: any
+}): Promise<any> => {
+  const { data } = await enterpriseApi.post('/security/monitoring/start', monitoringConfig)
+  return data.data || data
+}
+
+// ============================================================================
+// COMPREHENSIVE REACT QUERY HOOKS - ENTERPRISE INTEGRATION
+// ============================================================================
+
+// COLLABORATION HOOKS
+export const useCollaborationWorkspacesQuery = (filters?: {
+  user_id?: string
+  workspace_type?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['collaboration', 'workspaces', filters],
+    queryFn: () => getCollaborationWorkspaces(filters),
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 60000, // 1 minute
+    ...options,
+  })
+}
+
+export const useCreateCollaborationWorkspaceMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createCollaborationWorkspace,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collaboration', 'workspaces'] })
+    },
+  })
+}
+
+export const useSharedDocumentsQuery = (workspaceId: string, filters?: {
+  document_type?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['collaboration', 'documents', workspaceId, filters],
+    queryFn: () => getSharedDocuments(workspaceId, filters),
+    enabled: !!workspaceId,
+    staleTime: 180000, // 3 minutes
+    ...options,
+  })
+}
+
+export const useCreateSharedDocumentMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ workspaceId, documentData }: { workspaceId: string; documentData: any }) =>
+      createSharedDocument(workspaceId, documentData),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collaboration', 'documents', variables.workspaceId] })
+    },
+  })
+}
+
+export const useActiveCollaborationSessionsQuery = (filters?: {
+  workspace_id?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['collaboration', 'sessions', 'active', filters],
+    queryFn: () => getActiveCollaborationSessions(filters),
+    refetchInterval: 5000, // 5 seconds for real-time updates
+    staleTime: 10000, // 10 seconds
+    ...options,
+  })
+}
+
+export const useDocumentCommentsQuery = (documentId: string, options = {}) => {
+  return useQuery({
+    queryKey: ['collaboration', 'comments', documentId],
+    queryFn: () => getDocumentComments(documentId),
+    enabled: !!documentId,
+    staleTime: 60000, // 1 minute
+    ...options,
+  })
+}
+
+export const useAddDocumentCommentMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ documentId, commentData }: { documentId: string; commentData: any }) =>
+      addDocumentComment(documentId, commentData),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collaboration', 'comments', variables.documentId] })
+    },
+  })
+}
+
+export const useInviteToWorkspaceMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ workspaceId, invitationData }: { workspaceId: string; invitationData: any }) =>
+      inviteToWorkspace(workspaceId, invitationData),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['collaboration', 'workspaces'] })
+    },
+  })
+}
+
+export const useWorkspaceActivityQuery = (workspaceId: string, days: number = 7, options = {}) => {
+  return useQuery({
+    queryKey: ['collaboration', 'activity', workspaceId, days],
+    queryFn: () => getWorkspaceActivity(workspaceId, days),
+    enabled: !!workspaceId,
+    staleTime: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+// WORKFLOW HOOKS
+export const useWorkflowDefinitionsQuery = (filters?: {
+  workflow_type?: string
+  status?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'definitions', filters],
+    queryFn: () => getWorkflowDefinitions(filters),
+    staleTime: 600000, // 10 minutes
+    ...options,
+  })
+}
+
+export const useCreateWorkflowDefinitionMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createWorkflowDefinition,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'definitions'] })
+    },
+  })
+}
+
+export const useWorkflowDefinitionQuery = (workflowId: string, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'definition', workflowId],
+    queryFn: () => getWorkflowDefinition(workflowId),
+    enabled: !!workflowId,
+    staleTime: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+export const useUpdateWorkflowDefinitionMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ workflowId, workflowData }: { workflowId: string; workflowData: any }) =>
+      updateWorkflowDefinition(workflowId, workflowData),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'definition', variables.workflowId] })
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'definitions'] })
+    },
+  })
+}
+
+export const useExecuteWorkflowMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ workflowId, executionData }: { workflowId: string; executionData: any }) =>
+      executeWorkflow(workflowId, executionData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'executions'] })
+    },
+  })
+}
+
+export const useWorkflowExecutionsQuery = (filters?: {
+  workflow_id?: string
+  status?: string
+  days?: number
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'executions', filters],
+    queryFn: () => getWorkflowExecutions(filters),
+    staleTime: 120000, // 2 minutes
+    refetchInterval: 30000, // 30 seconds
+    ...options,
+  })
+}
+
+export const useWorkflowExecutionDetailsQuery = (executionId: string, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'execution', executionId],
+    queryFn: () => getWorkflowExecutionDetails(executionId),
+    enabled: !!executionId,
+    staleTime: 60000, // 1 minute
+    refetchInterval: 10000, // 10 seconds for running executions
+    ...options,
+  })
+}
+
+export const useCreateApprovalWorkflowMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createApprovalWorkflow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'approvals'] })
+    },
+  })
+}
+
+export const usePendingApprovalsQuery = (approver_id?: string, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'approvals', 'pending', approver_id],
+    queryFn: () => getPendingApprovals(approver_id),
+    staleTime: 60000, // 1 minute
+    refetchInterval: 30000, // 30 seconds
+    ...options,
+  })
+}
+
+export const useApproveRequestMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ approvalId, approvalData }: { approvalId: string; approvalData: any }) =>
+      approveRequest(approvalId, approvalData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'approvals'] })
+    },
+  })
+}
+
+export const useRejectRequestMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ approvalId, rejectionData }: { approvalId: string; rejectionData: any }) =>
+      rejectRequest(approvalId, rejectionData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'approvals'] })
+    },
+  })
+}
+
+export const useCreateBulkOperationMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createBulkOperation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflow', 'bulk-operations'] })
+    },
+  })
+}
+
+export const useBulkOperationStatusQuery = (operationId: string, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'bulk-operation', operationId],
+    queryFn: () => getBulkOperationStatus(operationId),
+    enabled: !!operationId,
+    staleTime: 5000, // 5 seconds
+    refetchInterval: 3000, // 3 seconds for active operations
+    ...options,
+  })
+}
+
+export const useWorkflowTemplatesQuery = (category?: string, options = {}) => {
+  return useQuery({
+    queryKey: ['workflow', 'templates', category],
+    queryFn: () => getWorkflowTemplates(category),
+    staleTime: 1800000, // 30 minutes
+    ...options,
+  })
+}
+
+// ENHANCED PERFORMANCE HOOKS
+export const useSystemHealthQuery = (include_detailed: boolean = false, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'system', 'health', include_detailed],
+    queryFn: () => getSystemHealth(include_detailed),
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 15000, // 15 seconds
+    ...options,
+  })
+}
+
+export const useEnhancedPerformanceMetricsQuery = (dataSourceId: number, queryOptions?: {
+  time_range?: string
+  metric_types?: string[]
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'metrics', 'enhanced', dataSourceId, queryOptions],
+    queryFn: () => getEnhancedPerformanceMetrics(dataSourceId, queryOptions),
+    enabled: !!dataSourceId,
+    staleTime: 60000, // 1 minute
+    refetchInterval: 30000, // 30 seconds
+    ...options,
+  })
+}
+
+export const usePerformanceAlertsQuery = (filters?: {
+  severity?: string
+  status?: string
+  days?: number
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'alerts', filters],
+    queryFn: () => getPerformanceAlerts(filters),
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 15000, // 15 seconds
+    ...options,
+  })
+}
+
+export const useAcknowledgePerformanceAlertMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ alertId, acknowledgmentData }: { alertId: number; acknowledgmentData: any }) =>
+      acknowledgePerformanceAlert(alertId, acknowledgmentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance', 'alerts'] })
+    },
+  })
+}
+
+export const useResolvePerformanceAlertMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ alertId, resolutionData }: { alertId: number; resolutionData: any }) =>
+      resolvePerformanceAlert(alertId, resolutionData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance', 'alerts'] })
+    },
+  })
+}
+
+export const usePerformanceThresholdsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'thresholds', dataSourceId],
+    queryFn: () => getPerformanceThresholds(dataSourceId),
+    staleTime: 600000, // 10 minutes
+    ...options,
+  })
+}
+
+export const useCreatePerformanceThresholdMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createPerformanceThreshold,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance', 'thresholds'] })
+    },
+  })
+}
+
+export const usePerformanceTrendsQuery = (dataSourceId?: number, time_range: string = '30d', options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'trends', dataSourceId, time_range],
+    queryFn: () => getPerformanceTrends(dataSourceId, time_range),
+    staleTime: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+export const useOptimizationRecommendationsQuery = (dataSourceId?: number, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'optimization', 'recommendations', dataSourceId],
+    queryFn: () => getOptimizationRecommendations(dataSourceId),
+    staleTime: 1800000, // 30 minutes
+    ...options,
+  })
+}
+
+export const useStartRealTimeMonitoringMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: startRealTimeMonitoring,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance'] })
+    },
+  })
+}
+
+export const useStopRealTimeMonitoringMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: stopRealTimeMonitoring,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance'] })
+    },
+  })
+}
+
+export const usePerformanceSummaryReportQuery = (queryOptions?: {
+  time_range?: string
+  data_sources?: number[]
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['performance', 'reports', 'summary', queryOptions],
+    queryFn: () => getPerformanceSummaryReport(queryOptions),
+    staleTime: 600000, // 10 minutes
+    ...options,
+  })
+}
+
+// ENHANCED SECURITY HOOKS
+export const useEnhancedSecurityAuditQuery = (dataSourceId: number, queryOptions?: {
+  include_vulnerabilities?: boolean
+  include_compliance?: boolean
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'audit', 'enhanced', dataSourceId, queryOptions],
+    queryFn: () => getEnhancedSecurityAudit(dataSourceId, queryOptions),
+    enabled: !!dataSourceId,
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+export const useCreateEnhancedSecurityScanMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createEnhancedSecurityScan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security', 'scans'] })
+    },
+  })
+}
+
+export const useSecurityScansQuery = (filters?: {
+  data_source_id?: number
+  scan_type?: string
+  status?: string
+  days?: number
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'scans', filters],
+    queryFn: () => getSecurityScans(filters),
+    staleTime: 180000, // 3 minutes
+    refetchInterval: 120000, // 2 minutes
+    ...options,
+  })
+}
+
+export const useVulnerabilityAssessmentsQuery = (filters?: {
+  severity?: string
+  data_source_id?: number
+  status?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'vulnerabilities', filters],
+    queryFn: () => getVulnerabilityAssessments(filters),
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+export const useRemediateVulnerabilityMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ vulnerabilityId, remediationData }: { vulnerabilityId: string; remediationData: any }) =>
+      remediateVulnerability(vulnerabilityId, remediationData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security', 'vulnerabilities'] })
+    },
+  })
+}
+
+export const useSecurityIncidentsQuery = (filters?: {
+  severity?: string
+  status?: string
+  days?: number
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'incidents', filters],
+    queryFn: () => getSecurityIncidents(filters),
+    staleTime: 120000, // 2 minutes
+    refetchInterval: 60000, // 1 minute
+    ...options,
+  })
+}
+
+export const useCreateSecurityIncidentMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: createSecurityIncident,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security', 'incidents'] })
+    },
+  })
+}
+
+export const useComplianceChecksQuery = (filters?: {
+  framework?: string
+  data_source_id?: number
+  status?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'compliance', 'checks', filters],
+    queryFn: () => getComplianceChecks(filters),
+    staleTime: 600000, // 10 minutes
+    refetchInterval: 1800000, // 30 minutes
+    ...options,
+  })
+}
+
+export const useRunComplianceCheckMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: runComplianceCheck,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security', 'compliance'] })
+    },
+  })
+}
+
+export const useThreatDetectionQuery = (filters?: {
+  threat_type?: string
+  severity?: string
+  days?: number
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'threats', filters],
+    queryFn: () => getThreatDetection(filters),
+    staleTime: 60000, // 1 minute
+    refetchInterval: 30000, // 30 seconds
+    ...options,
+  })
+}
+
+export const useSecurityAnalyticsDashboardQuery = (time_range: string = '7d', options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'analytics', 'dashboard', time_range],
+    queryFn: () => getSecurityAnalyticsDashboard(time_range),
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 300000, // 5 minutes
+    ...options,
+  })
+}
+
+export const useRiskAssessmentReportQuery = (filters?: {
+  data_source_id?: number
+  risk_level?: string
+}, options = {}) => {
+  return useQuery({
+    queryKey: ['security', 'risk', 'assessment', filters],
+    queryFn: () => getRiskAssessmentReport(filters),
+    staleTime: 1800000, // 30 minutes
+    ...options,
+  })
+}
+
+export const useStartSecurityMonitoringMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: startSecurityMonitoring,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security'] })
+    },
+  })
+}
+
 // Initialize global event bus if not already present
 if (typeof window !== 'undefined' && !window.enterpriseEventBus) {
   const listeners: Record<string, ((data: any) => void)[]> = {}

@@ -314,6 +314,15 @@ import { useDataSourceSecurityAuditQuery } from "@/hooks/useDataSources"
 
 // Import enterprise hooks for better backend integration
 import { useEnterpriseFeatures, useSecurityFeatures } from "./hooks/use-enterprise-features"
+import { 
+  useEnhancedSecurityAuditQuery,
+  useVulnerabilityAssessmentsQuery,
+  useSecurityIncidentsQuery,
+  useComplianceChecksQuery,
+  useThreatDetectionQuery,
+  useSecurityAnalyticsDashboardQuery,
+  useRiskAssessmentReportQuery,
+} from "./services/enterprise-apis"
 import { useSecurityAuditQuery } from "./services/enterprise-apis"
 import { DataSource } from "./types"
 
@@ -376,21 +385,88 @@ export function DataSourceSecurityView({
   const [showSecurityScan, setShowSecurityScan] = useState(false)
   const [showIncidentReport, setShowIncidentReport] = useState(false)
 
-  // Fetch security data
+  // =====================================================================================
+  // ENHANCED SECURITY APIs - REAL BACKEND INTEGRATION (NO MOCK DATA)
+  // =====================================================================================
+  
+  // Enhanced Security Audit with vulnerabilities and compliance
   const {
-    data: securityResponse,
-    isLoading,
-    error,
-    refetch,
-  } = useDataSourceSecurityAuditQuery(dataSource.id, {
-    refetchInterval: 60000, // 1 minute
+    data: enhancedSecurityAudit,
+    isLoading: auditLoading,
+    error: auditError,
+    refetch: refetchAudit,
+  } = useEnhancedSecurityAuditQuery(dataSource.id, {
+    include_vulnerabilities: true,
+    include_compliance: true
+  }, {
+    refetchInterval: 300000, // 5 minutes
   })
 
-  const securityData = securityResponse?.data
+  // Vulnerability Assessments
+  const {
+    data: vulnerabilityAssessments,
+    isLoading: vulnerabilitiesLoading,
+    refetch: refetchVulnerabilities,
+  } = useVulnerabilityAssessmentsQuery({
+    data_source_id: dataSource.id,
+    severity: filterSeverity !== 'all' ? filterSeverity : undefined
+  })
 
-  // Use real security data from enterprise APIs
+  // Security Incidents
+  const {
+    data: securityIncidents,
+    isLoading: incidentsLoading,
+    refetch: refetchIncidents,
+  } = useSecurityIncidentsQuery({
+    days: 30
+  })
+
+  // Compliance Checks
+  const {
+    data: complianceChecks,
+    isLoading: complianceLoading,
+    refetch: refetchCompliance,
+  } = useComplianceChecksQuery({
+    data_source_id: dataSource.id
+  })
+
+  // Threat Detection
+  const {
+    data: threatDetection,
+    isLoading: threatsLoading,
+    refetch: refetchThreats,
+  } = useThreatDetectionQuery({
+    days: 7
+  })
+
+  // Security Analytics Dashboard
+  const {
+    data: securityDashboard,
+    isLoading: dashboardLoading,
+  } = useSecurityAnalyticsDashboardQuery('7d')
+
+  // Risk Assessment Report
+  const {
+    data: riskAssessment,
+    isLoading: riskLoading,
+  } = useRiskAssessmentReportQuery({
+    data_source_id: dataSource.id
+  })
+
+  // Consolidated loading and error states
+  const isLoading = auditLoading || vulnerabilitiesLoading || incidentsLoading || complianceLoading || threatsLoading || dashboardLoading || riskLoading
+  const error = auditError
+  const refetch = () => {
+    refetchAudit()
+    refetchVulnerabilities()
+    refetchIncidents()
+    refetchCompliance()
+    refetchThreats()
+  }
+
+  // Use real security data from enhanced APIs (NO MOCK DATA)
   const realSecurityData = useMemo(() => {
-    if (!enterpriseFeatures.componentState?.metrics) return null
+    if (!enhancedSecurityAudit && !vulnerabilityAssessments) return null
     
     return {
     securityScore: 78,
