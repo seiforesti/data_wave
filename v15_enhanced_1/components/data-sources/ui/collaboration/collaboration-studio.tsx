@@ -534,50 +534,32 @@ export const CollaborationStudio: React.FC = () => {
     console.log(`${type.toUpperCase()}: ${message}`)
   }
 
-  const simulateExistingParticipants = () => {
-    const mockParticipants = [
-      { id: 'user_2', name: 'Sarah Chen', color: '#10B981' },
-      { id: 'user_3', name: 'Mike Rodriguez', color: '#F59E0B' },
-      { id: 'user_4', name: 'Elena Kozlov', color: '#8B5CF6' }
-    ]
-
-    mockParticipants.forEach((participant, index) => {
-      setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          participants: [...prev.participants, {
-            ...participant,
-            userId: participant.id,
-            sessionId: state.session?.id || '',
-            role: 'editor' as any,
-            status: 'active' as any,
-            permissions: { read: true, write: true, comment: true, share: false, admin: false },
-            presence: {
-              isOnline: true,
-              lastSeen: new Date(),
-              cursor: { line: Math.floor(Math.random() * 20) + 1, column: 1 },
-              selection: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } },
-              viewport: { top: 0, left: 0, width: 0, height: 0 },
-              activity: 'idle' as any,
-              focus: { elementId: '', type: 'document' },
-              device: { type: 'desktop', browser: 'chrome', os: 'windows' }
-            },
-            activity: { operationsCount: 0, lastOperation: new Date(), sessionDuration: 0 },
-            joinedAt: new Date(),
-            lastActiveAt: new Date(),
-            connection: { id: '', status: 'connected', quality: 'good', latency: 50 }
-          }],
-          cursors: [...prev.cursors, {
-            participantId: participant.id,
-            position: { line: Math.floor(Math.random() * 20) + 1, column: Math.floor(Math.random() * 40) + 1 },
-            color: participant.color,
-            visible: true
-          }]
-        }))
-        
-        addActivity('join', participant.id, `${participant.name} joined the session`)
-      }, (index + 1) * 1000)
-    })
+  const initializeRealTimeCollaboration = () => {
+    // Use real collaboration data from enterprise hooks
+    if (collaborationFeatures.participants && collaborationFeatures.participants.length > 0) {
+      setParticipants(collaborationFeatures.participants)
+      
+      // Set up real cursors and selections from collaboration data
+      const realCursors = collaborationFeatures.participants.map(participant => ({
+        participantId: participant.userId,
+        position: participant.presence?.cursor || { line: 1, column: 1 },
+        color: participant.color || '#3B82F6',
+        visible: participant.presence?.isOnline || false
+      }))
+      setCursors(realCursors)
+      
+      // Add activity for each participant joining
+      collaborationFeatures.participants.forEach(participant => {
+        setActivities(prev => [...prev, {
+          id: `join-${participant.userId}`,
+          type: 'collaboration',
+          participantId: participant.userId,
+          timestamp: participant.joinedAt,
+          description: `${participant.name} joined the session`,
+          metadata: participant
+        }])
+      })
+    }
   }
 
   const getParticipantName = (participantId: string) => {
