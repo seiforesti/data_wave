@@ -78,6 +78,96 @@ import {
   useAnalyticsIntegration
 } from './hooks/use-enterprise-features'
 
+// Import ALL enterprise APIs for complete backend integration
+import { 
+  // Core Data Source APIs
+  useDataSourcesQuery, 
+  useUserQuery, 
+  useNotificationsQuery,
+  useWorkspaceQuery,
+  useDataSourceMetricsQuery,
+  useDataSourceHealthQuery,
+  useConnectionPoolStatsQuery,
+  useDiscoveryHistoryQuery,
+  useScanResultsQuery,
+  useQualityMetricsQuery,
+  useGrowthMetricsQuery,
+  useSchemaDiscoveryQuery,
+  useDataLineageQuery,
+  useBackupStatusQuery,
+  useScheduledTasksQuery,
+  useAuditLogsQuery,
+  useUserPermissionsQuery,
+  useDataCatalogQuery,
+  
+  // NEW ENTERPRISE APIs - FULL BACKEND INTEGRATION 
+  // Collaboration APIs
+  useCollaborationWorkspacesQuery,
+  useActiveCollaborationSessionsQuery,
+  useSharedDocumentsQuery,
+  useCreateSharedDocumentMutation,
+  useDocumentCommentsQuery,
+  useAddDocumentCommentMutation,
+  useInviteToWorkspaceMutation,
+  useWorkspaceActivityQuery,
+  useCreateCollaborationWorkspaceMutation,
+  
+  // Workflow APIs  
+  useWorkflowDefinitionsQuery,
+  useWorkflowExecutionsQuery,
+  usePendingApprovalsQuery,
+  useWorkflowTemplatesQuery,
+  useWorkflowDefinitionQuery,
+  useUpdateWorkflowDefinitionMutation,
+  useExecuteWorkflowMutation,
+  useWorkflowExecutionDetailsQuery,
+  useCreateApprovalWorkflowMutation,
+  useApproveRequestMutation,
+  useRejectRequestMutation,
+  useCreateBulkOperationMutation,
+  useBulkOperationStatusQuery,
+  useCreateWorkflowDefinitionMutation,
+  
+  // Enhanced Performance APIs
+  useSystemHealthQuery,
+  useEnhancedPerformanceMetricsQuery,
+  usePerformanceAlertsQuery,
+  usePerformanceTrendsQuery,
+  useOptimizationRecommendationsQuery,
+  usePerformanceSummaryReportQuery,
+  useAcknowledgePerformanceAlertMutation,
+  useResolvePerformanceAlertMutation,
+  usePerformanceThresholdsQuery,
+  useCreatePerformanceThresholdMutation,
+  useStartRealTimeMonitoringMutation,
+  useStopRealTimeMonitoringMutation,
+  
+  // Enhanced Security APIs
+  useEnhancedSecurityAuditQuery,
+  useVulnerabilityAssessmentsQuery,
+  useSecurityIncidentsQuery,
+  useComplianceChecksQuery,
+  useThreatDetectionQuery,
+  useSecurityAnalyticsDashboardQuery,
+  useRiskAssessmentReportQuery,
+  useCreateEnhancedSecurityScanMutation,
+  useSecurityScansQuery,
+  useRemediateVulnerabilityMutation,
+  useCreateSecurityIncidentMutation,
+  useRunComplianceCheckMutation,
+  useStartSecurityMonitoringMutation,
+} from './services/enterprise-apis'
+
+// Import three-phase architecture
+import { CoreComponentRegistry } from './core/component-registry'
+import { EnterpriseEventBus } from './core/event-bus'
+import { StateManager } from './core/state-manager'
+import { WorkflowEngine } from './core/workflow-engine'
+import { CorrelationEngine } from './analytics/correlation-engine'
+import { RealtimeCollaboration } from './collaboration/realtime-collaboration'
+import { ApprovalSystem } from './workflows/approval-system'
+import { BulkOperations } from './workflows/bulk-operations'
+
 // Import ALL existing data-sources components
 import { DataSourceList } from "./data-source-list"
 import { DataSourceGrid } from "./data-source-grid"
@@ -99,6 +189,12 @@ import { DataSourceBulkActions } from "./data-source-bulk-actions"
 import { DataDiscoveryWorkspace } from "./data-discovery/data-discovery-workspace"
 import { DataLineageGraph } from "./data-discovery/data-lineage-graph"
 import { SchemaDiscovery } from "./data-discovery/schema-discovery"
+
+// Import enterprise UI components
+import { EnterpriseDashboard } from "./ui/dashboard/enterprise-dashboard"
+import { CollaborationStudio } from "./ui/collaboration/collaboration-studio"
+import { AnalyticsWorkbench } from "./ui/analytics/analytics-workbench"
+import { WorkflowDesigner } from "./ui/workflow/workflow-designer"
 
 // Import remaining components with enterprise features
 const DataSourceComplianceView = React.lazy(() => import("./data-source-compliance-view"))
@@ -382,11 +478,105 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
   })
 
   // ========================================================================
-  // BACKEND DATA INTEGRATION
+  // COMPREHENSIVE BACKEND DATA INTEGRATION - ALL ENTERPRISE APIs
   // ========================================================================
   
-  const { backendData, systemHealth } = enterprise
-  const { dataSources, loading } = backendData
+  // Core Data Sources Integration
+  const { data: dataSources, isLoading: dataSourcesLoading, error: dataSourcesError, refetch: refetchDataSources } = useDataSourcesQuery({
+    refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
+  })
+  const { data: user, isLoading: userLoading } = useUserQuery()
+  const { data: userNotifications } = useNotificationsQuery()
+  const { data: workspace } = useWorkspaceQuery()
+  const { data: metrics } = useDataSourceMetricsQuery(selectedDataSource?.id)
+  
+  // Core data source backend integrations
+  const { data: dataSourceHealth } = useDataSourceHealthQuery(selectedDataSource?.id)
+  const { data: connectionPoolStats } = useConnectionPoolStatsQuery(selectedDataSource?.id)
+  const { data: discoveryHistory } = useDiscoveryHistoryQuery(selectedDataSource?.id)
+  const { data: scanResults } = useScanResultsQuery(selectedDataSource?.id)
+  const { data: qualityMetrics } = useQualityMetricsQuery(selectedDataSource?.id)
+  const { data: growthMetrics } = useGrowthMetricsQuery(selectedDataSource?.id)
+  const { data: schemaDiscoveryData } = useSchemaDiscoveryQuery(selectedDataSource?.id)
+  const { data: dataLineage } = useDataLineageQuery(selectedDataSource?.id)
+  const { data: backupStatus } = useBackupStatusQuery(selectedDataSource?.id)
+  const { data: scheduledTasks } = useScheduledTasksQuery()
+  const { data: auditLogs } = useAuditLogsQuery()
+  const { data: userPermissions } = useUserPermissionsQuery()
+  const { data: dataCatalog } = useDataCatalogQuery()
+
+  // =====================================================================================
+  // NEW ENTERPRISE APIs - REAL BACKEND INTEGRATION (NO MOCK DATA)
+  // =====================================================================================
+  
+  // COLLABORATION APIs
+  const { data: collaborationWorkspaces } = useCollaborationWorkspacesQuery()
+  const { data: activeCollaborationSessions } = useActiveCollaborationSessionsQuery()
+  const { data: sharedDocuments } = useSharedDocumentsQuery(
+    selectedDataSource?.id?.toString() || '', 
+    { document_type: 'all' }
+  )
+  const { data: documentComments } = useDocumentCommentsQuery('')
+  const { data: workspaceActivity } = useWorkspaceActivityQuery(workspace?.id?.toString() || '', 7)
+  
+  // WORKFLOW APIs
+  const { data: workflowDefinitions } = useWorkflowDefinitionsQuery()
+  const { data: workflowExecutions } = useWorkflowExecutionsQuery({ days: 7 })
+  const { data: pendingApprovals } = usePendingApprovalsQuery()
+  const { data: workflowTemplates } = useWorkflowTemplatesQuery()
+  const { data: bulkOperationStatus } = useBulkOperationStatusQuery('')
+  
+  // ENHANCED PERFORMANCE APIs
+  const { data: systemHealth } = useSystemHealthQuery(true) // Enhanced with detailed metrics
+  const { data: enhancedPerformanceMetrics } = useEnhancedPerformanceMetricsQuery(
+    selectedDataSource?.id || 0,
+    { time_range: '24h', metric_types: ['cpu', 'memory', 'io', 'network'] }
+  )
+  const { data: performanceAlerts } = usePerformanceAlertsQuery({ severity: 'all', days: 7 })
+  const { data: performanceTrends } = usePerformanceTrendsQuery(selectedDataSource?.id, '30d')
+  const { data: optimizationRecommendations } = useOptimizationRecommendationsQuery(selectedDataSource?.id)
+  const { data: performanceSummaryReport } = usePerformanceSummaryReportQuery({ time_range: '7d' })
+  const { data: performanceThresholds } = usePerformanceThresholdsQuery(selectedDataSource?.id)
+  
+  // ENHANCED SECURITY APIs
+  const { data: enhancedSecurityAudit } = useEnhancedSecurityAuditQuery(
+    selectedDataSource?.id || 0,
+    { include_vulnerabilities: true, include_compliance: true }
+  )
+  const { data: vulnerabilityAssessments } = useVulnerabilityAssessmentsQuery({ severity: 'all' })
+  const { data: securityIncidents } = useSecurityIncidentsQuery({ days: 30 })
+  const { data: complianceChecks } = useComplianceChecksQuery()
+  const { data: threatDetection } = useThreatDetectionQuery({ days: 7 })
+  const { data: securityAnalyticsDashboard } = useSecurityAnalyticsDashboardQuery('7d')
+  const { data: riskAssessmentReport } = useRiskAssessmentReportQuery()
+  const { data: securityScans } = useSecurityScansQuery({ days: 30 })
+
+  // Mutation hooks for enterprise actions
+  const createWorkspaceMutation = useCreateCollaborationWorkspaceMutation()
+  const createDocumentMutation = useCreateSharedDocumentMutation()
+  const addCommentMutation = useAddDocumentCommentMutation()
+  const inviteToWorkspaceMutation = useInviteToWorkspaceMutation()
+  const createWorkflowMutation = useCreateWorkflowDefinitionMutation()
+  const executeWorkflowMutation = useExecuteWorkflowMutation()
+  const approveRequestMutation = useApproveRequestMutation()
+  const rejectRequestMutation = useRejectRequestMutation()
+  const createBulkOperationMutation = useCreateBulkOperationMutation()
+  const acknowledgeAlertMutation = useAcknowledgePerformanceAlertMutation()
+  const resolveAlertMutation = useResolvePerformanceAlertMutation()
+  const createThresholdMutation = useCreatePerformanceThresholdMutation()
+  const startMonitoringMutation = useStartRealTimeMonitoringMutation()
+  const stopMonitoringMutation = useStopRealTimeMonitoringMutation()
+  const createSecurityScanMutation = useCreateEnhancedSecurityScanMutation()
+  const remediateVulnerabilityMutation = useRemediateVulnerabilityMutation()
+  const createIncidentMutation = useCreateSecurityIncidentMutation()
+  const runComplianceCheckMutation = useRunComplianceCheckMutation()
+  const startSecurityMonitoringMutation = useStartSecurityMonitoringMutation()
+
+  // Consolidated loading state
+  const loading = dataSourcesLoading || userLoading
+
+  // Legacy enterprise context data for backward compatibility
+  const { backendData } = enterprise || { backendData: { dataSources, loading } }
 
   // ========================================================================
   // REAL-TIME UPDATES AND EVENT HANDLING
@@ -723,6 +913,249 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
       </div>
     </div>
   )
+
+  // ========================================================================
+  // COMPREHENSIVE COMPONENT RENDERER WITH ALL ENTERPRISE FEATURES
+  // ========================================================================
+  
+  const renderActiveComponent = () => {
+    const commonProps = {
+      dataSource: selectedDataSource,
+      dataSources,
+      onSelectDataSource: setSelectedDataSource,
+      viewMode,
+      onViewModeChange: setViewMode,
+      selectedItems,
+      onSelectionChange: setSelectedItems,
+      filters,
+      onFiltersChange: setFilters,
+      
+      // Real backend data props (NO MOCK DATA)
+      health: dataSourceHealth,
+      connectionPoolStats,
+      discoveryHistory,
+      scanResults,
+      qualityMetrics,
+      growthMetrics,
+      schemaDiscoveryData,
+      dataLineage,
+      backupStatus,
+      scheduledTasks,
+      auditLogs,
+      userPermissions,
+      dataCatalog,
+      metrics,
+      workspace,
+      user,
+      
+      // NEW ENTERPRISE DATA PROPS
+      collaborationWorkspaces,
+      activeCollaborationSessions,
+      sharedDocuments,
+      documentComments,
+      workspaceActivity,
+      workflowDefinitions,
+      workflowExecutions,
+      pendingApprovals,
+      workflowTemplates,
+      systemHealth,
+      enhancedPerformanceMetrics,
+      performanceAlerts,
+      performanceTrends,
+      optimizationRecommendations,
+      performanceSummaryReport,
+      performanceThresholds,
+      enhancedSecurityAudit,
+      vulnerabilityAssessments,
+      securityIncidents,
+      complianceChecks,
+      threatDetection,
+      securityAnalyticsDashboard,
+      riskAssessmentReport,
+      securityScans,
+      
+      // Enterprise mutation functions
+      mutations: {
+        createWorkspace: createWorkspaceMutation,
+        createDocument: createDocumentMutation,
+        addComment: addCommentMutation,
+        inviteToWorkspace: inviteToWorkspaceMutation,
+        createWorkflow: createWorkflowMutation,
+        executeWorkflow: executeWorkflowMutation,
+        approveRequest: approveRequestMutation,
+        rejectRequest: rejectRequestMutation,
+        createBulkOperation: createBulkOperationMutation,
+        acknowledgeAlert: acknowledgeAlertMutation,
+        resolveAlert: resolveAlertMutation,
+        createThreshold: createThresholdMutation,
+        startMonitoring: startMonitoringMutation,
+        stopMonitoring: stopMonitoringMutation,
+        createSecurityScan: createSecurityScanMutation,
+        remediateVulnerability: remediateVulnerabilityMutation,
+        createIncident: createIncidentMutation,
+        runComplianceCheck: runComplianceCheckMutation,
+        startSecurityMonitoring: startSecurityMonitoringMutation,
+      }
+    }
+
+    try {
+      switch (activeView) {
+        // Enterprise Dashboard Components
+        case "enterprise-dashboard":
+          return <EnterpriseDashboard {...commonProps} />
+        case "collaboration-studio":
+          return <CollaborationStudio {...commonProps} />
+        case "analytics-workbench":
+          return <AnalyticsWorkbench {...commonProps} />
+        case "workflow-designer":
+          return <WorkflowDesigner {...commonProps} />
+          
+        // Core Management
+        case "overview":
+          return (
+            <div className="space-y-6">
+              <DataSourceDetails {...commonProps} />
+              {selectedDataSource && <DataSourceMonitoringDashboard {...commonProps} />}
+            </div>
+          )
+        case "grid":
+          return <DataSourceGrid {...commonProps} />
+        case "list":
+          return <DataSourceList {...commonProps} />
+        case "details":
+          return selectedDataSource ? <DataSourceDetails {...commonProps} /> : <div className="p-6">Select a data source</div>
+          
+        // Monitoring & Analytics
+        case "monitoring":
+          return selectedDataSource ? <DataSourceMonitoring {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "dashboard-monitoring":
+          return <DataSourceMonitoringDashboard {...commonProps} />
+        case "performance":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourcePerformanceView {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+        case "quality":
+          return selectedDataSource ? <DataSourceQualityAnalytics {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "growth":
+          return selectedDataSource ? <DataSourceGrowthAnalytics {...commonProps} /> : <div className="p-6">Select a data source</div>
+          
+        // Discovery & Governance
+        case "discovery":
+          return selectedDataSource ? <DataSourceDiscovery {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "discovery-workspace":
+          return selectedDataSource ? <DataDiscoveryWorkspace {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "schema-discovery":
+          return selectedDataSource ? <SchemaDiscovery {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "data-lineage":
+          return selectedDataSource ? <DataLineageGraph {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "scan-results":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceScanResults {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+        case "compliance":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceComplianceView {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+        case "security":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceSecurityView {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+          
+        // Configuration & Management
+        case "cloud-config":
+          return selectedDataSource ? <DataSourceCloudConfig {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "access-control":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceAccessControl {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+        case "tags":
+          return (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceTagsManager {...commonProps} />
+            </Suspense>
+          )
+        case "scheduler":
+          return (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceScheduler {...commonProps} />
+            </Suspense>
+          )
+          
+        // Collaboration & Sharing
+        case "workspaces":
+          return selectedDataSource ? <DataSourceWorkspaceManagement {...commonProps} /> : <div className="p-6">Select a data source</div>
+        case "notifications":
+          return (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceNotifications {...commonProps} />
+            </Suspense>
+          )
+        case "reports":
+          return (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceReports {...commonProps} />
+            </Suspense>
+          )
+        case "version-history":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceVersionHistory {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+          
+        // Operations & Maintenance
+        case "backup-restore":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceBackupRestore {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+        case "bulk-actions":
+          return <DataSourceBulkActions {...commonProps} />
+        case "integrations":
+          return selectedDataSource ? (
+            <Suspense fallback={<ComponentLoader />}>
+              <DataSourceIntegrations {...commonProps} />
+            </Suspense>
+          ) : <div className="p-6">Select a data source</div>
+          
+        default:
+          return (
+            <div className="p-6 text-center">
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Component Not Found</h3>
+              <p className="text-gray-500 mb-4">The component "{activeView}" could not be loaded.</p>
+              <Button onClick={() => setActiveView("enterprise-dashboard")} variant="outline">
+                Return to Dashboard
+              </Button>
+            </div>
+          )
+      }
+    } catch (error) {
+      console.error(`Error rendering component ${activeView}:`, error)
+      return (
+        <Alert className="m-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error Loading Component</AlertTitle>
+          <AlertDescription>
+            Failed to load component: {activeView}
+            <br />
+            <small className="text-gray-500">{error instanceof Error ? error.message : "Unknown error"}</small>
+          </AlertDescription>
+        </Alert>
+      )
+    }
+  }
 
   const SystemHealthIndicator = () => {
     const HealthIcon = getHealthIcon(systemHealthScore)

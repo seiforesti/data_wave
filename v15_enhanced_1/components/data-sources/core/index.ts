@@ -14,6 +14,45 @@ import { eventBus, EventBus } from './event-bus'
 import { componentRegistry, ComponentRegistry } from './component-registry'
 import { stateManager, StateManager } from './state-manager'
 
+// Enterprise API integration
+import {
+  // Collaboration APIs
+  useCollaborationWorkspacesQuery,
+  useActiveCollaborationSessionsQuery,
+  useCreateCollaborationWorkspaceMutation,
+  useCreateSharedDocumentMutation,
+  useAddDocumentCommentMutation,
+  useInviteToWorkspaceMutation,
+  
+  // Workflow APIs
+  useWorkflowDefinitionsQuery,
+  useWorkflowExecutionsQuery,
+  usePendingApprovalsQuery,
+  useCreateWorkflowDefinitionMutation,
+  useExecuteWorkflowMutation,
+  useApproveRequestMutation,
+  useRejectRequestMutation,
+  useCreateBulkOperationMutation,
+  
+  // Performance APIs  
+  useSystemHealthQuery,
+  useEnhancedPerformanceMetricsQuery,
+  usePerformanceAlertsQuery,
+  useAcknowledgePerformanceAlertMutation,
+  useResolvePerformanceAlertMutation,
+  useStartRealTimeMonitoringMutation,
+  useStopRealTimeMonitoringMutation,
+  
+  // Security APIs
+  useEnhancedSecurityAuditQuery,
+  useVulnerabilityAssessmentsQuery,
+  useSecurityIncidentsQuery,
+  useCreateEnhancedSecurityScanMutation,
+  useRemediateVulnerabilityMutation,
+  useCreateSecurityIncidentMutation,
+  useStartSecurityMonitoringMutation,
+} from '../services/enterprise-apis'
+
 // ============================================================================
 // CORE INFRASTRUCTURE ORCHESTRATOR
 // ============================================================================
@@ -669,6 +708,140 @@ export class CoreInfrastructure {
   public getEventBus(): EventBus { return this.eventBus }
   public getComponentRegistry(): ComponentRegistry { return this.componentRegistry }
   public getStateManager(): StateManager { return this.stateManager }
+  
+  // ============================================================================
+  // ENTERPRISE API INTEGRATION BRIDGE
+  // ============================================================================
+  
+  /**
+   * Creates a bridge between the three-phase architecture and enterprise APIs
+   * This connects all core systems to real backend data and operations
+   */
+  public createEnterpriseAPIBridge(hookProvider: any) {
+    return {
+      // Collaboration integration
+      collaboration: {
+        workspaces: hookProvider.useCollaborationWorkspacesQuery,
+        activeSessions: hookProvider.useActiveCollaborationSessionsQuery,
+        createWorkspace: hookProvider.useCreateCollaborationWorkspaceMutation,
+        createDocument: hookProvider.useCreateSharedDocumentMutation,
+        addComment: hookProvider.useAddDocumentCommentMutation,
+        inviteUser: hookProvider.useInviteToWorkspaceMutation,
+      },
+      
+      // Workflow integration  
+      workflows: {
+        definitions: hookProvider.useWorkflowDefinitionsQuery,
+        executions: hookProvider.useWorkflowExecutionsQuery,
+        pendingApprovals: hookProvider.usePendingApprovalsQuery,
+        createWorkflow: hookProvider.useCreateWorkflowDefinitionMutation,
+        executeWorkflow: hookProvider.useExecuteWorkflowMutation,
+        approveRequest: hookProvider.useApproveRequestMutation,
+        rejectRequest: hookProvider.useRejectRequestMutation,
+        createBulkOperation: hookProvider.useCreateBulkOperationMutation,
+      },
+      
+      // Performance integration
+      performance: {
+        systemHealth: hookProvider.useSystemHealthQuery,
+        enhancedMetrics: hookProvider.useEnhancedPerformanceMetricsQuery,
+        alerts: hookProvider.usePerformanceAlertsQuery,
+        acknowledgeAlert: hookProvider.useAcknowledgePerformanceAlertMutation,
+        resolveAlert: hookProvider.useResolvePerformanceAlertMutation,
+        startMonitoring: hookProvider.useStartRealTimeMonitoringMutation,
+        stopMonitoring: hookProvider.useStopRealTimeMonitoringMutation,
+      },
+      
+      // Security integration
+      security: {
+        audit: hookProvider.useEnhancedSecurityAuditQuery,
+        vulnerabilities: hookProvider.useVulnerabilityAssessmentsQuery,
+        incidents: hookProvider.useSecurityIncidentsQuery,
+        createScan: hookProvider.useCreateEnhancedSecurityScanMutation,
+        remediateVulnerability: hookProvider.useRemediateVulnerabilityMutation,
+        createIncident: hookProvider.useCreateSecurityIncidentMutation,
+        startMonitoring: hookProvider.useStartSecurityMonitoringMutation,
+      }
+    }
+  }
+  
+  /**
+   * Connects three-phase events to enterprise API actions
+   * This enables automatic backend synchronization
+   */
+  public enableEnterpriseSync(apiActions: any) {
+    // Sync workflow events to backend
+    this.eventBus.subscribe('workflow:created', async (event) => {
+      try {
+        await apiActions.workflows.createWorkflow.mutateAsync(event.payload)
+      } catch (error) {
+        console.error('Failed to sync workflow creation:', error)
+      }
+    })
+    
+    this.eventBus.subscribe('workflow:executed', async (event) => {
+      try {
+        await apiActions.workflows.executeWorkflow.mutateAsync({
+          workflowId: event.payload.workflowId,
+          executionData: event.payload.data
+        })
+      } catch (error) {
+        console.error('Failed to sync workflow execution:', error)
+      }
+    })
+    
+    // Sync collaboration events to backend
+    this.eventBus.subscribe('collaboration:workspace:created', async (event) => {
+      try {
+        await apiActions.collaboration.createWorkspace.mutateAsync(event.payload)
+      } catch (error) {
+        console.error('Failed to sync workspace creation:', error)
+      }
+    })
+    
+    this.eventBus.subscribe('collaboration:document:created', async (event) => {
+      try {
+        await apiActions.collaboration.createDocument.mutateAsync({
+          workspaceId: event.payload.workspaceId,
+          documentData: event.payload.data
+        })
+      } catch (error) {
+        console.error('Failed to sync document creation:', error)
+      }
+    })
+    
+    // Sync performance events to backend  
+    this.eventBus.subscribe('performance:alert:triggered', async (event) => {
+      try {
+        await apiActions.performance.acknowledgeAlert.mutateAsync({
+          alertId: event.payload.alertId,
+          acknowledgmentData: { auto_acknowledged: true }
+        })
+      } catch (error) {
+        console.error('Failed to sync alert acknowledgment:', error)
+      }
+    })
+    
+    // Sync security events to backend
+    this.eventBus.subscribe('security:vulnerability:detected', async (event) => {
+      try {
+        await apiActions.security.createScan.mutateAsync({
+          data_source_ids: [event.payload.dataSourceId],
+          scan_types: ['vulnerability']
+        })
+      } catch (error) {
+        console.error('Failed to sync vulnerability scan:', error)
+      }
+    })
+    
+    this.eventBus.subscribe('security:incident:created', async (event) => {
+      try {
+        await apiActions.security.createIncident.mutateAsync(event.payload)
+      } catch (error) {
+        console.error('Failed to sync incident creation:', error)
+      }
+    })
+  }
 }
 
 // ============================================================================
