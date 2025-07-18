@@ -30,6 +30,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from app.api.routes import scan_routes, dashboard, custom_scan_rules, data_profiling, incremental_scan, data_discovery_routes
 from app.api.routes.scan_rule_set_validation import router as scan_rule_set_validation_router
+from app.api.routes.enterprise_analytics import router as enterprise_analytics_router
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -96,6 +97,7 @@ app.include_router(data_profiling.router)
 app.include_router(incremental_scan.router)
 app.include_router(scan_rule_set_validation_router)
 app.include_router(data_discovery_routes.router)  # Add the new data discovery routes
+app.include_router(enterprise_analytics_router)  # Add enterprise analytics routes
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
