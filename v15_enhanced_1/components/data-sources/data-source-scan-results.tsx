@@ -2,6 +2,11 @@
 
 import { useState, useMemo } from "react"
 import { useDataSources } from "@/hooks/useDataSources"
+
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
+import { useScanResultsQuery } from "./services/apis"
+
 import {
   Search,
   Filter,
@@ -93,128 +98,63 @@ import {
 
 import { DataSource } from "./types"
 
-interface DataSourceScanResultsProps {
-  dataSource: DataSource
-  scanResults?: any
-  onRefresh?: () => void
+interface ScanResultsProps {
+  dataSourceId: number
+  onNavigateToComponent?: (componentId: string, data?: any) => void
+  className?: string
 }
 
-interface ScanResult {
-  id: string
-  scanId: string
-  scanName: string
-  timestamp: string
-  status: "completed" | "running" | "failed" | "cancelled"
-  severity: "critical" | "high" | "medium" | "low" | "info"
-  category: "security" | "compliance" | "quality" | "performance" | "structure"
-  schema: string
-  table: string
-  column?: string
-  rule: string
-  description: string
-  recommendation: string
-  impact: string
-  effort: "low" | "medium" | "high"
-  resolved: boolean
-  assignee?: string
-  dueDate?: string
-  tags: string[]
-  metadata: Record<string, any>
-}
+export function DataSourceScanResults({ 
+  dataSourceId, 
+  onNavigateToComponent, 
+  className = "" 
+}: ScanResultsProps) {
+  const [selectedScan, setSelectedScan] = useState<string | null>(null)
+  const [timeRange, setTimeRange] = useState("7d")
 
-// Mock data for demonstration
-const mockScanResults: ScanResult[] = [
-  {
-    id: "sr-1",
-    scanId: "scan-001",
-    scanName: "Weekly Security Scan",
-    timestamp: "2024-01-15T10:30:00Z",
-    status: "completed",
-    severity: "critical",
-    category: "security",
-    schema: "public",
-    table: "users",
-    column: "password",
-    rule: "Unencrypted Sensitive Data",
-    description: "Password column contains unencrypted sensitive data",
-    recommendation: "Implement proper password hashing using bcrypt or similar",
-    impact: "High security risk - passwords exposed in plain text",
-    effort: "medium",
-    resolved: false,
-    assignee: "security-team",
-    dueDate: "2024-01-30",
-    tags: ["security", "urgent", "gdpr"],
-    metadata: { rowCount: 10000, exampleValue: "plaintext123" }
-  },
-  {
-    id: "sr-2", 
-    scanId: "scan-001",
-    scanName: "Weekly Security Scan",
-    timestamp: "2024-01-15T10:30:00Z",
-    status: "completed",
-    severity: "high",
-    category: "compliance",
-    schema: "public",
-    table: "customers",
-    column: "email",
-    rule: "PII Data Classification",
-    description: "Email addresses not properly classified as PII",
-    recommendation: "Add PII classification tags and implement data masking",
-    impact: "Compliance violation - GDPR requirements not met",
-    effort: "low",
-    resolved: false,
-    assignee: "data-governance",
-    dueDate: "2024-02-01",
-    tags: ["compliance", "pii", "gdpr"],
-    metadata: { rowCount: 50000, classificationScore: 0.95 }
-  },
-  {
-    id: "sr-3",
-    scanId: "scan-002", 
-    scanName: "Data Quality Check",
-    timestamp: "2024-01-14T15:45:00Z",
-    status: "completed",
-    severity: "medium",
-    category: "quality",
-    schema: "analytics",
-    table: "user_events",
-    rule: "Null Value Threshold",
-    description: "High percentage of null values in user_id column (15%)",
-    recommendation: "Investigate data pipeline and implement validation rules",
-    impact: "Data quality issues affecting analytics accuracy",
-    effort: "high",
-    resolved: true,
-    assignee: "data-engineering",
-    tags: ["quality", "pipeline"],
-    metadata: { nullPercentage: 15.3, totalRows: 1000000 }
-  },
-  {
-    id: "sr-4",
-    scanId: "scan-003",
-    scanName: "Performance Analysis",
-    timestamp: "2024-01-13T09:15:00Z", 
-    status: "completed",
-    severity: "low",
-    category: "performance",
-    schema: "public",
-    table: "orders",
-    rule: "Missing Index",
-    description: "Query performance degradation on frequently accessed columns",
-    recommendation: "Add composite index on (customer_id, order_date)",
-    impact: "Slower query performance affecting user experience",
-    effort: "low",
-    resolved: false,
-    assignee: "dba-team",
-    tags: ["performance", "indexing"],
-    metadata: { avgQueryTime: 2.5, recommendedIndex: "idx_customer_order_date" }
-  }
-]
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceScanResults',
+    dataSourceId,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
 
-export function DataSourceScanResults({
-  dataSource,
-  scanResults,
-  onRefresh
-}: DataSourceScanResultsProps) {
+  // Backend data queries
+  const { 
+    data: scanResults, 
+    isLoading,
+    error,
+    refetch 
+  } = useScanResultsQuery(dataSourceId, { timeRange })
+
+  // Transform and use real scan results
+  const results = useMemo(() => {
+    if (scanResults && scanResults.length > 0) {
+      return scanResults.map(scan => ({
+        id: scan.id,
+        scanType: scan.scan_type || 'full',
+        status: scan.status,
+        startTime: new Date(scan.start_time),
+        endTime: scan.end_time ? new Date(scan.end_time) : null,
+        duration: scan.duration || 0,
+        entitiesScanned: scan.total_entities || 0,
+        entitiesFound: scan.entities_discovered || 0,
+        issuesFound: scan.issues_count || 0,
+        completionRate: scan.completion_rate || 0,
+        dataQualityScore: scan.quality_score || 0,
+        complianceScore: scan.compliance_score || 0,
+        errorMessage: scan.error_message,
+        metadata: scan.metadata || {}
+      }))
+    }
+    
+    // Return empty array if no real data available
+    return []
+  }, [scanResults])
+
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -222,14 +162,11 @@ export function DataSourceScanResults({
   const [showResolved, setShowResolved] = useState(true)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [groupBy, setGroupBy] = useState<string>("category")
-  const [selectedResult, setSelectedResult] = useState<ScanResult | null>(null)
-
-  // Use mock data if no scan results provided
-  const results = scanResults || mockScanResults
+  const [selectedResult, setSelectedResult] = useState<any | null>(null)
 
   // Filter and group results
   const filteredResults = useMemo(() => {
-    return results.filter((result: ScanResult) => {
+    return results.filter((result: any) => {
       const matchesSearch = 
         result.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         result.table.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -246,9 +183,9 @@ export function DataSourceScanResults({
   }, [results, searchQuery, selectedSeverity, selectedCategory, selectedStatus, showResolved])
 
   const groupedResults = useMemo(() => {
-    const groups: Record<string, ScanResult[]> = {}
+    const groups: Record<string, any[]> = {}
     
-    filteredResults.forEach((result: ScanResult) => {
+    filteredResults.forEach((result: any) => {
       const groupKey = groupBy === "category" ? result.category :
                       groupBy === "severity" ? result.severity :
                       groupBy === "schema" ? result.schema :
@@ -301,7 +238,7 @@ export function DataSourceScanResults({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedItems(filteredResults.map((r: ScanResult) => r.id))
+      setSelectedItems(filteredResults.map((r: any) => r.id))
     } else {
       setSelectedItems([])
     }
@@ -315,7 +252,7 @@ export function DataSourceScanResults({
     }
   }
 
-  const ResultCard = ({ result }: { result: ScanResult }) => {
+  const ResultCard = ({ result }: { result: any }) => {
     const SeverityIcon = getSeverityIcon(result.severity)
     const StatusIcon = getStatusIcon(result.status) 
     const CategoryIcon = categoryIcons[result.category as keyof typeof categoryIcons] || Database
@@ -449,11 +386,11 @@ export function DataSourceScanResults({
 
   const getSummaryStats = () => {
     const total = filteredResults.length
-    const bySeverity = filteredResults.reduce((acc: Record<string, number>, result: ScanResult) => {
+    const bySeverity = filteredResults.reduce((acc: Record<string, number>, result: any) => {
       acc[result.severity] = (acc[result.severity] || 0) + 1
       return acc
     }, {})
-    const resolved = filteredResults.filter((r: ScanResult) => r.resolved).length
+    const resolved = filteredResults.filter((r: any) => r.resolved).length
     const unresolved = total - resolved
 
     return { total, bySeverity, resolved, unresolved }
@@ -653,7 +590,7 @@ export function DataSourceScanResults({
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 mt-4">
-              {groupResults.map((result: ScanResult) => (
+              {groupResults.map((result: any) => (
                 <ResultCard key={result.id} result={result} />
               ))}
             </CollapsibleContent>

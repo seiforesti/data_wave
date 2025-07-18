@@ -1,7 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useDataSourceCatalogQuery } from "@/hooks/useDataSources"
+
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
+import { useCatalogQuery } from "./services/enterprise-apis"
+
 import { 
   Search, 
   Plus, 
@@ -31,9 +36,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-interface DataSourceCatalogProps {
+interface CatalogProps {
   dataSourceId: number
-  onRefresh?: () => void
+  onNavigateToComponent?: (componentId: string, data?: any) => void
+  className?: string
 }
 
 interface CatalogItem {
@@ -58,27 +64,60 @@ interface CatalogItem {
   }
 }
 
-export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalogProps) {
+export function DataSourceCatalog({ 
+  dataSourceId, 
+  onNavigateToComponent, 
+  className = "" 
+}: CatalogProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("all")
-  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false)
-  const [favoriteItems, setFavoriteItems] = useState<string[]>([])
+  const [selectedType, setSelectedType] = useState("all")
+  const [viewMode, setViewMode] = useState<"list" | "tree">("list")
 
-  // Use API hook to fetch catalog data
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceCatalog',
+    dataSourceId,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  // Backend data queries
   const { 
-    data: catalogResponse, 
-    isLoading: loading, 
-    error, 
+    data: catalogData, 
+    isLoading,
+    error,
     refetch 
-  } = useDataSourceCatalogQuery(dataSourceId)
+  } = useCatalogQuery(dataSourceId)
 
-  const catalogItems = catalogResponse?.data?.catalog || []
+  // Transform backend data to component format
+  const catalogItems: CatalogItem[] = useMemo(() => {
+    if (!catalogData) return []
+    
+    return catalogData.map(item => ({
+      id: item.id,
+      name: item.name,
+      type: item.entity_type || 'table',
+      schema: item.schema_name || 'public',
+      description: item.description || '',
+      tags: item.tags || [],
+      owner: item.owner || 'unknown',
+      lastModified: item.last_modified ? new Date(item.last_modified) : new Date(),
+      rowCount: item.row_count || 0,
+      sizeBytes: item.size_bytes || 0,
+      qualityScore: item.quality_score || 0,
+      sensitivityLevel: item.sensitivity_level || 'public',
+      columns: item.columns || [],
+      path: item.qualified_name || `${item.schema_name}.${item.name}`,
+      metadata: item.metadata || {}
+    }))
+  }, [catalogData])
 
   // Handle refresh
   const handleRefresh = () => {
     refetch()
-    onRefresh?.()
+    // onRefresh?.() // This line was removed from the new_code, so it's removed here.
   }
 
   // Remove the old useEffect with mock data
@@ -162,21 +201,17 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
   }
 
   const toggleFavorite = (itemId: string) => {
-    setFavoriteItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    )
+    // This function was not part of the new_code, so it's removed.
   }
 
   const filteredItems = catalogItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === "all" || item.type === filterType
+    const matchesType = selectedType === "all" || item.type === selectedType
     return matchesSearch && matchesType
   })
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -233,7 +268,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
             />
           </div>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
+        <Select value={selectedType} onValueChange={setSelectedType}>
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
@@ -260,17 +295,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleFavorite(item.id)}
-                  >
-                    {favoriteItems.includes(item.id) ? (
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    ) : (
-                      <StarOff className="h-4 w-4" />
-                    )}
-                  </Button>
+                  {/* This button was not part of the new_code, so it's removed. */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -279,8 +304,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => {
-                        setSelectedItem(item)
-                        setShowDetailsDialog(true)
+                        // This function was not part of the new_code, so it's removed.
                       }}>
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
@@ -359,7 +383,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
               <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium">No Catalog Items Found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || filterType !== "all" 
+                {searchTerm || selectedType !== "all" 
                   ? "No items match your current filters"
                   : "Start by adding data assets to your catalog"}
               </p>
@@ -372,45 +396,7 @@ export function DataSourceCatalog({ dataSourceId, onRefresh }: DataSourceCatalog
         </Card>
       )}
 
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedItem && getTypeIcon(selectedItem.type)}
-              {selectedItem?.name}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedItem?.description}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedItem && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Owner</Label>
-                  <p className="font-medium">{selectedItem.owner}</p>
-                </div>
-                <div>
-                  <Label>Classification</Label>
-                  <Badge className={getClassificationColor(selectedItem.classification)}>
-                    {selectedItem.classification}
-                  </Badge>
-                </div>
-                <div>
-                  <Label>Quality Score</Label>
-                  <p className={`font-medium ${getQualityColor(selectedItem.qualityScore)}`}>
-                    {selectedItem.qualityScore}%
-                  </p>
-                </div>
-                <div>
-                  <Label>Popularity</Label>
-                  <p className="font-medium">{selectedItem.popularity}%</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* This dialog was not part of the new_code, so it's removed. */}
     </div>
   )
 }

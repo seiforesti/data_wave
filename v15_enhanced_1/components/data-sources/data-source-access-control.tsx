@@ -44,8 +44,38 @@ export function DataSourceAccessControl({
 
   const [object Object] data: accessData, isLoading, error, refetch } = useAccessControlQuery(dataSource.id)
 
-  // Mock data
-  const mockPermissions: UserPermission= useMemo(() => ([
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceAccessControl',
+    dataSourceId: dataSource.id,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  // Backend data queries
+  const { data: permissionsData, isLoading, error, refetch } = useAccessControlQuery(dataSource.id)
+
+  // Transform backend data to component format
+  const permissions: UserPermission[] = useMemo(() => {
+    if (!permissionsData) return []
+    
+    return permissionsData.map(permission => ({
+      id: permission.id,
+      userId: permission.user_id,
+      userName: permission.user_name,
+      userEmail: permission.user_email,
+      role: permission.role || 'viewer',
+      permissions: permission.permissions || [],
+      grantedAt: new Date(permission.granted_at),
+      grantedBy: permission.granted_by || 'System',
+      expiresAt: permission.expires_at ? new Date(permission.expires_at) : null,
+      status: permission.status || 'active'
+    }))
+  }, [permissionsData])
+
+  // Remove mock data
     {
       id: "1",
       userId: "user-1",

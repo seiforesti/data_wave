@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton"
 import { Clock, Play, Pause, Edit, Trash2, Calendar, Zap, CheckCircle, AlertTriangle } from "lucide-react"
 
-import { useScheduledTasksQuery } from "./services/apis"
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
+import { useScheduledTasksQuery } from "./services/enterprise-apis"
 import { DataSource } from "./types"
 
 interface SchedulerProps {
@@ -38,63 +40,43 @@ interface ScheduledTask {
 export function DataSourceScheduler({
   dataSource,
   onNavigateToComponent,
-  className = "": SchedulerProps) => {
-  const [tasks, setTasks] = useState<ScheduledTask[]>([])
+  className = "" }: SchedulerProps) {
   const [selectedTask, setSelectedTask] = useState<ScheduledTask | null>(null)
   const [showCreateTask, setShowCreateTask] = useState(false)
   const [filterType, setFilterType] = useState("all")
 
-  const { data: tasksData, isLoading, error, refetch } = useScheduledTasksQuery()
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceScheduler',
+    dataSourceId: dataSource.id,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
 
-  // Mock data
-  const mockTasks: ScheduledTask[] = useMemo(() => ([
-    {
-      id: "1",
-      name: "Daily Backup",
-      description: "Automated daily backup at 2:00AM",
-      type: "backup",
-      schedule: "Daily at 2:00 AM",
-      status: "active",
-      lastRun: "2023-12-22T02:00:00.000Z",
-      nextRun: "2024-01-23T02:00:00.000Z",
-      cronExpression: "0 2 * * *",
-      enabled: true,
-      retryCount: 0,
-      maxRetries: 3
-    },
-    {
-      id: "2",
-      name: "Weekly Security Scan",
-      description: "Comprehensive security scan every Sunday",
-      type: "scan",
-      schedule: "Weekly on Sunday at 3:00 AM",
-      status: "active",
-      lastRun: "2023-12-24T03:00:00.000Z",
-      nextRun: "2024-01-28T03:00:00.000Z",
-      cronExpression: "0 3 * * 0",
-      enabled: true,
-      retryCount: 1,
-      maxRetries: 3
-    },
-    {
-      id: "3",
-      name: "Monthly Report Generation",
-      description: "Generate monthly performance report",
-      type: "report",
-      schedule: "Monthly on 1st at 6:00 AM",
-      status: "paused",
-      lastRun: "2023-12-22T06:00:00.000Z",
-      nextRun: "2024-01-22T06:00:00.000Z",
-      cronExpression: "0 6 1 * *",
-      enabled: false,
-      retryCount: 0,
-      maxRetries: 3
-    }
-  ]), [])
+  // Backend data queries
+  const { data: tasksData, isLoading, error, refetch } = useScheduledTasksQuery(dataSource.id)
 
-  useEffect(() => {
-    setTasks(mockTasks)
-  }, [mockTasks])
+  // Transform backend data to component format
+  const tasks: ScheduledTask[] = useMemo(() => {
+    if (!tasksData) return []
+    
+    return tasksData.map(task => ({
+      id: task.id,
+      name: task.name,
+      description: task.description || '',
+      type: task.task_type || 'scan',
+      schedule: task.schedule_description || '',
+      status: task.status || 'active',
+      lastRun: task.last_run || undefined,
+      nextRun: task.next_run || '',
+      cronExpression: task.cron_expression || '',
+      enabled: task.enabled || false,
+      retryCount: task.retry_count || 0,
+      maxRetries: task.max_retries || 3
+    }))
+  }, [tasksData])
 
   const getTypeColor = (type: string) => {
     switch (type) {

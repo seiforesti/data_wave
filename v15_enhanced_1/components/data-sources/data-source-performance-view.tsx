@@ -239,7 +239,8 @@ export function DataSourcePerformanceView({
     })),
   }), [])
 
-  const data = performanceData || mockPerformanceData
+  // Use real performance data from enterprise APIs
+  const data = performanceData
 
   const getStatusColor = (status: string) => {
     switch (status) {

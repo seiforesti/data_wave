@@ -43,8 +43,39 @@ export function DataSourceNotifications({
 
   const { data: notificationData, isLoading, error, refetch } = useNotificationsQuery()
 
-  // Mock data
-  const mockNotifications: Notification[] = useMemo(() => ([
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceNotifications',
+    dataSourceId: dataSource.id,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  // Backend data queries
+  const { data: notificationsData, isLoading, error, refetch } = useNotificationsQuery(dataSource.id)
+
+  // Transform backend data to component format
+  const notifications: Notification[] = useMemo(() => {
+    if (!notificationsData) return []
+    
+    return notificationsData.map(notification => ({
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      type: notification.notification_type || 'info',
+      severity: notification.severity || 'medium',
+      status: notification.status || 'unread',
+      createdAt: new Date(notification.created_at),
+      readAt: notification.read_at ? new Date(notification.read_at) : null,
+      category: notification.category || 'system',
+      source: notification.source || 'system',
+      actionUrl: notification.action_url
+    }))
+  }, [notificationsData])
+
+  // Remove mock data
     {
       id: "1",
       title: "Backup Completed Successfully",

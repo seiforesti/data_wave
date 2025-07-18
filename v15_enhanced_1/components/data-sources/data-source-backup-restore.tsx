@@ -12,11 +12,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Skeleton } from "@/components/ui/skeleton"
 import { Archive, Download, Upload, Clock, CheckCircle, AlertTriangle, Play, Pause, RotateCcw } from "lucide-react"
 
-import { useBackupStatusQuery } from "./services/apis"
-import { DataSource } from "./types"
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
+import { useBackupStatusQuery } from "./services/enterprise-apis"
 
 interface BackupRestoreProps {
-  dataSource: DataSource
+  dataSourceId: number
   onNavigateToComponent?: (componentId: string, data?: any) => void
   className?: string
 }
@@ -32,44 +33,57 @@ interface Backup {
   location: string
 }
 
-export function DataSourceBackupRestore({
-  dataSource,
-  onNavigateToComponent,
-  className = "": BackupRestoreProps) {
-  const [backups, setBackups] = useState<Backup[]>([])
-  const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null)
+export function DataSourceBackupRestore({ 
+  dataSourceId, 
+  onNavigateToComponent, 
+  className = "" 
+}: BackupRestoreProps) {
+  const [selectedBackup, setSelectedBackup] = useState<string | null>(null)
   const [showCreateBackup, setShowCreateBackup] = useState(false)
-  const [showRestoreDialog, setShowRestoreDialog] = useState(false)
 
-  const [backupData, isLoading, error, refetch] = useBackupStatusQuery(dataSource.id)
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceBackupRestore',
+    dataSourceId,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
 
-  // Mock data
-  const mockBackups: Backup[] = useMemo(() => ([
-    {
-      id: "1",
-      name: "Full Backup - 202401-15",
-      size: 2048576, // 2GB
-      status: "completed",
-      createdAt: "2024-01-15T10:00:00Z",
-      type: "full",
-      retentionDays: 30,
-      location: "S3://backups/prod/db-1"
-    },
-    {
-      id: "2",
-      name: "Incremental Backup - 202401-14",
-      size: 5120050, // 5GB
-      status: "completed",
-      createdAt: "2024-01-14T10:00:00Z",
-      type: "incremental",
-      retentionDays: 7,
-      location: "S3://backups/prod/db-01"
-    }
-  ]), [])
+  // Backend data queries
+  const { 
+    data: backupData, 
+    isLoading,
+    error,
+    refetch 
+  } = useBackupStatusQuery(dataSourceId)
+
+  // Transform backend data to component format
+  const backups: Backup[] = useMemo(() => {
+    if (!backupData?.backups) return []
+    
+    return backupData.backups.map(backup => ({
+      id: backup.id,
+      name: backup.name || `Backup ${backup.id}`,
+      type: backup.backup_type || 'full',
+      status: backup.status,
+      createdAt: new Date(backup.created_at),
+      completedAt: backup.completed_at ? new Date(backup.completed_at) : null,
+      size: backup.size_bytes || 0,
+      duration: backup.duration_seconds || 0,
+      location: backup.storage_location || '',
+      metadata: backup.metadata || {},
+      retentionDays: backup.retention_days || 30,
+      encrypted: backup.encrypted || false,
+      compressionRatio: backup.compression_ratio || 1.0,
+      creator: backup.created_by || 'System'
+    }))
+  }, [backupData])
 
   useEffect(() => {
-    setBackups(mockBackups)
-  }, [mockBackups])
+    // setBackups(mockBackups) // This line is removed as per the new_code
+  }, [backups]) // This line is removed as per the new_code
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,7 +111,7 @@ export function DataSourceBackupRestore({
             Backup & Restore
           </h2>
           <p className="text-muted-foreground">
-            Manage backups and restoration for {dataSource.name}
+            Manage backups and restoration for {/* dataSource.name */}
           </p>
         </div>
         <div className="flex gap-2">
@@ -192,7 +206,7 @@ export function DataSourceBackupRestore({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setSelectedBackup(backup)}
+                      onClick={() => setSelectedBackup(backup.id)}
                     >
                       <Download className="h-4 w-4" />
                     </Button>
