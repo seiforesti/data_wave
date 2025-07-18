@@ -98,7 +98,7 @@ export function DataSourceVersionHistory({
   // Remove useEffect since we're using the API hook directly
 
   // Use API data if available, otherwise fallback to mock data
-  const displayVersions = versions.length > 0 ? versions : mockVersions
+  const displayVersions = versions.length > 0 ? versions : []
 
   const getVersionTypeColor = (type: string) => {
     switch (type) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useDataSourceIntegrationsQuery } from "@/hooks/useDataSources"
 import { 
   Settings, 
@@ -34,9 +34,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
-interface DataSourceIntegrationsProps {
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
+import { useIntegrationsQuery } from "./services/enterprise-apis"
+
+interface IntegrationsProps {
   dataSourceId: number
-  onRefresh?: () => void
+  onNavigateToComponent?: (componentId: string, data?: any) => void
+  className?: string
 }
 
 interface Integration {
@@ -55,83 +60,64 @@ interface Integration {
   createdAt: string
 }
 
-export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIntegrationsProps) {
+export function DataSourceIntegrations({ 
+  dataSourceId, 
+  onNavigateToComponent, 
+  className = "" 
+}: IntegrationsProps) {
+  const [activeTab, setActiveTab] = useState("connected")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
 
-  // Use API hook to fetch integrations
-  const { 
-    data: integrationsResponse, 
-    isLoading: loading, 
-    error, 
-    refetch 
-  } = useDataSourceIntegrationsQuery(dataSourceId)
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceIntegrations',
+    dataSourceId,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
 
-  const integrations = integrationsResponse?.data?.integrations || []
+  // Backend data queries
+  const { 
+    data: integrationsData, 
+    isLoading,
+    error,
+    refetch 
+  } = useIntegrationsQuery(dataSourceId)
+
+  // Transform backend data to component format
+  const integrations: Integration[] = useMemo(() => {
+    if (!integrationsData) return []
+    
+    return integrationsData.map(integration => ({
+      id: integration.id,
+      name: integration.name,
+      type: integration.integration_type,
+      description: integration.description || '',
+      status: integration.status || 'inactive',
+      category: integration.category || 'other',
+      version: integration.version || '1.0.0',
+      lastSync: integration.last_sync ? new Date(integration.last_sync) : null,
+      config: integration.config || {},
+      metrics: integration.metrics || {},
+      connectionString: integration.connection_string,
+      healthScore: integration.health_score || 0,
+      syncFrequency: integration.sync_frequency || 'manual',
+      dataVolume: integration.data_volume || 0,
+      errorCount: integration.error_count || 0,
+      tags: integration.tags || []
+    }))
+  }, [integrationsData])
 
   // Handle refresh
   const handleRefresh = () => {
     refetch()
-    onRefresh?.()
+    // onRefresh?.() // This line was removed from the new_code, so it's removed here.
   }
-
-  // Remove the old useEffect with mock data
-  /*useEffect(() => {
-    const mockIntegrations: Integration[] = [
-      {
-        id: "int-001",
-        name: "Salesforce CRM",
-        type: "crm",
-        provider: "salesforce",
-        status: "active",
-        description: "Customer relationship management data sync",
-        lastSync: "2024-01-15T10:30:00Z",
-        nextSync: "2024-01-15T14:30:00Z",
-        syncFrequency: "4h",
-        dataVolume: 125000,
-        errorCount: 2,
-        successRate: 98.5,
-        createdAt: "2024-01-01T00:00:00Z"
-      },
-      {
-        id: "int-002",
-        name: "AWS S3 Storage",
-        type: "storage",
-        provider: "aws",
-        status: "active",
-        description: "Cloud storage integration for data archival",
-        lastSync: "2024-01-15T09:00:00Z",
-        nextSync: "2024-01-16T09:00:00Z",
-        syncFrequency: "24h",
-        dataVolume: 2500000,
-        errorCount: 0,
-        successRate: 100,
-        createdAt: "2024-01-01T00:00:00Z"
-      },
-      {
-        id: "int-003",
-        name: "Slack Notifications",
-        type: "notification",
-        provider: "slack",
-        status: "error",
-        description: "Real-time alerts and notifications",
-        lastSync: "2024-01-14T15:00:00Z",
-        nextSync: "2024-01-15T15:00:00Z",
-        syncFrequency: "1h",
-        dataVolume: 450,
-        errorCount: 15,
-        successRate: 85.2,
-        createdAt: "2024-01-01T00:00:00Z"
-      }
-    ]
-
-    setTimeout(() => {
-      setIntegrations(mockIntegrations)
-      setLoading(false)
-    }, 1000)
-  }, [dataSourceId])*/
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -161,7 +147,7 @@ export function DataSourceIntegrations({ dataSourceId, onRefresh }: DataSourceIn
     return matchesSearch && matchesType && matchesStatus
   })
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">

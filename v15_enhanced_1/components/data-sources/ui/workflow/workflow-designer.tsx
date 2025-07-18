@@ -29,6 +29,20 @@ import { eventBus } from '../../core/event-bus'
 import { realTimeCollaborationManager } from '../../collaboration/realtime-collaboration'
 import { approvalSystem } from '../../workflows/approval-system'
 
+// Import enterprise hooks and APIs
+import { 
+  useEnterpriseFeatures, 
+  useWorkflowIntegration,
+  useCollaborationFeatures 
+} from '../../hooks/use-enterprise-features'
+import { 
+  useWorkflowDefinitionsQuery,
+  useWorkflowExecutionsQuery,
+  useWorkflowTemplatesQuery,
+  useWorkflowApprovalQuery
+} from '../../services/enterprise-apis'
+import { useDataSourcesQuery } from '../../services/apis'
+
 // ============================================================================
 // INTERFACES AND TYPES
 // ============================================================================

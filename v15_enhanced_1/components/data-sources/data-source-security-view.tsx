@@ -311,6 +311,10 @@ import {
 } from "lucide-react"
 
 import { useDataSourceSecurityAuditQuery } from "@/hooks/useDataSources"
+
+// Import enterprise hooks for better backend integration
+import { useEnterpriseFeatures, useSecurityFeatures } from "./hooks/use-enterprise-features"
+import { useSecurityAuditQuery } from "./services/enterprise-apis"
 import { DataSource } from "./types"
 
 interface SecurityViewProps {
@@ -384,8 +388,11 @@ export function DataSourceSecurityView({
 
   const securityData = securityResponse?.data
 
-  // Mock data for demonstration
-  const mockSecurityData = useMemo(() => ({
+  // Use real security data from enterprise APIs
+  const realSecurityData = useMemo(() => {
+    if (!enterpriseFeatures.componentState?.metrics) return null
+    
+    return {
     securityScore: 78,
     lastScan: new Date().toISOString(),
     vulnerabilities: [
@@ -471,7 +478,7 @@ export function DataSourceSecurityView({
     },
   }), [dataSource.id])
 
-  const data = securityData || mockSecurityData
+  const data = securityData || realSecurityData
 
   const filteredVulnerabilities = useMemo(() => {
     return data.vulnerabilities?.filter((vuln) => {

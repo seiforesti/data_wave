@@ -43,8 +43,40 @@ export function DataSourceReports({
 
   const { data: reportsData, isLoading, error, refetch } = useReportsQuery(dataSource.id)
 
-  // Mock data
-  const mockReports: Report[] = useMemo(() => ([
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceReports',
+    dataSourceId: dataSource.id,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  // Backend data queries
+  const { data: reportsData, isLoading, error, refetch } = useReportsQuery(dataSource.id)
+
+  // Transform backend data to component format
+  const reports: Report[] = useMemo(() => {
+    if (!reportsData) return []
+    
+    return reportsData.map(report => ({
+      id: report.id,
+      name: report.name,
+      type: report.report_type || 'performance',
+      status: report.status || 'completed',
+      format: report.format || 'pdf',
+      createdAt: new Date(report.created_at),
+      scheduledAt: report.scheduled_at ? new Date(report.scheduled_at) : null,
+      createdBy: report.created_by || 'System',
+      description: report.description || '',
+      fileSize: report.file_size || 0,
+      downloadUrl: report.download_url || '',
+      parameters: report.parameters || {}
+    }))
+  }, [reportsData])
+
+  // Fallback empty array if no real data (remove mock data)
     {
       id: "1",
       name: "Monthly Performance Report",

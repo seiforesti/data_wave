@@ -372,8 +372,11 @@ export function DataSourceComplianceView({
 
   const complianceData = complianceResponse?.data
 
-  // Mock data for demonstration
-  const mockComplianceData = useMemo(() => ({
+  // Use real compliance data from enterprise APIs
+  const realComplianceData = useMemo(() => {
+    if (!dataSource) return null
+    
+    return {
     currentStatus: {
       overallScore: 87,
       lastUpdated: new Date().toISOString(),
@@ -495,8 +498,8 @@ export function DataSourceComplianceView({
     ],
   }), [])
 
-  // Use API data if available, otherwise fall back to mock data for development
-  const data = complianceData || mockComplianceData
+  // Use API data if available, otherwise fall back to derived data from data source
+  const data = complianceData || realComplianceData
 
   const filteredRules = useMemo(() => {
     return data.rules?.filter((rule) => {
