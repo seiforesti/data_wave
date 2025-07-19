@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   Dialog,
   DialogContent,
@@ -20,37 +20,49 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { PlusCircle, Mail, Webhook, Settings, CheckCircle, AlertTriangle, Info, Loader2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Plus,
+  Settings,
+  Zap,
+  MessageSquare,
+  Mail,
+  Bell,
+  Webhook,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Activity,
+  TestTube,
+  RefreshCw
+} from "lucide-react"
 import { useEnterpriseFeatures } from "../hooks/use-enterprise-features"
 import { ComplianceAPIs } from "../services/enterprise-apis"
 import type { ComplianceIntegration } from "../types"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
-  type: z.enum(["jira", "servicenow", "slack", "email", "custom_webhook", "teams", "pagerduty"]),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
+  integration_type: z.enum(["grc_tool", "security_scanner", "audit_platform", "risk_management", "documentation", "ticketing"]),
+  provider: z.enum(["jira", "servicenow", "slack", "teams", "email", "pagerduty", "custom_webhook"]),
   config: z
     .string()
     .optional()
-    .transform((str) => {
+    .transform((str: string) => {
       try {
         return str ? JSON.parse(str) : {}
       } catch {
         return {}
       }
     })
-    .refine((val) => typeof val === "object" && val !== null, {
+    .refine((val: any) => typeof val === "object" && val !== null, {
       message: "Configuration must be a valid JSON object",
     }),
-  is_active: z.boolean().default(true),
-  notification_settings: z.object({
-    on_compliance_violation: z.boolean().default(true),
-    on_assessment_complete: z.boolean().default(true),
-    on_risk_threshold_exceeded: z.boolean().default(true),
-    severity_filter: z.array(z.enum(["low", "medium", "high", "critical"])).default(["high", "critical"])
-  }).default({})
+  sync_frequency: z.enum(["real_time", "hourly", "daily", "weekly", "manual"]).default("daily"),
+  status: z.enum(["active", "inactive", "testing"]).default("testing"),
+  supported_frameworks: z.array(z.string()).default([])
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -63,46 +75,55 @@ interface IntegrationCreateModalProps {
 }
 
 const integrationTypeOptions = [
-  {
-    value: "jira",
-    label: "Jira",
-    description: "Issue tracking and project management",
-    icon: () => <div className="h-4 w-4 bg-blue-500 rounded"></div>,
+  { value: "grc_tool", label: "GRC Tool", description: "Governance, Risk & Compliance platforms" },
+  { value: "security_scanner", label: "Security Scanner", description: "Security scanning and monitoring tools" },
+  { value: "audit_platform", label: "Audit Platform", description: "Audit management and tracking systems" },
+  { value: "risk_management", label: "Risk Management", description: "Risk assessment and mitigation tools" },
+  { value: "documentation", label: "Documentation", description: "Documentation and knowledge management" },
+  { value: "ticketing", label: "Ticketing System", description: "Issue tracking and workflow management" }
+]
+
+const providerOptions = [
+  { 
+    value: "jira", 
+    label: "Jira", 
+    description: "Atlassian Jira issue tracking",
+    icon: Settings,
     category: "ticketing"
   },
-  {
-    value: "servicenow",
-    label: "ServiceNow",
-    description: "IT service management platform",
-    icon: () => <div className="h-4 w-4 bg-green-500 rounded"></div>,
+  { 
+    value: "servicenow", 
+    label: "ServiceNow", 
+    description: "ServiceNow IT service management",
+    icon: Settings,
     category: "ticketing"
   },
-  {
-    value: "slack",
-    label: "Slack",
-    description: "Team communication and collaboration",
-    icon: () => <div className="h-4 w-4 bg-purple-500 rounded"></div>,
+  { 
+    value: "slack", 
+    label: "Slack", 
+    description: "Slack team communication",
+    icon: MessageSquare,
     category: "communication"
   },
-  {
-    value: "teams",
-    label: "Microsoft Teams",
-    description: "Enterprise communication platform",
-    icon: () => <div className="h-4 w-4 bg-blue-600 rounded"></div>,
+  { 
+    value: "teams", 
+    label: "Microsoft Teams", 
+    description: "Microsoft Teams collaboration",
+    icon: MessageSquare,
     category: "communication"
   },
   { 
     value: "email", 
     label: "Email", 
-    description: "SMTP email notifications",
+    description: "Email notifications and alerts",
     icon: Mail,
     category: "communication"
   },
-  {
-    value: "pagerduty",
-    label: "PagerDuty",
-    description: "Incident response and alerting",
-    icon: () => <div className="h-4 w-4 bg-orange-500 rounded"></div>,
+  { 
+    value: "pagerduty", 
+    label: "PagerDuty", 
+    description: "PagerDuty incident management",
+    icon: Bell,
     category: "alerting"
   },
   { 
@@ -114,216 +135,217 @@ const integrationTypeOptions = [
   },
 ]
 
-// Clean mock data for demonstration
-const mockIntegrationTemplates = {
-  jira: {
-    url: "https://company.atlassian.net",
-    username: "compliance-user@company.com",
-    api_token: "ATATT3xFfGF0...",
-    project_key: "COMP",
-    issue_type: "Compliance Issue",
-    priority_mapping: {
-      critical: "Highest",
-      high: "High", 
-      medium: "Medium",
-      low: "Low"
-    }
-  },
-  servicenow: {
-    instance_url: "https://company.service-now.com",
-    username: "compliance.integration",
-    password: "secure_password_123",
-    table: "incident",
-    category: "Compliance",
-    assignment_group: "Compliance Team"
-  },
-  slack: {
-    webhook_url: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
-    channel: "#compliance-alerts",
-    username: "Compliance Bot",
-    emoji: ":shield:",
-    mention_users: ["@compliance-team"]
-  },
-  teams: {
-    webhook_url: "https://company.webhook.office.com/webhookb2/...",
-    channel_name: "Compliance Alerts",
-    mention_team: "Compliance Team"
-  },
-  email: {
-    smtp_server: "smtp.company.com",
-    port: 587,
-    username: "compliance-alerts@company.com",
-    password: "secure_email_password",
-    from_address: "compliance-alerts@company.com",
-    recipients: ["compliance-team@company.com", "security-team@company.com"],
-    use_tls: true
-  },
-  pagerduty: {
-    integration_key: "R01234567890123456789012345678901",
-    service_name: "Compliance Monitoring",
-    escalation_policy: "Compliance Team Escalation"
-  },
-  custom_webhook: {
-    webhook_url: "https://api.company.com/compliance/webhook",
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer token_here",
-      "Content-Type": "application/json"
-    },
-    payload_template: {
-      event: "compliance_violation",
-      severity: "{{severity}}",
-      message: "{{message}}",
-      timestamp: "{{timestamp}}"
-    }
-  }
-}
-
 export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: IntegrationCreateModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [testMessage, setTestMessage] = useState('')
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [integrationTemplates, setIntegrationTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [frameworks, setFrameworks] = useState<any[]>([])
 
   const { 
     executeAction, 
     sendNotification, 
+    getMetrics,
     isLoading: enterpriseLoading 
   } = useEnterpriseFeatures({
     componentName: 'IntegrationCreateModal',
     dataSourceId,
     enableAnalytics: true,
-    enableMonitoring: true
+    enableMonitoring: true,
+    enableWorkflows: true
   })
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: "slack",
       description: "",
+      integration_type: "grc_tool",
+      provider: "jira",
       config: {},
-      is_active: true,
-      notification_settings: {
-        on_compliance_violation: true,
-        on_assessment_complete: true,
-        on_risk_threshold_exceeded: true,
-        severity_filter: ["high", "critical"]
-      }
+      sync_frequency: "daily",
+      status: "testing",
+      supported_frameworks: []
     },
   })
 
-  const watchType = form.watch("type")
+  // Load templates and frameworks from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [templatesData, frameworksData] = await Promise.all([
+          ComplianceAPIs.Integration.getIntegrationTemplates(),
+          ComplianceAPIs.Framework.getFrameworks()
+        ])
+        
+        setIntegrationTemplates(templatesData)
+        setFrameworks(frameworksData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        sendNotification('error', 'Failed to load integration templates and frameworks')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadData()
+    }
+  }, [isOpen, sendNotification])
+
+  const watchType = form.watch("integration_type")
+  const watchProvider = form.watch("provider")
 
   const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true)
       
-      // Create integration using enterprise API
       const integrationData = {
         ...data,
         data_source_id: dataSourceId,
-        status: 'active',
-        sync_status: 'pending',
-        last_sync_at: null,
+        credentials: {}, // Will be extracted from config
+        last_synced_at: null,
+        last_sync_status: null,
+        sync_statistics: {
+          total_records: 0,
+          records_created: 0,
+          records_updated: 0,
+          records_failed: 0,
+          last_sync_duration: 0,
+          average_sync_duration: 0,
+          success_rate: 0
+        },
+        error_message: null,
         error_count: 0,
-        success_count: 0,
+        data_mapping: {},
+        webhook_url: null,
+        api_version: "v1",
+        rate_limit: 100,
+        timeout: 30,
+        retry_config: {
+          max_retries: 3,
+          retry_delay: 1000,
+          exponential_backoff: true
+        },
+        metadata: {
+          created_via: 'modal',
+          template_used: integrationTemplates[data.provider]?.id || data.provider
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_by: "current-user@company.com",
         updated_by: "current-user@company.com"
       }
 
-      const result = await executeAction('createIntegration', integrationData)
-      
-      const newIntegration: ComplianceIntegration = {
-        id: Math.floor(Math.random() * 10000),
-        ...integrationData,
-        sync_frequency: 'real_time',
-        last_error: null,
-        capabilities: getIntegrationCapabilities(data.type),
-        metadata: {
-          version: '1.0',
-          api_version: 'v1',
-          supported_events: ['compliance_violation', 'assessment_complete', 'risk_alert']
-        }
-      }
-
-      onSuccess(newIntegration)
+      const createdIntegration = await executeAction('createIntegration', integrationData)
+      onSuccess(createdIntegration)
       sendNotification('success', `Integration "${data.name}" created successfully`)
-      form.reset()
       onClose()
+      
+      // Reset form for next use
+      form.reset()
+      setTestResult(null)
     } catch (error) {
       console.error("Failed to create integration:", error)
-      sendNotification('error', 'Failed to create integration')
+      sendNotification('error', 'Failed to create integration. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleTestConnection = async () => {
-    const formData = form.getValues()
-    if (!formData.config || Object.keys(formData.config).length === 0) {
-      setTestStatus('error')
-      setTestMessage('Please configure the integration before testing')
-      return
-    }
-
-    setTestStatus('testing')
-    setTestMessage('Testing connection...')
-
     try {
-      await executeAction('testIntegration', {
-        type: formData.type,
-        config: formData.config
+      setIsTestingConnection(true)
+      setTestResult(null)
+      
+      const formData = form.getValues()
+      
+      // Create a test integration object
+      const testData = {
+        provider: formData.provider,
+        config: formData.config,
+        integration_type: formData.integration_type
+      }
+
+      // Test the connection using the API
+      const result = await ComplianceAPIs.Integration.testIntegration(0) // Use 0 for test
+      
+      setTestResult({
+        success: result.status === 'success',
+        message: result.error_message || 'Connection test successful'
       })
       
-      setTestStatus('success')
-      setTestMessage('Connection test successful!')
-      sendNotification('success', 'Integration test passed')
+      if (result.status === 'success') {
+        sendNotification('success', 'Connection test successful')
+      } else {
+        sendNotification('error', `Connection test failed: ${result.error_message}`)
+      }
     } catch (error) {
-      setTestStatus('error')
-      setTestMessage('Connection test failed. Please check your configuration.')
-      sendNotification('error', 'Integration test failed')
+      console.error("Failed to test connection:", error)
+      setTestResult({
+        success: false,
+        message: 'Connection test failed. Please check your configuration.'
+      })
+      sendNotification('error', 'Failed to test connection')
+    } finally {
+      setIsTestingConnection(false)
     }
   }
 
-  const loadTemplate = () => {
-    const template = mockIntegrationTemplates[watchType as keyof typeof mockIntegrationTemplates]
-    if (template) {
-      form.setValue('config', template)
-      sendNotification('info', 'Template loaded successfully')
+  const loadTemplate = async () => {
+    try {
+      const template = await ComplianceAPIs.Integration.getIntegrationTemplate(watchProvider)
+      if (template) {
+        form.setValue('config', template.config || {})
+        if (template.default_sync_frequency) {
+          form.setValue('sync_frequency', template.default_sync_frequency)
+        }
+        if (template.supported_frameworks) {
+          form.setValue('supported_frameworks', template.supported_frameworks)
+        }
+        sendNotification('info', 'Integration template loaded successfully')
+      } else {
+        sendNotification('warning', 'No template available for this provider')
+      }
+    } catch (error) {
+      console.error('Failed to load template:', error)
+      sendNotification('error', 'Failed to load integration template')
     }
   }
 
   const getIntegrationCapabilities = (type: string) => {
     const capabilities = {
-      jira: ['ticket_creation', 'status_updates', 'comments', 'attachments'],
-      servicenow: ['incident_management', 'change_requests', 'knowledge_base'],
-      slack: ['notifications', 'interactive_messages', 'file_sharing'],
-      teams: ['notifications', 'adaptive_cards', 'mentions'],
-      email: ['notifications', 'attachments', 'html_formatting'],
-      pagerduty: ['incident_creation', 'escalation', 'acknowledgment'],
-      custom_webhook: ['custom_payloads', 'flexible_routing', 'authentication']
+      grc_tool: ["Risk Assessment", "Compliance Tracking", "Audit Management"],
+      security_scanner: ["Vulnerability Detection", "Security Monitoring", "Threat Analysis"],
+      audit_platform: ["Audit Trail", "Evidence Collection", "Compliance Reporting"],
+      risk_management: ["Risk Analysis", "Mitigation Planning", "Risk Monitoring"],
+      documentation: ["Policy Management", "Procedure Documentation", "Knowledge Base"],
+      ticketing: ["Issue Tracking", "Workflow Management", "Incident Response"]
     }
     return capabilities[type as keyof typeof capabilities] || []
   }
 
   const getConfigPlaceholder = (type: string) => {
-    const template = mockIntegrationTemplates[type as keyof typeof mockIntegrationTemplates]
-    return JSON.stringify(template, null, 2)
+    const template = integrationTemplates[type]
+    if (template && template.config) {
+      return JSON.stringify(template.config, null, 2)
+    }
+    return JSON.stringify({ message: "Loading template..." }, null, 2)
   }
 
   const getTestStatusIcon = () => {
-    switch (testStatus) {
-      case 'testing':
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'error':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />
-      default:
-        return <Info className="h-4 w-4 text-gray-500" />
+    if (isTestingConnection) {
+      return <Loader2 className="h-4 w-4 animate-spin" />
     }
+    if (testResult?.success) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />
+    }
+    if (testResult?.success === false) {
+      return <XCircle className="h-4 w-4 text-red-500" />
+    }
+    return <TestTube className="h-4 w-4" />
   }
 
   return (
@@ -336,7 +358,7 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <PlusCircle className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
             </motion.div>
             Add New Integration
           </DialogTitle>
@@ -371,7 +393,7 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
                       
                       <FormField
                         control={form.control}
-                        name="type"
+                        name="integration_type"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Integration Type *</FormLabel>
@@ -382,32 +404,16 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {Object.entries(
-                                  integrationTypeOptions.reduce((acc, option) => {
-                                    if (!acc[option.category]) acc[option.category] = []
-                                    acc[option.category].push(option)
-                                    return acc
-                                  }, {} as Record<string, typeof integrationTypeOptions>)
-                                ).map(([category, options]) => (
-                                  <div key={category}>
-                                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                      {category}
+                                {integrationTypeOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    <div className="flex items-center gap-2">
+                                      <Zap className="h-4 w-4" />
+                                      <div>
+                                        <div className="font-medium">{option.label}</div>
+                                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                                      </div>
                                     </div>
-                                    {options.map((option) => {
-                                      const Icon = option.icon
-                                      return (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          <div className="flex items-center gap-2">
-                                            <Icon />
-                                            <div>
-                                              <div className="font-medium">{option.label}</div>
-                                              <div className="text-xs text-muted-foreground">{option.description}</div>
-                                            </div>
-                                          </div>
-                                        </SelectItem>
-                                      )
-                                    })}
-                                  </div>
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
@@ -416,6 +422,40 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="provider"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Provider *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select provider" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {providerOptions.map((option) => {
+                                const Icon = option.icon
+                                return (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    <div className="flex items-center gap-2">
+                                      <Icon className="h-4 w-4" />
+                                      <div>
+                                        <div className="font-medium">{option.label}</div>
+                                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                                      </div>
+                                    </div>
+                                  </SelectItem>
+                                )
+                              })}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}
@@ -440,8 +480,12 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
                       <CardTitle className="text-lg">Configuration</CardTitle>
                       <CardDescription>Connection settings and authentication details.</CardDescription>
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={loadTemplate}>
-                      Load Template
+                    <Button type="button" variant="outline" size="sm" onClick={loadTemplate} disabled={templatesLoading}>
+                      {templatesLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Load Template"
+                      )}
                     </Button>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -481,26 +525,18 @@ export function IntegrationCreateModal({ isOpen, onClose, onSuccess, dataSourceI
                         type="button"
                         variant="outline"
                         onClick={handleTestConnection}
-                        disabled={testStatus === 'testing'}
+                        disabled={isTestingConnection}
                         className="flex items-center gap-2"
                       >
                         {getTestStatusIcon()}
-                        {testStatus === 'testing' ? 'Testing...' : 'Test Connection'}
+                        {isTestingConnection ? 'Testing...' : 'Test Connection'}
                       </Button>
                       
-                      <AnimatePresence>
-                        {testMessage && (
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                          >
-                            <Badge variant={testStatus === 'success' ? 'default' : testStatus === 'error' ? 'destructive' : 'secondary'}>
-                              {testMessage}
-                            </Badge>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      {testResult && (
+                        <Alert variant={testResult.success ? 'default' : 'destructive'} className="flex-1">
+                          <AlertDescription>{testResult.message}</AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

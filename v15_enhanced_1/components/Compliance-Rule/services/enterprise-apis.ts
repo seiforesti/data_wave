@@ -579,6 +579,35 @@ export class ComplianceManagementAPI {
     })
   }
 
+  static async getRuleTemplates(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/templates'
+    })
+  }
+
+  static async getRuleTemplate(type: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/templates/${type}`
+    })
+  }
+
+  static async testRule(ruleData: any): Promise<{ success: boolean; results: any; errors?: string[] }> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/rules/test',
+      data: ruleData
+    })
+  }
+
+  static async validateRule(id: number): Promise<{ valid: boolean; issues: any[]; recommendations: string[] }> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/rules/${id}/validate`
+    })
+  }
+
   // Assessments Management
   static async getAssessments(params?: {
     data_source_id?: number
@@ -1106,11 +1135,26 @@ export class AuditReportingAPI {
     })
   }
 
+  static async getReportTemplate(type: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/reports/templates/${type}`
+    })
+  }
+
   static async createReportTemplate(template: any): Promise<any> {
     return apiClient.request({
       method: 'POST',
       url: '/compliance/reports/templates',
       data: template
+    })
+  }
+
+  static async previewReport(data: any): Promise<{ preview_url: string; estimated_size: string; generation_time: string }> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/reports/preview',
+      data
     })
   }
 }
@@ -1228,6 +1272,35 @@ export class WorkflowAutomationAPI {
     })
   }
 
+  static async getWorkflowTemplate(type: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/workflows/templates/${type}`
+    })
+  }
+
+  static async getTriggerTemplates(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/workflows/trigger-templates'
+    })
+  }
+
+  static async getActionTemplates(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/workflows/action-templates'
+    })
+  }
+
+  static async executeWorkflow(id: number, params?: any): Promise<{ instance_id: string; status: string }> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/workflows/${id}/execute`,
+      data: params
+    })
+  }
+
   static async createWorkflowTemplate(template: any): Promise<any> {
     return apiClient.request({
       method: 'POST',
@@ -1333,6 +1406,20 @@ export class IntegrationAPI {
     return apiClient.request({
       method: 'GET',
       url: '/compliance/integrations/available'
+    })
+  }
+
+  static async getIntegrationTemplates(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/integrations/templates'
+    })
+  }
+
+  static async getIntegrationTemplate(type: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/integrations/templates/${type}`
     })
   }
 

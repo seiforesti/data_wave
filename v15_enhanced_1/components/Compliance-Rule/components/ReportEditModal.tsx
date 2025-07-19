@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Edit, FileText, Mail, Filter, CalendarDays, Download, Users, Clock, Activity, Loader2, BarChart } from "lucide-react"
+import {
+  Edit,
+  FileText,
+  Download,
+  Calendar,
+  Clock,
+  Users,
+  Settings,
+  Eye,
+  Loader2,
+  AlertTriangle,
+  CheckCircle,
+  FileSpreadsheet,
+  FileCode,
+  FileImage,
+  Activity,
+  BarChart3,
+  RefreshCw
+} from "lucide-react"
 import { useEnterpriseFeatures } from "../hooks/use-enterprise-features"
 import { ComplianceAPIs } from "../services/enterprise-apis"
 import type { ComplianceReport } from "../types"
@@ -30,32 +48,21 @@ import type { ComplianceReport } from "../types"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
-  type: z.enum(["summary", "detail", "trend", "custom", "executive", "technical"]),
-  format: z.enum(["pdf", "csv", "json", "xlsx", "html"]),
-  schedule: z.enum(["daily", "weekly", "monthly", "quarterly", "on_demand"]).optional(),
-  recipients: z
-    .string()
-    .optional()
-    .transform((str) => (str ? str.split(",").map((s) => s.trim()) : [])),
-  filters: z
-    .string()
-    .optional()
-    .transform((str) => {
-      try {
-        return str ? JSON.parse(str) : {}
-      } catch {
-        return {}
-      }
-    })
-    .refine((val) => typeof val === "object" && val !== null, {
-      message: "Filters must be a valid JSON object",
-    }),
-  template_id: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-  auto_generate: z.boolean().default(false),
+  type: z.enum(["compliance_status", "gap_analysis", "risk_assessment", "audit_trail", "executive_summary", "detailed_findings"]),
+  format: z.enum(["pdf", "excel", "csv", "json", "html"]),
+  framework: z.string().optional(),
+  schedule: z.enum(["once", "daily", "weekly", "monthly", "quarterly"]).default("once"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  recipients: z.string().optional(),
+  filters: z.object({
+    date_range: z.string().optional(),
+    severity: z.array(z.string()).optional(),
+    status: z.array(z.string()).optional(),
+    categories: z.array(z.string()).optional()
+  }).optional(),
   include_charts: z.boolean().default(true),
   include_recommendations: z.boolean().default(true),
-  compliance_frameworks: z.array(z.string()).default([])
+  include_raw_data: z.boolean().default(false)
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -68,83 +75,40 @@ interface ReportEditModalProps {
 }
 
 const reportTypeOptions = [
-  { 
-    value: "summary", 
-    label: "Summary", 
-    description: "High-level overview of compliance status",
-    icon: FileText,
-    category: "standard"
-  },
-  { 
-    value: "detail", 
-    label: "Detail", 
-    description: "Granular findings and specific violations",
-    icon: FileText,
-    category: "standard"
-  },
-  { 
-    value: "trend", 
-    label: "Trend", 
-    description: "Historical performance and trend analysis",
-    icon: BarChart,
-    category: "analytics"
-  },
-  { 
-    value: "executive", 
-    label: "Executive", 
-    description: "Executive summary for leadership",
-    icon: Users,
-    category: "executive"
-  },
-  { 
-    value: "technical", 
-    label: "Technical", 
-    description: "Technical details for IT and security teams",
-    icon: FileText,
-    category: "technical"
-  },
-  { 
-    value: "custom", 
-    label: "Custom", 
-    description: "User-defined content and structure",
-    icon: FileText,
-    category: "custom"
-  },
+  { value: "compliance_status", label: "Compliance Status", icon: CheckCircle, description: "Overall compliance posture and metrics" },
+  { value: "gap_analysis", label: "Gap Analysis", icon: AlertTriangle, description: "Identify compliance gaps and remediation needs" },
+  { value: "risk_assessment", label: "Risk Assessment", icon: FileText, description: "Risk analysis and mitigation strategies" },
+  { value: "audit_trail", label: "Audit Trail", icon: Clock, description: "Detailed audit logs and activities" },
+  { value: "executive_summary", label: "Executive Summary", icon: Users, description: "High-level overview for executives" },
+  { value: "detailed_findings", label: "Detailed Findings", icon: FileSpreadsheet, description: "Comprehensive findings and evidence" }
 ]
 
-const reportFormatOptions = [
-  { value: "pdf", label: "PDF", description: "Portable Document Format" },
-  { value: "xlsx", label: "Excel", description: "Microsoft Excel spreadsheet" },
-  { value: "csv", label: "CSV", description: "Comma-separated values" },
-  { value: "html", label: "HTML", description: "Web page format" },
-  { value: "json", label: "JSON", description: "JavaScript Object Notation" }
-]
-
-const reportScheduleOptions = [
-  { value: "on_demand", label: "On Demand", description: "Generate manually when needed" },
-  { value: "daily", label: "Daily", description: "Generate every day" },
-  { value: "weekly", label: "Weekly", description: "Generate every week" },
-  { value: "monthly", label: "Monthly", description: "Generate every month" },
-  { value: "quarterly", label: "Quarterly", description: "Generate every quarter" }
-]
-
-const complianceFrameworks = [
-  "GDPR", "HIPAA", "PCI DSS", "SOX", "CCPA", "GLBA", "ISO 27001", "NIST", "SOC 2", "FISMA"
+const formatOptions = [
+  { value: "pdf", label: "PDF", icon: FileText, description: "Portable document format" },
+  { value: "excel", label: "Excel", icon: FileSpreadsheet, description: "Microsoft Excel spreadsheet" },
+  { value: "csv", label: "CSV", icon: FileCode, description: "Comma-separated values" },
+  { value: "json", label: "JSON", icon: FileCode, description: "JavaScript Object Notation" },
+  { value: "html", label: "HTML", icon: FileImage, description: "Web page format" }
 ]
 
 export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEditModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [reportTemplates, setReportTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [frameworks, setFrameworks] = useState<any[]>([])
 
   const { 
     executeAction, 
     sendNotification, 
+    getMetrics,
     isLoading: enterpriseLoading 
   } = useEnterpriseFeatures({
     componentName: 'ReportEditModal',
     complianceId: report.id,
     enableAnalytics: true,
-    enableMonitoring: true
+    enableMonitoring: true,
+    enableWorkflows: true
   })
 
   const form = useForm<FormData>({
@@ -152,37 +116,66 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
     defaultValues: {
       name: report.name,
       description: report.description || "",
-      type: report.type,
-      format: report.format,
-      schedule: report.schedule || "on_demand",
-      recipients: report.recipients || [],
+      type: report.report_type,
+      format: report.file_format,
+      framework: report.framework || "",
+      schedule: "once", // Will be populated from report schedule
+      priority: "medium", // Will be populated from report metadata
+      recipients: Array.isArray(report.recipients) ? report.recipients.join(", ") : "",
       filters: report.filters || {},
-      template_id: report.template_id || "",
-      priority: report.priority || "medium",
-      auto_generate: report.auto_generate || false,
-      include_charts: report.metadata?.generation_settings?.include_charts ?? true,
-      include_recommendations: report.metadata?.generation_settings?.include_recommendations ?? true,
-      compliance_frameworks: report.metadata?.generation_settings?.frameworks || []
+      include_charts: report.parameters?.include_charts ?? true,
+      include_recommendations: report.parameters?.include_recommendations ?? true,
+      include_raw_data: report.parameters?.include_raw_data ?? false
     },
   })
 
-  // Reset form with new report data if the report prop changes
+  // Load templates and frameworks from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [templatesData, frameworksData] = await Promise.all([
+          ComplianceAPIs.Audit.getReportTemplates(),
+          ComplianceAPIs.Framework.getFrameworks()
+        ])
+        
+        // Convert templates array to object for easier access
+        const templatesObj = templatesData.reduce((acc: any, template: any) => {
+          acc[template.type] = template
+          return acc
+        }, {})
+        
+        setReportTemplates(templatesObj)
+        setFrameworks(frameworksData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        sendNotification('error', 'Failed to load report templates and frameworks')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadData()
+    }
+  }, [isOpen, sendNotification])
+
+  // Reset form when report changes
   useEffect(() => {
     if (report) {
       form.reset({
         name: report.name,
         description: report.description || "",
-        type: report.type,
-        format: report.format,
-        schedule: report.schedule || "on_demand",
-        recipients: report.recipients || [],
+        type: report.report_type,
+        format: report.file_format,
+        framework: report.framework || "",
+        schedule: "once",
+        priority: "medium",
+        recipients: Array.isArray(report.recipients) ? report.recipients.join(", ") : "",
         filters: report.filters || {},
-        template_id: report.template_id || "",
-        priority: report.priority || "medium",
-        auto_generate: report.auto_generate || false,
-        include_charts: report.metadata?.generation_settings?.include_charts ?? true,
-        include_recommendations: report.metadata?.generation_settings?.include_recommendations ?? true,
-        compliance_frameworks: report.metadata?.generation_settings?.frameworks || []
+        include_charts: report.parameters?.include_charts ?? true,
+        include_recommendations: report.parameters?.include_recommendations ?? true,
+        include_raw_data: report.parameters?.include_raw_data ?? false
       })
     }
   }, [report, form])
@@ -194,16 +187,17 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
       const updatedReport: ComplianceReport = {
         ...report,
         ...data,
+        report_type: data.type,
+        file_format: data.format,
+        parameters: {
+          include_charts: data.include_charts,
+          include_recommendations: data.include_recommendations,
+          include_raw_data: data.include_raw_data
+        },
+        filters: data.filters || {},
+        recipients: data.recipients ? data.recipients.split(',').map(r => r.trim()) : [],
         updated_at: new Date().toISOString(),
-        updated_by: "current-user@company.com",
-        metadata: {
-          ...report.metadata,
-          generation_settings: {
-            include_charts: data.include_charts,
-            include_recommendations: data.include_recommendations,
-            frameworks: data.compliance_frameworks
-          }
-        }
+        updated_by: "current-user@company.com"
       }
 
       await executeAction('updateReport', {
@@ -216,7 +210,7 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
       onClose()
     } catch (error) {
       console.error("Failed to update report:", error)
-      sendNotification('error', 'Failed to update report')
+      sendNotification('error', 'Failed to update report. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -225,10 +219,11 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
   const handleGenerateNow = async () => {
     try {
       setIsGenerating(true)
-      await executeAction('generateReport', { id: report.id })
-      sendNotification('success', 'Report generation initiated')
+      await ComplianceAPIs.Audit.generateReport(report.id, { force_regenerate: true })
+      sendNotification('success', 'Report generation initiated successfully')
     } catch (error) {
-      sendNotification('error', 'Failed to generate report')
+      console.error("Failed to generate report:", error)
+      sendNotification('error', 'Failed to generate report. Please try again.')
     } finally {
       setIsGenerating(false)
     }
@@ -236,11 +231,11 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      pending: 'outline',
+      draft: 'secondary',
       generating: 'default',
       completed: 'default',
       failed: 'destructive',
-      scheduled: 'secondary'
+      scheduled: 'outline'
     } as const
     
     return (
@@ -485,7 +480,7 @@ export function ReportEditModal({ isOpen, onClose, report, onSuccess }: ReportEd
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {reportFormatOptions.map((option) => (
+                                {formatOptions.map((option) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     <div className="flex items-center gap-2">
                                       <Download className="h-4 w-4" />

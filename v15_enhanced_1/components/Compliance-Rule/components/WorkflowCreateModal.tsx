@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -23,7 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  PlusCircle,
+  Plus,
   Trash2,
   ChevronDown,
   ChevronUp,
@@ -32,13 +32,17 @@ import {
   Ticket,
   Play,
   CheckCircle,
-  Edit,
   Webhook,
+  PlusCircle,
   Loader2,
+  Activity,
+  ArrowLeft,
+  ArrowRight,
   Workflow,
   Clock,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Edit
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useEnterpriseFeatures } from "../hooks/use-enterprise-features"
@@ -52,14 +56,14 @@ const formSchema = z.object({
   trigger_config: z
     .string()
     .optional()
-    .transform((str) => {
+    .transform((str: string) => {
       try {
         return str ? JSON.parse(str) : {}
       } catch {
         return {}
       }
     })
-    .refine((val) => typeof val === "object" && val !== null, {
+    .refine((val: any) => typeof val === "object" && val !== null, {
       message: "Trigger configuration must be a valid JSON object",
     }),
   actions: z.array(
@@ -78,14 +82,14 @@ const formSchema = z.object({
       config: z
         .string()
         .optional()
-        .transform((str) => {
+        .transform((str: string) => {
           try {
             return str ? JSON.parse(str) : {}
           } catch {
             return {}
           }
         })
-        .refine((val) => typeof val === "object" && val !== null, {
+        .refine((val: any) => typeof val === "object" && val !== null, {
           message: "Action configuration must be a valid JSON object",
         }),
       order: z.number(),
@@ -165,126 +169,17 @@ const actionTypeOptions = [
   { value: "approval", label: "Require Approval", icon: CheckCircle, category: "approval" },
 ]
 
-// Clean mock data templates for demonstration
-const mockTriggerTemplates = {
-  rule_violation: {
-    rule_ids: [1, 2, 3],
-    severity: ["high", "critical"],
-    data_source_ids: [1, 2],
-    immediate: true,
-    conditions: {
-      rule_categories: ["data_protection", "security"],
-      min_severity: "high"
-    }
-  },
-  issue_status_change: {
-    from_status: ["open", "new"],
-    to_status: "in_progress",
-    issue_types: ["compliance_violation", "security_incident"],
-    notify_assignee: true,
-    escalation_time_hours: 24
-  },
-  threshold_breach: {
-    metric: "compliance_score",
-    threshold: 85,
-    operator: "less_than",
-    consecutive_periods: 2,
-    time_window: "1h"
-  },
-  scheduled: {
-    frequency: "daily",
-    time: "08:00",
-    timezone: "UTC",
-    weekdays_only: true,
-    enabled: true
-  },
-  integration_event: {
-    source_system: "jira",
-    event_types: ["issue_created", "issue_updated", "issue_resolved"],
-    filters: { 
-      project: "COMP",
-      priority: ["high", "critical"]
-    }
-  }
-}
-
-const mockActionTemplates = {
-  create_issue: {
-    title: "Compliance Issue: {{rule_name}}",
-    description: "Automated issue created for compliance violation in {{data_source_name}}",
-    priority: "high",
-    assignee: "compliance-team@company.com",
-    labels: ["compliance", "automated", "{{severity}}"],
-    project: "COMP"
-  },
-  send_notification: {
-    channels: ["slack", "email", "teams"],
-    recipients: ["compliance-team@company.com", "security-team@company.com"],
-    template: "compliance_violation_alert",
-    include_details: true,
-    urgency: "high"
-  },
-  update_issue: {
-    status: "in_progress",
-    add_comment: "Workflow action executed: {{action_name}} at {{timestamp}}",
-    update_priority: true,
-    assign_to: "{{rule_owner}}"
-  },
-  assign_user: {
-    user_email: "compliance-analyst@company.com",
-    role: "primary_assignee",
-    notify_user: true,
-    escalation_time_hours: 24,
-    backup_assignee: "compliance-manager@company.com"
-  },
-  escalate: {
-    escalation_level: 1,
-    escalate_to: "compliance-manager@company.com",
-    escalation_message: "Issue requires immediate attention: {{issue_title}}",
-    auto_escalate_hours: 4,
-    max_escalation_level: 3
-  },
-  run_remediation: {
-    script_name: "auto_mask_pii",
-    parameters: { 
-      column: "{{column_name}}", 
-      method: "hash",
-      backup_original: true
-    },
-    approval_required: false,
-    rollback_enabled: true,
-    timeout_minutes: 30
-  },
-  call_webhook: {
-    url: "https://api.company.com/compliance/webhook",
-    method: "POST",
-    headers: { 
-      "Authorization": "Bearer {{api_token}}",
-      "Content-Type": "application/json"
-    },
-    payload: { 
-      event: "{{event_type}}", 
-      data: "{{event_data}}",
-      timestamp: "{{timestamp}}"
-    },
-    retry_count: 3
-  },
-  approval: {
-    approvers: ["ciso@company.com", "compliance-manager@company.com"],
-    approval_type: "any",
-    timeout_hours: 24,
-    auto_approve_conditions: [],
-    escalation_on_timeout: true
-  }
-}
-
 export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: WorkflowCreateModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  const [triggerTemplates, setTriggerTemplates] = useState<any>({})
+  const [actionTemplates, setActionTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
 
   const { 
     executeAction, 
     sendNotification, 
+    getMetrics,
     isLoading: enterpriseLoading 
   } = useEnterpriseFeatures({
     componentName: 'WorkflowCreateModal',
@@ -302,7 +197,7 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
       trigger: "rule_violation",
       trigger_config: {},
       actions: [],
-      status: "active",
+      status: "draft",
       priority: "medium",
       timeout_hours: 24,
       retry_count: 3,
@@ -315,34 +210,71 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
     name: "actions",
   })
 
+  // Load templates from API
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [triggerTemplatesData, actionTemplatesData] = await Promise.all([
+          ComplianceAPIs.Workflow.getTriggerTemplates(),
+          ComplianceAPIs.Workflow.getActionTemplates()
+        ])
+        setTriggerTemplates(triggerTemplatesData)
+        setActionTemplates(actionTemplatesData)
+      } catch (error) {
+        console.error('Failed to load templates:', error)
+        sendNotification('error', 'Failed to load workflow templates')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadTemplates()
+    }
+  }, [isOpen, sendNotification])
+
   const watchTrigger = form.watch("trigger")
 
   const getTriggerConfigPlaceholder = (triggerType: string) => {
-    const template = mockTriggerTemplates[triggerType as keyof typeof mockTriggerTemplates]
-    return JSON.stringify(template, null, 2)
+    const template = triggerTemplates[triggerType]
+    if (template) {
+      return JSON.stringify(template, null, 2)
+    }
+    return JSON.stringify({ message: "Loading template..." }, null, 2)
   }
 
   const getActionConfigPlaceholder = (actionType: string) => {
-    const template = mockActionTemplates[actionType as keyof typeof mockActionTemplates]
-    return JSON.stringify(template, null, 2)
+    const template = actionTemplates[actionType]
+    if (template) {
+      return JSON.stringify(template, null, 2)
+    }
+    return JSON.stringify({ message: "Loading template..." }, null, 2)
   }
 
   const addAction = () => {
+    const defaultTemplate = actionTemplates.send_notification || {}
     append({
       id: `action-${Date.now()}`,
       type: "send_notification",
-      config: mockActionTemplates.send_notification,
+      config: defaultTemplate,
       order: fields.length + 1,
       delay_minutes: 0,
       condition: ""
     })
   }
 
-  const loadTriggerTemplate = () => {
-    const template = mockTriggerTemplates[watchTrigger as keyof typeof mockTriggerTemplates]
-    if (template) {
-      form.setValue('trigger_config', template)
-      sendNotification('info', 'Trigger template loaded successfully')
+  const loadTriggerTemplate = async () => {
+    try {
+      const template = triggerTemplates[watchTrigger]
+      if (template) {
+        form.setValue('trigger_config', template)
+        sendNotification('info', 'Trigger template loaded successfully')
+      } else {
+        sendNotification('warning', 'No template available for this trigger type')
+      }
+    } catch (error) {
+      sendNotification('error', 'Failed to load trigger template')
     }
   }
 
@@ -350,45 +282,44 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
     try {
       setIsLoading(true)
       
-      // Create workflow using enterprise API
       const workflowData = {
         ...data,
-        actions: data.actions.map((action, index) => ({ 
+        actions: data.actions.map((action: any, index: number) => ({ 
           ...action, 
           order: index + 1,
           id: action.id || `action-${index + 1}`
         })),
         data_source_id: dataSourceId,
+        workflow_type: 'automation' as const,
+        current_step: 0,
+        steps: [],
+        triggers: [{
+          id: 'main-trigger',
+          type: data.trigger === 'manual' ? 'manual' : 'event',
+          config: data.trigger_config,
+          enabled: true
+        }],
+        conditions: {},
+        variables: {},
+        execution_history: [],
+        metadata: {
+          created_via: 'modal',
+          template_used: data.trigger
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_by: "current-user@company.com",
         updated_by: "current-user@company.com"
       }
 
-      const result = await executeAction('createWorkflow', workflowData)
-      
-      const newWorkflow: ComplianceWorkflow = {
-        id: Math.floor(Math.random() * 10000),
-        ...workflowData,
-        last_run_at: null,
-        last_run_status: null,
-        execution_count: 0,
-        success_count: 0,
-        failure_count: 0,
-        average_execution_time: null,
-        execution_history: [],
-        metadata: {
-          version: '1.0',
-          created_via: 'ui',
-          automation_level: 'semi_automated',
-          complexity_score: data.actions.length * 10
-        }
-      }
-
-      onSuccess(newWorkflow)
+      const createdWorkflow = await executeAction('createWorkflow', workflowData)
+      onSuccess(createdWorkflow)
       sendNotification('success', `Workflow "${data.name}" created successfully`)
-      form.reset()
       onClose()
+      
+      // Reset form for next use
+      form.reset()
+      setCurrentStep(1)
     } catch (error) {
       console.error("Failed to create workflow:", error)
       sendNotification('error', 'Failed to create workflow. Please try again.')
@@ -398,11 +329,11 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
   }
 
   const nextStep = () => {
-    if (currentStep < 3) setCurrentStep(currentStep + 1)
+    setCurrentStep(prev => Math.min(prev + 1, 3))
   }
 
   const prevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1)
+    setCurrentStep(prev => Math.max(prev - 1, 1))
   }
 
   return (
@@ -668,7 +599,7 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
                           <CardTitle className="text-lg">Trigger Configuration</CardTitle>
                           <CardDescription>Define when this workflow should execute.</CardDescription>
                         </div>
-                        <Button type="button" variant="outline" size="sm" onClick={loadTriggerTemplate}>
+                        <Button type="button" variant="outline" size="sm" onClick={loadTriggerTemplate} disabled={templatesLoading}>
                           <Settings className="h-4 w-4 mr-2" />
                           Load Template
                         </Button>
@@ -778,7 +709,7 @@ export function WorkflowCreateModal({ isOpen, onClose, onSuccess, dataSourceId }
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-lg">Workflow Actions</CardTitle>
-                        <Button type="button" variant="outline" size="sm" onClick={addAction}>
+                        <Button type="button" variant="outline" size="sm" onClick={addAction} disabled={templatesLoading}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add Action
                         </Button>
                       </CardHeader>

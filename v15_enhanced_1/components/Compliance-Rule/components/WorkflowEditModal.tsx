@@ -56,14 +56,14 @@ const formSchema = z.object({
   trigger_config: z
     .string()
     .optional()
-    .transform((str) => {
+    .transform((str: string) => {
       try {
         return str ? JSON.parse(str) : {}
       } catch {
         return {}
       }
     })
-    .refine((val) => typeof val === "object" && val !== null, {
+    .refine((val: any) => typeof val === "object" && val !== null, {
       message: "Trigger configuration must be a valid JSON object",
     }),
   actions: z.array(
@@ -82,14 +82,14 @@ const formSchema = z.object({
       config: z
         .string()
         .optional()
-        .transform((str) => {
+        .transform((str: string) => {
           try {
             return str ? JSON.parse(str) : {}
           } catch {
             return {}
           }
         })
-        .refine((val) => typeof val === "object" && val !== null, {
+        .refine((val: any) => typeof val === "object" && val !== null, {
           message: "Action configuration must be a valid JSON object",
         }),
       order: z.number(),
@@ -169,122 +169,12 @@ const actionTypeOptions = [
   { value: "approval", label: "Require Approval", icon: CheckCircle, category: "approval" },
 ]
 
-// Clean mock data templates for demonstration
-const mockTriggerTemplates = {
-  rule_violation: {
-    rule_ids: [1, 2, 3],
-    severity: ["high", "critical"],
-    data_source_ids: [1, 2],
-    immediate: true,
-    conditions: {
-      rule_categories: ["data_protection", "security"],
-      min_severity: "high"
-    }
-  },
-  issue_status_change: {
-    from_status: ["open", "new"],
-    to_status: "in_progress",
-    issue_types: ["compliance_violation", "security_incident"],
-    notify_assignee: true,
-    escalation_time_hours: 24
-  },
-  threshold_breach: {
-    metric: "compliance_score",
-    threshold: 85,
-    operator: "less_than",
-    consecutive_periods: 2,
-    time_window: "1h"
-  },
-  scheduled: {
-    frequency: "daily",
-    time: "08:00",
-    timezone: "UTC",
-    weekdays_only: true,
-    enabled: true
-  },
-  integration_event: {
-    source_system: "jira",
-    event_types: ["issue_created", "issue_updated", "issue_resolved"],
-    filters: { 
-      project: "COMP",
-      priority: ["high", "critical"]
-    }
-  }
-}
-
-const mockActionTemplates = {
-  create_issue: {
-    title: "Compliance Issue: {{rule_name}}",
-    description: "Automated issue created for compliance violation in {{data_source_name}}",
-    priority: "high",
-    assignee: "compliance-team@company.com",
-    labels: ["compliance", "automated", "{{severity}}"],
-    project: "COMP"
-  },
-  send_notification: {
-    channels: ["slack", "email", "teams"],
-    recipients: ["compliance-team@company.com", "security-team@company.com"],
-    template: "compliance_violation_alert",
-    include_details: true,
-    urgency: "high"
-  },
-  update_issue: {
-    status: "in_progress",
-    add_comment: "Workflow action executed: {{action_name}} at {{timestamp}}",
-    update_priority: true,
-    assign_to: "{{rule_owner}}"
-  },
-  assign_user: {
-    user_email: "compliance-analyst@company.com",
-    role: "primary_assignee",
-    notify_user: true,
-    escalation_time_hours: 24,
-    backup_assignee: "compliance-manager@company.com"
-  },
-  escalate: {
-    escalation_level: 1,
-    escalate_to: "compliance-manager@company.com",
-    escalation_message: "Issue requires immediate attention: {{issue_title}}",
-    auto_escalate_hours: 4,
-    max_escalation_level: 3
-  },
-  run_remediation: {
-    script_name: "auto_mask_pii",
-    parameters: { 
-      column: "{{column_name}}", 
-      method: "hash",
-      backup_original: true
-    },
-    approval_required: false,
-    rollback_enabled: true,
-    timeout_minutes: 30
-  },
-  call_webhook: {
-    url: "https://api.company.com/compliance/webhook",
-    method: "POST",
-    headers: { 
-      "Authorization": "Bearer {{api_token}}",
-      "Content-Type": "application/json"
-    },
-    payload: { 
-      event: "{{event_type}}", 
-      data: "{{event_data}}",
-      timestamp: "{{timestamp}}"
-    },
-    retry_count: 3
-  },
-  approval: {
-    approvers: ["ciso@company.com", "compliance-manager@company.com"],
-    approval_type: "any",
-    timeout_hours: 24,
-    auto_approve_conditions: [],
-    escalation_on_timeout: true
-  }
-}
-
 export function WorkflowEditModal({ isOpen, onClose, workflow, onSuccess }: WorkflowEditModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [triggerTemplates, setTriggerTemplates] = useState<any>({})
+  const [actionTemplates, setActionTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
 
   const { 
     executeAction, 
@@ -320,6 +210,30 @@ export function WorkflowEditModal({ isOpen, onClose, workflow, onSuccess }: Work
     name: "actions",
   })
 
+  // Load templates from API
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [triggerTemplatesData, actionTemplatesData] = await Promise.all([
+          ComplianceAPIs.Workflow.getTriggerTemplates(),
+          ComplianceAPIs.Workflow.getActionTemplates()
+        ])
+        setTriggerTemplates(triggerTemplatesData)
+        setActionTemplates(actionTemplatesData)
+      } catch (error) {
+        console.error('Failed to load templates:', error)
+        sendNotification('error', 'Failed to load workflow templates')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadTemplates()
+    }
+  }, [isOpen, sendNotification])
+
   // Reset form with new workflow data if the workflow prop changes
   useEffect(() => {
     if (workflow) {
@@ -341,31 +255,44 @@ export function WorkflowEditModal({ isOpen, onClose, workflow, onSuccess }: Work
   const watchTrigger = form.watch("trigger")
 
   const getTriggerConfigPlaceholder = (triggerType: string) => {
-    const template = mockTriggerTemplates[triggerType as keyof typeof mockTriggerTemplates]
-    return JSON.stringify(template, null, 2)
+    const template = triggerTemplates[triggerType]
+    if (template) {
+      return JSON.stringify(template, null, 2)
+    }
+    return JSON.stringify({ message: "Loading template..." }, null, 2)
   }
 
   const getActionConfigPlaceholder = (actionType: string) => {
-    const template = mockActionTemplates[actionType as keyof typeof mockActionTemplates]
-    return JSON.stringify(template, null, 2)
+    const template = actionTemplates[actionType]
+    if (template) {
+      return JSON.stringify(template, null, 2)
+    }
+    return JSON.stringify({ message: "Loading template..." }, null, 2)
   }
 
   const addAction = () => {
+    const defaultTemplate = actionTemplates.send_notification || {}
     append({
       id: `action-${Date.now()}`,
       type: "send_notification",
-      config: mockActionTemplates.send_notification,
+      config: defaultTemplate,
       order: fields.length + 1,
       delay_minutes: 0,
       condition: ""
     })
   }
 
-  const loadTriggerTemplate = () => {
-    const template = mockTriggerTemplates[watchTrigger as keyof typeof mockTriggerTemplates]
-    if (template) {
-      form.setValue('trigger_config', template)
-      sendNotification('info', 'Trigger template loaded successfully')
+  const loadTriggerTemplate = async () => {
+    try {
+      const template = triggerTemplates[watchTrigger]
+      if (template) {
+        form.setValue('trigger_config', template)
+        sendNotification('info', 'Trigger template loaded successfully')
+      } else {
+        sendNotification('warning', 'No template available for this trigger type')
+      }
+    } catch (error) {
+      sendNotification('error', 'Failed to load trigger template')
     }
   }
 
@@ -376,7 +303,7 @@ export function WorkflowEditModal({ isOpen, onClose, workflow, onSuccess }: Work
       const updatedWorkflow: ComplianceWorkflow = {
         ...workflow,
         ...data,
-        actions: data.actions.map((action, index) => ({ 
+        actions: data.actions.map((action: any, index: number) => ({ 
           ...action, 
           order: index + 1,
           id: action.id || `action-${index + 1}`
@@ -404,7 +331,7 @@ export function WorkflowEditModal({ isOpen, onClose, workflow, onSuccess }: Work
   const handleExecuteNow = async () => {
     try {
       setIsExecuting(true)
-      await executeAction('executeWorkflow', { id: workflow.id })
+      await ComplianceAPIs.Workflow.executeWorkflow(workflow.id)
       sendNotification('success', 'Workflow execution initiated successfully')
     } catch (error) {
       sendNotification('error', 'Failed to execute workflow. Please try again.')

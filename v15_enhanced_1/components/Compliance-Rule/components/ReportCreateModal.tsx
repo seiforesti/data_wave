@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { PlusCircle, FileText, Mail, Filter, CalendarDays, Clock, Users, Download, Loader2, Info } from "lucide-react"
+import {
+  FileText,
+  Download,
+  Calendar,
+  Clock,
+  Users,
+  Settings,
+  Eye,
+  Loader2,
+  AlertTriangle,
+  CheckCircle,
+  FileSpreadsheet,
+  FileCode,
+  FileImage
+} from "lucide-react"
 import { useEnterpriseFeatures } from "../hooks/use-enterprise-features"
 import { ComplianceAPIs } from "../services/enterprise-apis"
 import type { ComplianceReport } from "../types"
@@ -30,32 +44,21 @@ import type { ComplianceReport } from "../types"
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
-  type: z.enum(["summary", "detail", "trend", "custom", "executive", "technical"]),
-  format: z.enum(["pdf", "csv", "json", "xlsx", "html"]),
-  schedule: z.enum(["daily", "weekly", "monthly", "quarterly", "on_demand"]).optional(),
-  recipients: z
-    .string()
-    .optional()
-    .transform((str) => (str ? str.split(",").map((s) => s.trim()) : [])),
-  filters: z
-    .string()
-    .optional()
-    .transform((str) => {
-      try {
-        return str ? JSON.parse(str) : {}
-      } catch {
-        return {}
-      }
-    })
-    .refine((val) => typeof val === "object" && val !== null, {
-      message: "Filters must be a valid JSON object",
-    }),
-  template_id: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
-  auto_generate: z.boolean().default(false),
+  type: z.enum(["compliance_status", "gap_analysis", "risk_assessment", "audit_trail", "executive_summary", "detailed_findings"]),
+  format: z.enum(["pdf", "excel", "csv", "json", "html"]),
+  framework: z.string().optional(),
+  schedule: z.enum(["once", "daily", "weekly", "monthly", "quarterly"]).default("once"),
+  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  recipients: z.string().optional(),
+  filters: z.object({
+    date_range: z.string().optional(),
+    severity: z.array(z.string()).optional(),
+    status: z.array(z.string()).optional(),
+    categories: z.array(z.string()).optional()
+  }).optional(),
   include_charts: z.boolean().default(true),
   include_recommendations: z.boolean().default(true),
-  compliance_frameworks: z.array(z.string()).default([])
+  include_raw_data: z.boolean().default(false)
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -68,117 +71,40 @@ interface ReportCreateModalProps {
 }
 
 const reportTypeOptions = [
-  { 
-    value: "summary", 
-    label: "Summary", 
-    description: "High-level overview of compliance status",
-    icon: FileText,
-    category: "standard"
-  },
-  { 
-    value: "detail", 
-    label: "Detail", 
-    description: "Granular findings and specific violations",
-    icon: FileText,
-    category: "standard"
-  },
-  { 
-    value: "trend", 
-    label: "Trend", 
-    description: "Historical performance and trend analysis",
-    icon: FileText,
-    category: "analytics"
-  },
-  { 
-    value: "executive", 
-    label: "Executive", 
-    description: "Executive summary for leadership",
-    icon: Users,
-    category: "executive"
-  },
-  { 
-    value: "technical", 
-    label: "Technical", 
-    description: "Technical details for IT and security teams",
-    icon: FileText,
-    category: "technical"
-  },
-  { 
-    value: "custom", 
-    label: "Custom", 
-    description: "User-defined content and structure",
-    icon: FileText,
-    category: "custom"
-  },
+  { value: "compliance_status", label: "Compliance Status", icon: CheckCircle, description: "Overall compliance posture and metrics" },
+  { value: "gap_analysis", label: "Gap Analysis", icon: AlertTriangle, description: "Identify compliance gaps and remediation needs" },
+  { value: "risk_assessment", label: "Risk Assessment", icon: FileText, description: "Risk analysis and mitigation strategies" },
+  { value: "audit_trail", label: "Audit Trail", icon: Clock, description: "Detailed audit logs and activities" },
+  { value: "executive_summary", label: "Executive Summary", icon: Users, description: "High-level overview for executives" },
+  { value: "detailed_findings", label: "Detailed Findings", icon: FileSpreadsheet, description: "Comprehensive findings and evidence" }
 ]
 
-const reportFormatOptions = [
-  { value: "pdf", label: "PDF", description: "Portable Document Format" },
-  { value: "xlsx", label: "Excel", description: "Microsoft Excel spreadsheet" },
-  { value: "csv", label: "CSV", description: "Comma-separated values" },
-  { value: "html", label: "HTML", description: "Web page format" },
-  { value: "json", label: "JSON", description: "JavaScript Object Notation" }
+const formatOptions = [
+  { value: "pdf", label: "PDF", icon: FileText, description: "Portable document format" },
+  { value: "excel", label: "Excel", icon: FileSpreadsheet, description: "Microsoft Excel spreadsheet" },
+  { value: "csv", label: "CSV", icon: FileCode, description: "Comma-separated values" },
+  { value: "json", label: "JSON", icon: FileCode, description: "JavaScript Object Notation" },
+  { value: "html", label: "HTML", icon: FileImage, description: "Web page format" }
 ]
-
-const reportScheduleOptions = [
-  { value: "on_demand", label: "On Demand", description: "Generate manually when needed" },
-  { value: "daily", label: "Daily", description: "Generate every day" },
-  { value: "weekly", label: "Weekly", description: "Generate every week" },
-  { value: "monthly", label: "Monthly", description: "Generate every month" },
-  { value: "quarterly", label: "Quarterly", description: "Generate every quarter" }
-]
-
-const complianceFrameworks = [
-  "GDPR", "HIPAA", "PCI DSS", "SOX", "CCPA", "GLBA", "ISO 27001", "NIST", "SOC 2", "FISMA"
-]
-
-// Clean mock data for demonstration
-const mockReportTemplates = {
-  summary: {
-    sections: ["executive_summary", "compliance_overview", "key_metrics", "recommendations"],
-    default_filters: { severity: ["high", "critical"], status: ["open", "in_progress"] },
-    charts: ["compliance_score_trend", "violations_by_category", "remediation_progress"]
-  },
-  detail: {
-    sections: ["detailed_findings", "violation_details", "remediation_plans", "evidence"],
-    default_filters: { include_resolved: false, detailed_view: true },
-    charts: ["violation_timeline", "severity_distribution", "data_source_breakdown"]
-  },
-  trend: {
-    sections: ["trend_analysis", "historical_data", "projections", "benchmarks"],
-    default_filters: { time_range: "last_12_months", include_predictions: true },
-    charts: ["compliance_trend", "improvement_metrics", "forecast_chart"]
-  },
-  executive: {
-    sections: ["executive_summary", "strategic_overview", "risk_assessment", "budget_impact"],
-    default_filters: { executive_view: true, high_level_only: true },
-    charts: ["risk_heatmap", "compliance_dashboard", "cost_analysis"]
-  },
-  technical: {
-    sections: ["technical_findings", "system_details", "implementation_guides", "api_logs"],
-    default_filters: { technical_details: true, include_logs: true },
-    charts: ["system_performance", "error_analysis", "integration_status"]
-  },
-  custom: {
-    sections: ["custom_content"],
-    default_filters: {},
-    charts: []
-  }
-}
 
 export function ReportCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: ReportCreateModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [previewData, setPreviewData] = useState<any>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [reportTemplates, setReportTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [frameworks, setFrameworks] = useState<any[]>([])
 
   const { 
     executeAction, 
     sendNotification, 
+    getMetrics,
     isLoading: enterpriseLoading 
   } = useEnterpriseFeatures({
     componentName: 'ReportCreateModal',
     dataSourceId,
     enableAnalytics: true,
-    enableMonitoring: true
+    enableMonitoring: true,
+    enableWorkflows: true
   })
 
   const form = useForm<FormData>({
@@ -186,19 +112,54 @@ export function ReportCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: 
     defaultValues: {
       name: "",
       description: "",
-      type: "summary",
+      type: "compliance_status",
       format: "pdf",
-      schedule: "on_demand",
-      recipients: [],
-      filters: {},
-      template_id: "",
+      framework: "",
+      schedule: "once",
       priority: "medium",
-      auto_generate: false,
+      recipients: "",
+      filters: {
+        date_range: "last_30_days",
+        severity: [],
+        status: [],
+        categories: []
+      },
       include_charts: true,
       include_recommendations: true,
-      compliance_frameworks: []
+      include_raw_data: false
     },
   })
+
+  // Load templates and frameworks from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [templatesData, frameworksData] = await Promise.all([
+          ComplianceAPIs.Audit.getReportTemplates(),
+          ComplianceAPIs.Framework.getFrameworks()
+        ])
+        
+        // Convert templates array to object for easier access
+        const templatesObj = templatesData.reduce((acc: any, template: any) => {
+          acc[template.type] = template
+          return acc
+        }, {})
+        
+        setReportTemplates(templatesObj)
+        setFrameworks(frameworksData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        sendNotification('error', 'Failed to load report templates and frameworks')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadData()
+    }
+  }, [isOpen, sendNotification])
 
   const watchType = form.watch("type")
   const watchFormat = form.watch("format")
@@ -207,87 +168,109 @@ export function ReportCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: 
     try {
       setIsLoading(true)
       
-      // Create report using enterprise API
       const reportData = {
         ...data,
         data_source_id: dataSourceId,
-        status: 'pending',
-        generated_by: "current-user@company.com",
+        status: 'draft' as const,
+        parameters: {
+          include_charts: data.include_charts,
+          include_recommendations: data.include_recommendations,
+          include_raw_data: data.include_raw_data
+        },
+        filters: data.filters || {},
+        recipients: data.recipients ? data.recipients.split(',').map(r => r.trim()) : [],
+        distribution_method: 'download' as const,
+        access_level: 'internal' as const,
+        metadata: {
+          created_via: 'modal',
+          template_used: reportTemplates[data.type]?.id || data.type
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_by: "current-user@company.com",
         updated_by: "current-user@company.com"
       }
 
-      const result = await executeAction('createReport', reportData)
-      
-      const newReport: ComplianceReport = {
-        id: Math.floor(Math.random() * 10000),
-        ...reportData,
-        file_url: null,
-        last_generated_at: null,
-        generation_time: null,
-        file_size: null,
-        download_count: 0,
-        metadata: {
-          version: '1.0',
-          template_used: mockReportTemplates[data.type as keyof typeof mockReportTemplates],
-          generation_settings: {
-            include_charts: data.include_charts,
-            include_recommendations: data.include_recommendations,
-            frameworks: data.compliance_frameworks
-          }
-        }
-      }
-
-      onSuccess(newReport)
+      const createdReport = await executeAction('createReport', reportData)
+      onSuccess(createdReport)
       sendNotification('success', `Report "${data.name}" created successfully`)
-      form.reset()
       onClose()
+      
+      // Reset form for next use
+      form.reset()
     } catch (error) {
       console.error("Failed to create report:", error)
-      sendNotification('error', 'Failed to create report')
+      sendNotification('error', 'Failed to create report. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handlePreview = async () => {
-    const formData = form.getValues()
     try {
-      const preview = await executeAction('previewReport', {
+      setIsPreviewLoading(true)
+      const formData = form.getValues()
+      
+      const previewData = {
         type: formData.type,
+        format: formData.format,
+        data_source_id: dataSourceId,
         filters: formData.filters,
-        template: mockReportTemplates[formData.type as keyof typeof mockReportTemplates]
-      })
-      setPreviewData(preview)
-      sendNotification('info', 'Report preview generated')
+        parameters: {
+          include_charts: formData.include_charts,
+          include_recommendations: formData.include_recommendations,
+          include_raw_data: formData.include_raw_data
+        }
+      }
+
+      const preview = await ComplianceAPIs.Audit.previewReport(previewData)
+      sendNotification('success', 'Report preview generated successfully')
+      
+      // Open preview in new window/tab
+      if (preview.preview_url) {
+        window.open(preview.preview_url, '_blank')
+      }
     } catch (error) {
-      sendNotification('error', 'Failed to generate preview')
+      console.error("Failed to generate preview:", error)
+      sendNotification('error', 'Failed to generate report preview')
+    } finally {
+      setIsPreviewLoading(false)
     }
   }
 
-  const loadTemplate = () => {
-    const template = mockReportTemplates[watchType as keyof typeof mockReportTemplates]
-    if (template) {
-      form.setValue('filters', template.default_filters)
-      sendNotification('info', 'Template loaded successfully')
+  const loadTemplate = async () => {
+    try {
+      const template = reportTemplates[watchType]
+      if (template) {
+        // Apply template settings to form
+        if (template.default_format) {
+          form.setValue('format', template.default_format)
+        }
+        if (template.default_filters) {
+          form.setValue('filters', template.default_filters)
+        }
+        if (template.default_parameters) {
+          form.setValue('include_charts', template.default_parameters.include_charts ?? true)
+          form.setValue('include_recommendations', template.default_parameters.include_recommendations ?? true)
+          form.setValue('include_raw_data', template.default_parameters.include_raw_data ?? false)
+        }
+        sendNotification('info', 'Report template applied successfully')
+      } else {
+        sendNotification('warning', 'No template available for this report type')
+      }
+    } catch (error) {
+      sendNotification('error', 'Failed to load report template')
     }
   }
 
   const getEstimatedSize = () => {
-    const baseSize = watchFormat === 'pdf' ? '2-5 MB' : 
-                    watchFormat === 'xlsx' ? '1-3 MB' : 
-                    watchFormat === 'csv' ? '0.5-2 MB' : 
-                    watchFormat === 'html' ? '1-4 MB' : '0.1-1 MB'
-    return baseSize
+    const template = reportTemplates[watchType]
+    return template?.estimated_size || "~2-5 MB"
   }
 
   const getGenerationTime = () => {
-    const baseTime = watchType === 'detail' ? '5-15 minutes' :
-                     watchType === 'trend' ? '10-30 minutes' :
-                     watchType === 'technical' ? '15-45 minutes' : '2-10 minutes'
-    return baseTime
+    const template = reportTemplates[watchType]
+    return template?.generation_time || "2-5 minutes"
   }
 
   return (
@@ -447,7 +430,7 @@ export function ReportCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: 
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {reportFormatOptions.map((option) => (
+                                {formatOptions.map((option) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     <div className="flex items-center gap-2">
                                       <Download className="h-4 w-4" />
