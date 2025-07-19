@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -99,13 +99,7 @@ const ruleTypeOptions = [
   { value: "custom", label: "Custom", description: "Custom rule logic", icon: Zap },
 ]
 
-// Clean mock data for demonstration
-const mockDataSources = [
-  { id: 1, name: "Customer Database", type: "postgresql" },
-  { id: 2, name: "Analytics Warehouse", type: "snowflake" },
-  { id: 3, name: "Transaction System", type: "mysql" },
-  { id: 4, name: "Document Store", type: "mongodb" },
-]
+// Data sources will be loaded from API
 
 // Rule definition templates
 const ruleDefinitionTemplates = {
@@ -135,18 +129,24 @@ const ruleDefinitionTemplates = {
 
 export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess, dataSourceId }: ComplianceRuleCreateModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [currentTab, setCurrentTab] = useState("basic")
+  const [isTestingRule, setIsTestingRule] = useState(false)
+  const [testResults, setTestResults] = useState<any>(null)
+  const [ruleTemplates, setRuleTemplates] = useState<any>({})
+  const [templatesLoading, setTemplatesLoading] = useState(true)
+  const [dataSources, setDataSources] = useState<any[]>([])
+  const [frameworks, setFrameworks] = useState<any[]>([])
 
   const { 
     executeAction, 
     sendNotification, 
+    getMetrics,
     isLoading: enterpriseLoading 
   } = useEnterpriseFeatures({
     componentName: 'ComplianceRuleCreateModal',
     dataSourceId,
     enableAnalytics: true,
     enableMonitoring: true,
-    enableCompliance: true
+    enableWorkflows: true
   })
 
   const form = useForm<FormData>({
@@ -172,6 +172,38 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess, dataSour
       tags: [],
     },
   })
+
+  // Load templates, data sources, and frameworks from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setTemplatesLoading(true)
+        const [templatesData, dataSourcesData, frameworksData] = await Promise.all([
+          ComplianceAPIs.Management.getRuleTemplates(),
+          // Load data sources from data governance API
+          fetch('/api/data-sources').then(res => res.json()).catch(() => []),
+          ComplianceAPIs.Framework.getFrameworks()
+        ])
+        
+        setRuleTemplates(templatesData)
+        setDataSources(dataSourcesData)
+        setFrameworks(frameworksData)
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        sendNotification('error', 'Failed to load rule templates and data sources')
+        
+        // Fallback to basic data
+        setDataSources([])
+        setFrameworks([])
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+
+    if (isOpen) {
+      loadData()
+    }
+  }, [isOpen, sendNotification])
 
   const watchRuleType = form.watch("rule_type")
   const watchIsGlobal = form.watch("is_global")
@@ -708,7 +740,7 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess, dataSour
                                   <FormLabel>Data Sources</FormLabel>
                                   <FormDescription>Select which data sources this rule should apply to</FormDescription>
                                   <div className="grid grid-cols-2 gap-2">
-                                    {mockDataSources.map((source) => (
+                                    {dataSources.map((source) => (
                                       <div key={source.id} className="flex items-center space-x-2 p-2 border rounded">
                                         <Checkbox
                                           id={`source-${source.id}`}

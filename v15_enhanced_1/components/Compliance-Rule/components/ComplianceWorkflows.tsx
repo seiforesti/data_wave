@@ -61,264 +61,134 @@ const ComplianceWorkflows: React.FC<ComplianceWorkflowsProps> = ({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
   const [activeTab, setActiveTab] = useState('all')
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
 
-  // Mock data for clean output
-  const mockWorkflows: ComplianceWorkflow[] = [
-    {
-      id: 1,
-      name: 'SOC 2 Annual Assessment',
-      description: 'Automated workflow for conducting SOC 2 Type II annual assessments',
-      workflow_type: 'assessment',
-      status: 'active',
-      steps: [
-        {
-          id: 'step-1',
-          name: 'Preparation',
-          type: 'manual',
-          description: 'Prepare assessment documentation and scope',
-          assignee: 'compliance-team',
-          due_date_offset: 7,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'completed',
-          started_at: '2024-01-01T09:00:00Z',
-          completed_at: '2024-01-08T17:00:00Z',
-          notes: 'All documentation prepared and scope defined',
-          attachments: [],
-          sub_steps: []
-        },
-        {
-          id: 'step-2',
-          name: 'Evidence Collection',
-          type: 'automated',
-          description: 'Collect evidence from various systems',
-          assignee: 'system',
-          due_date_offset: 14,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'in_progress',
-          started_at: '2024-01-08T09:00:00Z',
-          completed_at: null,
-          notes: null,
-          attachments: [],
-          sub_steps: []
-        },
-        {
-          id: 'step-3',
-          name: 'Review and Approval',
-          type: 'approval',
-          description: 'Review collected evidence and approve assessment',
-          assignee: 'audit-manager',
-          due_date_offset: 21,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'pending',
-          started_at: null,
-          completed_at: null,
-          notes: null,
-          attachments: [],
-          sub_steps: []
-        }
-      ],
-      current_step: 1,
-      assigned_to: 'compliance-team',
-      due_date: '2024-02-01T00:00:00Z',
-      priority: 'high',
-      triggers: [
-        {
-          id: 'trigger-1',
-          type: 'scheduled',
-          config: { cron: '0 0 1 1 *' },
-          enabled: true
-        }
-      ],
-      conditions: {},
-      variables: {},
-      execution_history: [],
-      approval_chain: [],
-      escalation_rules: [],
-      sla_requirements: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-08T17:00:00Z',
-      created_by: 'admin',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 2,
-      name: 'GDPR Data Subject Request',
-      description: 'Automated workflow for handling GDPR data subject access requests',
-      workflow_type: 'remediation',
-      status: 'active',
-      steps: [
-        {
-          id: 'step-1',
-          name: 'Request Validation',
-          type: 'automated',
-          description: 'Validate incoming data subject request',
-          assignee: 'system',
-          due_date_offset: 1,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'completed',
-          started_at: '2024-01-10T10:00:00Z',
-          completed_at: '2024-01-10T10:30:00Z',
-          notes: 'Request validated successfully',
-          attachments: [],
-          sub_steps: []
-        },
-        {
-          id: 'step-2',
-          name: 'Data Collection',
-          type: 'automated',
-          description: 'Collect personal data from all systems',
-          assignee: 'system',
-          due_date_offset: 15,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'in_progress',
-          started_at: '2024-01-10T11:00:00Z',
-          completed_at: null,
-          notes: null,
-          attachments: [],
-          sub_steps: []
-        },
-        {
-          id: 'step-3',
-          name: 'Response Preparation',
-          type: 'manual',
-          description: 'Prepare response package for data subject',
-          assignee: 'privacy-officer',
-          due_date_offset: 25,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'pending',
-          started_at: null,
-          completed_at: null,
-          notes: null,
-          attachments: [],
-          sub_steps: []
-        }
-      ],
-      current_step: 1,
-      assigned_to: 'privacy-officer',
-      due_date: '2024-02-04T00:00:00Z',
-      priority: 'urgent',
-      triggers: [
-        {
-          id: 'trigger-1',
-          type: 'event',
-          config: { event_type: 'data_subject_request' },
-          enabled: true
-        }
-      ],
-      conditions: {},
-      variables: {},
-      execution_history: [],
-      approval_chain: [],
-      escalation_rules: [],
-      sla_requirements: [],
-      created_at: '2024-01-10T00:00:00Z',
-      updated_at: '2024-01-10T11:00:00Z',
-      created_by: 'system',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 3,
-      name: 'Risk Assessment Review',
-      description: 'Quarterly risk assessment review and update workflow',
-      workflow_type: 'review',
-      status: 'paused',
-      steps: [
-        {
-          id: 'step-1',
-          name: 'Risk Identification',
-          type: 'manual',
-          description: 'Identify and document new risks',
-          assignee: 'risk-team',
-          due_date_offset: 7,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'completed',
-          started_at: '2024-01-01T09:00:00Z',
-          completed_at: '2024-01-07T17:00:00Z',
-          notes: 'New risks identified and documented',
-          attachments: [],
-          sub_steps: []
-        },
-        {
-          id: 'step-2',
-          name: 'Risk Analysis',
-          type: 'manual',
-          description: 'Analyze impact and likelihood of identified risks',
-          assignee: 'risk-analyst',
-          due_date_offset: 14,
-          required: true,
-          conditions: {},
-          actions: [],
-          status: 'paused',
-          started_at: '2024-01-08T09:00:00Z',
-          completed_at: null,
-          notes: 'Paused pending additional information',
-          attachments: [],
-          sub_steps: []
-        }
-      ],
-      current_step: 1,
-      assigned_to: 'risk-analyst',
-      due_date: '2024-01-31T00:00:00Z',
-      priority: 'medium',
-      triggers: [
-        {
-          id: 'trigger-1',
-          type: 'scheduled',
-          config: { cron: '0 0 1 */3 *' },
-          enabled: true
-        }
-      ],
-      conditions: {},
-      variables: {},
-      execution_history: [],
-      approval_chain: [],
-      escalation_rules: [],
-      sla_requirements: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-08T09:00:00Z',
-      created_by: 'admin',
-      updated_by: 'risk-analyst',
-      version: 1,
-      metadata: {}
-    }
-  ]
-
-  // Load workflows
+  // Load workflows from API
   useEffect(() => {
     const loadWorkflows = async () => {
-      setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setWorkflows(mockWorkflows)
+        setLoading(true)
+        
+        const params: any = {
+          page: pagination.page,
+          limit: pagination.pageSize
+        }
+        
+        // Add search query if provided
+        if (searchQuery) {
+          params.search = searchQuery
+        }
+        
+        // Add filters
+        if (filters.status) {
+          params.status = filters.status
+        }
+        if (filters.workflow_type) {
+          params.workflow_type = filters.workflow_type
+        }
+        if (filters.priority) {
+          params.priority = filters.priority
+        }
+        if (filters.assigned_to) {
+          params.assigned_to = filters.assigned_to
+        }
+        if (dataSourceId) {
+          params.data_source_id = dataSourceId
+        }
+
+        const response = await ComplianceAPIs.Workflow.getWorkflows(params)
+        
+        setWorkflows(response.data)
+        setPagination(prev => ({
+          ...prev,
+          total: response.total
+        }))
+        
+        // Load active workflow instances for real-time status
+        const activeInstances = await ComplianceAPIs.Workflow.getActiveWorkflowInstances({
+          status: 'running'
+        })
+        
+        // Update workflows with active instance data
+        setWorkflows(prevWorkflows => 
+          prevWorkflows.map(workflow => {
+            const activeInstance = activeInstances.find(instance => 
+              instance.workflow_id === workflow.id
+            )
+            if (activeInstance) {
+              return {
+                ...workflow,
+                current_step: activeInstance.current_step,
+                execution_status: activeInstance.status,
+                progress_percentage: activeInstance.progress_percentage
+              }
+            }
+            return workflow
+          })
+        )
+        
       } catch (error) {
         console.error('Failed to load workflows:', error)
-        onError?.('Failed to load compliance workflows')
+        onError?.(error as Error)
+        
+        // Fallback to empty state
+        setWorkflows([])
+        setPagination(prev => ({ ...prev, total: 0 }))
       } finally {
         setLoading(false)
       }
     }
 
     loadWorkflows()
-  }, [dataSourceId])
+  }, [dataSourceId, searchQuery, filters, pagination.page, pagination.pageSize, onError])
+
+  // Real-time updates for workflow status
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (workflows.length > 0) {
+        try {
+          // Check for workflow status updates
+          const activeWorkflows = workflows.filter(w => w.status === 'active')
+          const statusUpdates = await Promise.all(
+            activeWorkflows.map(async (workflow) => {
+              try {
+                const instances = await ComplianceAPIs.Workflow.getActiveWorkflowInstances({
+                  workflow_id: workflow.id
+                })
+                return { workflowId: workflow.id, instances }
+              } catch {
+                return { workflowId: workflow.id, instances: [] }
+              }
+            })
+          )
+          
+          // Update workflows with latest status
+          setWorkflows(prevWorkflows =>
+            prevWorkflows.map(workflow => {
+              const statusUpdate = statusUpdates.find(update => 
+                update.workflowId === workflow.id
+              )
+              if (statusUpdate && statusUpdate.instances.length > 0) {
+                const latestInstance = statusUpdate.instances[0]
+                return {
+                  ...workflow,
+                  current_step: latestInstance.current_step,
+                  execution_status: latestInstance.status,
+                  progress_percentage: latestInstance.progress_percentage,
+                  last_run_at: latestInstance.started_at
+                }
+              }
+              return workflow
+            })
+          )
+        } catch (error) {
+          console.error('Failed to update workflow status:', error)
+        }
+      }
+    }, 30000) // Update every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [workflows])
 
   // Filter workflows based on active tab and search
   const filteredWorkflows = workflows.filter(workflow => {

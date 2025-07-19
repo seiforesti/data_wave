@@ -76,140 +76,127 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
   const auditFeatures = ComplianceHooks.useAuditFeatures('compliance_requirement')
   
   // State
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
-  const [sortField, setSortField] = useState<string>('updated_at')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'created_at', direction: 'desc' })
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
+  const [selectedRequirement, setSelectedRequirement] = useState<ComplianceRequirement | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<ComplianceRequirement | null>(null)
   const [requirements, setRequirements] = useState<ComplianceRequirement[]>([])
-  const [loading, setLoading] = useState(false)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 25,
-    total: 0
-  })
 
-  // Mock data for clean output
-  const mockRequirements: ComplianceRequirement[] = [
-    {
-      id: 1,
-      data_source_id: dataSourceId || 1,
-      framework: 'SOC 2',
-      requirement_id: 'CC1.1',
-      title: 'Control Environment',
-      description: 'The entity demonstrates a commitment to integrity and ethical values',
-      category: 'Control Environment',
-      status: 'compliant',
-      compliance_percentage: 95,
-      last_assessed: '2024-01-15T10:00:00Z',
-      next_assessment: '2024-04-15T10:00:00Z',
-      assessor: 'John Smith',
-      assessment_notes: 'All controls are operating effectively',
-      risk_level: 'low',
-      remediation_plan: null,
-      remediation_deadline: null,
-      remediation_owner: null,
-      evidence_files: ['control_environment_policy.pdf', 'ethics_training_records.xlsx'],
-      documentation_links: ['https://company.com/policies/ethics'],
-      impact_description: 'Ensures ethical behavior across the organization',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-      created_by: 'admin',
-      updated_by: 'john.smith',
-      version: 1,
-      tags: ['ethics', 'control_environment'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    },
-    {
-      id: 2,
-      data_source_id: dataSourceId || 1,
-      framework: 'GDPR',
-      requirement_id: 'Art.32',
-      title: 'Security of Processing',
-      description: 'Implement appropriate technical and organizational measures',
-      category: 'Security',
-      status: 'partially_compliant',
-      compliance_percentage: 75,
-      last_assessed: '2024-01-10T14:30:00Z',
-      next_assessment: '2024-02-10T14:30:00Z',
-      assessor: 'Jane Doe',
-      assessment_notes: 'Some security measures need improvement',
-      risk_level: 'medium',
-      remediation_plan: 'Implement additional encryption controls',
-      remediation_deadline: '2024-03-01T00:00:00Z',
-      remediation_owner: 'security-team',
-      evidence_files: ['security_policy.pdf'],
-      documentation_links: ['https://company.com/security'],
-      impact_description: 'Protects personal data from unauthorized access',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-10T14:30:00Z',
-      created_by: 'admin',
-      updated_by: 'jane.doe',
-      version: 2,
-      tags: ['security', 'encryption'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    },
-    {
-      id: 3,
-      data_source_id: dataSourceId || 1,
-      framework: 'HIPAA',
-      requirement_id: '164.312(a)(1)',
-      title: 'Access Control',
-      description: 'Implement technical safeguards to allow access only to authorized persons',
-      category: 'Access Control',
-      status: 'non_compliant',
-      compliance_percentage: 45,
-      last_assessed: '2024-01-05T09:15:00Z',
-      next_assessment: '2024-02-05T09:15:00Z',
-      assessor: 'Mike Johnson',
-      assessment_notes: 'Access controls are insufficient',
-      risk_level: 'high',
-      remediation_plan: 'Implement role-based access control system',
-      remediation_deadline: '2024-02-15T00:00:00Z',
-      remediation_owner: 'it-team',
-      evidence_files: [],
-      documentation_links: [],
-      impact_description: 'Critical for protecting PHI',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-05T09:15:00Z',
-      created_by: 'admin',
-      updated_by: 'mike.johnson',
-      version: 1,
-      tags: ['access_control', 'phi'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    }
-  ]
-
-  // Load requirements
+  // Load requirements from API
   useEffect(() => {
     const loadRequirements = async () => {
-      setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setRequirements(mockRequirements)
-        setPagination(prev => ({ ...prev, total: mockRequirements.length }))
+        setLoading(true)
+        
+        const params: any = {
+          page: pagination.page,
+          limit: pagination.pageSize,
+          sort: `${sortConfig.field}:${sortConfig.direction}`
+        }
+        
+        // Add search query if provided
+        if (searchQuery) {
+          params.search = searchQuery
+        }
+        
+        // Add filters
+        if (filters.status) {
+          params.status = filters.status
+        }
+        if (filters.framework) {
+          params.framework = filters.framework
+        }
+        if (filters.risk_level) {
+          params.risk_level = filters.risk_level
+        }
+        if (filters.category) {
+          params.category = filters.category
+        }
+        if (dataSourceId) {
+          params.data_source_id = dataSourceId
+        }
+
+        const response = await ComplianceAPIs.Management.getRequirements(params)
+        
+        setRequirements(response.data)
+        setPagination(prev => ({
+          ...prev,
+          total: response.total
+        }))
+        
+        // Load assessment history for each requirement
+        const requirementsWithHistory = await Promise.all(
+          response.data.map(async (requirement) => {
+            try {
+              const history = await ComplianceAPIs.Management.getRequirementHistory(requirement.id)
+              return {
+                ...requirement,
+                assessment_history: history,
+                last_assessment_date: history.length > 0 ? history[0].created_at : null
+              }
+            } catch (error) {
+              console.error(`Failed to load history for requirement ${requirement.id}:`, error)
+              return requirement
+            }
+          })
+        )
+        
+        setRequirements(requirementsWithHistory)
+        
       } catch (error) {
-        console.error('Failed to load requirements:', error)
-        onError?.('Failed to load compliance requirements')
+        console.error('Failed to load compliance requirements:', error)
+        onError?.(error as Error)
+        
+        // Fallback to empty state
+        setRequirements([])
+        setPagination(prev => ({ ...prev, total: 0 }))
       } finally {
         setLoading(false)
       }
     }
 
     loadRequirements()
-  }, [dataSourceId, searchQuery, filters, sortField, sortDirection, pagination.page, pagination.limit])
+  }, [dataSourceId, searchQuery, filters, sortConfig, pagination.page, pagination.pageSize, onError])
+
+  // Real-time updates for requirement status
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (requirements.length > 0) {
+        try {
+          // Check for requirement status updates
+          const activeRequirements = requirements.filter(req => 
+            req.status === 'in_progress' || req.status === 'not_assessed'
+          )
+          
+          const statusUpdates = await Promise.all(
+            activeRequirements.map(async (requirement) => {
+              try {
+                const updatedRequirement = await ComplianceAPIs.Management.getRequirement(requirement.id)
+                return updatedRequirement
+              } catch {
+                return requirement
+              }
+            })
+          )
+          
+          // Update requirements with latest status
+          setRequirements(prevRequirements =>
+            prevRequirements.map(requirement => {
+              const updatedRequirement = statusUpdates.find(update => update.id === requirement.id)
+              return updatedRequirement || requirement
+            })
+          )
+        } catch (error) {
+          console.error('Failed to update requirement status:', error)
+        }
+      }
+    }, 120000) // Update every 2 minutes
+
+    return () => clearInterval(interval)
+  }, [requirements])
 
   // Filter and sort requirements
   const filteredAndSortedRequirements = useMemo(() => {
@@ -238,10 +225,10 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
 
     // Apply sorting
     filtered.sort((a, b) => {
-      const aValue = a[sortField as keyof ComplianceRequirement]
-      const bValue = b[sortField as keyof ComplianceRequirement]
+      const aValue = a[sortConfig.field as keyof ComplianceRequirement]
+      const bValue = b[sortConfig.field as keyof ComplianceRequirement]
       
-      if (sortDirection === 'asc') {
+      if (sortConfig.direction === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
       } else {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0
@@ -249,33 +236,32 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
     })
 
     return filtered
-  }, [requirements, searchQuery, filters, sortField, sortDirection])
+  }, [requirements, searchQuery, filters, sortConfig])
 
   // Handle sort
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    if (sortConfig.field === field) {
+      setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))
     } else {
-      setSortField(field)
-      setSortDirection('asc')
+      setSortConfig({ field, direction: 'asc' })
     }
   }
 
   // Handle delete
   const handleDelete = async () => {
-    if (!itemToDelete) return
+    if (!selectedRequirement) return
 
     try {
-      await ComplianceAPIs.Management.deleteRequirement(itemToDelete.id as number)
-      setRequirements(prev => prev.filter(req => req.id !== itemToDelete.id))
+      await ComplianceAPIs.Management.deleteRequirement(selectedRequirement.id as number)
+      setRequirements(prev => prev.filter(req => req.id !== selectedRequirement.id))
       enterprise.sendNotification('success', 'Requirement deleted successfully')
-      onItemDelete?.(itemToDelete)
+      onItemDelete?.(selectedRequirement)
     } catch (error) {
       console.error('Failed to delete requirement:', error)
       enterprise.sendNotification('error', 'Failed to delete requirement')
     } finally {
       setDeleteDialogOpen(false)
-      setItemToDelete(null)
+      setSelectedRequirement(null)
     }
   }
 
@@ -398,12 +384,12 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
               <TableHead className="w-12">
                 <input
                   type="checkbox"
-                  checked={selectedItems.length === filteredAndSortedRequirements.length}
+                  checked={selectedRequirement?.id ? selectedRequirement.id.toString() : false}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedItems(filteredAndSortedRequirements.map(req => req.id.toString()))
+                      setSelectedRequirement(filteredAndSortedRequirements[0] || null)
                     } else {
-                      setSelectedItems([])
+                      setSelectedRequirement(null)
                     }
                   }}
                 />
@@ -507,14 +493,10 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selectedItems.includes(requirement.id.toString())}
+                      checked={selectedRequirement?.id === requirement.id}
                       onChange={(e) => {
                         e.stopPropagation()
-                        if (e.target.checked) {
-                          setSelectedItems(prev => [...prev, requirement.id.toString()])
-                        } else {
-                          setSelectedItems(prev => prev.filter(id => id !== requirement.id.toString()))
-                        }
+                        setSelectedRequirement(requirement)
                       }}
                     />
                   </TableCell>
@@ -593,7 +575,7 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
                           className="text-red-600"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setItemToDelete(requirement)
+                            setSelectedRequirement(requirement)
                             setDeleteDialogOpen(true)
                           }}
                         >
@@ -625,12 +607,12 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
             Previous
           </Button>
           <span className="text-sm">
-            Page {pagination.page} of {Math.ceil(pagination.total / pagination.limit)}
+            Page {pagination.page} of {Math.ceil(pagination.total / pagination.pageSize)}
           </span>
           <Button 
             variant="outline" 
             size="sm"
-            disabled={pagination.page >= Math.ceil(pagination.total / pagination.limit)}
+            disabled={pagination.page >= Math.ceil(pagination.total / pagination.pageSize)}
             onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
           >
             Next
@@ -644,7 +626,7 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Requirement</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{selectedRequirement?.title}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1438,6 +1438,190 @@ export class IntegrationAPI {
   }
 }
 
+// Data Sources Management APIs (Integration with Data Governance)
+export class DataSourcesAPI {
+  static async getDataSources(params?: {
+    status?: string
+    type?: string
+    search?: string
+    page?: number
+    limit?: number
+  }): Promise<{ data: any[]; total: number }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/data-sources',
+      params
+    })
+  }
+
+  static async getDataSource(id: number): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/data-sources/${id}`
+    })
+  }
+
+  static async getDataSourceSchemas(id: number): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/data-sources/${id}/schemas`
+    })
+  }
+
+  static async getDataSourceTables(id: number, schema?: string): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/data-sources/${id}/tables`,
+      params: { schema }
+    })
+  }
+
+  static async getDataSourceColumns(id: number, table: string, schema?: string): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/data-sources/${id}/columns`,
+      params: { table, schema }
+    })
+  }
+
+  static async testDataSourceConnection(id: number): Promise<{
+    status: 'success' | 'failed'
+    response_time: number
+    error_message?: string
+  }> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/data-sources/${id}/test-connection`
+    })
+  }
+}
+
+// Enhanced Compliance Analytics APIs
+export class ComplianceAnalyticsAPI {
+  static async getComplianceMetrics(params?: {
+    data_source_id?: number
+    framework?: string
+    date_range?: { start: string; end: string }
+    granularity?: 'daily' | 'weekly' | 'monthly'
+  }): Promise<{
+    overall_score: number
+    framework_scores: Record<string, number>
+    risk_distribution: Record<string, number>
+    trends: any[]
+    benchmarks: any
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/analytics/metrics',
+      params
+    })
+  }
+
+  static async getComplianceTrends(params?: {
+    data_source_id?: number
+    metric_type?: string
+    period?: string
+  }): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/analytics/trends',
+      params
+    })
+  }
+
+  static async generateComplianceInsights(params?: {
+    data_source_id?: number
+    analysis_type?: 'risk' | 'performance' | 'gaps'
+  }): Promise<{
+    insights: any[]
+    recommendations: string[]
+    priority_actions: any[]
+  }> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/analytics/insights',
+      data: params
+    })
+  }
+
+  static async getComplianceForecasting(params?: {
+    data_source_id?: number
+    forecast_period?: number
+    metrics?: string[]
+  }): Promise<{
+    forecasts: any[]
+    confidence_intervals: any[]
+    assumptions: string[]
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/analytics/forecasting',
+      params
+    })
+  }
+}
+
+// Enhanced Remediation Management APIs
+export class RemediationAPI {
+  static async getRemediationPlans(params?: {
+    data_source_id?: number
+    status?: string
+    priority?: string
+    assigned_to?: string
+  }): Promise<{ data: any[]; total: number }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/remediation/plans',
+      params
+    })
+  }
+
+  static async createRemediationPlan(data: {
+    title: string
+    description: string
+    issue_ids: number[]
+    priority: string
+    assigned_to: string
+    due_date: string
+    steps: any[]
+  }): Promise<any> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/remediation/plans',
+      data
+    })
+  }
+
+  static async executeAutomatedRemediation(planId: number, params?: {
+    dry_run?: boolean
+    approval_required?: boolean
+  }): Promise<{
+    execution_id: string
+    status: string
+    estimated_completion: string
+  }> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/remediation/plans/${planId}/execute`,
+      data: params
+    })
+  }
+
+  static async getRemediationStatus(executionId: string): Promise<{
+    status: string
+    progress: number
+    steps_completed: number
+    total_steps: number
+    results: any[]
+    errors: any[]
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/remediation/executions/${executionId}/status`
+    })
+  }
+}
+
 // Export all APIs as a collection
 export const ComplianceAPIs = {
   Management: ComplianceManagementAPI,
@@ -1446,6 +1630,9 @@ export const ComplianceAPIs = {
   Audit: AuditReportingAPI,
   Workflow: WorkflowAutomationAPI,
   Integration: IntegrationAPI,
+  DataSources: DataSourcesAPI,
+  Analytics: ComplianceAnalyticsAPI,
+  Remediation: RemediationAPI,
   Client: apiClient
 }
 
