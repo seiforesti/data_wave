@@ -32,7 +32,9 @@ import {
   RefreshCw,
   Play,
   Pause,
-  Stop
+  Stop,
+  MessageSquare,
+  GitBranch
 } from 'lucide-react'
 
 // Import enhanced enterprise hooks
@@ -53,6 +55,12 @@ import { ComplianceIssueList } from './components/ComplianceIssueList'
 import { ComplianceReports } from './components/ComplianceReports'
 import { ComplianceIntegrations } from './components/ComplianceIntegrations'
 import { ComplianceWorkflows } from './components/ComplianceWorkflows'
+
+// Import the Three Phases UI Components
+import AnalyticsWorkbench from './ui/analytics/analytics-workbench'
+import CollaborationStudio from './ui/collaboration/collaboration-studio'
+import WorkflowDesigner from './ui/workflow/workflow-designer'
+import EnterpriseDashboard from './ui/dashboard/enterprise-dashboard'
 
 // Import types
 import type { ComplianceRequirement, ComplianceAssessment, ComplianceGap } from './services/enhanced-compliance-apis'
@@ -482,7 +490,7 @@ export function EnhancedComplianceRuleApp({
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -500,11 +508,15 @@ export function EnhancedComplianceRuleApp({
             Gaps
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
+            <Brain className="h-4 w-4" />
             Analytics
           </TabsTrigger>
+          <TabsTrigger value="collaboration" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Collaboration
+          </TabsTrigger>
           <TabsTrigger value="workflows" className="flex items-center gap-2">
-            <Workflow className="h-4 w-4" />
+            <GitBranch className="h-4 w-4" />
             Workflows
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
@@ -515,7 +527,7 @@ export function EnhancedComplianceRuleApp({
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">
-          <ComplianceDashboard />
+          <EnterpriseDashboard />
         </TabsContent>
 
         {/* Requirements Tab */}
@@ -573,14 +585,17 @@ export function EnhancedComplianceRuleApp({
 
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
-          <h2 className="text-2xl font-bold">Compliance Analytics</h2>
-          {/* Analytics components would go here */}
+          <AnalyticsWorkbench />
+        </TabsContent>
+
+        {/* Collaboration Tab */}
+        <TabsContent value="collaboration" className="space-y-6">
+          <CollaborationStudio />
         </TabsContent>
 
         {/* Workflows Tab */}
         <TabsContent value="workflows" className="space-y-6">
-          <h2 className="text-2xl font-bold">Compliance Workflows</h2>
-          <ComplianceWorkflows />
+          <WorkflowDesigner />
         </TabsContent>
 
         {/* Reports Tab */}
@@ -623,6 +638,12 @@ export function EnhancedComplianceRuleApp({
     </div>
   )
 }
+
+// Export the enhanced compliance app
+export default EnhancedComplianceRuleApp
+
+// Named export for flexibility
+export { EnhancedComplianceRuleApp }
 
 // Missing Plus component import
 const Plus = ({ className }: { className?: string }) => (
