@@ -37,6 +37,7 @@ from app.api.routes.performance_routes import router as performance_router
 from app.api.routes.security_routes import router as security_router
 from app.api.routes.compliance_routes import router as compliance_router
 from app.api.routes.scan_rule_set_routes import router as scan_rule_set_router
+from app.api.routes.data_catalog_routes import router as data_catalog_router
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -110,6 +111,7 @@ app.include_router(performance_router)  # Add enhanced performance routes
 app.include_router(security_router)  # Add enhanced security routes
 app.include_router(compliance_router)  # Add enhanced compliance routes
 app.include_router(scan_rule_set_router)  # Add enhanced scan rule set routes
+app.include_router(data_catalog_router)  # Add enhanced data catalog routes
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
