@@ -35,6 +35,8 @@ from app.api.routes.collaboration_routes import router as collaboration_router
 from app.api.routes.workflow_routes import router as workflow_router
 from app.api.routes.performance_routes import router as performance_router
 from app.api.routes.security_routes import router as security_router
+from app.api.routes.compliance_routes import router as compliance_router
+from app.api.routes.scan_rule_set_routes import router as scan_rule_set_router
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -106,6 +108,8 @@ app.include_router(collaboration_router)  # Add collaboration routes
 app.include_router(workflow_router)  # Add workflow routes  
 app.include_router(performance_router)  # Add enhanced performance routes
 app.include_router(security_router)  # Add enhanced security routes
+app.include_router(compliance_router)  # Add enhanced compliance routes
+app.include_router(scan_rule_set_router)  # Add enhanced scan rule set routes
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
