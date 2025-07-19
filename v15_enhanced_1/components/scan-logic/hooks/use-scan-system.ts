@@ -1,263 +1,284 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import type { ScanConfig, ScanRun, ScanSchedule } from "../types"
-import { mockScanConfigs, mockScanRuns, mockScanSchedules } from "../data/mock-data"
+import {
+  useScanConfigurationsQuery,
+  useScanRunsQuery,
+  useScanSchedulesQuery,
+  useCreateScanConfigurationMutation,
+  useUpdateScanConfigurationMutation,
+  useDeleteScanConfigurationMutation,
+  useCreateScanRunMutation,
+  useCancelScanRunMutation,
+  useActiveRunsQuery,
+  useScanAnalyticsQuery,
+  useScanStatisticsQuery,
+  createScanLogicErrorHandler,
+  type ScanConfigurationCreateRequest,
+  type ScanConfigurationUpdateRequest,
+  type ScanRunCreateRequest
+} from "../services/scan-logic-apis"
 
 export function useScanSystem() {
-  const [scanConfigs, setScanConfigs] = useState<ScanConfig[]>([])
-  const [scanRuns, setScanRuns] = useState<ScanRun[]>([])
-  const [scanSchedules, setScanSchedules] = useState<ScanSchedule[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const errorHandler = createScanLogicErrorHandler('useScanSystem')
 
-  // Load initial data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+  // Query hooks for data fetching
+  const {
+    data: scanConfigsData,
+    isLoading: scanConfigsLoading,
+    error: scanConfigsError,
+    refetch: refetchScanConfigs
+  } = useScanConfigurationsQuery({ page_size: 100 })
 
-        setScanConfigs(mockScanConfigs)
-        setScanRuns(mockScanRuns)
-        setScanSchedules(mockScanSchedules)
-        setError(null)
-      } catch (err) {
-        setError("Failed to load scan data")
-      } finally {
-        setLoading(false)
-      }
-    }
+  const {
+    data: scanRunsData,
+    isLoading: scanRunsLoading,
+    error: scanRunsError,
+    refetch: refetchScanRuns
+  } = useScanRunsQuery({ page_size: 100 })
 
-    loadData()
-  }, [])
+  const {
+    data: scanSchedulesData,
+    isLoading: scanSchedulesLoading,
+    error: scanSchedulesError,
+    refetch: refetchScanSchedules
+  } = useScanSchedulesQuery()
+
+  const {
+    data: activeRunsData,
+    isLoading: activeRunsLoading,
+    error: activeRunsError
+  } = useActiveRunsQuery()
+
+  const {
+    data: analyticsData,
+    isLoading: analyticsLoading,
+    error: analyticsError
+  } = useScanAnalyticsQuery()
+
+  const {
+    data: statisticsData,
+    isLoading: statisticsLoading,
+    error: statisticsError
+  } = useScanStatisticsQuery()
+
+  // Mutation hooks for data operations
+  const createScanConfigurationMutation = useCreateScanConfigurationMutation()
+  const updateScanConfigurationMutation = useUpdateScanConfigurationMutation()
+  const deleteScanConfigurationMutation = useDeleteScanConfigurationMutation()
+  const createScanRunMutation = useCreateScanRunMutation()
+  const cancelScanRunMutation = useCancelScanRunMutation()
+
+  // Extract data from query responses
+  const scanConfigs = scanConfigsData?.configurations || []
+  const scanRuns = scanRunsData?.runs || []
+  const scanSchedules = scanSchedulesData || []
+  const activeRuns = activeRunsData || []
+
+  // Combined loading state
+  const loading = scanConfigsLoading || scanRunsLoading || scanSchedulesLoading
+
+  // Combined error state
+  const combinedError = scanConfigsError || scanRunsError || scanSchedulesError || activeRunsError || analyticsError || statisticsError
+  if (combinedError && !error) {
+    setError(errorHandler(combinedError))
+  }
 
   // Create new scan configuration
   const createScan = useCallback(async (scanData: Omit<ScanConfig, "id" | "createdAt" | "updatedAt">) => {
     try {
-      const newScan: ScanConfig = {
-        ...scanData,
-        id: `scan-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      setError(null)
+      
+      const requestData: ScanConfigurationCreateRequest = {
+        name: scanData.name,
+        description: scanData.description,
+        data_source_id: parseInt(scanData.dataSourceId),
+        scan_type: scanData.scanType,
+        scope: scanData.scope,
+        settings: {
+          enable_pii: scanData.settings.enablePII,
+          enable_classification: scanData.settings.enableClassification,
+          enable_lineage: scanData.settings.enableLineage,
+          enable_quality: scanData.settings.enableQuality,
+          sample_size: scanData.settings.sampleSize,
+          parallelism: scanData.settings.parallelism
+        },
+        schedule: scanData.schedule
       }
 
-      setScanConfigs((prev) => [...prev, newScan])
-      return newScan
-    } catch (err) {
-      throw new Error("Failed to create scan")
+      const result = await createScanConfigurationMutation.mutateAsync(requestData)
+      return result
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }, [createScanConfigurationMutation, errorHandler])
 
   // Update scan configuration
   const updateScan = useCallback(async (id: string, updates: Partial<ScanConfig>) => {
     try {
-      setScanConfigs((prev) =>
-        prev.map((scan) => (scan.id === id ? { ...scan, ...updates, updatedAt: new Date().toISOString() } : scan)),
-      )
-    } catch (err) {
-      throw new Error("Failed to update scan")
+      setError(null)
+      
+      const requestData: ScanConfigurationUpdateRequest = {
+        name: updates.name,
+        description: updates.description,
+        data_source_id: updates.dataSourceId ? parseInt(updates.dataSourceId) : undefined,
+        scan_type: updates.scanType,
+        scope: updates.scope,
+        settings: updates.settings ? {
+          enable_pii: updates.settings.enablePII,
+          enable_classification: updates.settings.enableClassification,
+          enable_lineage: updates.settings.enableLineage,
+          enable_quality: updates.settings.enableQuality,
+          sample_size: updates.settings.sampleSize,
+          parallelism: updates.settings.parallelism
+        } : undefined,
+        schedule: updates.schedule
+      }
+
+      const result = await updateScanConfigurationMutation.mutateAsync({
+        configId: parseInt(id),
+        updateData: requestData
+      })
+      return result
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }, [updateScanConfigurationMutation, errorHandler])
 
   // Delete scan configuration
   const deleteScan = useCallback(async (id: string) => {
     try {
-      setScanConfigs((prev) => prev.filter((scan) => scan.id !== id))
-      setScanRuns((prev) => prev.filter((run) => run.scanId !== id))
-      setScanSchedules((prev) => prev.filter((schedule) => schedule.scanId !== id))
-    } catch (err) {
-      throw new Error("Failed to delete scan")
+      setError(null)
+      await deleteScanConfigurationMutation.mutateAsync(parseInt(id))
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }, [deleteScanConfigurationMutation, errorHandler])
 
   // Run scan manually
-  const runScan = useCallback(
-    async (scanId: string) => {
-      try {
-        const scan = scanConfigs.find((s) => s.id === scanId)
-        if (!scan) throw new Error("Scan not found")
-
-        const newRun: ScanRun = {
-          id: `run-${Date.now()}`,
-          scanId,
-          scanName: scan.name,
-          status: "running",
-          startTime: new Date().toISOString(),
-          progress: 0,
-          entitiesScanned: 0,
-          entitiesTotal: 1000, // Mock total
-          issuesFound: 0,
-          dataSourceName: scan.dataSourceName,
-          triggeredBy: "manual",
-          logs: [
-            {
-              id: `log-${Date.now()}`,
-              timestamp: new Date().toISOString(),
-              level: "info",
-              message: "Scan started manually",
-            },
-          ],
-        }
-
-        setScanRuns((prev) => [newRun, ...prev])
-
-        // Simulate scan progress
-        simulateScanProgress(newRun.id)
-
-        return newRun
-      } catch (err) {
-        throw new Error("Failed to start scan")
+  const runScan = useCallback(async (scanId: string) => {
+    try {
+      setError(null)
+      
+      const runData: ScanRunCreateRequest = {
+        trigger_type: 'manual',
+        run_name: `Manual run - ${new Date().toLocaleString()}`
       }
-    },
-    [scanConfigs],
-  )
+
+      const result = await createScanRunMutation.mutateAsync({
+        configId: parseInt(scanId),
+        runData
+      })
+      return result
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    }
+  }, [createScanRunMutation, errorHandler])
 
   // Cancel running scan
   const cancelScan = useCallback(async (runId: string) => {
     try {
-      setScanRuns((prev) =>
-        prev.map((run) =>
-          run.id === runId
-            ? {
-                ...run,
-                status: "cancelled",
-                endTime: new Date().toISOString(),
-                logs: [
-                  ...run.logs,
-                  {
-                    id: `log-${Date.now()}`,
-                    timestamp: new Date().toISOString(),
-                    level: "warning",
-                    message: "Scan cancelled by user",
-                  },
-                ],
-              }
-            : run,
-        ),
-      )
-    } catch (err) {
-      throw new Error("Failed to cancel scan")
+      setError(null)
+      const result = await cancelScanRunMutation.mutateAsync(parseInt(runId))
+      return result
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
     }
-  }, [])
+  }, [cancelScanRunMutation, errorHandler])
 
   // Update scan schedule
-  const updateSchedule = useCallback(
-    async (scanId: string, schedule: ScanSchedule["cron"], timezone: string, enabled: boolean) => {
-      try {
-        const existingSchedule = scanSchedules.find((s) => s.scanId === scanId)
-        const scan = scanConfigs.find((s) => s.id === scanId)
+  const updateSchedule = useCallback(async (scanId: string, schedule: ScanSchedule["cron"], timezone: string, enabled: boolean) => {
+    try {
+      setError(null)
+      
+      // Update the scan configuration with the new schedule
+      await updateScan(scanId, {
+        schedule: { enabled, cron: schedule, timezone }
+      })
+      
+      // Refetch schedules to get updated data
+      await refetchScanSchedules()
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    }
+  }, [updateScan, refetchScanSchedules, errorHandler])
 
-        if (!scan) throw new Error("Scan not found")
+  // Refresh all data
+  const refreshData = useCallback(async () => {
+    try {
+      setError(null)
+      await Promise.all([
+        refetchScanConfigs(),
+        refetchScanRuns(),
+        refetchScanSchedules()
+      ])
+    } catch (err: any) {
+      const errorMessage = errorHandler(err)
+      setError(errorMessage)
+    }
+  }, [refetchScanConfigs, refetchScanRuns, refetchScanSchedules, errorHandler])
 
-        if (existingSchedule) {
-          setScanSchedules((prev) =>
-            prev.map((s) =>
-              s.scanId === scanId
-                ? {
-                    ...s,
-                    cron: schedule,
-                    timezone,
-                    enabled,
-                    updatedAt: new Date().toISOString(),
-                    nextRun: calculateNextRun(schedule, timezone),
-                  }
-                : s,
-            ),
-          )
-        } else {
-          const newSchedule: ScanSchedule = {
-            id: `schedule-${Date.now()}`,
-            scanId,
-            scanName: scan.name,
-            enabled,
-            cron: schedule,
-            timezone,
-            nextRun: calculateNextRun(schedule, timezone),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-          setScanSchedules((prev) => [...prev, newSchedule])
-        }
-
-        // Update scan config
-        await updateScan(scanId, {
-          schedule: { enabled, cron: schedule, timezone },
-        })
-      } catch (err) {
-        throw new Error("Failed to update schedule")
-      }
-    },
-    [scanSchedules, scanConfigs, updateScan],
-  )
-
-  // Simulate scan progress
-  const simulateScanProgress = useCallback((runId: string) => {
-    const interval = setInterval(() => {
-      setScanRuns((prev) =>
-        prev.map((run) => {
-          if (run.id === runId && run.status === "running") {
-            const newProgress = Math.min(run.progress + Math.random() * 15, 100)
-            const newEntitiesScanned = Math.floor((newProgress / 100) * run.entitiesTotal)
-            const newIssuesFound = Math.floor(Math.random() * 5)
-
-            if (newProgress >= 100) {
-              clearInterval(interval)
-              return {
-                ...run,
-                status: "completed",
-                progress: 100,
-                entitiesScanned: run.entitiesTotal,
-                issuesFound: run.issuesFound + newIssuesFound,
-                endTime: new Date().toISOString(),
-                duration: Date.now() - new Date(run.startTime).getTime(),
-                logs: [
-                  ...run.logs,
-                  {
-                    id: `log-${Date.now()}`,
-                    timestamp: new Date().toISOString(),
-                    level: "info",
-                    message: "Scan completed successfully",
-                  },
-                ],
-              }
-            }
-
-            return {
-              ...run,
-              progress: newProgress,
-              entitiesScanned: newEntitiesScanned,
-              issuesFound: run.issuesFound + (Math.random() > 0.8 ? 1 : 0),
-            }
-          }
-          return run
-        }),
-      )
-    }, 2000)
-
-    return () => clearInterval(interval)
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null)
   }, [])
 
-  // Helper function to calculate next run time
-  const calculateNextRun = (cron: string, timezone: string): string => {
-    // This is a simplified calculation - in real app, use a proper cron library
-    const now = new Date()
-    const nextRun = new Date(now.getTime() + 24 * 60 * 60 * 1000) // Next day
-    return nextRun.toISOString()
-  }
-
   return {
+    // Data
     scanConfigs,
     scanRuns,
     scanSchedules,
+    activeRuns,
+    analytics: analyticsData,
+    statistics: statisticsData,
+    
+    // Loading states
     loading,
+    scanConfigsLoading,
+    scanRunsLoading,
+    scanSchedulesLoading,
+    activeRunsLoading,
+    analyticsLoading,
+    statisticsLoading,
+    
+    // Error states
     error,
+    scanConfigsError,
+    scanRunsError,
+    scanSchedulesError,
+    activeRunsError,
+    analyticsError,
+    statisticsError,
+    
+    // Actions
     createScan,
     updateScan,
     deleteScan,
     runScan,
     cancelScan,
     updateSchedule,
+    refreshData,
+    clearError,
+    
+    // Mutation states
+    isCreatingScan: createScanConfigurationMutation.isPending,
+    isUpdatingScan: updateScanConfigurationMutation.isPending,
+    isDeletingScan: deleteScanConfigurationMutation.isPending,
+    isRunningScan: createScanRunMutation.isPending,
+    isCancellingScan: cancelScanRunMutation.isPending
   }
 }
