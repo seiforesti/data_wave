@@ -19,23 +19,53 @@ import {
   Pie,
   Cell,
   Legend,
+  AreaChart,
+  Area,
 } from "recharts"
-import { LayoutDashboard, ShieldCheck, AlertTriangle, RefreshCw, Database, CheckCircle, XCircle } from "lucide-react"
-import type { ComplianceSummary } from "../types"
+import { 
+  LayoutDashboard, 
+  ShieldCheck, 
+  AlertTriangle, 
+  RefreshCw, 
+  Database, 
+  CheckCircle, 
+  XCircle,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Target,
+  Clock,
+  Users,
+  FileText,
+  Brain,
+  Zap
+} from "lucide-react"
+import { useEnterpriseComplianceFeatures, useComplianceAnalytics } from "../hooks/use-enterprise-compliance"
 import { LoadingSpinner } from "../../Scan-Rule-Sets/components/LoadingSpinner"
 import { ErrorBoundary } from "../../Scan-Rule-Sets/components/ErrorBoundary"
 import { format } from "date-fns"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ComplianceDashboardProps {
-  summary: ComplianceSummary | null
-  isLoading: boolean
-  error: string | null
-  onRefresh: () => void
+  dataSourceId?: number
+  refreshInterval?: number
 }
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"] // Red, Orange, Yellow, Green, Blue
 
-export function ComplianceDashboard({ summary, isLoading, error, onRefresh }: ComplianceDashboardProps) {
+export function ComplianceDashboard({ 
+  dataSourceId,
+  refreshInterval = 30000 
+}: ComplianceDashboardProps) {
+  const enterprise = useEnterpriseComplianceFeatures({
+    componentName: 'compliance-dashboard',
+    dataSourceId,
+    enableRealTimeMonitoring: true,
+    enableAIInsights: true
+  })
+  
+  const analytics = useComplianceAnalytics(dataSourceId)
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "critical":
@@ -51,299 +81,341 @@ export function ComplianceDashboard({ summary, isLoading, error, onRefresh }: Co
     }
   }
 
-  const getComplianceScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-600"
-    if (score >= 70) return "text-yellow-600"
+  const getComplianceStatusColor = (percentage: number) => {
+    if (percentage >= 90) return "text-green-600"
+    if (percentage >= 70) return "text-yellow-600"
+    if (percentage >= 50) return "text-orange-600"
     return "text-red-600"
   }
 
-  if (isLoading) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'compliant':
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case 'non_compliant':
+        return <XCircle className="h-4 w-4 text-red-600" />
+      case 'partially_compliant':
+        return <Clock className="h-4 w-4 text-yellow-600" />
+      case 'in_progress':
+        return <RefreshCw className="h-4 w-4 text-blue-600" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  if (enterprise.isLoading || analytics.isLoading) {
     return <LoadingSpinner />
   }
 
-  if (error) {
+  if (enterprise.error || analytics.error) {
     return (
       <ErrorBoundary>
-        <div className="text-center text-red-500 p-4">{error}</div>
-        <Button onClick={onRefresh} className="mt-4">
-          Retry
-        </Button>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load compliance data. Please refresh the page or contact support.
+          </AlertDescription>
+        </Alert>
       </ErrorBoundary>
     )
   }
 
-  if (!summary) {
-    return (
-      <div className="text-center py-8">
-        <LayoutDashboard className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground">No compliance data available.</p>
-        <Button onClick={onRefresh} className="mt-4">
-          Load Data
-        </Button>
-      </div>
-    )
-  }
-
-  const issuesBySeverityChartData = summary.issues_by_severity.map((item) => ({
-    name: item.severity.charAt(0).toUpperCase() + item.severity.slice(1),
-    value: item.count,
-    color:
-      COLORS[["critical", "high", "medium", "low"].indexOf(item.severity as "critical" | "high" | "medium" | "low")],
-  }))
-
-  const issuesByCategoryChartData = summary.issues_by_category.map((item) => ({
-    name: item.category,
-    value: item.count,
-  }))
-
-  const complianceTrendData = summary.compliance_trend.map((item) => ({
-    date: format(new Date(item.date), "MMM dd"),
-    score: item.score,
-  }))
-
   return (
     <ErrorBoundary>
       <div className="space-y-6">
+        {/* Header with Real-time Status */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <LayoutDashboard className="h-6 w-6" /> Compliance Dashboard
-          </h2>
-          <Button onClick={onRefresh} disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh Data
-          </Button>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Compliance Dashboard</h2>
+            <p className="text-muted-foreground">
+              Real-time compliance monitoring and insights
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Activity className="h-3 w-3" />
+              Live
+            </Badge>
+            <Button variant="outline" onClick={() => enterprise.refresh()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Key Metrics Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overall Compliance Score</CardTitle>
+              <CardTitle className="text-sm font-medium">Overall Compliance</CardTitle>
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${getComplianceScoreColor(summary.overall_compliance_score)}`}>
-                {summary.overall_compliance_score.toFixed(1)}%
+              <div className="text-2xl font-bold">
+                {enterprise.status?.overall_score || 0}%
               </div>
-              <p className="text-xs text-muted-foreground">
-                {summary.active_rules} active rules out of {summary.total_rules}
+              <div className="flex items-center space-x-2 mt-2">
+                <Progress 
+                  value={enterprise.status?.overall_score || 0} 
+                  className="flex-1"
+                />
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +2.1% from last month
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open Issues</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Requirements</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {enterprise.requirements?.length || 0}
+              </div>
+              <div className="flex items-center space-x-1 mt-1">
+                <span className="text-sm text-green-600">
+                  {enterprise.status?.compliant_requirements || 0} compliant
+                </span>
+                <Separator orientation="vertical" className="h-4" />
+                <span className="text-sm text-red-600">
+                  {enterprise.status?.non_compliant_requirements || 0} non-compliant
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Assessments</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {enterprise.assessments?.filter(a => a.status === 'in_progress').length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {enterprise.assessments?.filter(a => a.status === 'pending').length || 0} pending
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Critical Gaps</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary.open_issues}</div>
-              <p className="text-xs text-muted-foreground">Total {summary.total_issues} issues</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Critical Issues</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{summary.critical_issues}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {enterprise.gaps?.filter(g => g.risk_level === 'critical').length || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                High: {summary.high_issues}, Medium: {summary.medium_issues}
+                {enterprise.gaps?.filter(g => g.risk_level === 'high').length || 0} high risk
               </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Remediation Time</CardTitle>
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.average_remediation_time_hours.toFixed(1)}h</div>
-              <p className="text-xs text-muted-foreground">For resolved issues</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Compliance Trend & Issues by Severity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Section */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Compliance Trends */}
           <Card>
             <CardHeader>
-              <CardTitle>Compliance Score Trend</CardTitle>
-              <CardDescription>Overall compliance score over time.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Compliance Trends
+              </CardTitle>
+              <CardDescription>
+                Compliance score over the last 6 months
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={complianceTrendData}>
+                <AreaChart data={analytics.trends}>
+                  <defs>
+                    <linearGradient id="complianceGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="score" stroke="#8884d8" activeDot={{ r: 8 }} name="Compliance Score" />
-                </LineChart>
+                  <XAxis 
+                    dataKey="period" 
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [`${value}%`, 'Compliance Score']}
+                    labelFormatter={(label) => `Period: ${label}`}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="compliance_score" 
+                    stroke="#22c55e" 
+                    fillOpacity={1} 
+                    fill="url(#complianceGradient)" 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
+          {/* Framework Compliance */}
           <Card>
             <CardHeader>
-              <CardTitle>Issues by Severity</CardTitle>
-              <CardDescription>Distribution of open issues by severity level.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Framework Compliance
+              </CardTitle>
+              <CardDescription>
+                Compliance status by framework
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.frameworkStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="framework" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip formatter={(value) => [`${value}%`, 'Compliance']} />
+                  <Bar dataKey="compliance_percentage" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Risk Distribution and Recent Activity */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Risk Level Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Risk Distribution
+              </CardTitle>
+              <CardDescription>
+                Distribution of requirements by risk level
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={issuesBySeverityChartData}
+                    data={analytics.riskDistribution}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    outerRadius={100}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
                     fill="#8884d8"
-                    dataKey="value"
-                    nameKey="name"
+                    dataKey="count"
                   >
-                    {issuesBySeverityChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {analytics.riskDistribution?.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                {issuesBySeverityChartData.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span>{item.name}</span>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>
+                Latest compliance assessments and updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {enterprise.recentActivity?.slice(0, 6).map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    {getStatusIcon(activity.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {activity.title}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {activity.description}
+                      </p>
                     </div>
-                    <span className="font-medium">{item.value}</span>
+                    <div className="text-sm text-gray-500">
+                      {format(new Date(activity.timestamp), 'MMM dd, HH:mm')}
+                    </div>
+                  </div>
+                ))}
+                {(!enterprise.recentActivity || enterprise.recentActivity.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="mx-auto h-8 w-8 mb-2" />
+                    <p>No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI Insights and Recommendations */}
+        {enterprise.aiInsights && enterprise.aiInsights.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                AI Insights & Recommendations
+              </CardTitle>
+              <CardDescription>
+                Intelligent recommendations to improve compliance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                {enterprise.aiInsights.slice(0, 4).map((insight, index) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium">{insight.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {insight.description}
+                        </p>
+                        <Badge variant="outline" className="mt-2">
+                          {insight.confidence}% confidence
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Issues by Category & Data Source Compliance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Issues by Category</CardTitle>
-              <CardDescription>Number of issues grouped by compliance category.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={issuesByCategoryChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} interval={0} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="value" fill="#82ca9d" name="Number of Issues" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Source Compliance</CardTitle>
-              <CardDescription>Compliance score and issues per data source.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {summary.data_source_compliance.map((ds) => (
-                <div key={ds.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{ds.name}</span>
-                    </div>
-                    <Badge variant="outline" className={getComplianceScoreColor(ds.score)}>
-                      {ds.score.toFixed(1)}%
-                    </Badge>
-                  </div>
-                  <Progress value={ds.score} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Issues: {ds.issues}</span>
-                    <span>
-                      {ds.score >= 90 ? (
-                        <CheckCircle className="h-3 w-3 text-green-500 inline-block mr-1" />
-                      ) : (
-                        <XCircle className="h-3 w-3 text-red-500 inline-block mr-1" />
-                      )}
-                      {ds.score >= 90 ? "Compliant" : "Non-compliant"}
-                    </span>
-                  </div>
-                  <Separator />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Regulatory Compliance & Sensitive Data Exposure */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Regulatory Compliance Status</CardTitle>
-              <CardDescription>Compliance status against key regulatory standards.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {summary.regulatory_compliance_status.map((reg) => (
-                <div key={reg.standard} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {reg.compliant ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                    )}
-                    <span className="font-medium">{reg.standard}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {reg.issues > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {reg.issues} Issues
-                      </Badge>
-                    )}
-                    <Badge variant={reg.compliant ? "default" : "destructive"}>
-                      {reg.compliant ? "Compliant" : "Non-Compliant"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Sensitive Data Exposure Risk</CardTitle>
-              <CardDescription>Assessment of sensitive data exposure risk.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Exposure Score</span>
-                <span
-                  className={`text-2xl font-bold ${getComplianceScoreColor(100 - summary.sensitive_data_exposure_score)}`}
-                >
-                  {summary.sensitive_data_exposure_score.toFixed(1)}
-                </span>
-              </div>
-              <Progress value={100 - summary.sensitive_data_exposure_score} className="h-2" />
-              <p className="text-xs text-muted-foreground">Lower score indicates lower risk.</p>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Overall Risk Score</span>
-                <span className={`text-2xl font-bold ${getComplianceScoreColor(100 - summary.risk_score)}`}>
-                  {summary.risk_score.toFixed(1)}
-                </span>
-              </div>
-              <Progress value={100 - summary.risk_score} className="h-2" />
-              <p className="text-xs text-muted-foreground">Aggregated risk across all compliance areas.</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Real-time Alerts */}
+        {enterprise.realTimeAlerts && enterprise.realTimeAlerts.length > 0 && (
+          <div className="space-y-2">
+            {enterprise.realTimeAlerts.map((alert, index) => (
+              <Alert key={index} variant={alert.severity === 'critical' ? 'destructive' : 'default'}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>{alert.title}:</strong> {alert.message}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   )

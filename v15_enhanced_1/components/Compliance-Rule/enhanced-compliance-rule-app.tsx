@@ -55,12 +55,14 @@ import { ComplianceIssueList } from './components/ComplianceIssueList'
 import { ComplianceReports } from './components/ComplianceReports'
 import { ComplianceIntegrations } from './components/ComplianceIntegrations'
 import { ComplianceWorkflows } from './components/ComplianceWorkflows'
+import { AdvancedRiskAssessment } from './components/AdvancedRiskAssessment'
+import { PolicyAutomation } from './components/PolicyAutomation'
 
 // Import the Three Phases UI Components
-import AnalyticsWorkbench from './ui/analytics/analytics-workbench'
-import CollaborationStudio from './ui/collaboration/collaboration-studio'
-import WorkflowDesigner from './ui/workflow/workflow-designer'
-import EnterpriseDashboard from './ui/dashboard/enterprise-dashboard'
+import { default as AnalyticsWorkbench } from './ui/analytics/analytics-workbench'
+import { default as CollaborationStudio } from './ui/collaboration/collaboration-studio'
+import { default as WorkflowDesigner } from './ui/workflow/workflow-designer'
+import { default as EnterpriseDashboard } from './ui/dashboard/enterprise-dashboard'
 
 // Import types
 import type { ComplianceRequirement, ComplianceAssessment, ComplianceGap } from './services/enhanced-compliance-apis'
@@ -490,7 +492,7 @@ export function EnhancedComplianceRuleApp({
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
@@ -522,6 +524,14 @@ export function EnhancedComplianceRuleApp({
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Reports
+          </TabsTrigger>
+          <TabsTrigger value="risk-assessment" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Risk Assessment
+          </TabsTrigger>
+          <TabsTrigger value="policy-automation" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Policy Automation
           </TabsTrigger>
         </TabsList>
 
@@ -602,6 +612,30 @@ export function EnhancedComplianceRuleApp({
         <TabsContent value="reports" className="space-y-6">
           <h2 className="text-2xl font-bold">Compliance Reports</h2>
           <ComplianceReports />
+        </TabsContent>
+
+        {/* Risk Assessment Tab */}
+        <TabsContent value="risk-assessment" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Advanced Risk Assessment</h2>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Brain className="h-3 w-3" />
+              AI-Powered
+            </Badge>
+          </div>
+          <AdvancedRiskAssessment />
+        </TabsContent>
+
+        {/* Policy Automation Tab */}
+        <TabsContent value="policy-automation" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Policy Automation</h2>
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              Automated
+            </Badge>
+          </div>
+          <PolicyAutomation />
         </TabsContent>
       </Tabs>
 

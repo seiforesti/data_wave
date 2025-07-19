@@ -26,9 +26,14 @@ import {
   AlertTriangle,
   Info,
   MoreHorizontal,
+  Shield,
+  Target,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react"
-import { useComplianceRules } from "../hooks/useComplianceRules"
-import type { ComplianceRule } from "../types"
+import { useEnterpriseComplianceFeatures } from "../hooks/use-enterprise-compliance"
+import type { ComplianceRequirement } from "../services/enhanced-compliance-apis"
 import { LoadingSpinner } from "../../Scan-Rule-Sets/components/LoadingSpinner"
 import { ErrorBoundary } from "../../Scan-Rule-Sets/components/ErrorBoundary"
 import {
@@ -45,70 +50,71 @@ import { useNotifications } from "../../Scan-Rule-Sets/hooks/useNotifications"
 import { formatDateTime } from "@/utils/formatDateTime"
 
 interface ComplianceRuleListProps {
-  onViewDetails: (rule: ComplianceRule) => void
-  onEditRule: (rule: ComplianceRule) => void
-  onDeleteRule: (rule: ComplianceRule) => void
+  requirements: ComplianceRequirement[]
+  onView: (requirement: ComplianceRequirement) => void
+  onEdit: (requirement: ComplianceRequirement) => void
+  onDelete: (requirement: ComplianceRequirement) => void
   onCreateRule: () => void
   onValidateRule: (ruleId: number) => void
   onRefresh: () => void
 }
 
 export function ComplianceRuleList({
-  onViewDetails,
-  onEditRule,
-  onDeleteRule,
+  requirements,
+  onView,
+  onEdit,
+  onDelete,
   onCreateRule,
   onValidateRule,
   onRefresh,
 }: ComplianceRuleListProps) {
-  const { rules, isLoading, error, fetchRules, deleteRule, toggleRule, validateRule } = useComplianceRules()
+  const enterprise = useEnterpriseComplianceFeatures({
+    componentName: 'compliance-rule-list'
+  })
   const { showNotification } = useNotifications()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterSeverity, setFilterSeverity] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [sortBy, setSortBy] = useState<keyof ComplianceRule>("name")
+  const [sortBy, setSortBy] = useState<keyof ComplianceRequirement>("title")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [ruleToDelete, setRuleToDelete] = useState<ComplianceRule | null>(null)
-  const [validatingRuleId, setValidatingRuleId] = useState<number | null>(null)
+  const [requirementToDelete, setRequirementToDelete] = useState<ComplianceRequirement | null>(null)
+  const [validatingRequirementId, setValidatingRequirementId] = useState<number | null>(null)
 
-  const filteredAndSortedRules = useMemo(() => {
-    let filtered = rules.filter(
-      (rule) =>
-        rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rule.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rule.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
+  const filteredAndSortedRequirements = useMemo(() => {
+    let filtered = requirements.filter(
+      (requirement) =>
+        requirement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        requirement.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        requirement.framework.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     if (filterCategory !== "all") {
-      filtered = filtered.filter((rule) => rule.category === filterCategory)
+      filtered = filtered.filter((requirement) => requirement.category === filterCategory)
     }
+
     if (filterSeverity !== "all") {
-      filtered = filtered.filter((rule) => rule.severity === filterSeverity)
+      filtered = filtered.filter((requirement) => requirement.risk_level === filterSeverity)
     }
+
     if (filterStatus !== "all") {
-      filtered = filtered.filter((rule) => rule.status === filterStatus)
+      filtered = filtered.filter((requirement) => requirement.status === filterStatus)
     }
 
     return filtered.sort((a, b) => {
       const aValue = a[sortBy]
       const bValue = b[sortBy]
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
-      }
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortDirection === "asc" ? aValue - bValue : bValue - aValue
-      }
-      // Fallback for other types or mixed types, or if values are null/undefined
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1
       return 0
     })
-  }, [rules, searchTerm, filterCategory, filterSeverity, filterStatus, sortBy, sortDirection])
+  }, [requirements, searchTerm, filterCategory, filterSeverity, filterStatus, sortBy, sortDirection])
 
-  const handleSort = (column: keyof ComplianceRule) => {
+  const handleSort = (column: keyof ComplianceRequirement) => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
@@ -117,286 +123,267 @@ export function ComplianceRuleList({
     }
   }
 
-  const handleDeleteClick = (rule: ComplianceRule) => {
-    setRuleToDelete(rule)
+  const handleDeleteClick = (requirement: ComplianceRequirement) => {
+    setRequirementToDelete(requirement)
     setShowDeleteConfirm(true)
   }
 
   const handleDeleteConfirm = async () => {
-    if (ruleToDelete) {
+    if (requirementToDelete) {
       try {
-        await deleteRule(ruleToDelete.id)
-        onDeleteRule(ruleToDelete) // Notify parent component
-        showNotification({
-          type: "success",
-          title: "Rule Deleted",
-          message: `Compliance rule "${ruleToDelete.name}" has been deleted.`,
-        })
-      } catch (err) {
-        showNotification({
-          type: "error",
-          title: "Error",
-          message: "Failed to delete compliance rule.",
-        })
-      } finally {
-        setRuleToDelete(null)
+        await onDelete(requirementToDelete)
+        showNotification("Compliance requirement deleted successfully", "success")
         setShowDeleteConfirm(false)
+        setRequirementToDelete(null)
+        onRefresh()
+      } catch (error) {
+        showNotification("Failed to delete compliance requirement", "error")
       }
     }
   }
 
-  const handleToggleRule = async (rule: ComplianceRule) => {
+  const handleValidate = async (requirementId: number) => {
+    setValidatingRequirementId(requirementId)
     try {
-      await toggleRule(rule.id)
-    } catch (err) {
-      // Error handled by useComplianceRules hook
-    }
-  }
-
-  const handleValidateRule = async (rule: ComplianceRule) => {
-    setValidatingRuleId(rule.id)
-    try {
-      await validateRule(rule.id)
-    } catch (err) {
-      // Error handled by useComplianceRules hook
+      await onValidateRule(requirementId)
+      showNotification("Compliance requirement validated successfully", "success")
+    } catch (error) {
+      showNotification("Failed to validate compliance requirement", "error")
     } finally {
-      setValidatingRuleId(null)
+      setValidatingRequirementId(null)
     }
   }
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />
-      case "high":
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />
-      case "medium":
-        return <Info className="h-4 w-4 text-yellow-500" />
-      case "low":
-        return <Info className="h-4 w-4 text-blue-500" />
-      default:
-        return <Info className="h-4 w-4" />
+  const getStatusBadge = (status: ComplianceRequirement['status']) => {
+    const variants = {
+      compliant: { color: "bg-green-100 text-green-800", icon: CheckCircle },
+      non_compliant: { color: "bg-red-100 text-red-800", icon: XCircle },
+      partially_compliant: { color: "bg-yellow-100 text-yellow-800", icon: Clock },
+      not_assessed: { color: "bg-gray-100 text-gray-800", icon: Clock },
+      in_progress: { color: "bg-blue-100 text-blue-800", icon: RefreshCw }
     }
-  }
-
-  if (isLoading) {
-    return <LoadingSpinner />
-  }
-
-  if (error) {
+    const variant = variants[status]
+    const Icon = variant.icon
     return (
-      <ErrorBoundary>
-        <div className="text-center text-red-500 p-4">{error}</div>
-        <Button onClick={fetchRules} className="mt-4">
-          Retry
-        </Button>
-      </ErrorBoundary>
+      <Badge className={variant.color}>
+        <Icon className="w-3 h-3 mr-1" />
+        {status.replace('_', ' ').toUpperCase()}
+      </Badge>
     )
+  }
+
+  const getRiskBadge = (riskLevel: ComplianceRequirement['risk_level']) => {
+    const variants = {
+      low: "bg-green-100 text-green-800",
+      medium: "bg-yellow-100 text-yellow-800", 
+      high: "bg-orange-100 text-orange-800",
+      critical: "bg-red-100 text-red-800"
+    }
+    return (
+      <Badge className={variants[riskLevel]}>
+        {riskLevel.toUpperCase()}
+      </Badge>
+    )
+  }
+
+  if (enterprise.isLoading) {
+    return <LoadingSpinner />
   }
 
   return (
     <ErrorBoundary>
       <div className="space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Compliance Rules</h2>
-          <Button onClick={onCreateRule}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create New Rule
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Input
+              placeholder="Search requirements..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-64"
+            />
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Access Control">Access Control</SelectItem>
+                <SelectItem value="Data Protection">Data Protection</SelectItem>
+                <SelectItem value="Monitoring">Monitoring</SelectItem>
+                <SelectItem value="Encryption">Encryption</SelectItem>
+                <SelectItem value="Audit">Audit</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterSeverity} onValueChange={setFilterSeverity}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by risk level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Risk Levels</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="compliant">Compliant</SelectItem>
+                <SelectItem value="non_compliant">Non-Compliant</SelectItem>
+                <SelectItem value="partially_compliant">Partially Compliant</SelectItem>
+                <SelectItem value="not_assessed">Not Assessed</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={onCreateRule}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Requirement
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Input
-            placeholder="Search rules..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="Data Protection">Data Protection</SelectItem>
-              <SelectItem value="Access Control">Access Control</SelectItem>
-              <SelectItem value="Data Quality">Data Quality</SelectItem>
-              <SelectItem value="Regulatory Compliance">Regulatory Compliance</SelectItem>
-              <SelectItem value="Security">Security</SelectItem>
-              <SelectItem value="Privacy">Privacy</SelectItem>
-              <SelectItem value="Governance">Governance</SelectItem>
-              <SelectItem value="Custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Severity" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Severities</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
+        {/* Table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">
-                  <Button variant="ghost" onClick={() => handleSort("name")}>
-                    Rule Name
+                <TableHead className="cursor-pointer" onClick={() => handleSort("framework")}>
+                  <div className="flex items-center">
+                    Framework
                     <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("category")}>
-                    Category
+                <TableHead className="cursor-pointer" onClick={() => handleSort("title")}>
+                  <div className="flex items-center">
+                    Title
                     <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("severity")}>
-                    Severity
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("status")}>
-                    Status
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("pass_rate")}>
-                    Pass Rate
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>Last Validated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Risk Level</TableHead>
+                <TableHead>Compliance</TableHead>
+                <TableHead>Last Assessed</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAndSortedRules.length > 0 ? (
-                filteredAndSortedRules.map((rule) => (
-                  <TableRow key={rule.id}>
-                    <TableCell className="font-medium">{rule.name}</TableCell>
-                    <TableCell>{rule.category}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        {getSeverityIcon(rule.severity)}
-                        {rule.severity.charAt(0).toUpperCase() + rule.severity.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rule.status === "active" ? "default" : "secondary"}>
-                        {rule.status.charAt(0).toUpperCase() + rule.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-20">
-                          <div className="text-sm">{rule.pass_rate.toFixed(1)}%</div>
-                          <div className="h-2 w-full rounded-full bg-gray-200">
-                            <div className="h-full rounded-full bg-green-500" style={{ width: `${rule.pass_rate}%` }} />
-                          </div>
-                        </div>
+              {filteredAndSortedRequirements.map((requirement) => (
+                <TableRow key={requirement.id}>
+                  <TableCell>
+                    <Badge variant="outline">{requirement.framework.toUpperCase()}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{requirement.title}</div>
+                      <div className="text-sm text-muted-foreground">{requirement.requirement_id}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{requirement.category}</TableCell>
+                  <TableCell>{getStatusBadge(requirement.status)}</TableCell>
+                  <TableCell>{getRiskBadge(requirement.risk_level)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-sm font-medium">{requirement.compliance_percentage}%</div>
+                      <div className="w-20 h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="h-2 bg-green-500 rounded-full" 
+                          style={{ width: `${requirement.compliance_percentage}%` }}
+                        />
                       </div>
-                    </TableCell>
-                    <TableCell>{formatDateTime(rule.last_validation)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => onViewDetails(rule)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onEditRule(rule)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Rule
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleRule(rule)}>
-                            {rule.status === "active" ? (
-                              <>
-                                <Pause className="mr-2 h-4 w-4" /> Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Play className="mr-2 h-4 w-4" /> Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleValidateRule(rule)}
-                            disabled={validatingRuleId === rule.id}
-                          >
-                            {validatingRuleId === rule.id ? (
-                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Play className="mr-2 h-4 w-4" />
-                            )}
-                            {validatingRuleId === rule.id ? "Validating..." : "Run Validation"}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteClick(rule)} className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Rule
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    No compliance rules found.
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {requirement.last_assessed ? formatDateTime(requirement.last_assessed) : "Never"}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onView(requirement)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(requirement)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleValidate(requirement.id)}>
+                          <Shield className="mr-2 h-4 w-4" />
+                          {validatingRequirementId === requirement.id ? "Validating..." : "Validate"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteClick(requirement)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>
-      </div>
 
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the compliance rule "{ruleToDelete?.name}" and
-              remove its data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {filteredAndSortedRequirements.length === 0 && (
+          <div className="text-center py-8">
+            <AlertTriangle className="mx-auto h-8 w-8 text-muted-foreground" />
+            <h3 className="mt-2 text-sm font-semibold text-muted-foreground">No requirements found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {searchTerm || filterCategory !== "all" || filterSeverity !== "all" || filterStatus !== "all"
+                ? "Try adjusting your search or filters"
+                : "Get started by creating a new compliance requirement"}
+            </p>
+            {!searchTerm && filterCategory === "all" && filterSeverity === "all" && filterStatus === "all" && (
+              <Button className="mt-4" onClick={onCreateRule}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Requirement
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the compliance requirement
+                "{requirementToDelete?.title}" and all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </ErrorBoundary>
   )
 }
