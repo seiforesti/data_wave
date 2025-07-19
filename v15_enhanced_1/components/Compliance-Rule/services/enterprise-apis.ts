@@ -1622,6 +1622,161 @@ export class RemediationAPI {
   }
 }
 
+// Settings Management APIs
+export class SettingsAPI {
+  static async getSettings(category?: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/settings${category ? `/${category}` : ''}`
+    })
+  }
+
+  static async updateSettings(category: string, settings: any): Promise<any> {
+    return apiClient.request({
+      method: 'PUT',
+      url: `/compliance/settings/${category}`,
+      data: settings
+    })
+  }
+
+  static async resetSettings(category?: string): Promise<void> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/settings/reset${category ? `/${category}` : ''}`
+    })
+  }
+
+  static async exportSettings(): Promise<Blob> {
+    return apiClient.downloadFile('/compliance/settings/export')
+  }
+
+  static async importSettings(file: File): Promise<any> {
+    return apiClient.uploadFile('/compliance/settings/import', file)
+  }
+
+  static async validateSettings(settings: any): Promise<{
+    valid: boolean
+    errors: string[]
+    warnings: string[]
+  }> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/settings/validate',
+      data: settings
+    })
+  }
+}
+
+// System Health and Monitoring APIs
+export class SystemAPI {
+  static async getSystemHealth(): Promise<{
+    status: 'healthy' | 'degraded' | 'critical'
+    uptime: number
+    latency: number
+    errorRate: number
+    services: any[]
+    lastChecked: string
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/system/health'
+    })
+  }
+
+  static async getSystemMetrics(timeRange?: string): Promise<{
+    cpu: number
+    memory: number
+    disk: number
+    network: any
+    database: any
+    cache: any
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/system/metrics',
+      params: { timeRange }
+    })
+  }
+
+  static async getSystemLogs(params?: {
+    level?: string
+    service?: string
+    limit?: number
+    offset?: number
+  }): Promise<{ data: any[]; total: number }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/system/logs',
+      params
+    })
+  }
+
+  static async restartService(serviceName: string): Promise<void> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/system/services/${serviceName}/restart`
+    })
+  }
+
+  static async getSystemInfo(): Promise<{
+    version: string
+    buildDate: string
+    environment: string
+    features: string[]
+    dependencies: any[]
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/system/info'
+    })
+  }
+}
+
+// Enhanced Dashboard APIs
+export class DashboardAPI {
+  static async getDashboardData(params?: {
+    dataSourceId?: number
+    timeRange?: string
+    includeInsights?: boolean
+  }): Promise<{
+    metrics: any
+    trends: any[]
+    activities: any[]
+    insights: any[]
+    alerts: any[]
+  }> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/dashboard',
+      params
+    })
+  }
+
+  static async refreshDashboard(force?: boolean): Promise<void> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/dashboard/refresh',
+      data: { force }
+    })
+  }
+
+  static async getDashboardConfig(userId?: string): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/dashboard/config',
+      params: { userId }
+    })
+  }
+
+  static async updateDashboardConfig(config: any): Promise<any> {
+    return apiClient.request({
+      method: 'PUT',
+      url: '/compliance/dashboard/config',
+      data: config
+    })
+  }
+}
+
 // Export all APIs as a collection
 export const ComplianceAPIs = {
   Management: ComplianceManagementAPI,
@@ -1633,6 +1788,9 @@ export const ComplianceAPIs = {
   DataSources: DataSourcesAPI,
   Analytics: ComplianceAnalyticsAPI,
   Remediation: RemediationAPI,
+  Settings: SettingsAPI,
+  System: SystemAPI,
+  Dashboard: DashboardAPI,
   Client: apiClient
 }
 

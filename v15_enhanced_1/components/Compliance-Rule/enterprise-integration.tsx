@@ -737,6 +737,7 @@ export function EnterpriseComplianceProvider({
     errorRate: number
   }>({ status: 'healthy', uptime: 0, latency: 0, errorRate: 0 })
   const [backendData, setBackendData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true) // New state for loading
   
   // Event Bus and WebSocket
   const eventBus = useMemo(() => new ComplianceEventBus(), [])
@@ -1341,85 +1342,159 @@ export function EnterpriseComplianceProvider({
   }, [])
   
      // Data Management
-   const refreshData = useCallback(async (force?: boolean) => {
+   const refreshData = useCallback(async (force = false) => {
      try {
-       const cacheKey = 'compliance_data'
+       setIsLoading(true)
        
-       // Check cache first unless force refresh
+       // Check cache first unless forced refresh
+       const cacheKey = 'enterprise_compliance_data'
        if (!force) {
-         const cachedData = cacheManager.get(cacheKey)
-         if (cachedData) {
-           setBackendData(cachedData.status)
-           setMetrics(cachedData.metrics)
-           setEvents(cachedData.events)
-           setNotifications(cachedData.notifications)
-           setInsights(cachedData.insights)
-           setLastSync(new Date(cachedData.timestamp))
-           setIsInitialized(true)
-           performanceMonitor.recordCacheHit()
+         const cached = cacheManager.get(cacheKey)
+         if (cached) {
+           setBackendData(cached)
+           setLastSync(new Date())
            return
          }
-         performanceMonitor.recordCacheMiss()
        }
-       
-       const startTime = Date.now()
-       const [statusResponse, metricsResponse, eventsResponse, notificationsResponse, insightsResponse] = await Promise.all([
-         fetch('/api/compliance/status'),
-         fetch('/api/compliance/metrics'),
-         fetch('/api/compliance/events'),
-         fetch('/api/compliance/notifications'),
-         fetch('/api/compliance/insights')
+
+       // Load comprehensive compliance data from multiple APIs
+       const [
+         complianceMetrics,
+         recentEvents,
+         systemNotifications,
+         aiInsights,
+         frameworkData,
+         riskAssessment
+       ] = await Promise.all([
+         // Load real compliance metrics
+         fetch('/api/compliance/metrics').then(res => res.ok ? res.json() : {
+           totalRequirements: 0,
+           compliantRequirements: 0,
+           nonCompliantRequirements: 0,
+           partiallyCompliantRequirements: 0,
+           notAssessedRequirements: 0,
+           complianceScore: 0,
+           riskScore: 0,
+           activeAssessments: 0,
+           completedAssessments: 0,
+           failedAssessments: 0,
+           openGaps: 0,
+           criticalGaps: 0,
+           highRiskGaps: 0,
+           mediumRiskGaps: 0,
+           lowRiskGaps: 0,
+           upcomingDeadlines: 0,
+           overdueDeadlines: 0,
+           frameworkCoverage: {},
+           trendData: {
+             complianceScoreHistory: [],
+             riskScoreHistory: [],
+             requirementTrends: []
+           },
+           performanceMetrics: {
+             avgAssessmentTime: 0,
+             avgRemediationTime: 0,
+             assessmentSuccessRate: 0,
+             onTimeCompletionRate: 0
+           }
+         }),
+         
+         // Load recent compliance events
+         fetch('/api/compliance/events?limit=50').then(res => res.ok ? res.json() : []),
+         
+         // Load system notifications
+         fetch('/api/compliance/notifications?unread=true').then(res => res.ok ? res.json() : []),
+         
+         // Load AI-generated insights
+         fetch('/api/compliance/insights?limit=10').then(res => res.ok ? res.json() : []),
+         
+         // Load framework data
+         fetch('/api/compliance/frameworks').then(res => res.ok ? res.json() : []),
+         
+         // Load risk assessment
+         fetch('/api/compliance/risk-assessment').then(res => res.ok ? res.json() : {
+           overall_risk_score: 0,
+           risk_level: 'low',
+           risk_factors: [],
+           risk_trends: [],
+           recommendations: [],
+           last_assessed: new Date().toISOString(),
+           next_assessment: new Date().toISOString()
+         })
        ])
-       
-       const status = await statusResponse.json()
-       const metricsData = await metricsResponse.json()
-       const eventsData = await eventsResponse.json()
-       const notificationsData = await notificationsResponse.json()
-       const insightsData = await insightsResponse.json()
-       
-       // Cache the data
-       const dataToCache = {
-         status,
-         metrics: metricsData,
-         events: eventsData,
-         notifications: notificationsData,
-         insights: insightsData,
-         timestamp: Date.now()
+
+       // Transform and set data
+       setMetrics(complianceMetrics)
+       setEvents(recentEvents.map((event: any) => ({
+         ...event,
+         timestamp: new Date(event.timestamp),
+         acknowledged: event.acknowledged || false
+       })))
+       setNotifications(systemNotifications.map((notif: any) => ({
+         ...notif,
+         timestamp: new Date(notif.timestamp),
+         read: notif.read || false
+       })))
+       setInsights(aiInsights.map((insight: any) => ({
+         ...insight,
+         generatedAt: new Date(insight.generatedAt)
+       })))
+
+       const combinedData = {
+         metrics: complianceMetrics,
+         events: recentEvents,
+         notifications: systemNotifications,
+         insights: aiInsights,
+         frameworks: frameworkData,
+         riskAssessment,
+         lastUpdated: new Date().toISOString()
        }
-       cacheManager.set(cacheKey, dataToCache, 60000) // Cache for 1 minute
-       
-       setBackendData(status)
-       setMetrics(metricsData)
-       setEvents(eventsData)
-       setNotifications(notificationsData)
-       setInsights(insightsData)
+
+       setBackendData(combinedData)
+       cacheManager.set(cacheKey, combinedData, 300000) // Cache for 5 minutes
        setLastSync(new Date())
-       setIsInitialized(true)
-       
-       performanceMonitor.recordRequest(startTime)
-       
-       // Emit refresh event
-       eventBus.emitComplianceEvent({
-         type: 'system_event',
-         data: { action: 'data_refreshed', force },
-         source: 'system',
-         severity: 'low'
-       })
        
      } catch (error) {
-       console.error('Failed to refresh data:', error)
-       performanceMonitor.recordError()
-       setIsInitialized(false)
-       
-       // Emit error event
-       eventBus.emitComplianceEvent({
-         type: 'system_event',
-         data: { action: 'data_refresh_failed', error: error.message },
-         source: 'system',
-         severity: 'high'
+       console.error('Failed to refresh compliance data:', error)
+       // Set fallback empty state instead of mock data
+       setMetrics({
+         totalRequirements: 0,
+         compliantRequirements: 0,
+         nonCompliantRequirements: 0,
+         partiallyCompliantRequirements: 0,
+         notAssessedRequirements: 0,
+         complianceScore: 0,
+         riskScore: 0,
+         activeAssessments: 0,
+         completedAssessments: 0,
+         failedAssessments: 0,
+         openGaps: 0,
+         criticalGaps: 0,
+         highRiskGaps: 0,
+         mediumRiskGaps: 0,
+         lowRiskGaps: 0,
+         upcomingDeadlines: 0,
+         overdueDeadlines: 0,
+         frameworkCoverage: {},
+         trendData: {
+           complianceScoreHistory: [],
+           riskScoreHistory: [],
+           requirementTrends: []
+         },
+         performanceMetrics: {
+           avgAssessmentTime: 0,
+           avgRemediationTime: 0,
+           assessmentSuccessRate: 0,
+           onTimeCompletionRate: 0
+         }
        })
+       setEvents([])
+       setNotifications([])
+       setInsights([])
+     } finally {
+       setIsLoading(false)
      }
-   }, [cacheManager, performanceMonitor, eventBus])
+   }, [cacheManager])
    
    // Export data functionality
    const exportData = useCallback(async (format: 'json' | 'csv' | 'excel', filters?: any) => {
@@ -1568,18 +1643,42 @@ export function EnterpriseComplianceProvider({
     initializeCompliance()
   }, [config.monitoring.enableRealTimeMonitoring, refreshData, wsManager, eventBus])
 
-  // System Health Monitoring
+  // Enhanced System Health Monitoring with Real API Calls
   useEffect(() => {
     const checkSystemHealth = async () => {
       try {
-        const response = await fetch('/api/compliance/health')
+        const startTime = Date.now()
+        const response = await fetch('/api/compliance/health', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        const latency = Date.now() - startTime
+        
         if (response.ok) {
-          setSystemHealth({ status: 'healthy', uptime: 0, latency: 0, errorRate: 0 }) // Placeholder, actual health check needed
+          const healthData = await response.json()
+          setSystemHealth({
+            status: healthData.status || 'healthy',
+            uptime: healthData.uptime || 0,
+            latency,
+            errorRate: healthData.errorRate || 0
+          })
         } else {
-          setSystemHealth({ status: 'critical', uptime: 0, latency: 0, errorRate: 0 }) // Placeholder
+          setSystemHealth({
+            status: 'degraded',
+            uptime: 0,
+            latency,
+            errorRate: 100
+          })
         }
       } catch (error) {
-        setSystemHealth({ status: 'critical', uptime: 0, latency: 0, errorRate: 0 }) // Placeholder
+        console.error('Health check failed:', error)
+        setSystemHealth({
+          status: 'critical',
+          uptime: 0,
+          latency: 0,
+          errorRate: 100
+        })
       }
     }
 
@@ -1588,7 +1687,7 @@ export function EnterpriseComplianceProvider({
     return () => clearInterval(interval)
   }, [])
 
-  // Performance Monitoring
+  // Enhanced Performance Monitoring
   useEffect(() => {
     const recordPerformance = () => {
       performanceMonitor.recordRequest(Date.now())
@@ -1597,13 +1696,21 @@ export function EnterpriseComplianceProvider({
     // Record initial performance
     recordPerformance()
 
-    // Record performance for all fetch calls
+    // Monitor all API calls for performance metrics
     const originalFetch = window.fetch
     window.fetch = async (...args) => {
       const startTime = Date.now()
-      const response = await originalFetch(...args)
-      recordPerformance()
-      return response
+      try {
+        const response = await originalFetch(...args)
+        performanceMonitor.recordRequest(startTime)
+        if (!response.ok) {
+          performanceMonitor.recordError()
+        }
+        return response
+      } catch (error) {
+        performanceMonitor.recordError()
+        throw error
+      }
     }
 
     return () => {
