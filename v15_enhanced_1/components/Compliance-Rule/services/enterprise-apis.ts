@@ -501,16 +501,13 @@ export interface ComplianceFramework {
 
 // Compliance Management APIs - Updated to match backend compliance_rule_routes.py
 export class ComplianceManagementAPI {
-  // Requirements Management - Updated to match backend endpoints
+  // **COMPREHENSIVE: Enhanced CRUD Operations**
   static async getRequirements(params?: {
-    data_source_id?: number
-    framework?: string
-    status?: string
-    risk_level?: string
-    category?: string
     rule_type?: string
     severity?: string
+    status?: string
     scope?: string
+    data_source_id?: number
     compliance_standard?: string
     tags?: string
     search?: string
@@ -533,7 +530,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async createRequirement(data: Omit<ComplianceRequirement, 'id' | 'created_at' | 'updated_at' | 'version'>, created_by?: string): Promise<ComplianceRequirement> {
+  static async createRequirement(data: Partial<ComplianceRequirement>, created_by?: string): Promise<ComplianceRequirement> {
     return apiClient.request({
       method: 'POST',
       url: '/compliance/rules',
@@ -551,74 +548,43 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async deleteRequirement(id: number): Promise<void> {
+  static async deleteRequirement(id: number): Promise<{ message: string }> {
     return apiClient.request({
       method: 'DELETE',
       url: `/compliance/rules/${id}`
     })
   }
 
-  static async bulkUpdateRequirements(updates: Array<{ id: number; data: Partial<ComplianceRequirement> }>, updated_by?: string): Promise<ComplianceRequirement[]> {
+  // **COMPREHENSIVE: Advanced Evaluation and Testing**
+  static async evaluateRequirement(id: number, params?: {
+    data_source_ids?: number[]
+    run_scans?: boolean
+    include_performance_check?: boolean
+    include_security_check?: boolean
+  }): Promise<any> {
     return apiClient.request({
       method: 'POST',
-      url: '/compliance/rules/bulk-update',
-      data: updates,
-      params: updated_by ? { updated_by } : undefined
+      url: `/compliance/rules/${id}/evaluate-with-sources`,
+      data: params
     })
   }
 
-  // Rule Evaluation - Match backend endpoints
-  static async evaluateRule(id: number, data_source_id?: number, entity_ids?: string[]): Promise<any> {
+  static async testRule(data: any): Promise<any> {
     return apiClient.request({
       method: 'POST',
-      url: `/compliance/rules/${id}/evaluate`,
-      data: { data_source_id, entity_ids }
+      url: '/compliance/rules/test',
+      data
     })
   }
 
-  static async getRuleEvaluations(rule_id: number, params?: {
-    status?: string
-    data_source_id?: number
-    page?: number
-    limit?: number
-  }): Promise<{ data: any[]; total: number }> {
-    return apiClient.request({
-      method: 'GET',
-      url: `/compliance/rules/${rule_id}/evaluations`,
-      params
-    })
-  }
-
-  static async validateRule(id: number): Promise<{ valid: boolean; issues: any[]; recommendations: string[] }> {
+  static async validateRule(id: number): Promise<any> {
     return apiClient.request({
       method: 'POST',
       url: `/compliance/rules/${id}/validate`
     })
   }
 
-  static async getRuleTemplates(): Promise<any[]> {
-    return apiClient.request({
-      method: 'GET',
-      url: '/compliance/rules/templates'
-    })
-  }
-
-  static async getRuleTemplate(type: string): Promise<any> {
-    return apiClient.request({
-      method: 'GET',
-      url: `/compliance/rules/templates/${type}`
-    })
-  }
-
-  static async testRule(ruleData: any): Promise<{ success: boolean; results: any; errors?: string[] }> {
-    return apiClient.request({
-      method: 'POST',
-      url: '/compliance/rules/test',
-      data: ruleData
-    })
-  }
-
-  // Issues Management - Match backend endpoints
+  // **COMPREHENSIVE: Issues Management**
   static async getIssues(params?: {
     rule_id?: number
     status?: string
@@ -627,7 +593,7 @@ export class ComplianceManagementAPI {
     data_source_id?: number
     page?: number
     limit?: number
-  }): Promise<{ data: ComplianceGap[]; total: number }> {
+  }): Promise<{ data: ComplianceGap[]; total: number; page: number; limit: number }> {
     return apiClient.request({
       method: 'GET',
       url: '/compliance/rules/issues',
@@ -635,7 +601,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async createIssue(data: Omit<ComplianceGap, 'id' | 'created_at' | 'updated_at'>): Promise<ComplianceGap> {
+  static async createIssue(data: Partial<ComplianceGap>): Promise<ComplianceGap> {
     return apiClient.request({
       method: 'POST',
       url: '/compliance/rules/issues',
@@ -651,21 +617,14 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async deleteIssue(id: number): Promise<void> {
-    return apiClient.request({
-      method: 'DELETE',
-      url: `/compliance/rules/issues/${id}`
-    })
-  }
-
-  // Workflows Management - Match backend endpoints  
+  // **COMPREHENSIVE: Workflows Management**
   static async getWorkflows(params?: {
     rule_id?: number
     status?: string
     workflow_type?: string
     page?: number
     limit?: number
-  }): Promise<{ data: ComplianceWorkflow[]; total: number }> {
+  }): Promise<{ data: ComplianceWorkflow[]; total: number; page: number; limit: number }> {
     return apiClient.request({
       method: 'GET',
       url: '/compliance/rules/workflows',
@@ -673,7 +632,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async createWorkflow(data: Omit<ComplianceWorkflow, 'id' | 'created_at' | 'updated_at' | 'execution_history'>): Promise<ComplianceWorkflow> {
+  static async createWorkflow(data: Partial<ComplianceWorkflow>): Promise<ComplianceWorkflow> {
     return apiClient.request({
       method: 'POST',
       url: '/compliance/rules/workflows',
@@ -689,7 +648,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async executeWorkflow(id: number, params?: any): Promise<{ execution_id: string }> {
+  static async executeWorkflow(id: number, params?: any): Promise<any> {
     return apiClient.request({
       method: 'POST',
       url: `/compliance/rules/workflows/${id}/execute`,
@@ -697,30 +656,68 @@ export class ComplianceManagementAPI {
     })
   }
 
-  // Analytics and Insights - Match backend endpoints
-  static async getRuleMetrics(rule_id: number): Promise<any> {
+  // **COMPREHENSIVE: Templates and Frameworks**
+  static async getTemplates(): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
-      url: `/compliance/rules/${rule_id}/metrics`
+      url: '/compliance/rules/templates'
     })
   }
 
-  static async getRuleTrends(rule_id: number, params?: {
-    start_date?: string
-    end_date?: string
-    interval?: string
-  }): Promise<any> {
+  // **COMPREHENSIVE: Analytics and Insights**
+  static async getInsights(rule_id?: number, days?: number): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
-      url: `/compliance/rules/${rule_id}/trends`,
-      params
+      url: '/compliance/rules/insights',
+      params: { rule_id, days }
     })
   }
 
-  static async getRuleInsights(rule_id: number): Promise<any> {
+  static async getTrends(rule_id?: number, days?: number): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
-      url: `/compliance/rules/${rule_id}/insights`
+      url: '/compliance/rules/trends',
+      params: { rule_id, days }
+    })
+  }
+
+  static async getStatistics(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/statistics'
+    })
+  }
+
+  // **COMPREHENSIVE: Bulk Operations**
+  static async bulkUpdateRequirements(updates: Array<{ id: number; data: any }>): Promise<ComplianceRequirement[]> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/rules/bulk-update',
+      data: { updates }
+    })
+  }
+
+  static async bulkDeleteRequirements(ids: number[]): Promise<{ message: string }> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/rules/bulk-delete',
+      data: { ids }
+    })
+  }
+
+  // **COMPREHENSIVE: Audit and History**
+  static async getAuditHistory(rule_id: number): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/${rule_id}/history`
+    })
+  }
+
+  static async getEvaluationHistory(rule_id: number, page?: number, limit?: number): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/${rule_id}/evaluations`,
+      params: { page, limit }
     })
   }
 

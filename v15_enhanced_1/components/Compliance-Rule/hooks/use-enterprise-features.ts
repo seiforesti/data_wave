@@ -1157,6 +1157,377 @@ export function useIntegrationManagement() {
   }
 }
 
+// **COMPREHENSIVE: Enhanced Compliance Management Hooks**
+export function useComplianceRules(options?: {
+  rule_type?: string
+  severity?: string
+  status?: string
+  scope?: string
+  data_source_id?: number
+  compliance_standard?: string
+  tags?: string
+  search?: string
+  page?: number
+  limit?: number
+  sort?: string
+  sort_order?: string
+  auto_refresh?: boolean
+}) {
+  const enterprise = useEnterpriseCompliance()
+  
+  const [rules, setRules] = useState<ComplianceRequirement[]>([])
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 50,
+    pages: 0
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadRules = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await ComplianceAPIs.ComplianceManagement.getRequirements(options)
+      setRules(response.data || [])
+      setPagination({
+        total: response.total,
+        page: response.page,
+        limit: response.limit,
+        pages: response.pages
+      })
+      
+      enterprise.emitEvent({
+        type: 'compliance_rules_loaded',
+        data: { count: response.data?.length || 0, filters: options },
+        source: 'useComplianceRules',
+        severity: 'low'
+      })
+      
+    } catch (err: any) {
+      setError(err.message || 'Failed to load compliance rules')
+      enterprise.sendNotification('error', 'Failed to load compliance rules')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise, JSON.stringify(options)])
+
+  const createRule = useCallback(async (data: Partial<ComplianceRequirement>, created_by?: string) => {
+    try {
+      const rule = await ComplianceAPIs.ComplianceManagement.createRequirement(data, created_by)
+      setRules(prev => [rule, ...prev])
+      enterprise.sendNotification('success', `Rule "${rule.name}" created successfully`)
+      return rule
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to create rule')
+      throw err
+    }
+  }, [enterprise])
+
+  const updateRule = useCallback(async (id: number, data: Partial<ComplianceRequirement>, updated_by?: string) => {
+    try {
+      const rule = await ComplianceAPIs.ComplianceManagement.updateRequirement(id, data, updated_by)
+      setRules(prev => prev.map(r => r.id === id ? rule : r))
+      enterprise.sendNotification('success', `Rule "${rule.name}" updated successfully`)
+      return rule
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to update rule')
+      throw err
+    }
+  }, [enterprise])
+
+  const deleteRule = useCallback(async (id: number) => {
+    try {
+      await ComplianceAPIs.ComplianceManagement.deleteRequirement(id)
+      setRules(prev => prev.filter(r => r.id !== id))
+      enterprise.sendNotification('success', 'Rule deleted successfully')
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to delete rule')
+      throw err
+    }
+  }, [enterprise])
+
+  const evaluateRule = useCallback(async (id: number, params?: {
+    data_source_ids?: number[]
+    run_scans?: boolean
+    include_performance_check?: boolean
+    include_security_check?: boolean
+  }) => {
+    try {
+      const result = await ComplianceAPIs.ComplianceManagement.evaluateRequirement(id, params)
+      enterprise.sendNotification('success', 'Rule evaluation completed')
+      return result
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Rule evaluation failed')
+      throw err
+    }
+  }, [enterprise])
+
+  useEffect(() => {
+    loadRules()
+  }, [loadRules])
+
+  // Auto-refresh if enabled
+  useEffect(() => {
+    if (options?.auto_refresh) {
+      const interval = setInterval(loadRules, 30000) // Refresh every 30 seconds
+      return () => clearInterval(interval)
+    }
+  }, [options?.auto_refresh, loadRules])
+
+  return {
+    rules,
+    pagination,
+    loading,
+    error,
+    loadRules,
+    createRule,
+    updateRule,
+    deleteRule,
+    evaluateRule
+  }
+}
+
+// **COMPREHENSIVE: Enhanced Rule Template Hooks**
+export function useComplianceTemplates() {
+  const enterprise = useEnterpriseCompliance()
+  
+  const [frameworks, setFrameworks] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const loadFrameworks = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await ComplianceAPIs.ComplianceManagement.getFrameworks()
+      setFrameworks(response || [])
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to load frameworks')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise])
+
+  const loadTemplatesByFramework = useCallback(async (framework: string) => {
+    setLoading(true)
+    try {
+      const response = await ComplianceAPIs.ComplianceManagement.getTemplatesByFramework(framework)
+      setTemplates(response || [])
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to load templates')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise])
+
+  const createRuleFromTemplate = useCallback(async (templateData: any, created_by?: string) => {
+    try {
+      const rule = await ComplianceAPIs.ComplianceManagement.createRuleFromTemplate(templateData, created_by)
+      enterprise.sendNotification('success', `Rule created from template: ${rule.name}`)
+      return rule
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to create rule from template')
+      throw err
+    }
+  }, [enterprise])
+
+  useEffect(() => {
+    loadFrameworks()
+  }, [loadFrameworks])
+
+  return {
+    frameworks,
+    templates,
+    loading,
+    loadFrameworks,
+    loadTemplatesByFramework,
+    createRuleFromTemplate
+  }
+}
+
+// **COMPREHENSIVE: Enhanced Issues Management Hooks**
+export function useComplianceIssues(options?: {
+  rule_id?: number
+  status?: string
+  severity?: string
+  assigned_to?: string
+  data_source_id?: number
+  page?: number
+  limit?: number
+}) {
+  const enterprise = useEnterpriseCompliance()
+  
+  const [issues, setIssues] = useState<ComplianceGap[]>([])
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 50
+  })
+  const [loading, setLoading] = useState(false)
+
+  const loadIssues = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await ComplianceAPIs.ComplianceManagement.getIssues(options)
+      setIssues(response.data || [])
+      setPagination({
+        total: response.total,
+        page: response.page,
+        limit: response.limit
+      })
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to load issues')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise, JSON.stringify(options)])
+
+  const createIssue = useCallback(async (data: Partial<ComplianceGap>) => {
+    try {
+      const issue = await ComplianceAPIs.ComplianceManagement.createIssue(data)
+      setIssues(prev => [issue, ...prev])
+      enterprise.sendNotification('success', 'Issue created successfully')
+      return issue
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to create issue')
+      throw err
+    }
+  }, [enterprise])
+
+  const updateIssue = useCallback(async (id: number, data: Partial<ComplianceGap>) => {
+    try {
+      const issue = await ComplianceAPIs.ComplianceManagement.updateIssue(id, data)
+      setIssues(prev => prev.map(i => i.id === id ? issue : i))
+      enterprise.sendNotification('success', 'Issue updated successfully')
+      return issue
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to update issue')
+      throw err
+    }
+  }, [enterprise])
+
+  useEffect(() => {
+    loadIssues()
+  }, [loadIssues])
+
+  return {
+    issues,
+    pagination,
+    loading,
+    loadIssues,
+    createIssue,
+    updateIssue
+  }
+}
+
+// **COMPREHENSIVE: Enhanced Analytics Hooks**
+export function useComplianceAnalytics(options?: {
+  data_source_id?: number
+  time_range?: string
+  auto_refresh?: boolean
+}) {
+  const enterprise = useEnterpriseCompliance()
+  
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [trends, setTrends] = useState<any[]>([])
+  const [insights, setInsights] = useState<any[]>([])
+  const [statistics, setStatistics] = useState<any>(null)
+  const [integrationStatus, setIntegrationStatus] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+
+  const loadAnalytics = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [analyticsData, trendsData, insightsData, statsData, statusData] = await Promise.all([
+        ComplianceAPIs.ComplianceManagement.getDashboardAnalytics(options),
+        ComplianceAPIs.ComplianceManagement.getTrends(undefined, parseInt(options?.time_range?.replace('d', '') || '30')),
+        ComplianceAPIs.ComplianceManagement.getInsights(undefined, parseInt(options?.time_range?.replace('d', '') || '30')),
+        ComplianceAPIs.ComplianceManagement.getStatistics(),
+        ComplianceAPIs.ComplianceManagement.getIntegrationStatus()
+      ])
+      
+      setAnalytics(analyticsData)
+      setTrends(trendsData || [])
+      setInsights(insightsData || [])
+      setStatistics(statsData)
+      setIntegrationStatus(statusData)
+      
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to load analytics')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise, JSON.stringify(options)])
+
+  useEffect(() => {
+    loadAnalytics()
+  }, [loadAnalytics])
+
+  // Auto-refresh if enabled
+  useEffect(() => {
+    if (options?.auto_refresh) {
+      const interval = setInterval(loadAnalytics, 60000) // Refresh every minute
+      return () => clearInterval(interval)
+    }
+  }, [options?.auto_refresh, loadAnalytics])
+
+  return {
+    analytics,
+    trends,
+    insights,
+    statistics,
+    integrationStatus,
+    loading,
+    loadAnalytics
+  }
+}
+
+// **COMPREHENSIVE: Enhanced Data Source Integration Hooks**
+export function useComplianceDataSources(options?: {
+  rule_type?: string
+  compliance_standard?: string
+  environment?: string
+  data_classification?: string
+}) {
+  const enterprise = useEnterpriseCompliance()
+  
+  const [dataSources, setDataSources] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const loadDataSources = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await ComplianceAPIs.ComplianceManagement.getDataSources()
+      setDataSources(response || [])
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to load data sources')
+    } finally {
+      setLoading(false)
+    }
+  }, [enterprise])
+
+  const getDataSourceCompliance = useCallback(async (id: number) => {
+    try {
+      return await ComplianceAPIs.ComplianceManagement.getDataSourceCompliance(id)
+    } catch (err: any) {
+      enterprise.sendNotification('error', 'Failed to get data source compliance')
+      throw err
+    }
+  }, [enterprise])
+
+  useEffect(() => {
+    loadDataSources()
+  }, [loadDataSources])
+
+  return {
+    dataSources,
+    loading,
+    loadDataSources,
+    getDataSourceCompliance
+  }
+}
+
 // Export all hooks as a collection
 export const ComplianceHooks = {
   useEnterpriseFeatures,
@@ -1167,7 +1538,12 @@ export const ComplianceHooks = {
   useWorkflowIntegration,
   useAnalyticsIntegration,
   useEvidenceManagement,
-  useIntegrationManagement
+  useIntegrationManagement,
+  useComplianceRules,
+  useComplianceTemplates,
+  useComplianceIssues,
+  useComplianceAnalytics,
+  useComplianceDataSources
 }
 
 // Export individual hooks for direct use
@@ -1180,7 +1556,12 @@ export {
   useWorkflowIntegration,
   useAnalyticsIntegration,
   useEvidenceManagement,
-  useIntegrationManagement
+  useIntegrationManagement,
+  useComplianceRules,
+  useComplianceTemplates,
+  useComplianceIssues,
+  useComplianceAnalytics,
+  useComplianceDataSources
 }
 
 export default ComplianceHooks

@@ -29,7 +29,7 @@ async def get_compliance_rules(
     severity: Optional[ComplianceRuleSeverity] = Query(None, description="Filter by severity"),
     status: Optional[ComplianceRuleStatus] = Query(None, description="Filter by status"),
     scope: Optional[ComplianceRuleScope] = Query(None, description="Filter by scope"),
-    data_source_id: Optional[int] = Query(None, description="Filter by data source ID"),
+    data_source_id: Optional[int] = Query(None, description="Filter by data source"),
     compliance_standard: Optional[str] = Query(None, description="Filter by compliance standard"),
     tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     search: Optional[str] = Query(None, description="Search in name, description, and standard"),
@@ -482,39 +482,15 @@ async def create_rule_from_template(
         template_id = template_data.get("template_id")
         customizations = template_data.get("customizations", {})
         
-        # Get framework templates
-        frameworks = ComplianceRuleService.get_compliance_frameworks()
-        template = None
+        if not template_id:
+            raise HTTPException(status_code=400, detail="template_id is required")
         
-        for framework in frameworks:
-            for tmpl in framework.get("templates", []):
-                if tmpl["id"] == template_id:
-                    template = tmpl
-                    break
-            if template:
-                break
-        
-        if not template:
-            raise HTTPException(status_code=404, detail="Template not found")
-        
-        # Create rule from template with customizations
-        rule_data = ComplianceRuleCreate(
-            name=customizations.get("name", template["name"]),
-            description=customizations.get("description", template["description"]),
-            rule_type=ComplianceRuleType(customizations.get("rule_type", template["rule_type"])),
-            severity=ComplianceRuleSeverity(customizations.get("severity", template["severity"])),
-            condition=customizations.get("condition", template["condition"]),
-            compliance_standard=customizations.get("compliance_standard", framework.get("name")),
-            data_source_ids=customizations.get("data_source_ids", []),
-            tags=customizations.get("tags", []),
-            metadata={
-                "template_id": template_id,
-                "framework": framework.get("id"),
-                **customizations.get("metadata", {})
-            }
+        rule = ComplianceRuleService.create_rule_from_template(
+            session=session,
+            template_id=template_id,
+            customizations=customizations,
+            created_by=created_by
         )
-        
-        rule = ComplianceRuleService.create_rule(session, rule_data, created_by)
         return rule
         
     except HTTPException:
@@ -533,67 +509,12 @@ async def get_compliance_dashboard_analytics(
 ):
     """Get comprehensive compliance analytics for dashboard"""
     try:
-        # Get all rules for analytics
-        rules_query = select(ComplianceRule)
-        if data_source_id:
-            rules_query = rules_query.where(ComplianceRule.data_source_ids.contains([data_source_id]))
-        
-        rules = session.exec(rules_query).all()
-        
-        # Calculate metrics
-        total_rules = len(rules)
-        active_rules = len([r for r in rules if r.status == ComplianceRuleStatus.ACTIVE])
-        
-        # Status distribution
-        status_counts = {}
-        for status in ComplianceRuleStatus:
-            status_counts[status.value] = len([r for r in rules if r.status == status])
-        
-        # Severity distribution
-        severity_counts = {}
-        for severity in ComplianceRuleSeverity:
-            severity_counts[severity.value] = len([r for r in rules if r.severity == severity])
-        
-        # Framework coverage
-        framework_counts = {}
-        for rule in rules:
-            if rule.compliance_standard:
-                framework_counts[rule.compliance_standard] = framework_counts.get(rule.compliance_standard, 0) + 1
-        
-        # Recent evaluations
-        recent_evaluations = session.exec(
-            select(ComplianceRuleEvaluation).where(
-                ComplianceRuleEvaluation.evaluated_at >= datetime.now() - timedelta(days=7)
-            ).order_by(ComplianceRuleEvaluation.evaluated_at.desc()).limit(10)
-        ).all()
-        
-        return {
-            "summary": {
-                "total_rules": total_rules,
-                "active_rules": active_rules,
-                "draft_rules": status_counts.get("draft", 0),
-                "inactive_rules": status_counts.get("inactive", 0)
-            },
-            "distributions": {
-                "status": status_counts,
-                "severity": severity_counts,
-                "frameworks": framework_counts
-            },
-            "recent_activity": {
-                "evaluations": [
-                    {
-                        "id": eval.id,
-                        "rule_id": eval.rule_id,
-                        "status": eval.status,
-                        "compliance_score": eval.compliance_score,
-                        "evaluated_at": eval.evaluated_at.isoformat()
-                    }
-                    for eval in recent_evaluations
-                ]
-            },
-            "time_range": time_range,
-            "generated_at": datetime.now().isoformat()
-        }
+        analytics = ComplianceRuleService.get_compliance_dashboard_analytics(
+            session=session,
+            data_source_id=data_source_id,
+            time_range=time_range
+        )
+        return analytics
         
     except Exception as e:
         logger.error(f"Error getting compliance dashboard analytics: {str(e)}")
@@ -607,38 +528,8 @@ async def get_integration_status(
 ):
     """Get status of compliance system integrations"""
     try:
-        # Check data source integration
-        data_sources_count = session.exec(select(func.count(DataSource.id))).one()
-        
-        # Check scan rule integration
-        scan_rules_with_compliance = session.exec(
-            select(func.count(ComplianceRule.id)).where(
-                ComplianceRule.scan_rule_set_id.isnot(None)
-            )
-        ).one()
-        
-        # Check recent activity
-        recent_evaluations = session.exec(
-            select(func.count(ComplianceRuleEvaluation.id)).where(
-                ComplianceRuleEvaluation.evaluated_at >= datetime.now() - timedelta(hours=24)
-            )
-        ).one()
-        
-        return {
-            "data_source_integration": {
-                "status": "connected" if data_sources_count > 0 else "disconnected",
-                "data_sources_count": data_sources_count
-            },
-            "scan_integration": {
-                "status": "active" if scan_rules_with_compliance > 0 else "inactive",
-                "integrated_rules": scan_rules_with_compliance
-            },
-            "system_health": {
-                "recent_evaluations": recent_evaluations,
-                "last_check": datetime.now().isoformat(),
-                "status": "healthy" if recent_evaluations > 0 else "warning"
-            }
-        }
+        status = ComplianceRuleService.get_integration_status(session)
+        return status
         
     except Exception as e:
         logger.error(f"Error getting integration status: {str(e)}")

@@ -200,6 +200,14 @@ class DataSource(SQLModel, table=True):
     scans: List["Scan"] = Relationship(back_populates="data_source")
     scan_rule_sets: List["ScanRuleSet"] = Relationship(back_populates="data_source")
     discovery_history: List["DiscoveryHistory"] = Relationship(back_populates="data_source")
+    
+    # **NEW: Compliance Relationships**
+    compliance_requirements: List["ComplianceRequirement"] = Relationship(back_populates="data_source")
+    compliance_assessments: List["ComplianceAssessment"] = Relationship(back_populates="data_source")
+    compliance_rules: List["ComplianceRule"] = Relationship(
+        back_populates="data_sources",
+        link_table="compliance_rule_data_source_link"
+    )
 
     def get_connection_uri(self) -> str:
         """Generate connection URI based on source type and location."""
@@ -261,25 +269,29 @@ class DiscoveryHistory(SQLModel, table=True):
 
 
 class ScanRuleSet(SQLModel, table=True):
-    """Model for scan rule sets that define what to include/exclude during scans."""
+    """Model for scan rule sets."""
+    __tablename__ = "scan_rule_sets"
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     description: Optional[str] = None
-    data_source_id: Optional[int] = Field(default=None, foreign_key="datasource.id")
-    include_schemas: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    exclude_schemas: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    include_tables: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    exclude_tables: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    include_columns: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    exclude_columns: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    sample_data: bool = Field(default=False)  # Whether to sample actual data or just metadata
-    sample_size: Optional[int] = Field(default=100)  # Number of rows to sample if sample_data is True
+    data_source_id: int = Field(foreign_key="datasource.id", index=True)
+    
+    # Rule configuration
+    rules: List[Dict[str, Any]] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
+    rule_count: int = Field(default=0)
+    
+    # Status and metadata
+    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
     data_source: Optional[DataSource] = Relationship(back_populates="scan_rule_sets")
     scans: List["Scan"] = Relationship(back_populates="scan_rule_set")
+    
+    # **NEW: Compliance Relationships**
+    compliance_rules: List["ComplianceRule"] = Relationship(back_populates="scan_rule_set")
 
 
 class Scan(SQLModel, table=True):
