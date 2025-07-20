@@ -269,12 +269,22 @@ class DiscoveryHistory(SQLModel, table=True):
 
 
 class ScanRuleSet(SQLModel, table=True):
-    """Model for scan rule sets."""
+    """Model for scan rule sets that define what to include/exclude during scans."""
     __tablename__ = "scan_rule_sets"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     description: Optional[str] = None
+    data_source_id: Optional[int] = Field(default=None, foreign_key="datasource.id")
+    include_schemas: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    exclude_schemas: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    include_tables: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    exclude_tables: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    include_columns: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    exclude_columns: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    sample_data: bool = Field(default=False)  # Whether to sample actual data or just metadata
+    sample_size: Optional[int] = Field(default=100)  # Number of rows to sample if sample_data is True
+
     data_source_id: int = Field(foreign_key="datasource.id", index=True)
     
     # Rule configuration
