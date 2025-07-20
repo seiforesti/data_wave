@@ -200,6 +200,12 @@ class DataSource(SQLModel, table=True):
     scans: List["Scan"] = Relationship(back_populates="data_source")
     scan_rule_sets: List["ScanRuleSet"] = Relationship(back_populates="data_source")
     discovery_history: List["DiscoveryHistory"] = Relationship(back_populates="data_source")
+    
+    # **INTERCONNECTED: Compliance Relationships**
+    compliance_rules: List["ComplianceRule"] = Relationship(
+        back_populates="data_sources",
+        link_table="compliance_rule_data_source_link"
+    )
 
     def get_connection_uri(self) -> str:
         """Generate connection URI based on source type and location."""
@@ -262,6 +268,8 @@ class DiscoveryHistory(SQLModel, table=True):
 
 class ScanRuleSet(SQLModel, table=True):
     """Model for scan rule sets that define what to include/exclude during scans."""
+    __tablename__ = "scan_rule_sets"
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     description: Optional[str] = None
@@ -280,6 +288,9 @@ class ScanRuleSet(SQLModel, table=True):
     # Relationships
     data_source: Optional[DataSource] = Relationship(back_populates="scan_rule_sets")
     scans: List["Scan"] = Relationship(back_populates="scan_rule_set")
+    
+    # **INTERCONNECTED: Compliance Relationships**
+    compliance_rules: List["ComplianceRule"] = Relationship(back_populates="scan_rule_set")
 
 
 class Scan(SQLModel, table=True):

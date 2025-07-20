@@ -1,396 +1,454 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  ArrowUpDown,
-  PlusCircle,
-  Edit,
-  Trash2,
-  ToggleRight,
-  ToggleLeft,
-  RefreshCw,
-  MoreHorizontal,
-  Plug,
-  Mail,
-  Webhook,
+  Plug, CheckCircle, AlertCircle, Clock, RefreshCw, PlusCircle, 
+  Eye, Edit, Trash2, Search, Settings, Wifi, WifiOff, Zap
 } from "lucide-react"
-import { useIntegrations } from "../hooks/useIntegrations"
-import type { IntegrationConfig } from "../types"
-import { LoadingSpinner } from "../../Scan-Rule-Sets/components/LoadingSpinner"
-import { ErrorBoundary } from "../../Scan-Rule-Sets/components/ErrorBoundary"
-import { formatDateTime } from "@/utils/formatDateTime"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { IntegrationCreateModal } from "./IntegrationCreateModal"
-import { IntegrationEditModal } from "./IntegrationEditModal"
 
-type ComplianceIntegrationsProps = {}
+// Enterprise Integration
+import { ComplianceHooks } from '../hooks/use-enterprise-features'
+import { useEnterpriseCompliance } from '../enterprise-integration'
+import { ComplianceAPIs } from '../services/enterprise-apis'
+import type { 
+  ComplianceIntegration, 
+  ComplianceComponentProps 
+} from '../types'
 
-export function ComplianceIntegrations() {
-  const {
-    integrations,
-    isLoading,
-    error,
-    fetchIntegrations,
-    deleteIntegration,
-    testIntegration,
-    toggleIntegrationStatus,
-    createIntegration,
-    updateIntegration,
-  } = useIntegrations()
+interface ComplianceIntegrationsProps extends ComplianceComponentProps {
+  onCreateIntegration?: () => void
+  onEditIntegration?: (integration: ComplianceIntegration) => void
+  onViewIntegration?: (integration: ComplianceIntegration) => void
+  onDeleteIntegration?: (integration: ComplianceIntegration) => void
+}
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("all")
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [sortBy, setSortBy] = useState<keyof IntegrationConfig>("name")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-  const [testingIntegrationId, setTestingIntegrationId] = useState<number | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [integrationToDelete, setIntegrationToDelete] = useState<IntegrationConfig | null>(null)
+const ComplianceIntegrations: React.FC<ComplianceIntegrationsProps> = ({
+  dataSourceId,
+  searchQuery: initialSearchQuery = '',
+  filters: initialFilters = {},
+  onRefresh,
+  onError,
+  className = '',
+  onCreateIntegration,
+  onEditIntegration,
+  onViewIntegration,
+  onDeleteIntegration
+}) => {
+  const enterprise = useEnterpriseCompliance()
+  
+  // Enterprise hooks
+  const enterpriseFeatures = ComplianceHooks.useEnterpriseFeatures({
+    componentName: 'ComplianceIntegrations',
+    dataSourceId
+  })
+  
+  const integrationManagement = ComplianceHooks.useIntegrationManagement()
+  
+  // State
+  const [integrations, setIntegrations] = useState<ComplianceIntegration[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
+  const [filters, setFilters] = useState(initialFilters)
+  const [activeTab, setActiveTab] = useState('all')
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [editingIntegration, setEditingIntegration] = useState<IntegrationConfig | null>(null)
-
-  const filteredAndSortedIntegrations = useMemo(() => {
-    let filtered = integrations.filter(
-      (integration) =>
-        integration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        integration.type.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-
-    if (filterType !== "all") {
-      filtered = filtered.filter((integration) => integration.type === filterType)
-    }
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((integration) => integration.status === filterStatus)
-    }
-
-    return filtered.sort((a, b) => {
-      const aValue = a[sortBy]
-      const bValue = b[sortBy]
-
-      if (sortBy === "created_at" || sortBy === "last_synced_at") {
-        const dateA = aValue ? new Date(aValue as string).getTime() : 0
-        const dateB = bValue ? new Date(bValue as string).getTime() : 0
-        return sortDirection === "asc" ? dateA - dateB : dateB - dateA
-      }
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortDirection === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
-      }
-      // Fallback for other types or mixed types
-      return 0
-    })
-  }, [integrations, searchTerm, filterType, filterStatus, sortBy, sortDirection])
-
-  const handleSort = (column: keyof IntegrationConfig) => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortBy(column)
-      setSortDirection("asc")
-    }
-  }
-
-  const handleCreateIntegrationSuccess = async (
-    newIntegrationData: Omit<
-      IntegrationConfig,
-      "id" | "created_at" | "status" | "last_synced_at" | "updated_at" | "updated_by" | "error_message"
-    >,
-  ) => {
-    await createIntegration(newIntegrationData)
-    setIsCreateModalOpen(false)
-  }
-
-  const handleEditIntegrationClick = (integration: IntegrationConfig) => {
-    setEditingIntegration(integration)
-    setIsEditModalOpen(true)
-  }
-
-  const handleEditIntegrationSuccess = async (updatedIntegration: IntegrationConfig) => {
-    await updateIntegration(updatedIntegration.id, updatedIntegration)
-    setIsEditModalOpen(false)
-    setEditingIntegration(null)
-  }
-
-  const handleTestIntegrationClick = async (integration: IntegrationConfig) => {
-    setTestingIntegrationId(integration.id)
-    try {
-      await testIntegration(integration.id)
-    } finally {
-      setTestingIntegrationId(null)
-    }
-  }
-
-  const handleToggleStatus = async (integration: IntegrationConfig) => {
-    try {
-      await toggleIntegrationStatus(integration.id)
-    } catch (err) {
-      // Error handled by useIntegrations hook
-    }
-  }
-
-  const handleDeleteClick = (integration: IntegrationConfig) => {
-    setIntegrationToDelete(integration)
-    setShowDeleteConfirm(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (integrationToDelete) {
+  // Load integrations from backend
+  useEffect(() => {
+    const loadIntegrations = async () => {
+      setLoading(true)
       try {
-        await deleteIntegration(integrationToDelete.id)
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.Integration.getIntegrations({
+          integration_type: filters.integration_type,
+          provider: filters.provider,
+          status: activeTab !== 'all' ? activeTab : undefined
+        })
+        
+        setIntegrations(response || [])
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_loaded', count: response?.length || 0 },
+          source: 'ComplianceIntegrations',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load integrations:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance integrations')
+        onError?.('Failed to load compliance integrations')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_load_failed', error: error.message },
+          source: 'ComplianceIntegrations',
+          severity: 'high'
+        })
       } finally {
-        setIntegrationToDelete(null)
-        setShowDeleteConfirm(false)
+        setLoading(false)
       }
     }
-  }
 
-  const getStatusBadgeVariant = (status: IntegrationConfig["status"]) => {
+    loadIntegrations()
+  }, [dataSourceId, filters, activeTab, enterprise])
+
+  // Filter integrations based on active tab and search
+  const filteredIntegrations = integrations.filter(integration => {
+    // Tab filter
+    if (activeTab !== 'all') {
+      if (activeTab === 'active' && integration.status !== 'active') return false
+      if (activeTab === 'error' && integration.status !== 'error') return false
+      if (activeTab === 'pending' && integration.status !== 'pending') return false
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase()
+      return (
+        integration.name.toLowerCase().includes(searchLower) ||
+        integration.provider.toLowerCase().includes(searchLower) ||
+        integration.integration_type.toLowerCase().includes(searchLower)
+      )
+    }
+
+    return true
+  })
+
+  // Get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "active":
-        return "default"
-      case "inactive":
-        return "secondary"
-      case "error":
-        return "destructive"
+      case 'active':
+        return 'default'
+      case 'error':
+        return 'destructive'
+      case 'pending':
+        return 'secondary'
+      case 'inactive':
+        return 'outline'
+      case 'testing':
+        return 'secondary'
       default:
-        return "outline"
+        return 'outline'
     }
   }
 
-  const getSystemIcon = (system: string) => {
-    switch (system) {
-      case "jira":
-        return <img src="/placeholder.svg?height=16&width=16" alt="Jira" className="h-4 w-4" />
-      case "servicenow":
-        return <img src="/placeholder.svg?height=16&width=16" alt="ServiceNow" className="h-4 w-4" />
-      case "slack":
-        return <img src="/placeholder.svg?height=16&width=16" alt="Slack" className="h-4 w-4" />
-      case "email":
-        return <Mail className="h-4 w-4" />
-      case "custom_webhook":
-        return <Webhook className="h-4 w-4" />
+  // Get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />
+      case 'inactive':
+        return <WifiOff className="h-4 w-4 text-gray-500" />
+      case 'testing':
+        return <Zap className="h-4 w-4 text-blue-500" />
       default:
-        return <Plug className="h-4 w-4" />
+        return <Wifi className="h-4 w-4 text-gray-500" />
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner />
+  // Handle test integration
+  const handleTestIntegration = async (integration: ComplianceIntegration) => {
+    try {
+      const result = await ComplianceAPIs.Integration.testIntegration(integration.id as number)
+      if (result.status === 'success') {
+        enterprise.sendNotification('success', 'Integration test successful')
+      } else {
+        enterprise.sendNotification('error', `Integration test failed: ${result.error_message}`)
+      }
+    } catch (error) {
+      console.error('Failed to test integration:', error)
+      enterprise.sendNotification('error', 'Failed to test integration')
+    }
   }
 
-  if (error) {
-    return (
-      <ErrorBoundary>
-        <div className="text-center text-red-500 p-4">{error}</div>
-        <Button onClick={fetchIntegrations} className="mt-4">
-          Retry
-        </Button>
-      </ErrorBoundary>
-    )
+  // Handle sync integration
+  const handleSyncIntegration = async (integration: ComplianceIntegration) => {
+    try {
+      await ComplianceAPIs.Integration.syncIntegration(integration.id as number)
+      setIntegrations(prev => prev.map(i => 
+        i.id === integration.id ? { ...i, last_sync_status: 'success', last_synced_at: new Date().toISOString() } : i
+      ))
+      enterprise.sendNotification('success', 'Integration sync started')
+    } catch (error) {
+      console.error('Failed to sync integration:', error)
+      enterprise.sendNotification('error', 'Failed to sync integration')
+    }
   }
 
   return (
-    <ErrorBoundary>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">External Integrations</h2>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New Integration
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Compliance Integrations</h3>
+          <p className="text-sm text-muted-foreground">
+            Connect and manage external compliance tools and systems
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
           </Button>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Input
-            placeholder="Search integrations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="jira">Jira</SelectItem>
-              <SelectItem value="servicenow">ServiceNow</SelectItem>
-              <SelectItem value="slack">Slack</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="custom_webhook">Custom Webhook</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">
-                  <Button variant="ghost" onClick={() => handleSort("name")}>
-                    Integration Name
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("status")}>
-                    Status
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>Last Synced</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedIntegrations.length > 0 ? (
-                filteredAndSortedIntegrations.map((integration) => (
-                  <TableRow key={integration.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {getSystemIcon(integration.type)}
-                        {integration.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="capitalize">{integration.type.replace("_", " ")}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(integration.status)}>
-                        {integration.status.charAt(0).toUpperCase() + integration.status.slice(1)}
-                      </Badge>
-                      {integration.status === "error" && integration.error_message && (
-                        <div className="text-xs text-red-500 mt-1">{integration.error_message}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {integration.last_synced_at ? formatDateTime(integration.last_synced_at) : "Never"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditIntegrationClick(integration)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Configuration
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleTestIntegrationClick(integration)}
-                            disabled={testingIntegrationId === integration.id}
-                          >
-                            {testingIntegrationId === integration.id ? (
-                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Plug className="mr-2 h-4 w-4" />
-                            )}
-                            {testingIntegrationId === integration.id ? "Testing..." : "Test Connection"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(integration)}>
-                            {integration.status === "active" ? (
-                              <>
-                                <ToggleLeft className="mr-2 h-4 w-4" /> Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <ToggleRight className="mr-2 h-4 w-4" /> Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDeleteClick(integration)} className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Integration
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    No external integrations configured.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <Button size="sm" onClick={onCreateIntegration}>
+            <PlusCircle className="h-4 w-4 mr-1" />
+            New Integration
+          </Button>
         </div>
       </div>
 
-      <IntegrationCreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateIntegrationSuccess}
-      />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search integrations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Select value={filters.integration_type || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, integration_type: value || undefined }))}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Integration Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="grc_tool">GRC Tool</SelectItem>
+              <SelectItem value="security_scanner">Security Scanner</SelectItem>
+              <SelectItem value="audit_platform">Audit Platform</SelectItem>
+              <SelectItem value="risk_management">Risk Management</SelectItem>
+              <SelectItem value="documentation">Documentation</SelectItem>
+              <SelectItem value="ticketing">Ticketing</SelectItem>
+              <SelectItem value="monitoring">Monitoring</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.provider || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, provider: value || undefined }))}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Provider" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Providers</SelectItem>
+              <SelectItem value="ServiceNow">ServiceNow</SelectItem>
+              <SelectItem value="Qualys">Qualys</SelectItem>
+              <SelectItem value="Atlassian">Atlassian</SelectItem>
+              <SelectItem value="Microsoft">Microsoft</SelectItem>
+              <SelectItem value="AWS">AWS</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      {editingIntegration && (
-        <IntegrationEditModal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false)
-            setEditingIntegration(null)
-          }}
-          integration={editingIntegration}
-          onSuccess={handleEditIntegrationSuccess}
-        />
-      )}
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="all">All Integrations</TabsTrigger>
+          <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="error">Error</TabsTrigger>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+        </TabsList>
 
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the integration "{integrationToDelete?.name}"
-              and remove its data from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </ErrorBoundary>
+        <TabsContent value={activeTab} className="space-y-4">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index}>
+                  <CardHeader>
+                    <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
+                    <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-muted animate-pulse rounded" />
+                      <div className="h-3 bg-muted animate-pulse rounded w-2/3" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredIntegrations.length === 0 ? (
+            <div className="text-center py-12">
+              <Plug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No integrations found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery ? 'Try adjusting your search criteria' : 'Get started by connecting your first integration'}
+              </p>
+              {!searchQuery && (
+                <Button onClick={onCreateIntegration}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Integration
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredIntegrations.map((integration) => (
+                <motion.div
+                  key={integration.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="h-full cursor-pointer hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            {getStatusIcon(integration.status)}
+                            <CardTitle className="text-base line-clamp-1">
+                              {integration.name}
+                            </CardTitle>
+                          </div>
+                          <CardDescription className="line-clamp-1">
+                            {integration.provider} • {integration.integration_type.replace('_', ' ')}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
+                        {/* Status and Type */}
+                        <div className="flex items-center justify-between">
+                          <Badge variant={getStatusBadgeVariant(integration.status)}>
+                            {integration.status}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {integration.sync_frequency.replace('_', ' ')}
+                          </Badge>
+                        </div>
+
+                        {/* Sync Statistics */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Success Rate</span>
+                            <span>{integration.sync_statistics.success_rate.toFixed(1)}%</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Records Synced</span>
+                            <span>{integration.sync_statistics.total_records.toLocaleString()}</span>
+                          </div>
+                          {integration.last_synced_at && (
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                              <span>Last Sync</span>
+                              <span>
+                                {new Date(integration.last_synced_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Error Message */}
+                        {integration.error_message && (
+                          <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                            {integration.error_message}
+                          </div>
+                        )}
+
+                        {/* Supported Frameworks */}
+                        <div className="space-y-2">
+                          <span className="text-xs text-muted-foreground">Supported Frameworks</span>
+                          <div className="flex flex-wrap gap-1">
+                            {integration.supported_frameworks.slice(0, 3).map((framework) => (
+                              <Badge key={framework} variant="outline" className="text-xs">
+                                {framework}
+                              </Badge>
+                            ))}
+                            {integration.supported_frameworks.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{integration.supported_frameworks.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onViewIntegration?.(integration)
+                              }}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onEditIntegration?.(integration)
+                              }}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleTestIntegration(integration)
+                              }}
+                            >
+                              <Zap className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            {integration.status === 'active' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSyncIntegration(integration)
+                                }}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Sync
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDeleteIntegration?.(integration)
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }
+
+export default ComplianceIntegrations
