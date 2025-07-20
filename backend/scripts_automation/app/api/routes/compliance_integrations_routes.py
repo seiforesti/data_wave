@@ -199,81 +199,13 @@ async def get_integration_templates(
     integration_type: Optional[str] = Query(None, description="Filter by integration type"),
     session: Session = Depends(get_session)
 ):
-    """Get integration configuration templates"""
+    """Get integration configuration templates from database"""
     try:
-        templates = [
-            {
-                "id": "soc2_servicenow",
-                "name": "SOC 2 ServiceNow Template",
-                "description": "Pre-configured ServiceNow integration for SOC 2 compliance",
-                "integration_type": "ticketing",
-                "provider": "servicenow",
-                "framework": "soc2",
-                "config_template": {
-                    "incident_category": "Compliance",
-                    "incident_subcategory": "SOC 2",
-                    "priority": "3",
-                    "assignment_group": "Compliance Team",
-                    "auto_assign": True,
-                    "escalation_rules": [
-                        {"condition": "priority = 1", "escalate_after": "30 minutes"},
-                        {"condition": "priority = 2", "escalate_after": "2 hours"}
-                    ]
-                }
-            },
-            {
-                "id": "gdpr_aws_config",
-                "name": "GDPR AWS Config Template",
-                "description": "AWS Config rules for GDPR compliance monitoring",
-                "integration_type": "security_scanner",
-                "provider": "aws",
-                "framework": "gdpr",
-                "config_template": {
-                    "rules": [
-                        "encrypted-volumes",
-                        "s3-bucket-public-read-prohibited",
-                        "s3-bucket-public-write-prohibited",
-                        "rds-storage-encrypted"
-                    ],
-                    "compliance_by_config_rule": True,
-                    "delivery_channel": "compliance-delivery-channel",
-                    "snapshot_delivery_properties": {
-                        "delivery_frequency": "daily"
-                    }
-                }
-            },
-            {
-                "id": "pci_splunk",
-                "name": "PCI DSS Splunk Template",
-                "description": "Splunk configuration for PCI DSS compliance monitoring",
-                "integration_type": "audit_platform",
-                "provider": "splunk",
-                "framework": "pci",
-                "config_template": {
-                    "index": "compliance_pci",
-                    "sourcetype": "pci_compliance",
-                    "alerts": [
-                        {
-                            "name": "Unauthorized Access Attempt",
-                            "search": "index=compliance_pci sourcetype=access_logs status=failed",
-                            "threshold": 5,
-                            "time_window": "5m"
-                        },
-                        {
-                            "name": "Cardholder Data Access",
-                            "search": "index=compliance_pci sourcetype=data_access CHD=true",
-                            "threshold": 1,
-                            "time_window": "1m"
-                        }
-                    ],
-                    "dashboards": ["pci_overview", "access_monitoring", "vulnerability_tracking"]
-                }
-            }
-        ]
-        
-        # Apply filters
-        if integration_type:
-            templates = [t for t in templates if t["integration_type"] == integration_type]
+        # Use the production service to get templates from database
+        templates = ComplianceIntegrationService.get_integration_templates(
+            session=session,
+            integration_type=integration_type
+        )
         
         return templates
         
@@ -486,43 +418,43 @@ async def get_integration_template(
     template_type: str,
     session: Session = Depends(get_session)
 ):
-    """Get a specific integration template by type"""
+    """Get a specific integration template by type from database"""
     try:
-        # This would query integration templates
-        templates = {
-            "servicenow": {
-                "id": "servicenow",
-                "name": "ServiceNow Integration",
-                "integration_type": "ticketing",
-                "provider": "servicenow",
-                "config_template": {
-                    "instance_url": "",
-                    "username": "",
-                    "password": "",
-                    "api_version": "v1"
-                },
-                "capabilities": ["ticket_creation", "status_updates", "comments"]
-            },
-            "aws_config": {
-                "id": "aws_config", 
-                "name": "AWS Config Integration",
-                "integration_type": "security_scanner",
-                "provider": "aws",
-                "config_template": {
-                    "region": "us-east-1",
-                    "access_key_id": "",
-                    "secret_access_key": "",
-                    "account_id": ""
-                },
-                "capabilities": ["compliance_rules", "resource_config", "remediation"]
+        # Get specific template from database
+        from app.models.compliance_extended_models import ComplianceIntegrationTemplate
+        
+        template = session.exec(
+            select(ComplianceIntegrationTemplate).where(
+                ComplianceIntegrationTemplate.template_id == template_type,
+                ComplianceIntegrationTemplate.is_active == True
+            )
+        ).first()
+        
+        if template:
+            return {
+                "id": template.template_id,
+                "name": template.name,
+                "description": template.description,
+                "integration_type": template.integration_type.value,
+                "provider": template.provider,
+                "framework": template.framework,
+                "config_template": template.config_template,
+                "capabilities": template.capabilities,
+                "auth_methods": template.auth_methods,
+                "config_fields": template.config_fields,
+                "supported_frameworks": template.supported_frameworks,
+                "estimated_setup_time": template.estimated_setup_time,
+                "complexity_level": template.complexity_level,
+                "prerequisites": template.prerequisites
             }
-        }
         
-        template = templates.get(template_type)
-        if not template:
-            raise HTTPException(status_code=404, detail="Template not found")
+        # Fallback to default templates if not found in database
+        default_templates = ComplianceIntegrationService._get_default_templates()
+        for template in default_templates:
+            if template["id"] == template_type:
+                return template
         
-        return template
+        raise HTTPException(status_code=404, detail="Template not found")
         
     except HTTPException:
         raise

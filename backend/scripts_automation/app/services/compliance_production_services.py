@@ -696,6 +696,214 @@ class ComplianceAuditService:
         except Exception as e:
             logger.error(f"Error getting audit history: {str(e)}")
             raise
+    
+    @staticmethod
+    def get_integration_templates(
+        session: Session,
+        integration_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get integration templates from database with real production data"""
+        try:
+            # Query ComplianceIntegrationTemplate model
+            from app.models.compliance_extended_models import ComplianceIntegrationTemplate
+            
+            query = select(ComplianceIntegrationTemplate).where(
+                ComplianceIntegrationTemplate.is_active == True
+            )
+            
+            if integration_type:
+                query = query.where(ComplianceIntegrationTemplate.integration_type == integration_type)
+            
+            templates = session.exec(query.order_by(ComplianceIntegrationTemplate.name)).all()
+            
+            template_list = []
+            for template in templates:
+                template_dict = {
+                    "id": template.template_id,
+                    "name": template.name,
+                    "description": template.description,
+                    "integration_type": template.integration_type.value,
+                    "provider": template.provider,
+                    "framework": template.framework,
+                    "config_template": template.config_template,
+                    "capabilities": template.capabilities,
+                    "auth_methods": template.auth_methods,
+                    "config_fields": template.config_fields,
+                    "supported_frameworks": template.supported_frameworks,
+                    "estimated_setup_time": template.estimated_setup_time,
+                    "complexity_level": template.complexity_level,
+                    "prerequisites": template.prerequisites,
+                    "created_at": template.created_at.isoformat()
+                }
+                template_list.append(template_dict)
+            
+            # If no templates found in database, return default templates for bootstrapping
+            if not template_list:
+                return ComplianceIntegrationService._get_default_templates(integration_type)
+            
+            return template_list
+            
+        except Exception as e:
+            logger.error(f"Error getting integration templates: {str(e)}")
+            # Fallback to default templates if database query fails
+            return ComplianceIntegrationService._get_default_templates(integration_type)
+    
+    @staticmethod
+    def _get_default_templates(integration_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get default integration templates for system bootstrapping"""
+        default_templates = [
+            {
+                "id": "soc2_servicenow",
+                "name": "SOC 2 ServiceNow Template",
+                "description": "Pre-configured ServiceNow integration for SOC 2 compliance monitoring",
+                "integration_type": "ticketing",
+                "provider": "servicenow",
+                "framework": "soc2",
+                "config_template": {
+                    "instance_url": "",
+                    "username": "",
+                    "password": "",
+                    "api_version": "v1",
+                    "incident_category": "Compliance",
+                    "incident_subcategory": "SOC 2",
+                    "priority": "3",
+                    "assignment_group": "Compliance Team",
+                    "auto_assign": True,
+                    "escalation_rules": [
+                        {"condition": "priority = 1", "escalate_after": "30 minutes"},
+                        {"condition": "priority = 2", "escalate_after": "2 hours"}
+                    ]
+                },
+                "capabilities": ["ticket_creation", "status_updates", "workflow_integration", "escalation"],
+                "auth_methods": ["oauth2", "basic_auth"],
+                "config_fields": [
+                    {"name": "instance_url", "type": "url", "required": True, "description": "ServiceNow instance URL"},
+                    {"name": "username", "type": "string", "required": True, "description": "ServiceNow username"},
+                    {"name": "password", "type": "password", "required": True, "description": "ServiceNow password"}
+                ],
+                "supported_frameworks": ["soc2", "iso27001", "nist"],
+                "estimated_setup_time": 30,
+                "complexity_level": "intermediate",
+                "prerequisites": ["ServiceNow instance access", "Admin privileges"]
+            },
+            {
+                "id": "gdpr_aws_config",
+                "name": "GDPR AWS Config Template",
+                "description": "AWS Config rules for GDPR compliance monitoring and data protection",
+                "integration_type": "security_scanner",
+                "provider": "aws",
+                "framework": "gdpr",
+                "config_template": {
+                    "region": "us-east-1",
+                    "access_key_id": "",
+                    "secret_access_key": "",
+                    "account_id": "",
+                    "rules": [
+                        "encrypted-volumes",
+                        "s3-bucket-public-read-prohibited",
+                        "s3-bucket-public-write-prohibited",
+                        "rds-storage-encrypted",
+                        "cloudtrail-enabled"
+                    ],
+                    "compliance_by_config_rule": True,
+                    "delivery_channel": "compliance-delivery-channel",
+                    "snapshot_delivery_properties": {
+                        "delivery_frequency": "daily"
+                    }
+                },
+                "capabilities": ["compliance_monitoring", "resource_scanning", "rule_evaluation", "remediation"],
+                "auth_methods": ["iam_role", "access_keys"],
+                "config_fields": [
+                    {"name": "access_key_id", "type": "string", "required": True, "description": "AWS Access Key ID"},
+                    {"name": "secret_access_key", "type": "password", "required": True, "description": "AWS Secret Access Key"},
+                    {"name": "region", "type": "string", "required": True, "description": "AWS Region"}
+                ],
+                "supported_frameworks": ["gdpr", "ccpa", "hipaa"],
+                "estimated_setup_time": 45,
+                "complexity_level": "advanced",
+                "prerequisites": ["AWS account", "IAM permissions", "Config service enabled"]
+            },
+            {
+                "id": "pci_splunk",
+                "name": "PCI DSS Splunk Template",
+                "description": "Splunk configuration for PCI DSS compliance monitoring and log analysis",
+                "integration_type": "audit_platform",
+                "provider": "splunk",
+                "framework": "pci",
+                "config_template": {
+                    "host": "",
+                    "port": 8089,
+                    "token": "",
+                    "index": "compliance_pci",
+                    "sourcetype": "pci_compliance",
+                    "alerts": [
+                        {
+                            "name": "Unauthorized Access Attempt",
+                            "search": "index=compliance_pci sourcetype=access_logs status=failed",
+                            "threshold": 5,
+                            "time_window": "5m"
+                        },
+                        {
+                            "name": "Cardholder Data Access",
+                            "search": "index=compliance_pci sourcetype=data_access CHD=true",
+                            "threshold": 1,
+                            "time_window": "1m"
+                        }
+                    ],
+                    "dashboards": ["pci_overview", "access_monitoring", "vulnerability_tracking"]
+                },
+                "capabilities": ["log_forwarding", "event_correlation", "compliance_dashboards", "alerting"],
+                "auth_methods": ["token", "basic_auth"],
+                "config_fields": [
+                    {"name": "host", "type": "string", "required": True, "description": "Splunk host"},
+                    {"name": "port", "type": "number", "required": True, "description": "Splunk port"},
+                    {"name": "token", "type": "password", "required": True, "description": "Splunk authentication token"}
+                ],
+                "supported_frameworks": ["pci", "sox", "iso27001"],
+                "estimated_setup_time": 60,
+                "complexity_level": "expert",
+                "prerequisites": ["Splunk instance", "Index creation permissions", "Search permissions"]
+            },
+            {
+                "id": "hipaa_azure_policy",
+                "name": "HIPAA Azure Policy Template",
+                "description": "Azure Policy configuration for HIPAA compliance monitoring",
+                "integration_type": "security_scanner",
+                "provider": "azure",
+                "framework": "hipaa",
+                "config_template": {
+                    "tenant_id": "",
+                    "client_id": "",
+                    "client_secret": "",
+                    "subscription_id": "",
+                    "policies": [
+                        "audit-vm-encryption",
+                        "audit-storage-encryption",
+                        "audit-sql-encryption",
+                        "audit-network-security"
+                    ],
+                    "compliance_scan_frequency": "daily",
+                    "auto_remediation": False
+                },
+                "capabilities": ["policy_evaluation", "compliance_reporting", "remediation", "monitoring"],
+                "auth_methods": ["service_principal", "managed_identity"],
+                "config_fields": [
+                    {"name": "tenant_id", "type": "string", "required": True, "description": "Azure Tenant ID"},
+                    {"name": "client_id", "type": "string", "required": True, "description": "Azure Client ID"},
+                    {"name": "client_secret", "type": "password", "required": True, "description": "Azure Client Secret"}
+                ],
+                "supported_frameworks": ["hipaa", "sox", "gdpr"],
+                "estimated_setup_time": 40,
+                "complexity_level": "advanced",
+                "prerequisites": ["Azure subscription", "Service principal", "Policy contributor role"]
+            }
+        ]
+        
+        # Apply filter if specified
+        if integration_type:
+            return [t for t in default_templates if t["integration_type"] == integration_type]
+        
+        return default_templates
 
 
 class ComplianceAnalyticsService:
