@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import type { ComplianceReport } from "../types"
-import { api } from "../services/api"
+import { api } from "../services/enterprise-apis"
 import { useNotifications } from "../../Scan-Rule-Sets/hooks/useNotifications"
 
 export function useReports() {

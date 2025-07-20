@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { api } from "../services/api"
+import { api } from "../services/enterprise-apis"
 import type { ComplianceWorkflow } from "../types"
 import { useNotifications } from "../../Scan-Rule-Sets/hooks/useNotifications"
 
