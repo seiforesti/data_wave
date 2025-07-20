@@ -38,6 +38,9 @@ from app.api.routes.security_routes import router as security_router
 from app.api.routes.compliance_rule_routes import router as compliance_rule_routes
 from app.api.routes.compliance_framework_routes import router as compliance_framework_routes
 from app.api.routes.compliance_risk_routes import router as compliance_risk_routes
+from app.api.routes.compliance_reports_routes import router as compliance_reports_routes
+from app.api.routes.compliance_workflows_routes import router as compliance_workflows_routes
+from app.api.routes.compliance_integrations_routes import router as compliance_integrations_routes
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -112,6 +115,9 @@ app.include_router(security_router)  # Add enhanced security routes
 app.include_router(compliance_rule_routes)
 app.include_router(compliance_framework_routes)
 app.include_router(compliance_risk_routes)
+app.include_router(compliance_reports_routes)
+app.include_router(compliance_workflows_routes)
+app.include_router(compliance_integrations_routes)
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
 @app.get("/")

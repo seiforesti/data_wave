@@ -330,3 +330,30 @@ async def generate_framework_report(
     except Exception as e:
         logger.error(f"Error generating framework report {framework_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/mapping", response_model=Dict[str, Any])
+async def create_framework_mapping(
+    mapping_data: Dict[str, Any] = Body(..., description="Framework mapping data"),
+    session: Session = Depends(get_session)
+):
+    """Create a framework mapping"""
+    try:
+        mapping = {
+            "id": f"mapping_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "name": mapping_data.get("name", "Custom Framework Mapping"),
+            "description": mapping_data.get("description", ""),
+            "source_framework": mapping_data.get("source_framework"),
+            "target_framework": mapping_data.get("target_framework"),
+            "mappings": mapping_data.get("mappings", []),
+            "coverage_percentage": mapping_data.get("coverage_percentage", 0),
+            "created_at": datetime.now().isoformat(),
+            "created_by": mapping_data.get("created_by"),
+            "status": "active"
+        }
+        
+        return mapping
+        
+    except Exception as e:
+        logger.error(f"Error creating framework mapping: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

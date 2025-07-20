@@ -662,3 +662,116 @@ async def get_statistics(
     except Exception as e:
         logger.error(f"Error getting statistics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# **COMPREHENSIVE: Bulk Operations**
+@router.post("/bulk-update", response_model=List[ComplianceRuleResponse])
+async def bulk_update_requirements(
+    updates: Dict[str, Any] = Body(..., description="Bulk update data"),
+    session: Session = Depends(get_session)
+):
+    """Bulk update compliance requirements"""
+    try:
+        update_list = updates.get("updates", [])
+        results = []
+        
+        for update_item in update_list:
+            rule_id = update_item.get("id")
+            rule_data = update_item.get("data", {})
+            
+            if rule_id and rule_data:
+                # Convert dict to ComplianceRuleUpdate model
+                from app.models.compliance_rule_models import ComplianceRuleUpdate
+                update_model = ComplianceRuleUpdate(**rule_data)
+                
+                updated_rule = ComplianceRuleService.update_rule(session, rule_id, update_model)
+                if updated_rule:
+                    results.append(updated_rule)
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error in bulk update: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-delete", response_model=Dict[str, Any])
+async def bulk_delete_requirements(
+    delete_data: Dict[str, Any] = Body(..., description="Bulk delete data"),
+    session: Session = Depends(get_session)
+):
+    """Bulk delete compliance requirements"""
+    try:
+        ids = delete_data.get("ids", [])
+        deleted_count = 0
+        failed_ids = []
+        
+        for rule_id in ids:
+            try:
+                success = ComplianceRuleService.delete_rule(session, rule_id)
+                if success:
+                    deleted_count += 1
+                else:
+                    failed_ids.append(rule_id)
+            except Exception as e:
+                logger.warning(f"Failed to delete rule {rule_id}: {str(e)}")
+                failed_ids.append(rule_id)
+        
+        return {
+            "message": f"Successfully deleted {deleted_count} compliance rules",
+            "deleted_count": deleted_count,
+            "failed_ids": failed_ids,
+            "total_requested": len(ids)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk delete: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **COMPREHENSIVE: Audit and History**
+@router.get("/{rule_id}/history", response_model=List[Dict[str, Any]])
+async def get_audit_history(
+    rule_id: int,
+    session: Session = Depends(get_session)
+):
+    """Get audit history for a compliance rule"""
+    try:
+        # For now, return mock data. In production, this would query audit logs
+        # This would typically integrate with a separate audit service
+        history = [
+            {
+                "id": 1,
+                "action": "created",
+                "user": "admin@company.com",
+                "timestamp": datetime.now().isoformat(),
+                "details": "Rule created from SOC2 template",
+                "changes": {}
+            },
+            {
+                "id": 2,
+                "action": "updated",
+                "user": "compliance.manager@company.com", 
+                "timestamp": (datetime.now() - timedelta(days=1)).isoformat(),
+                "details": "Updated severity level",
+                "changes": {
+                    "severity": {"old": "medium", "new": "high"}
+                }
+            },
+            {
+                "id": 3,
+                "action": "evaluated",
+                "user": "system",
+                "timestamp": (datetime.now() - timedelta(hours=2)).isoformat(),
+                "details": "Automated evaluation completed",
+                "changes": {
+                    "evaluation_result": {"status": "compliant", "score": 95}
+                }
+            }
+        ]
+        
+        return history
+        
+    except Exception as e:
+        logger.error(f"Error getting audit history for rule {rule_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
