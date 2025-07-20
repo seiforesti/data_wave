@@ -1,401 +1,396 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 from typing import List, Dict, Any
 import logging
 from datetime import datetime
+
+# **INTERCONNECTED: Import all models and services**
 from app.models.compliance_rule_models import (
-    ComplianceRuleTemplate, ComplianceRule,
-    ComplianceRuleType, ComplianceRuleSeverity, ComplianceRuleStatus,
-    ComplianceRuleScope
+    ComplianceRule, ComplianceRuleCreate, ComplianceRuleType, 
+    ComplianceRuleSeverity, ComplianceRuleStatus, ComplianceRuleScope
 )
+from app.models.scan_models import DataSource, ScanRuleSet
+from app.services.compliance_rule_service import ComplianceRuleService
+from app.services.data_source_service import DataSourceService
+from app.db_session import get_session
 
 logger = logging.getLogger(__name__)
 
 
 class ComplianceRuleInitService:
-    """Service for initializing compliance rule templates and sample data"""
+    """Service for initializing compliance rules and framework integrations"""
     
     @staticmethod
-    def create_default_templates(session: Session) -> None:
-        """Create default compliance rule templates"""
+    def initialize_default_compliance_rules(session: Session) -> Dict[str, Any]:
+        """Initialize default compliance rules from all frameworks"""
         try:
-            # Check if templates already exist
-            existing_templates = session.query(ComplianceRuleTemplate).count()
-            if existing_templates > 0:
-                logger.info("Compliance rule templates already exist, skipping initialization")
-                return
+            # Get all frameworks and their templates
+            frameworks = ComplianceRuleService.get_compliance_frameworks()
             
-            templates = [
-                # GDPR Templates
-                {
-                    "name": "GDPR Personal Data Encryption",
-                    "description": "Ensures personal data is encrypted according to GDPR requirements",
-                    "rule_type": ComplianceRuleType.PRIVACY,
-                    "severity": ComplianceRuleSeverity.CRITICAL,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition_template": '{"column_name_regex": "{{personal_data_pattern}}", "encryption_required": true}',
-                    "parameter_definitions": [
-                        {
-                            "name": "personal_data_pattern",
-                            "type": "string",
-                            "description": "Regex pattern to identify personal data columns",
-                            "required": True,
-                            "defaultValue": ".*(email|name|phone|address|ssn).*"
-                        }
-                    ],
-                    "default_parameters": {
-                        "personal_data_pattern": ".*(email|name|phone|address|ssn).*"
-                    },
-                    "remediation_template": "Encrypt the identified personal data columns using AES-256 encryption",
-                    "reference_url": "https://gdpr.eu/article-32-security-of-processing/",
-                    "category": "Data Protection"
-                },
-                {
-                    "name": "GDPR Data Retention Policy",
-                    "description": "Ensures data is not retained longer than necessary per GDPR",
-                    "rule_type": ComplianceRuleType.DATA_RETENTION,
-                    "severity": ComplianceRuleSeverity.HIGH,
-                    "scope": ComplianceRuleScope.TABLE,
-                    "entity_types": ["table"],
-                    "condition_template": '{"retention_period_days": {{max_retention_days}}, "date_column": "{{date_column}}"}',
-                    "parameter_definitions": [
-                        {
-                            "name": "max_retention_days",
-                            "type": "number",
-                            "description": "Maximum retention period in days",
-                            "required": True,
-                            "defaultValue": 2555  # 7 years
-                        },
-                        {
-                            "name": "date_column",
-                            "type": "string",
-                            "description": "Column containing the creation date",
-                            "required": True,
-                            "defaultValue": "created_at"
-                        }
-                    ],
-                    "default_parameters": {
-                        "max_retention_days": 2555,
-                        "date_column": "created_at"
-                    },
-                    "remediation_template": "Implement automated data purging for records older than {{max_retention_days}} days",
-                    "reference_url": "https://gdpr.eu/article-5-how-to-process-personal-data/",
-                    "category": "Data Lifecycle"
-                },
-                
-                # SOX Templates
-                {
-                    "name": "SOX Financial Data Access Control",
-                    "description": "Ensures proper access controls for financial data per SOX requirements",
-                    "rule_type": ComplianceRuleType.ACCESS_CONTROL,
-                    "severity": ComplianceRuleSeverity.CRITICAL,
-                    "scope": ComplianceRuleScope.TABLE,
-                    "entity_types": ["table"],
-                    "condition_template": '{"table_prefix": "{{financial_prefix}}", "required_roles": {{authorized_roles}}}',
-                    "parameter_definitions": [
-                        {
-                            "name": "financial_prefix",
-                            "type": "string",
-                            "description": "Prefix for financial tables",
-                            "required": True,
-                            "defaultValue": "fin_"
-                        },
-                        {
-                            "name": "authorized_roles",
-                            "type": "array",
-                            "description": "List of authorized roles",
-                            "required": True,
-                            "defaultValue": ["finance_admin", "auditor", "cfo"]
-                        }
-                    ],
-                    "default_parameters": {
-                        "financial_prefix": "fin_",
-                        "authorized_roles": ["finance_admin", "auditor", "cfo"]
-                    },
-                    "remediation_template": "Review and update access permissions for financial tables. Remove unauthorized access.",
-                    "reference_url": "https://www.sec.gov/about/laws/soa2002.pdf",
-                    "category": "Access Control"
-                },
-                
-                # HIPAA Templates
-                {
-                    "name": "HIPAA PHI Data Encryption",
-                    "description": "Ensures Protected Health Information is encrypted per HIPAA requirements",
-                    "rule_type": ComplianceRuleType.ENCRYPTION,
-                    "severity": ComplianceRuleSeverity.CRITICAL,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition_template": '{"phi_pattern": "{{phi_regex}}", "encryption_algorithm": "{{encryption_type}}"}',
-                    "parameter_definitions": [
-                        {
-                            "name": "phi_regex",
-                            "type": "string",
-                            "description": "Regex pattern to identify PHI columns",
-                            "required": True,
-                            "defaultValue": ".*(patient|medical|health|diagnosis|treatment).*"
-                        },
-                        {
-                            "name": "encryption_type",
-                            "type": "string",
-                            "description": "Required encryption algorithm",
-                            "required": True,
-                            "defaultValue": "AES-256"
-                        }
-                    ],
-                    "default_parameters": {
-                        "phi_regex": ".*(patient|medical|health|diagnosis|treatment).*",
-                        "encryption_type": "AES-256"
-                    },
-                    "remediation_template": "Encrypt PHI columns using {{encryption_type}} encryption",
-                    "reference_url": "https://www.hhs.gov/hipaa/for-professionals/security/laws-regulations/index.html",
-                    "category": "Healthcare Data Protection"
-                },
-                
-                # PCI DSS Templates
-                {
-                    "name": "PCI DSS Credit Card Data Protection",
-                    "description": "Ensures credit card data is properly protected per PCI DSS",
-                    "rule_type": ComplianceRuleType.SECURITY,
-                    "severity": ComplianceRuleSeverity.CRITICAL,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition_template": '{"card_data_pattern": "{{card_pattern}}", "masking_required": true}',
-                    "parameter_definitions": [
-                        {
-                            "name": "card_pattern",
-                            "type": "string",
-                            "description": "Pattern to identify credit card data",
-                            "required": True,
-                            "defaultValue": ".*(card|credit|payment|ccn).*"
-                        }
-                    ],
-                    "default_parameters": {
-                        "card_pattern": ".*(card|credit|payment|ccn).*"
-                    },
-                    "remediation_template": "Implement data masking or tokenization for credit card data",
-                    "reference_url": "https://www.pcisecuritystandards.org/",
-                    "category": "Payment Security"
-                },
-                
-                # General Security Templates
-                {
-                    "name": "Sensitive Data Classification",
-                    "description": "Ensures sensitive data is properly classified and labeled",
-                    "rule_type": ComplianceRuleType.SECURITY,
-                    "severity": ComplianceRuleSeverity.HIGH,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition_template": '{"sensitivity_keywords": {{sensitive_patterns}}, "classification_required": true}',
-                    "parameter_definitions": [
-                        {
-                            "name": "sensitive_patterns",
-                            "type": "array",
-                            "description": "Keywords that indicate sensitive data",
-                            "required": True,
-                            "defaultValue": ["password", "secret", "key", "token", "confidential"]
-                        }
-                    ],
-                    "default_parameters": {
-                        "sensitive_patterns": ["password", "secret", "key", "token", "confidential"]
-                    },
-                    "remediation_template": "Apply appropriate sensitivity labels and access controls",
-                    "reference_url": "https://www.nist.gov/cybersecurity",
-                    "category": "Data Classification"
-                },
-                
-                # Quality Templates
-                {
-                    "name": "Data Quality Completeness Check",
-                    "description": "Ensures critical data fields are not null or empty",
-                    "rule_type": ComplianceRuleType.QUALITY,
-                    "severity": ComplianceRuleSeverity.MEDIUM,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition_template": '{"critical_columns": {{required_columns}}, "null_threshold": {{max_null_percentage}}}',
-                    "parameter_definitions": [
-                        {
-                            "name": "required_columns",
-                            "type": "array",
-                            "description": "List of columns that must not be null",
-                            "required": True,
-                            "defaultValue": ["id", "created_at", "updated_at"]
-                        },
-                        {
-                            "name": "max_null_percentage",
-                            "type": "number",
-                            "description": "Maximum allowed null percentage",
-                            "required": True,
-                            "defaultValue": 5.0
-                        }
-                    ],
-                    "default_parameters": {
-                        "required_columns": ["id", "created_at", "updated_at"],
-                        "max_null_percentage": 5.0
-                    },
-                    "remediation_template": "Implement data validation and default value assignment",
-                    "reference_url": "https://www.iso.org/standard/35736.html",
-                    "category": "Data Quality"
-                }
-            ]
+            created_rules = []
+            skipped_rules = []
+            error_rules = []
             
-            # Create template records
-            for template_data in templates:
-                template = ComplianceRuleTemplate(
-                    **template_data,
-                    is_built_in=True,
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-                session.add(template)
+            for framework in frameworks:
+                framework_id = framework["id"]
+                framework_name = framework["name"]
+                templates = framework.get("templates", [])
+                
+                logger.info(f"Initializing rules for framework: {framework_name}")
+                
+                for template in templates:
+                    try:
+                        # Check if rule already exists
+                        existing_rules = session.exec(
+                            select(ComplianceRule).where(
+                                ComplianceRule.name == template["name"]
+                            )
+                        ).all()
+                        
+                        if existing_rules:
+                            skipped_rules.append({
+                                "template_id": template["id"],
+                                "name": template["name"],
+                                "reason": "Rule already exists"
+                            })
+                            continue
+                        
+                        # Create rule from template
+                        rule_data = ComplianceRuleCreate(
+                            name=template["name"],
+                            description=template["description"],
+                            rule_type=ComplianceRuleType(template["rule_type"]),
+                            severity=ComplianceRuleSeverity(template["severity"]),
+                            scope=ComplianceRuleScope(template.get("scope", "global")),
+                            condition=template["condition"],
+                            compliance_standard=framework_name,
+                            business_impact=template.get("business_impact", "medium"),
+                            regulatory_requirement=template.get("regulatory_requirement", False),
+                            remediation_steps=template.get("remediation_steps"),
+                            validation_frequency=template.get("validation_frequency", "weekly"),
+                            tags=[framework_id, template["rule_type"]],
+                            metadata={
+                                "framework_id": framework_id,
+                                "template_id": template["id"],
+                                "reference": template.get("reference"),
+                                "reference_link": template.get("reference_link"),
+                                "is_built_in": True,
+                                "created_from_init": True
+                            }
+                        )
+                        
+                        rule = ComplianceRuleService.create_rule(
+                            session=session,
+                            rule_data=rule_data,
+                            created_by="system_init"
+                        )
+                        
+                        created_rules.append({
+                            "id": rule.id,
+                            "name": rule.name,
+                            "framework": framework_name,
+                            "template_id": template["id"]
+                        })
+                        
+                        logger.info(f"Created rule: {rule.name} (ID: {rule.id})")
+                        
+                    except Exception as rule_error:
+                        error_rules.append({
+                            "template_id": template["id"],
+                            "name": template["name"],
+                            "error": str(rule_error)
+                        })
+                        logger.error(f"Failed to create rule from template {template['id']}: {rule_error}")
             
-            session.commit()
-            logger.info(f"Created {len(templates)} default compliance rule templates")
+            result = {
+                "frameworks_processed": len(frameworks),
+                "rules_created": len(created_rules),
+                "rules_skipped": len(skipped_rules),
+                "rules_failed": len(error_rules),
+                "created_rules": created_rules,
+                "skipped_rules": skipped_rules,
+                "error_rules": error_rules,
+                "initialized_at": datetime.now().isoformat()
+            }
+            
+            logger.info(f"Compliance rule initialization complete: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error initializing compliance rules: {str(e)}")
+            raise
+    
+    @staticmethod
+    def link_rules_to_data_sources(session: Session, auto_link: bool = True) -> Dict[str, Any]:
+        """Link compliance rules to appropriate data sources based on their characteristics"""
+        try:
+            # **INTERCONNECTED: Get all data sources using existing service**
+            data_sources = DataSourceService.get_all_data_sources(session)
+            
+            # Get all compliance rules
+            rules = session.exec(select(ComplianceRule)).all()
+            
+            linked_count = 0
+            link_details = []
+            
+            for rule in rules:
+                applicable_sources = []
+                
+                for ds in data_sources:
+                    is_applicable = ComplianceRuleInitService._is_rule_applicable_to_source(rule, ds)
+                    
+                    if is_applicable:
+                        applicable_sources.append(ds)
+                
+                # Link rule to applicable data sources
+                if applicable_sources and auto_link:
+                    try:
+                        # Clear existing relationships
+                        rule.data_sources.clear()
+                        
+                        # Add new relationships
+                        for ds in applicable_sources:
+                            rule.data_sources.append(ds)
+                        
+                        session.add(rule)
+                        linked_count += 1
+                        
+                        link_details.append({
+                            "rule_id": rule.id,
+                            "rule_name": rule.name,
+                            "linked_sources": len(applicable_sources),
+                            "source_ids": [ds.id for ds in applicable_sources]
+                        })
+                        
+                        logger.info(f"Linked rule {rule.name} to {len(applicable_sources)} data sources")
+                        
+                    except Exception as link_error:
+                        logger.error(f"Failed to link rule {rule.id} to data sources: {link_error}")
+            
+            if auto_link:
+                session.commit()
+            
+            return {
+                "rules_processed": len(rules),
+                "rules_linked": linked_count,
+                "total_data_sources": len(data_sources),
+                "link_details": link_details,
+                "linked_at": datetime.now().isoformat()
+            }
             
         except Exception as e:
             session.rollback()
-            logger.error(f"Error creating default templates: {str(e)}")
+            logger.error(f"Error linking rules to data sources: {str(e)}")
             raise
     
     @staticmethod
-    def create_sample_rules(session: Session) -> None:
-        """Create sample compliance rules for demonstration"""
+    def _is_rule_applicable_to_source(rule: ComplianceRule, data_source: DataSource) -> bool:
+        """Determine if a compliance rule is applicable to a specific data source"""
         try:
-            # Check if sample rules already exist
-            existing_rules = session.query(ComplianceRule).filter(
-                ComplianceRule.is_built_in == True
-            ).count()
+            # Global rules apply to all sources
+            if rule.scope == ComplianceRuleScope.GLOBAL and rule.applies_to_all_sources:
+                return True
             
-            if existing_rules > 0:
-                logger.info("Sample compliance rules already exist, skipping initialization")
-                return
+            # Check rule type applicability
+            if rule.rule_type == ComplianceRuleType.ENCRYPTION:
+                # Encryption rules apply to all sources, especially sensitive ones
+                return True
             
-            sample_rules = [
-                {
-                    "name": "Email Column Encryption Rule",
-                    "description": "Ensures all email columns are encrypted for privacy protection",
-                    "rule_type": ComplianceRuleType.PRIVACY,
-                    "severity": ComplianceRuleSeverity.HIGH,
-                    "status": ComplianceRuleStatus.ACTIVE,
-                    "scope": ComplianceRuleScope.COLUMN,
-                    "entity_types": ["column"],
-                    "condition": '{"column_name_regex": ".*email.*", "encryption_required": true}',
-                    "rule_definition": {
-                        "pattern": ".*email.*",
-                        "case_sensitive": False,
-                        "encryption_algorithm": "AES-256"
-                    },
-                    "compliance_standard": "GDPR",
-                    "reference": "Article 32 - Security of processing",
-                    "remediation_steps": "1. Identify email columns\n2. Implement AES-256 encryption\n3. Update application code to handle encrypted data\n4. Test encryption/decryption functionality",
-                    "validation_frequency": "daily",
-                    "is_automated": True,
-                    "business_impact": "high",
-                    "regulatory_requirement": True,
-                    "tags": ["email", "encryption", "gdpr", "privacy"],
-                    "is_built_in": True,
-                    "is_global": True,
-                    "pass_rate": 95.5,
-                    "total_entities": 45,
-                    "passing_entities": 43,
-                    "failing_entities": 2
-                },
-                {
-                    "name": "Financial Table Access Control",
-                    "description": "Restricts access to financial tables to authorized personnel only",
-                    "rule_type": ComplianceRuleType.ACCESS_CONTROL,
-                    "severity": ComplianceRuleSeverity.CRITICAL,
-                    "status": ComplianceRuleStatus.ACTIVE,
-                    "scope": ComplianceRuleScope.TABLE,
-                    "entity_types": ["table"],
-                    "condition": '{"table_prefix": "fin_", "authorized_roles": ["finance_admin", "auditor"]}',
-                    "rule_definition": {
-                        "table_patterns": ["fin_*", "financial_*", "accounting_*"],
-                        "required_roles": ["finance_admin", "auditor", "cfo"],
-                        "access_type": "read_write"
-                    },
-                    "compliance_standard": "SOX",
-                    "reference": "Section 404 - Management Assessment of Internal Controls",
-                    "remediation_steps": "1. Review current access permissions\n2. Revoke unauthorized access\n3. Implement role-based access control\n4. Set up regular access reviews",
-                    "validation_frequency": "weekly",
-                    "is_automated": True,
-                    "business_impact": "critical",
-                    "regulatory_requirement": True,
-                    "tags": ["financial", "access_control", "sox", "security"],
-                    "is_built_in": True,
-                    "is_global": True,
-                    "pass_rate": 100.0,
-                    "total_entities": 12,
-                    "passing_entities": 12,
-                    "failing_entities": 0
-                },
-                {
-                    "name": "Data Retention Compliance",
-                    "description": "Ensures data is not retained longer than legally required",
-                    "rule_type": ComplianceRuleType.DATA_RETENTION,
-                    "severity": ComplianceRuleSeverity.HIGH,
-                    "status": ComplianceRuleStatus.ACTIVE,
-                    "scope": ComplianceRuleScope.TABLE,
-                    "entity_types": ["table"],
-                    "condition": '{"max_retention_days": 2555, "date_column": "created_at"}',
-                    "rule_definition": {
-                        "retention_periods": {
-                            "user_data": 2555,  # 7 years
-                            "log_data": 90,     # 3 months
-                            "temp_data": 30     # 1 month
-                        },
-                        "date_columns": ["created_at", "created_date", "timestamp"]
-                    },
-                    "compliance_standard": "GDPR",
-                    "reference": "Article 5(1)(e) - Storage limitation",
-                    "remediation_steps": "1. Identify tables with old data\n2. Implement automated purging\n3. Set up retention policies\n4. Monitor compliance regularly",
-                    "validation_frequency": "monthly",
-                    "is_automated": True,
-                    "auto_remediation": True,
-                    "business_impact": "medium",
-                    "regulatory_requirement": True,
-                    "tags": ["retention", "gdpr", "data_lifecycle", "automation"],
-                    "is_built_in": True,
-                    "is_global": True,
-                    "pass_rate": 88.7,
-                    "total_entities": 156,
-                    "passing_entities": 138,
-                    "failing_entities": 18
-                }
-            ]
+            elif rule.rule_type == ComplianceRuleType.ACCESS_CONTROL:
+                # Access control rules apply to monitored sources
+                return data_source.monitoring_enabled or data_source.criticality.value in ["critical", "high"]
             
-            # Create sample rule records
-            for rule_data in sample_rules:
-                rule = ComplianceRule(
-                    **rule_data,
-                    created_at=datetime.now(),
-                    updated_at=datetime.now(),
-                    created_by="system",
-                    updated_by="system"
+            elif rule.rule_type == ComplianceRuleType.PRIVACY:
+                # Privacy rules apply to sources with personal data
+                if data_source.data_classification and data_source.data_classification.value in ["confidential", "restricted"]:
+                    return True
+                if data_source.tags and any(tag in ["pii", "phi", "personal_data"] for tag in data_source.tags):
+                    return True
+            
+            elif rule.rule_type == ComplianceRuleType.AUDIT:
+                # Audit rules apply to production and critical sources
+                if data_source.environment and data_source.environment.value == "production":
+                    return True
+                if data_source.criticality and data_source.criticality.value in ["critical", "high"]:
+                    return True
+            
+            elif rule.rule_type == ComplianceRuleType.MONITORING:
+                # Monitoring rules apply to all production sources
+                return data_source.environment and data_source.environment.value == "production"
+            
+            elif rule.rule_type == ComplianceRuleType.DATA_RETENTION:
+                # Data retention rules apply to sources with retention requirements
+                if data_source.tags and any(tag in ["retention", "archival", "backup"] for tag in data_source.tags):
+                    return True
+                return data_source.backup_enabled
+            
+            elif rule.rule_type == ComplianceRuleType.SECURITY:
+                # Security rules apply to all sources with security requirements
+                return data_source.criticality and data_source.criticality.value in ["critical", "high", "medium"]
+            
+            # Check compliance standard applicability
+            if rule.compliance_standard:
+                standard_lower = rule.compliance_standard.lower()
+                
+                # HIPAA applies to healthcare data
+                if "hipaa" in standard_lower:
+                    if data_source.tags and any(tag in ["healthcare", "phi", "medical"] for tag in data_source.tags):
+                        return True
+                
+                # PCI DSS applies to payment data
+                elif "pci" in standard_lower:
+                    if data_source.tags and any(tag in ["payment", "financial", "card_data"] for tag in data_source.tags):
+                        return True
+                
+                # GDPR applies to EU personal data
+                elif "gdpr" in standard_lower:
+                    if data_source.tags and any(tag in ["eu", "personal_data", "pii"] for tag in data_source.tags):
+                        return True
+                
+                # SOC 2 applies to service organizations (general applicability)
+                elif "soc" in standard_lower:
+                    return True
+            
+            # Default: apply to production and critical sources
+            return (data_source.environment and data_source.environment.value == "production") or \
+                   (data_source.criticality and data_source.criticality.value in ["critical", "high"])
+                   
+        except Exception as e:
+            logger.warning(f"Error determining rule applicability: {e}")
+            return False
+    
+    @staticmethod
+    def create_scan_rule_integrations(session: Session) -> Dict[str, Any]:
+        """Create scan rule set integrations for compliance rules"""
+        try:
+            # **INTERCONNECTED: Get existing scan rule sets**
+            scan_rule_sets = session.exec(select(ScanRuleSet)).all()
+            
+            # Get compliance rules that need scan integration
+            rules = session.exec(
+                select(ComplianceRule).where(
+                    ComplianceRule.auto_scan_on_evaluation == True
                 )
-                session.add(rule)
+            ).all()
+            
+            integrated_count = 0
+            integration_details = []
+            
+            for rule in rules:
+                if rule.scan_rule_set_id:
+                    continue  # Already has scan integration
+                
+                # Find appropriate scan rule set
+                suitable_scan_set = None
+                
+                # Look for scan sets associated with the same data sources
+                for scan_set in scan_rule_sets:
+                    if scan_set.data_source_id:
+                        # Check if any of the rule's data sources match
+                        rule_source_ids = [ds.id for ds in rule.data_sources]
+                        if scan_set.data_source_id in rule_source_ids:
+                            suitable_scan_set = scan_set
+                            break
+                
+                # If no specific scan set found, use a general one or create default
+                if not suitable_scan_set and scan_rule_sets:
+                    suitable_scan_set = scan_rule_sets[0]  # Use first available
+                
+                if suitable_scan_set:
+                    rule.scan_rule_set_id = suitable_scan_set.id
+                    session.add(rule)
+                    integrated_count += 1
+                    
+                    integration_details.append({
+                        "rule_id": rule.id,
+                        "rule_name": rule.name,
+                        "scan_rule_set_id": suitable_scan_set.id,
+                        "scan_rule_set_name": suitable_scan_set.name
+                    })
+                    
+                    logger.info(f"Integrated rule {rule.name} with scan rule set {suitable_scan_set.name}")
             
             session.commit()
-            logger.info(f"Created {len(sample_rules)} sample compliance rules")
+            
+            return {
+                "rules_processed": len(rules),
+                "integrations_created": integrated_count,
+                "available_scan_sets": len(scan_rule_sets),
+                "integration_details": integration_details,
+                "integrated_at": datetime.now().isoformat()
+            }
             
         except Exception as e:
             session.rollback()
-            logger.error(f"Error creating sample rules: {str(e)}")
+            logger.error(f"Error creating scan rule integrations: {str(e)}")
             raise
     
     @staticmethod
-    def initialize_compliance_data(session: Session) -> None:
-        """Initialize all compliance rule data"""
+    def initialize_complete_system(session: Session) -> Dict[str, Any]:
+        """Initialize the complete compliance system with all integrations"""
         try:
-            logger.info("Starting compliance rule data initialization...")
+            logger.info("Starting complete compliance system initialization...")
             
-            # Create default templates
-            ComplianceRuleInitService.create_default_templates(session)
+            # Step 1: Initialize default compliance rules
+            rules_result = ComplianceRuleInitService.initialize_default_compliance_rules(session)
             
-            # Create sample rules
-            ComplianceRuleInitService.create_sample_rules(session)
+            # Step 2: Link rules to data sources
+            linking_result = ComplianceRuleInitService.link_rules_to_data_sources(session, auto_link=True)
             
-            logger.info("Compliance rule data initialization completed successfully")
+            # Step 3: Create scan rule integrations
+            scan_integration_result = ComplianceRuleInitService.create_scan_rule_integrations(session)
+            
+            complete_result = {
+                "initialization_complete": True,
+                "steps_completed": 3,
+                "rules_initialization": rules_result,
+                "data_source_linking": linking_result,
+                "scan_integration": scan_integration_result,
+                "system_ready": True,
+                "completed_at": datetime.now().isoformat()
+            }
+            
+            logger.info("Complete compliance system initialization finished successfully")
+            return complete_result
             
         except Exception as e:
-            logger.error(f"Error during compliance rule initialization: {str(e)}")
+            logger.error(f"Error in complete system initialization: {str(e)}")
             raise
+    
+    @staticmethod
+    def get_system_status(session: Session) -> Dict[str, Any]:
+        """Get the current status of the compliance system"""
+        try:
+            # Count rules by framework
+            rules = session.exec(select(ComplianceRule)).all()
+            framework_counts = {}
+            
+            for rule in rules:
+                framework = rule.compliance_standard or "Unknown"
+                framework_counts[framework] = framework_counts.get(framework, 0) + 1
+            
+            # Count data source relationships
+            linked_rules = len([r for r in rules if r.data_sources])
+            
+            # Count scan integrations
+            scan_integrated_rules = len([r for r in rules if r.scan_rule_set_id])
+            
+            # **INTERCONNECTED: Get data source count using existing service**
+            data_sources = DataSourceService.get_all_data_sources(session)
+            
+            return {
+                "total_rules": len(rules),
+                "framework_distribution": framework_counts,
+                "rules_linked_to_sources": linked_rules,
+                "rules_with_scan_integration": scan_integrated_rules,
+                "total_data_sources": len(data_sources),
+                "system_health": "healthy" if len(rules) > 0 else "needs_initialization",
+                "last_checked": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting system status: {str(e)}")
+            return {
+                "system_health": "error",
+                "error": str(e),
+                "last_checked": datetime.now().isoformat()
+            }

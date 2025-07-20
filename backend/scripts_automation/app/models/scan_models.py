@@ -201,9 +201,7 @@ class DataSource(SQLModel, table=True):
     scan_rule_sets: List["ScanRuleSet"] = Relationship(back_populates="data_source")
     discovery_history: List["DiscoveryHistory"] = Relationship(back_populates="data_source")
     
-    # **NEW: Compliance Relationships**
-    compliance_requirements: List["ComplianceRequirement"] = Relationship(back_populates="data_source")
-    compliance_assessments: List["ComplianceAssessment"] = Relationship(back_populates="data_source")
+    # **INTERCONNECTED: Compliance Relationships**
     compliance_rules: List["ComplianceRule"] = Relationship(
         back_populates="data_sources",
         link_table="compliance_rule_data_source_link"

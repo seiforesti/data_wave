@@ -729,21 +729,14 @@ export class ComplianceManagementAPI {
     })
   }
 
-  static async getDataSource(id: number): Promise<any> {
-    return apiClient.request({
-      method: 'GET',
-      url: `/scan/data-sources/${id}`
-    })
-  }
-
   static async getDataSourceCompliance(id: number): Promise<any> {
     return apiClient.request({
       method: 'GET',
-      url: `/scan/data-sources/${id}/compliance-status`
+      url: `/compliance/risk-assessment/data_source/${id}`
     })
   }
 
-  // **NEW: Enhanced Framework and Template APIs**
+  // **INTERCONNECTED: Enhanced Framework and Template APIs**
   static async getFrameworks(): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
@@ -767,7 +760,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  // **NEW: Scan Rule Integration APIs**
+  // **INTERCONNECTED: Scan Rule Integration APIs**
   static async getRelatedScanRules(rule_id: number): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
@@ -778,6 +771,8 @@ export class ComplianceManagementAPI {
   static async evaluateRuleWithDataSources(rule_id: number, params: {
     data_source_ids?: number[]
     run_scans?: boolean
+    include_performance_check?: boolean
+    include_security_check?: boolean
   }): Promise<any> {
     return apiClient.request({
       method: 'POST',
@@ -786,7 +781,7 @@ export class ComplianceManagementAPI {
     })
   }
 
-  // **NEW: Advanced Analytics APIs**
+  // **INTERCONNECTED: Advanced Analytics APIs**
   static async getDashboardAnalytics(params?: {
     data_source_id?: number
     time_range?: string
@@ -806,7 +801,7 @@ export class ComplianceManagementAPI {
   }
 }
 
-// Framework Integration APIs
+// Framework Integration APIs - Updated to match backend
 export class FrameworkIntegrationAPI {
   static async getFrameworks(params?: {
     category?: string
