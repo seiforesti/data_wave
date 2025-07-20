@@ -6,6 +6,7 @@ import logging
 
 # **INTERCONNECTED: Import enhanced service and models**
 from app.services.compliance_rule_service import ComplianceRuleService
+from app.services.compliance_production_services import ComplianceAuditService, ComplianceAnalyticsService
 from app.models.compliance_rule_models import (
     ComplianceRuleResponse, ComplianceRuleEvaluationResponse, ComplianceIssueResponse, ComplianceWorkflowResponse,
     ComplianceRuleCreate, ComplianceRuleUpdate, ComplianceIssueCreate, ComplianceIssueUpdate,
@@ -619,20 +620,13 @@ async def get_trends(
     days: Optional[int] = Query(30, description="Number of days for trends"),
     session: Session = Depends(get_session)
 ):
-    """Get compliance trends"""
+    """Get real compliance trends from evaluation data"""
     try:
-        # This would integrate with analytics service in a real implementation
-        trends = []
-        start_date = datetime.now() - timedelta(days=days)
-        
-        for i in range(days):
-            date = start_date + timedelta(days=i)
-            trends.append({
-                "date": date.isoformat(),
-                "compliance_score": 85 + (i % 10),  # Mock trend data
-                "rules_evaluated": 10 + (i % 5),
-                "issues_found": max(0, 5 - (i % 3))
-            })
+        trends = ComplianceAnalyticsService.get_compliance_trends(
+            session=session,
+            rule_id=rule_id,
+            days=days
+        )
         
         return trends
         
@@ -645,20 +639,106 @@ async def get_trends(
 async def get_statistics(
     session: Session = Depends(get_session)
 ):
-    """Get compliance statistics"""
+    """Get comprehensive compliance statistics"""
     try:
-        # Get basic statistics from the service
-        analytics = ComplianceRuleService.get_compliance_dashboard_analytics(session)
-        
-        return {
-            "total_rules": analytics["summary"]["total_rules"],
-            "active_rules": analytics["summary"]["active_rules"],
-            "compliance_score": 87.5,  # Would be calculated from actual data
-            "recent_evaluations": len(analytics["recent_activity"]["evaluations"]),
-            "frameworks_covered": len(analytics["distributions"]["frameworks"]),
-            "last_updated": datetime.now().isoformat()
-        }
+        statistics = ComplianceAnalyticsService.get_dashboard_statistics(session)
+        return statistics
         
     except Exception as e:
         logger.error(f"Error getting statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **COMPREHENSIVE: Bulk Operations**
+@router.post("/bulk-update", response_model=List[ComplianceRuleResponse])
+async def bulk_update_requirements(
+    updates: Dict[str, Any] = Body(..., description="Bulk update data"),
+    session: Session = Depends(get_session)
+):
+    """Bulk update compliance requirements"""
+    try:
+        update_list = updates.get("updates", [])
+        results = []
+        
+        for update_item in update_list:
+            rule_id = update_item.get("id")
+            rule_data = update_item.get("data", {})
+            
+            if rule_id and rule_data:
+                # Convert dict to ComplianceRuleUpdate model
+                from app.models.compliance_rule_models import ComplianceRuleUpdate
+                update_model = ComplianceRuleUpdate(**rule_data)
+                
+                updated_rule = ComplianceRuleService.update_rule(session, rule_id, update_model)
+                if updated_rule:
+                    results.append(updated_rule)
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error in bulk update: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-delete", response_model=Dict[str, Any])
+async def bulk_delete_requirements(
+    delete_data: Dict[str, Any] = Body(..., description="Bulk delete data"),
+    session: Session = Depends(get_session)
+):
+    """Bulk delete compliance requirements"""
+    try:
+        ids = delete_data.get("ids", [])
+        deleted_count = 0
+        failed_ids = []
+        
+        for rule_id in ids:
+            try:
+                success = ComplianceRuleService.delete_rule(session, rule_id)
+                if success:
+                    deleted_count += 1
+                else:
+                    failed_ids.append(rule_id)
+            except Exception as e:
+                logger.warning(f"Failed to delete rule {rule_id}: {str(e)}")
+                failed_ids.append(rule_id)
+        
+        return {
+            "message": f"Successfully deleted {deleted_count} compliance rules",
+            "deleted_count": deleted_count,
+            "failed_ids": failed_ids,
+            "total_requested": len(ids)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk delete: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **COMPREHENSIVE: Audit and History**
+@router.get("/{rule_id}/history", response_model=List[Dict[str, Any]])
+async def get_audit_history(
+    rule_id: int,
+    limit: int = Query(50, ge=1, le=100, description="Number of history items to return"),
+    session: Session = Depends(get_session)
+):
+    """Get real audit history for a compliance rule"""
+    try:
+        # Verify rule exists
+        rule = ComplianceRuleService.get_rule(session, rule_id)
+        if not rule:
+            raise HTTPException(status_code=404, detail="Compliance rule not found")
+        
+        history = ComplianceAuditService.get_audit_history(
+            session=session,
+            entity_type="rule",
+            entity_id=rule_id,
+            limit=limit
+        )
+        
+        return history
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting audit history for rule {rule_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

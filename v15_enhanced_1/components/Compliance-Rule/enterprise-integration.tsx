@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo, u
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { EventEmitter } from 'events'
+import { ComplianceAPIs } from './services/enterprise-apis'
 
 // Advanced Types for Enterprise Compliance
 interface ComplianceConfig {
@@ -1107,13 +1108,7 @@ export function EnterpriseComplianceProvider({
   // Workflow functions
   const startWorkflow = useCallback(async (workflowId: string, params: any) => {
     try {
-      const response = await fetch('/api/compliance/workflows/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId, params })
-      })
-      if (!response.ok) throw new Error('Failed to start workflow')
-      const workflowInstanceId = await response.json()
+      const workflowInstanceId = await ComplianceAPIs.Workflow.startWorkflow(parseInt(workflowId), params)
       eventBus.emitComplianceEvent({
         type: 'workflow_started',
         data: { workflowId, params, workflowInstanceId },
@@ -1289,9 +1284,8 @@ export function EnterpriseComplianceProvider({
   // Framework Management functions
   const getFrameworks = useCallback(async () => {
     try {
-      const response = await fetch('/api/compliance/frameworks')
-      if (!response.ok) throw new Error('Failed to get frameworks')
-      return await response.json()
+      const frameworks = await ComplianceAPIs.Framework.getFrameworks()
+      return frameworks
     } catch (error) {
       console.error('Failed to get frameworks:', error)
       toast.error('Failed to get frameworks')
@@ -1301,12 +1295,7 @@ export function EnterpriseComplianceProvider({
 
   const importFrameworkRequirements = useCallback(async (framework: string, dataSourceId: number) => {
     try {
-      const response = await fetch(`/api/compliance/frameworks/${framework}/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataSourceId })
-      })
-      if (!response.ok) throw new Error('Failed to import framework requirements')
+      await ComplianceAPIs.Framework.importFrameworkRequirements(framework, dataSourceId)
       toast.success(`Framework "${framework}" requirements imported.`)
     } catch (error) {
       console.error('Failed to import framework requirements:', error)
@@ -1316,9 +1305,8 @@ export function EnterpriseComplianceProvider({
 
   const validateFrameworkCompliance = useCallback(async (framework: string, entityId: string) => {
     try {
-      const response = await fetch(`/api/compliance/frameworks/${framework}/validate/${entityId}`)
-      if (!response.ok) throw new Error('Failed to validate framework compliance')
-      return await response.json()
+      const result = await ComplianceAPIs.Framework.validateFrameworkCompliance(framework, entityId)
+      return result
     } catch (error) {
       console.error('Failed to validate framework compliance:', error)
       throw error
@@ -1327,12 +1315,7 @@ export function EnterpriseComplianceProvider({
 
   const createFrameworkMapping = useCallback(async (sourceFramework: string, targetFramework: string, mappings: any) => {
     try {
-      const response = await fetch(`/api/compliance/frameworks/mapping`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceFramework, targetFramework, mappings })
-      })
-      if (!response.ok) throw new Error('Failed to create framework mapping')
+      await ComplianceAPIs.Framework.createFrameworkMapping(sourceFramework, targetFramework, mappings)
       toast.success(`Framework mapping created for ${sourceFramework} to ${targetFramework}`)
     } catch (error) {
       console.error('Failed to create framework mapping:', error)

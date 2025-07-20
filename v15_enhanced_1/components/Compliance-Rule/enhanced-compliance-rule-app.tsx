@@ -42,6 +42,7 @@ import {
 // Enterprise Integration
 import { EnterpriseComplianceProvider, useEnterpriseCompliance } from './enterprise-integration'
 import { ComplianceHooks } from './hooks/use-enterprise-features'
+import { ComplianceAPIs } from './services/enterprise-apis'
 
 // Enhanced Components with Enterprise Integration
 import ComplianceRuleList from './components/ComplianceRuleList'
@@ -427,13 +428,37 @@ const AnalyticsDashboard: React.FC<{ insights: any[]; trends: any[]; metrics: an
 // Advanced Risk Assessment Panel
 const RiskAssessmentPanel: React.FC<{ riskData: any; onUpdate: () => void }> = ({ riskData, onUpdate }) => {
   const [selectedRiskCategory, setSelectedRiskCategory] = useState('overall')
-  
-  const riskCategories = [
-    { id: 'overall', label: 'Overall Risk', color: 'red', value: 72 },
-    { id: 'data', label: 'Data Risk', color: 'orange', value: 68 },
-    { id: 'access', label: 'Access Risk', color: 'yellow', value: 45 },
-    { id: 'compliance', label: 'Compliance Risk', color: 'blue', value: 82 }
-  ]
+  const [riskCategories, setRiskCategories] = useState<any[]>([])
+  const [loadingRisk, setLoadingRisk] = useState(true)
+
+  // Load real risk data from backend
+  useEffect(() => {
+    const loadRiskData = async () => {
+      try {
+        setLoadingRisk(true)
+        const riskMatrix = await ComplianceAPIs.Risk.getRiskMatrix()
+        setRiskCategories(riskMatrix.categories || [
+          { id: 'overall', label: 'Overall Risk', color: 'red', value: 0 },
+          { id: 'data', label: 'Data Risk', color: 'orange', value: 0 },
+          { id: 'access', label: 'Access Risk', color: 'yellow', value: 0 },
+          { id: 'compliance', label: 'Compliance Risk', color: 'blue', value: 0 }
+        ])
+      } catch (error) {
+        console.error('Failed to load risk data:', error)
+        // Use default categories with zero values if API fails
+        setRiskCategories([
+          { id: 'overall', label: 'Overall Risk', color: 'red', value: 0 },
+          { id: 'data', label: 'Data Risk', color: 'orange', value: 0 },
+          { id: 'access', label: 'Access Risk', color: 'yellow', value: 0 },
+          { id: 'compliance', label: 'Compliance Risk', color: 'blue', value: 0 }
+        ])
+      } finally {
+        setLoadingRisk(false)
+      }
+    }
+
+    loadRiskData()
+  }, [])
 
   return (
     <Card className="mb-6">
@@ -446,7 +471,16 @@ const RiskAssessmentPanel: React.FC<{ riskData: any; onUpdate: () => void }> = (
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-          {riskCategories.map((category) => (
+          {loadingRisk ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="p-4 rounded-lg border-2 border-muted animate-pulse">
+                <div className="h-4 bg-muted rounded mb-2"></div>
+                <div className="h-8 bg-muted rounded mb-2"></div>
+                <div className="h-3 bg-muted rounded"></div>
+              </div>
+            ))
+          ) : (
+            riskCategories.map((category) => (
             <motion.div
               key={category.id}
               whileHover={{ scale: 1.02 }}
@@ -467,7 +501,8 @@ const RiskAssessmentPanel: React.FC<{ riskData: any; onUpdate: () => void }> = (
                 </div>
               </div>
             </motion.div>
-          ))}
+            ))
+          )}
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -522,27 +557,31 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
 
 
 
-  // Load active workflows from backend
+  // Load active workflows and templates from backend
   const [loadingWorkflows, setLoadingWorkflows] = useState(false)
 
   useEffect(() => {
-    const loadActiveWorkflows = async () => {
+    const loadWorkflowData = async () => {
       setLoadingWorkflows(true)
       try {
-        const response = await ComplianceAPIs.ComplianceManagement.getWorkflows({
-          status: 'active',
-          limit: 5
-        })
-        setActiveWorkflows(response.data || [])
+        const [workflowsResponse, templatesResponse] = await Promise.all([
+          ComplianceAPIs.ComplianceManagement.getWorkflows({
+            status: 'active',
+            limit: 5
+          }),
+          ComplianceAPIs.Workflow.getWorkflowTemplates()
+        ])
+        setActiveWorkflows(workflowsResponse.data || [])
+        setWorkflowTemplates(templatesResponse || [])
       } catch (error) {
-        console.error('Failed to load active workflows:', error)
-        enterprise.sendNotification('error', 'Failed to load active workflows')
+        console.error('Failed to load workflow data:', error)
+        enterprise.sendNotification('error', 'Failed to load workflow data')
       } finally {
         setLoadingWorkflows(false)
       }
     }
 
-    loadActiveWorkflows()
+    loadWorkflowData()
   }, [enterprise])
 
   return (
@@ -617,29 +656,37 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
           <div>
             <h4 className="font-semibold mb-4">Workflow Templates</h4>
             <div className="grid grid-cols-1 gap-3">
-              {[
-                { name: 'SOC 2 Type II Assessment', category: 'Security', icon: Shield },
-                { name: 'GDPR Data Mapping', category: 'Privacy', icon: Database },
-                { name: 'HIPAA Risk Assessment', category: 'Healthcare', icon: Hospital },
-                { name: 'PCI DSS Validation', category: 'Financial', icon: CreditCard }
-              ].map((template, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ scale: 1.02 }}
-                  className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => onExecute(`template-${index}`)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded">
-                      <template.icon className="h-4 w-4 text-primary" />
+              {loadingWorkflows ? (
+                <div className="text-center py-4">Loading templates...</div>
+              ) : workflowTemplates.length === 0 ? (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  No templates available
+                </div>
+              ) : (
+                workflowTemplates.map((template, index) => (
+                  <motion.div
+                    key={template.id || index}
+                    whileHover={{ scale: 1.02 }}
+                    className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => onExecute(`template-${template.id}`)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-primary/10 rounded">
+                        {template.category === 'Security' && <Shield className="h-4 w-4 text-primary" />}
+                        {template.category === 'Privacy' && <Database className="h-4 w-4 text-primary" />}
+                        {template.category === 'Healthcare' && <Hospital className="h-4 w-4 text-primary" />}
+                        {template.category === 'Financial' && <CreditCard className="h-4 w-4 text-primary" />}
+                        {!['Security', 'Privacy', 'Healthcare', 'Financial'].includes(template.category) && 
+                          <Workflow className="h-4 w-4 text-primary" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{template.name}</p>
+                        <p className="text-xs text-muted-foreground">{template.category || 'General'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{template.name}</p>
-                      <p className="text-xs text-muted-foreground">{template.category}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -650,11 +697,31 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
 
 // Real-time Collaboration Panel
 const CollaborationPanel: React.FC = () => {
-  const [activeUsers, setActiveUsers] = useState([
-    { id: 1, name: 'John Doe', role: 'Compliance Manager', status: 'online', avatar: 'JD' },
-    { id: 2, name: 'Jane Smith', role: 'Risk Analyst', status: 'online', avatar: 'JS' },
-    { id: 3, name: 'Mike Johnson', role: 'Auditor', status: 'away', avatar: 'MJ' }
-  ])
+  const [activeUsers, setActiveUsers] = useState<any[]>([])
+  const [workspaces, setWorkspaces] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load real collaboration data
+  useEffect(() => {
+    const loadCollaborationData = async () => {
+      try {
+        setIsLoading(true)
+        const [usersData, workspacesData] = await Promise.all([
+          ComplianceAPIs.Collaboration.getActiveUsers(),
+          ComplianceAPIs.Collaboration.getWorkspaces()
+        ])
+        setActiveUsers(usersData || [])
+        setWorkspaces(workspacesData || [])
+      } catch (error) {
+        console.error('Failed to load collaboration data:', error)
+        // Keep empty arrays for failed load
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadCollaborationData()
+  }, [])
 
   return (
     <Card className="mb-6">
@@ -670,7 +737,17 @@ const CollaborationPanel: React.FC = () => {
           <div>
             <h4 className="font-semibold mb-3">Active Users</h4>
             <div className="space-y-2">
-              {activeUsers.map((user) => (
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm text-muted-foreground">Loading users...</span>
+                </div>
+              ) : activeUsers.length === 0 ? (
+                <div className="text-center p-4 text-sm text-muted-foreground">
+                  No active users
+                </div>
+              ) : (
+                activeUsers.map((user) => (
                 <div key={user.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50">
                   <div className="relative">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -688,33 +765,41 @@ const CollaborationPanel: React.FC = () => {
                     <MessageSquare className="h-3 w-3" />
                   </Button>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
           
           <div>
             <h4 className="font-semibold mb-3">Shared Workspaces</h4>
             <div className="space-y-2">
-              {[
-                { name: 'Q1 Compliance Review', members: 5, activity: 'High' },
-                { name: 'Risk Assessment 2024', members: 3, activity: 'Medium' },
-                { name: 'Audit Preparation', members: 7, activity: 'High' }
-              ].map((workspace, index) => (
-                <div key={index} className="p-3 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium text-sm">{workspace.name}</h5>
-                    <Badge variant={workspace.activity === 'High' ? 'default' : 'secondary'}>
-                      {workspace.activity}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{workspace.members} members</span>
-                    <Button size="sm" variant="ghost" className="h-6 px-2">
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm text-muted-foreground">Loading workspaces...</span>
                 </div>
-              ))}
+              ) : workspaces.length === 0 ? (
+                <div className="text-center p-4 text-sm text-muted-foreground">
+                  No active workspaces
+                </div>
+              ) : (
+                workspaces.map((workspace, index) => (
+                  <div key={workspace.id || index} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-sm">{workspace.name}</h5>
+                      <Badge variant={workspace.activity === 'High' ? 'default' : 'secondary'}>
+                        {workspace.activity || 'Unknown'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{workspace.members || 0} members</span>
+                      <Button size="sm" variant="ghost" className="h-6 px-2">
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
