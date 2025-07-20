@@ -42,6 +42,9 @@ from app.api.routes.compliance_reports_routes import router as compliance_report
 from app.api.routes.compliance_workflows_routes import router as compliance_workflows_routes
 from app.api.routes.compliance_integrations_routes import router as compliance_integrations_routes
 from app.api.routes.compliance_audit_routes import router as compliance_audit_routes
+from app.api.routes.classification_routes import router as classification_routes
+from app.api.routes.ml_routes import router as ml_routes
+from app.api.routes.ai_routes import router as ai_routes
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -120,6 +123,9 @@ app.include_router(compliance_reports_routes)
 app.include_router(compliance_workflows_routes)
 app.include_router(compliance_integrations_routes)
 app.include_router(compliance_audit_routes)
+app.include_router(classification_routes)  # Version 1: Manual & Rule-Based
+app.include_router(ml_routes)              # Version 2: ML-Driven
+app.include_router(ai_routes)              # Version 3: AI-Intelligent
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
 @app.get("/")
