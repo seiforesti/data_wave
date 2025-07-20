@@ -54,227 +54,69 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
-  const [activeTab, setActiveTab] = useState('all')
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0
+  })
 
-  // Mock data for clean output
-  const mockIssues: ComplianceGap[] = [
-    {
-      id: 1,
-      data_source_id: dataSourceId || 1,
-      requirement_id: 1,
-      gap_title: 'Missing Access Control Documentation',
-      gap_description: 'No formal documentation exists for access control procedures and policies',
-      current_state: 'Informal access control processes in place',
-      desired_state: 'Formal documented access control policies and procedures',
-      gap_analysis: 'Gap exists due to lack of formal documentation and standardized procedures',
-      severity: 'high',
-      status: 'open',
-      remediation_plan: 'Create comprehensive access control documentation including policies, procedures, and role definitions',
-      remediation_steps: [
-        {
-          id: 'step-1',
-          step_number: 1,
-          title: 'Document Current Processes',
-          description: 'Document existing access control processes and identify gaps',
-          status: 'completed',
-          assigned_to: 'security-team',
-          estimated_effort: '2 weeks',
-          due_date: '2024-01-15T00:00:00Z',
-          completion_date: '2024-01-14T16:00:00Z',
-          dependencies: [],
-          deliverables: ['Current process documentation'],
-          acceptance_criteria: ['All current processes documented and reviewed']
-        },
-        {
-          id: 'step-2',
-          step_number: 2,
-          title: 'Create Formal Policies',
-          description: 'Create formal access control policies based on requirements',
-          status: 'in_progress',
-          assigned_to: 'compliance-officer',
-          estimated_effort: '3 weeks',
-          due_date: '2024-02-05T00:00:00Z',
-          completion_date: null,
-          dependencies: ['step-1'],
-          deliverables: ['Access control policy document'],
-          acceptance_criteria: ['Policy approved by management']
-        }
-      ],
-      assigned_to: 'compliance-officer',
-      due_date: '2024-02-15T00:00:00Z',
-      progress_percentage: 40,
-      last_updated_by: 'john.smith',
-      business_impact: 'Medium - May affect audit compliance',
-      technical_impact: 'Low - No immediate technical changes required',
-      cost_estimate: 15000,
-      effort_estimate: '6 weeks',
-      priority: 3,
-      dependencies: [],
-      related_gaps: [],
-      approval_required: true,
-      budget_approved: true,
-      resources_allocated: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-14T16:00:00Z',
-      created_by: 'system',
-      updated_by: 'john.smith',
-      version: 2,
-      metadata: {}
-    },
-    {
-      id: 2,
-      data_source_id: dataSourceId || 1,
-      requirement_id: 2,
-      gap_title: 'Insufficient Data Encryption',
-      gap_description: 'Data at rest is not encrypted according to GDPR requirements',
-      current_state: 'Some data encrypted, but not all sensitive data',
-      desired_state: 'All sensitive personal data encrypted at rest',
-      gap_analysis: 'Critical gap in data protection that could lead to regulatory violations',
-      severity: 'critical',
-      status: 'in_progress',
-      remediation_plan: 'Implement comprehensive data encryption for all sensitive data',
-      remediation_steps: [
-        {
-          id: 'step-1',
-          step_number: 1,
-          title: 'Data Classification',
-          description: 'Classify all data and identify sensitive information',
-          status: 'completed',
-          assigned_to: 'data-team',
-          estimated_effort: '2 weeks',
-          due_date: '2024-01-10T00:00:00Z',
-          completion_date: '2024-01-09T14:00:00Z',
-          dependencies: [],
-          deliverables: ['Data classification matrix'],
-          acceptance_criteria: ['All data classified and approved']
-        },
-        {
-          id: 'step-2',
-          step_number: 2,
-          title: 'Encryption Implementation',
-          description: 'Implement encryption for all classified sensitive data',
-          status: 'in_progress',
-          assigned_to: 'security-team',
-          estimated_effort: '4 weeks',
-          due_date: '2024-02-07T00:00:00Z',
-          completion_date: null,
-          dependencies: ['step-1'],
-          deliverables: ['Encrypted data storage'],
-          acceptance_criteria: ['All sensitive data encrypted']
-        }
-      ],
-      assigned_to: 'security-team',
-      due_date: '2024-02-07T00:00:00Z',
-      progress_percentage: 60,
-      last_updated_by: 'jane.doe',
-      business_impact: 'High - Regulatory compliance risk',
-      technical_impact: 'High - Requires infrastructure changes',
-      cost_estimate: 50000,
-      effort_estimate: '8 weeks',
-      priority: 1,
-      dependencies: [],
-      related_gaps: [3],
-      approval_required: true,
-      budget_approved: true,
-      resources_allocated: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T10:30:00Z',
-      created_by: 'system',
-      updated_by: 'jane.doe',
-      version: 3,
-      metadata: {}
-    },
-    {
-      id: 3,
-      data_source_id: dataSourceId || 1,
-      requirement_id: 3,
-      gap_title: 'Incomplete Audit Logging',
-      gap_description: 'Audit logs do not capture all required events for SOC 2 compliance',
-      current_state: 'Basic logging in place but missing critical events',
-      desired_state: 'Comprehensive audit logging covering all required events',
-      gap_analysis: 'Logging gaps identified during SOC 2 readiness assessment',
-      severity: 'medium',
-      status: 'resolved',
-      remediation_plan: 'Enhance logging infrastructure to capture all required audit events',
-      remediation_steps: [
-        {
-          id: 'step-1',
-          step_number: 1,
-          title: 'Logging Requirements Analysis',
-          description: 'Analyze SOC 2 logging requirements and current gaps',
-          status: 'completed',
-          assigned_to: 'audit-team',
-          estimated_effort: '1 week',
-          due_date: '2024-01-08T00:00:00Z',
-          completion_date: '2024-01-07T12:00:00Z',
-          dependencies: [],
-          deliverables: ['Logging requirements document'],
-          acceptance_criteria: ['Requirements approved by auditor']
-        },
-        {
-          id: 'step-2',
-          step_number: 2,
-          title: 'Logging Implementation',
-          description: 'Implement enhanced logging across all systems',
-          status: 'completed',
-          assigned_to: 'devops-team',
-          estimated_effort: '3 weeks',
-          due_date: '2024-01-29T00:00:00Z',
-          completion_date: '2024-01-28T18:00:00Z',
-          dependencies: ['step-1'],
-          deliverables: ['Enhanced logging system'],
-          acceptance_criteria: ['All required events logged']
-        }
-      ],
-      assigned_to: 'devops-team',
-      due_date: '2024-01-29T00:00:00Z',
-      progress_percentage: 100,
-      last_updated_by: 'mike.johnson',
-      business_impact: 'Medium - Affects audit readiness',
-      technical_impact: 'Medium - Requires system configuration changes',
-      cost_estimate: 25000,
-      effort_estimate: '4 weeks',
-      priority: 2,
-      dependencies: [],
-      related_gaps: [2],
-      approval_required: false,
-      budget_approved: true,
-      resources_allocated: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-28T18:00:00Z',
-      created_by: 'system',
-      updated_by: 'mike.johnson',
-      version: 4,
-      metadata: {}
-    }
-  ]
-
-  // Load issues
+  // Load issues from backend
   useEffect(() => {
     const loadIssues = async () => {
       setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setIssues(mockIssues)
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceManagement.getIssues({
+          rule_id: filters.rule_id,
+          status: filters.status,
+          severity: filters.severity,
+          assigned_to: filters.assigned_to,
+          data_source_id: dataSourceId,
+          page: pagination.page,
+          limit: pagination.limit
+        })
+        
+        setIssues(response.data || [])
+        setPagination(prev => ({ 
+          ...prev, 
+          total: response.total || 0
+        }))
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'issues_loaded', count: response.data?.length || 0 },
+          source: 'ComplianceIssueList',
+          severity: 'low'
+        })
+        
       } catch (error) {
         console.error('Failed to load issues:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance issues')
         onError?.('Failed to load compliance issues')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'issues_load_failed', error: error.message },
+          source: 'ComplianceIssueList',
+          severity: 'high'
+        })
       } finally {
         setLoading(false)
       }
     }
 
     loadIssues()
-  }, [dataSourceId])
+  }, [dataSourceId, searchQuery, filters, pagination.page, pagination.limit, enterprise])
 
   // Filter issues based on active tab and search
   const filteredIssues = issues.filter(issue => {
     // Tab filter
-    if (activeTab !== 'all') {
-      if (activeTab === 'open' && issue.status !== 'open') return false
-      if (activeTab === 'in_progress' && issue.status !== 'in_progress') return false
-      if (activeTab === 'resolved' && issue.status !== 'resolved') return false
+    if (filters.status) {
+      if (filters.status === 'open' && issue.status !== 'open') return false
+      if (filters.status === 'in_progress' && issue.status !== 'in_progress') return false
+      if (filters.status === 'resolved' && issue.status !== 'resolved') return false
     }
 
     // Search filter
@@ -406,7 +248,7 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value || undefined }))}>
         <TabsList>
           <TabsTrigger value="all">All Issues</TabsTrigger>
           <TabsTrigger value="open">Open</TabsTrigger>
@@ -414,7 +256,7 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
           <TabsTrigger value="resolved">Resolved</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
+        <TabsContent value={filters.status || 'all'} className="space-y-4">
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, index) => (

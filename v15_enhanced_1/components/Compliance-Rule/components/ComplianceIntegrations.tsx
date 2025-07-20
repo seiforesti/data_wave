@@ -58,256 +58,47 @@ const ComplianceIntegrations: React.FC<ComplianceIntegrationsProps> = ({
   const [filters, setFilters] = useState(initialFilters)
   const [activeTab, setActiveTab] = useState('all')
 
-  // Mock data for clean output
-  const mockIntegrations: ComplianceIntegration[] = [
-    {
-      id: 1,
-      name: 'ServiceNow GRC',
-      integration_type: 'grc_tool',
-      provider: 'ServiceNow',
-      status: 'active',
-      config: {
-        endpoint_url: 'https://company.service-now.com/api',
-        authentication_method: 'oauth2',
-        connection_pool_size: 10,
-        ssl_verification: true,
-        custom_headers: {},
-        request_timeout: 30000,
-        response_format: 'json',
-        pagination_method: 'offset',
-        batch_size: 100
-      },
-      credentials: {
-        encrypted: true,
-        client_id: 'servicenow_client_id',
-        client_secret: '[ENCRYPTED]',
-        access_token: '[ENCRYPTED]',
-        refresh_token: '[ENCRYPTED]',
-        token_expiry: '2024-12-31T23:59:59Z'
-      },
-      sync_frequency: 'daily',
-      last_synced_at: '2024-01-15T02:00:00Z',
-      last_sync_status: 'success',
-      sync_statistics: {
-        total_records: 1250,
-        records_created: 45,
-        records_updated: 120,
-        records_failed: 2,
-        last_sync_duration: 180000,
-        average_sync_duration: 175000,
-        success_rate: 98.4,
-        data_quality_score: 95.2,
-        sync_history: []
-      },
-      error_message: null,
-      error_count: 0,
-      supported_frameworks: ['SOC 2', 'ISO 27001', 'NIST'],
-      data_mapping: {
-        field_mappings: [],
-        transformation_rules: [],
-        validation_rules: [],
-        default_values: {}
-      },
-      webhook_url: 'https://api.company.com/webhooks/servicenow',
-      api_version: 'v1',
-      rate_limit: 1000,
-      timeout: 30000,
-      retry_config: {
-        max_attempts: 3,
-        retry_delay: 1000,
-        backoff_strategy: 'exponential'
-      },
-      health_check: {
-        enabled: true,
-        interval_minutes: 15,
-        timeout_seconds: 30,
-        failure_threshold: 3,
-        recovery_threshold: 2,
-        endpoints: ['/health', '/api/status']
-      },
-      monitoring: {
-        metrics_enabled: true,
-        logging_level: 'info',
-        alert_thresholds: [],
-        dashboard_url: 'https://monitoring.company.com/servicenow'
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T02:00:00Z',
-      created_by: 'admin',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 2,
-      name: 'Qualys VMDR',
-      integration_type: 'security_scanner',
-      provider: 'Qualys',
-      status: 'error',
-      config: {
-        endpoint_url: 'https://qualysapi.qualys.com',
-        authentication_method: 'basic_auth',
-        connection_pool_size: 5,
-        ssl_verification: true,
-        custom_headers: {},
-        request_timeout: 60000,
-        response_format: 'xml',
-        pagination_method: 'cursor',
-        batch_size: 50
-      },
-      credentials: {
-        encrypted: true,
-        username: 'qualys_user',
-        password: '[ENCRYPTED]'
-      },
-      sync_frequency: 'weekly',
-      last_synced_at: '2024-01-08T03:00:00Z',
-      last_sync_status: 'failed',
-      sync_statistics: {
-        total_records: 0,
-        records_created: 0,
-        records_updated: 0,
-        records_failed: 0,
-        last_sync_duration: 0,
-        average_sync_duration: 45000,
-        success_rate: 92.1,
-        data_quality_score: 88.7,
-        sync_history: []
-      },
-      error_message: 'Authentication failed: Invalid credentials',
-      error_count: 3,
-      supported_frameworks: ['SOC 2', 'NIST', 'ISO 27001'],
-      data_mapping: {
-        field_mappings: [],
-        transformation_rules: [],
-        validation_rules: [],
-        default_values: {}
-      },
-      webhook_url: null,
-      api_version: 'v2',
-      rate_limit: 500,
-      timeout: 60000,
-      retry_config: {
-        max_attempts: 3,
-        retry_delay: 2000,
-        backoff_strategy: 'linear'
-      },
-      health_check: {
-        enabled: true,
-        interval_minutes: 30,
-        timeout_seconds: 60,
-        failure_threshold: 2,
-        recovery_threshold: 1,
-        endpoints: ['/api/health']
-      },
-      monitoring: {
-        metrics_enabled: true,
-        logging_level: 'warn',
-        alert_thresholds: [],
-        dashboard_url: null
-      },
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-08T03:00:00Z',
-      created_by: 'admin',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 3,
-      name: 'Jira Service Management',
-      integration_type: 'ticketing',
-      provider: 'Atlassian',
-      status: 'pending',
-      config: {
-        endpoint_url: 'https://company.atlassian.net/rest/api/3',
-        authentication_method: 'api_key',
-        connection_pool_size: 8,
-        ssl_verification: true,
-        custom_headers: {},
-        request_timeout: 30000,
-        response_format: 'json',
-        pagination_method: 'page',
-        batch_size: 100
-      },
-      credentials: {
-        encrypted: true,
-        api_key: '[ENCRYPTED]',
-        username: 'compliance@company.com'
-      },
-      sync_frequency: 'real_time',
-      last_synced_at: null,
-      last_sync_status: null,
-      sync_statistics: {
-        total_records: 0,
-        records_created: 0,
-        records_updated: 0,
-        records_failed: 0,
-        last_sync_duration: 0,
-        average_sync_duration: 0,
-        success_rate: 0,
-        data_quality_score: 0,
-        sync_history: []
-      },
-      error_message: null,
-      error_count: 0,
-      supported_frameworks: ['SOC 2', 'GDPR', 'HIPAA'],
-      data_mapping: {
-        field_mappings: [],
-        transformation_rules: [],
-        validation_rules: [],
-        default_values: {}
-      },
-      webhook_url: 'https://api.company.com/webhooks/jira',
-      api_version: '3',
-      rate_limit: 10000,
-      timeout: 30000,
-      retry_config: {
-        max_attempts: 3,
-        retry_delay: 1000,
-        backoff_strategy: 'exponential'
-      },
-      health_check: {
-        enabled: false,
-        interval_minutes: 60,
-        timeout_seconds: 30,
-        failure_threshold: 3,
-        recovery_threshold: 2,
-        endpoints: []
-      },
-      monitoring: {
-        metrics_enabled: false,
-        logging_level: 'info',
-        alert_thresholds: [],
-        dashboard_url: null
-      },
-      created_at: '2024-01-10T00:00:00Z',
-      updated_at: '2024-01-10T00:00:00Z',
-      created_by: 'admin',
-      updated_by: 'admin',
-      version: 1,
-      metadata: {}
-    }
-  ]
-
-  // Load integrations
+  // Load integrations from backend
   useEffect(() => {
     const loadIntegrations = async () => {
       setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setIntegrations(mockIntegrations)
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.Integration.getIntegrations({
+          integration_type: filters.integration_type,
+          provider: filters.provider,
+          status: activeTab !== 'all' ? activeTab : undefined
+        })
+        
+        setIntegrations(response || [])
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_loaded', count: response?.length || 0 },
+          source: 'ComplianceIntegrations',
+          severity: 'low'
+        })
+        
       } catch (error) {
         console.error('Failed to load integrations:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance integrations')
         onError?.('Failed to load compliance integrations')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_load_failed', error: error.message },
+          source: 'ComplianceIntegrations',
+          severity: 'high'
+        })
       } finally {
         setLoading(false)
       }
     }
 
     loadIntegrations()
-  }, [dataSourceId])
+  }, [dataSourceId, filters, activeTab, enterprise])
 
   // Filter integrations based on active tab and search
   const filteredIntegrations = integrations.filter(integration => {

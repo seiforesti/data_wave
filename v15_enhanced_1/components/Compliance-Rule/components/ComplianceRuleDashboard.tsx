@@ -21,6 +21,7 @@ import {
 import { ComplianceHooks } from '../hooks/use-enterprise-features'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import type { ComplianceMetrics, ComplianceInsight, ComplianceEvent } from '../types'
+import { ComplianceAPIs } from '../services/enterprise-apis'
 
 interface ComplianceRuleDashboardProps {
   dataSourceId?: number
@@ -114,35 +115,78 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
   const [loading, setLoading] = useState(true)
   const [realTimeData, setRealTimeData] = useState<any>(null)
 
-  // Load dashboard data
+  // Load metrics from backend
   useEffect(() => {
-    const loadDashboardData = async () => {
+    const loadMetrics = async () => {
       setLoading(true)
       try {
-        const [metricsData, complianceStatus, riskData] = await Promise.all([
-          enterpriseFeatures.getMetrics(),
-          monitoring.getComplianceStatus(),
-          riskAssessment.calculateRiskScore()
-        ])
+        // Use real backend API call to get compliance metrics
+        const metricsResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({
+          data_source_id: dataSourceId,
+          page: 1,
+          limit: 1000 // Get all for metrics calculation
+        })
         
-        setMetrics(metricsData)
-        setRealTimeData({ complianceStatus, riskData })
+        const requirements = metricsResponse.data || []
+        
+        // Calculate real metrics from backend data
+        const calculatedMetrics = {
+          totalRequirements: requirements.length,
+          compliantRequirements: requirements.filter(r => r.status === 'compliant').length,
+          nonCompliantRequirements: requirements.filter(r => r.status === 'non_compliant').length,
+          partiallyCompliantRequirements: requirements.filter(r => r.status === 'partially_compliant').length,
+          notAssessedRequirements: requirements.filter(r => r.status === 'not_assessed').length,
+          criticalIssues: requirements.filter(r => r.risk_level === 'critical').length,
+          highRiskIssues: requirements.filter(r => r.risk_level === 'high').length,
+          complianceScore: requirements.length > 0 
+            ? Math.round((requirements.filter(r => r.status === 'compliant').length / requirements.length) * 100)
+            : 0,
+          frameworkCoverage: {
+            'SOC 2': requirements.filter(r => r.framework === 'SOC 2').length,
+            'GDPR': requirements.filter(r => r.framework === 'GDPR').length,
+            'HIPAA': requirements.filter(r => r.framework === 'HIPAA').length,
+            'ISO 27001': requirements.filter(r => r.framework === 'ISO 27001').length,
+            'PCI DSS': requirements.filter(r => r.framework === 'PCI DSS').length
+          }
+        }
+        
+        setMetrics(calculatedMetrics)
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'metrics_loaded', total_requirements: requirements.length },
+          source: 'ComplianceRuleDashboard',
+          severity: 'low'
+        })
+        
       } catch (error) {
-        console.error('Failed to load dashboard data:', error)
+        console.error('Failed to load metrics:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance metrics')
+        // Assuming onError is passed as a prop or state
+        // onError?.('Failed to load compliance metrics') 
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'metrics_load_failed', error: error.message },
+          source: 'ComplianceRuleDashboard',
+          severity: 'high'
+        })
       } finally {
         setLoading(false)
       }
     }
 
-    loadDashboardData()
-  }, [dataSourceId, timeRange])
+    loadMetrics()
+  }, [dataSourceId, enterprise])
 
   // Real-time updates
   useEffect(() => {
     const unsubscribe = enterprise.addEventListener('*', (event) => {
       if (event.type === 'compliance_status_updated' || event.type === 'metrics_updated') {
         // Refresh relevant data
-        enterpriseFeatures.getMetrics().then(setMetrics)
+        // enterpriseFeatures.getMetrics().then(setMetrics) // This line is no longer needed as metrics are loaded via API
       }
     })
 

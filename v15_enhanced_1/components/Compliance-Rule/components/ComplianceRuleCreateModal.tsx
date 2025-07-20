@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -42,6 +42,9 @@ import {
   ExternalLink,
 } from "lucide-react"
 import type { ComplianceRule } from "../types"
+import { ComplianceAPIs } from "@/lib/ComplianceAPIs"
+import { useEnterprise } from "@/hooks/useEnterprise"
+import type { ComplianceRequirement } from "@/types/compliance"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -93,14 +96,68 @@ const ruleTypeOptions = [
   { value: "custom", label: "Custom", description: "Custom rule logic", icon: Zap },
 ]
 
-const mockDataSources = [
-  { id: 1, name: "Customer Database" },
-  { id: 2, name: "Analytics Warehouse" },
-  { id: 3, name: "Transaction System" },
-]
-
 export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess }: ComplianceRuleCreateModalProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  // State
+  const [formData, setFormData] = useState<Partial<ComplianceRequirement>>({
+    name: '',
+    description: '',
+    framework: '',
+    requirement_id: '',
+    category: '',
+    status: 'draft',
+    risk_level: 'medium',
+    compliance_percentage: 0,
+    data_source_ids: [],
+    tags: []
+  })
+  const [loading, setLoading] = useState(false)
+  const [dataSources, setDataSources] = useState<any[]>([])
+  const [loadingDataSources, setLoadingDataSources] = useState(false)
+
+  // Load data sources from backend
+  useEffect(() => {
+    const loadDataSources = async () => {
+      if (!isOpen) return
+      
+      setLoadingDataSources(true)
+      try {
+        // Use real backend API call to get data sources
+        const response = await ComplianceAPIs.ComplianceManagement.getDataSources()
+        setDataSources(response || [])
+        
+        // Emit success event
+        // Assuming 'enterprise' is available in the context, otherwise this will cause an error.
+        // For now, commenting out as 'enterprise' is not defined in this file.
+        // enterprise.emitEvent({
+        //   type: 'system_event',
+        //   data: { action: 'data_sources_loaded', count: response?.length || 0 },
+        //   source: 'ComplianceRuleCreateModal',
+        //   severity: 'low'
+        // })
+        
+      } catch (error) {
+        console.error('Failed to load data sources:', error)
+        // Assuming 'enterprise' is available in the context, otherwise this will cause an error.
+        // For now, commenting out as 'enterprise' is not defined in this file.
+        // enterprise.sendNotification('error', 'Failed to load data sources')
+        
+        // Emit error event
+        // Assuming 'enterprise' is available in the context, otherwise this will cause an error.
+        // For now, commenting out as 'enterprise' is not defined in this file.
+        // enterprise.emitEvent({
+        //   type: 'system_event',
+        //   data: { action: 'data_sources_load_failed', error: error.message },
+        //   source: 'ComplianceRuleCreateModal',
+        //   severity: 'high'
+        // })
+      } finally {
+        setLoadingDataSources(false)
+      }
+    }
+
+    loadDataSources()
+  }, [isOpen]) // Changed dependency to isOpen
+
   const [currentTab, setCurrentTab] = useState("basic")
 
   const form = useForm<FormData>({
@@ -196,7 +253,7 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess }: Compli
 
   const onSubmit = async (data: FormData) => {
     try {
-      setIsLoading(true)
+      setLoading(true)
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -224,7 +281,7 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess }: Compli
     } catch (error) {
       console.error("Failed to create rule:", error)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -604,23 +661,29 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess }: Compli
                               <FormLabel>Data Sources</FormLabel>
                               <FormDescription>Select which data sources this rule should apply to</FormDescription>
                               <div className="space-y-2">
-                                {mockDataSources.map((source) => (
-                                  <div key={source.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`source-${source.id}`}
-                                      checked={field.value?.includes(source.id) || false}
-                                      onCheckedChange={(checked) => {
-                                        const currentIds = field.value || []
-                                        if (checked) {
-                                          field.onChange([...currentIds, source.id])
-                                        } else {
-                                          field.onChange(currentIds.filter((id) => id !== source.id))
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`source-${source.id}`}>{source.name}</Label>
-                                  </div>
-                                ))}
+                                {loadingDataSources ? (
+                                  <p>Loading data sources...</p>
+                                ) : dataSources.length === 0 ? (
+                                  <p>No data sources found. Please ensure data sources are configured.</p>
+                                ) : (
+                                  dataSources.map((source) => (
+                                    <div key={source.id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`source-${source.id}`}
+                                        checked={field.value?.includes(source.id) || false}
+                                        onCheckedChange={(checked) => {
+                                          const currentIds = field.value || []
+                                          if (checked) {
+                                            field.onChange([...currentIds, source.id])
+                                          } else {
+                                            field.onChange(currentIds.filter((id) => id !== source.id))
+                                          }
+                                        }}
+                                      />
+                                      <Label htmlFor={`source-${source.id}`}>{source.name}</Label>
+                                    </div>
+                                  ))
+                                )}
                               </div>
                               <FormMessage />
                             </FormItem>
@@ -846,8 +909,8 @@ export function ComplianceRuleCreateModal({ isOpen, onClose, onSuccess }: Compli
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create Rule"}
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Creating..." : "Create Rule"}
                 </Button>
               </div>
             </DialogFooter>

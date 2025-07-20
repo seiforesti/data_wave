@@ -323,7 +323,7 @@ const NotificationCenter: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))
+                ))}
               )}
             </div>
           </ScrollArea>
@@ -520,28 +520,30 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
   const [activeWorkflows, setActiveWorkflows] = useState<any[]>([])
   const [workflowTemplates, setWorkflowTemplates] = useState<any[]>([])
 
-  const mockActiveWorkflows = [
-    {
-      id: 'wf-001',
-      name: 'SOC 2 Assessment',
-      progress: 65,
-      status: 'in_progress',
-      assignee: 'John Doe',
-      dueDate: '2024-02-15',
-      steps: 8,
-      completedSteps: 5
-    },
-    {
-      id: 'wf-002', 
-      name: 'GDPR Compliance Review',
-      progress: 30,
-      status: 'pending_approval',
-      assignee: 'Jane Smith',
-      dueDate: '2024-02-20',
-      steps: 12,
-      completedSteps: 4
+
+
+  // Load active workflows from backend
+  const [loadingWorkflows, setLoadingWorkflows] = useState(false)
+
+  useEffect(() => {
+    const loadActiveWorkflows = async () => {
+      setLoadingWorkflows(true)
+      try {
+        const response = await ComplianceAPIs.ComplianceManagement.getWorkflows({
+          status: 'active',
+          limit: 5
+        })
+        setActiveWorkflows(response.data || [])
+      } catch (error) {
+        console.error('Failed to load active workflows:', error)
+        enterprise.sendNotification('error', 'Failed to load active workflows')
+      } finally {
+        setLoadingWorkflows(false)
+      }
     }
-  ]
+
+    loadActiveWorkflows()
+  }, [enterprise])
 
   return (
     <Card className="mb-6">
@@ -563,7 +565,12 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
               </Button>
             </div>
             <div className="space-y-3">
-              {mockActiveWorkflows.map((workflow) => (
+              {loadingWorkflows ? (
+                <div className="text-center py-4">Loading workflows...</div>
+              ) : activeWorkflows.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">No active workflows</div>
+              ) : (
+                activeWorkflows.map((workflow) => (
                 <motion.div
                   key={workflow.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -602,7 +609,8 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
                     </div>
                   </div>
                 </motion.div>
-              ))}
+                ))
+              )}
             </div>
           </div>
           

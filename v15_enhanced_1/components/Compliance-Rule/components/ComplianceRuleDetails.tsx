@@ -58,10 +58,13 @@ export function ComplianceRuleDetails({
   onEdit, 
   onDelete 
 }: ComplianceRuleDetailsProps) {
-  const [loading, setLoading] = useState(false)
+  // State
+  const [requirement, setRequirement] = useState<ComplianceRequirement | null>(null)
   const [assessmentHistory, setAssessmentHistory] = useState<any[]>([])
   const [evidenceFiles, setEvidenceFiles] = useState<any[]>([])
-  const [relatedRequirements, setRelatedRequirements] = useState<any[]>([])
+  const [relatedRequirements, setRelatedRequirements] = useState<ComplianceRequirement[]>([])
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
 
   const { 
     executeAction, 
@@ -74,121 +77,60 @@ export function ComplianceRuleDetails({
     enableMonitoring: true
   })
 
-  // Clean mock data for demonstration
-  const mockAssessmentHistory = [
-    {
-      id: 1,
-      assessment_date: '2024-01-15T10:00:00Z',
-      assessor: 'john.doe@company.com',
-      status: 'compliant',
-      score: 95,
-      notes: 'All access controls properly implemented and documented.',
-      evidence_count: 5,
-      remediation_items: 0
-    },
-    {
-      id: 2,
-      assessment_date: '2023-12-15T14:30:00Z',
-      assessor: 'jane.smith@company.com',
-      status: 'partially_compliant',
-      score: 78,
-      notes: 'Minor gaps in documentation. Access review process needs improvement.',
-      evidence_count: 3,
-      remediation_items: 2
-    },
-    {
-      id: 3,
-      assessment_date: '2023-11-15T09:15:00Z',
-      assessor: 'mike.wilson@company.com',
-      status: 'non_compliant',
-      score: 45,
-      notes: 'Significant gaps in access control implementation. Immediate action required.',
-      evidence_count: 1,
-      remediation_items: 8
-    }
-  ]
-
-  const mockEvidenceFiles = [
-    {
-      id: 1,
-      title: 'Access Control Policy Document',
-      file_name: 'access-control-policy-v2.1.pdf',
-      file_type: 'document',
-      upload_date: '2024-01-10T08:00:00Z',
-      uploaded_by: 'compliance@company.com',
-      file_size: '2.4 MB',
-      status: 'verified'
-    },
-    {
-      id: 2,
-      title: 'User Access Review Report',
-      file_name: 'user-access-review-q4-2023.xlsx',
-      file_type: 'report',
-      upload_date: '2024-01-05T15:30:00Z',
-      uploaded_by: 'security@company.com',
-      file_size: '1.8 MB',
-      status: 'verified'
-    },
-    {
-      id: 3,
-      title: 'RBAC Configuration Screenshot',
-      file_name: 'rbac-config-screenshot.png',
-      file_type: 'screenshot',
-      upload_date: '2024-01-03T11:20:00Z',
-      uploaded_by: 'admin@company.com',
-      file_size: '456 KB',
-      status: 'pending'
-    }
-  ]
-
-  const mockRelatedRequirements = [
-    {
-      id: 101,
-      requirement_id: 'SOC2-ACC-002',
-      title: 'Privileged Access Management',
-      framework: 'SOC 2',
-      status: 'compliant',
-      compliance_percentage: 92
-    },
-    {
-      id: 102,
-      requirement_id: 'SOC2-ACC-003',
-      title: 'Multi-Factor Authentication',
-      framework: 'SOC 2',
-      status: 'partially_compliant',
-      compliance_percentage: 78
-    },
-    {
-      id: 103,
-      requirement_id: 'ISO27001-A.9.1.2',
-      title: 'Access to Networks and Network Services',
-      framework: 'ISO 27001',
-      status: 'compliant',
-      compliance_percentage: 88
-    }
-  ]
-
+  // Load requirement details from backend
   useEffect(() => {
-    if (requirement && isOpen) {
-      const loadDetails = async () => {
-        setLoading(true)
-        try {
-          // Use mock data for clean output
-          await new Promise(resolve => setTimeout(resolve, 500))
-          setAssessmentHistory(mockAssessmentHistory)
-          setEvidenceFiles(mockEvidenceFiles)
-          setRelatedRequirements(mockRelatedRequirements)
-        } catch (error) {
-          console.error('Failed to load requirement details:', error)
-          sendNotification('error', 'Failed to load requirement details')
-        } finally {
-          setLoading(false)
+    const loadRequirementDetails = async () => {
+      if (!requirementId) return
+      
+      setLoading(true)
+      try {
+        // Load main requirement data
+        const requirementData = await ComplianceAPIs.ComplianceManagement.getRequirement(requirementId)
+        setRequirement(requirementData)
+        
+        // Load evaluation history
+        const evaluationsResponse = await ComplianceAPIs.ComplianceManagement.getRuleEvaluations(requirementId, {
+          page: 1,
+          limit: 10
+        })
+        setAssessmentHistory(evaluationsResponse.data || [])
+        
+        // Load related requirements (same framework)
+        if (requirementData.framework) {
+          const relatedResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({
+            framework: requirementData.framework,
+            limit: 5
+          })
+          setRelatedRequirements((relatedResponse.data || []).filter(r => r.id !== requirementId))
         }
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirement_details_loaded', requirement_id: requirementId },
+          source: 'ComplianceRuleDetails',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load requirement details:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance requirement details')
+        onError?.('Failed to load compliance requirement details')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirement_details_load_failed', error: error.message },
+          source: 'ComplianceRuleDetails',
+          severity: 'high'
+        })
+      } finally {
+        setLoading(false)
       }
-
-      loadDetails()
     }
-  }, [requirement, isOpen])
+
+    loadRequirementDetails()
+  }, [requirementId, enterprise])
 
   const getStatusBadge = (status: string) => {
     const variants = {

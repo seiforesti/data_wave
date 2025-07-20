@@ -76,140 +76,70 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
   const auditFeatures = ComplianceHooks.useAuditFeatures('compliance_requirement')
   
   // State
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
-  const [filters, setFilters] = useState(initialFilters)
-  const [sortField, setSortField] = useState<string>('updated_at')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<ComplianceRequirement | null>(null)
   const [requirements, setRequirements] = useState<ComplianceRequirement[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
+  const [filters, setFilters] = useState(initialFilters)
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 25,
-    total: 0
+    limit: 20,
+    total: 0,
+    pages: 0
   })
 
-  // Mock data for clean output
-  const mockRequirements: ComplianceRequirement[] = [
-    {
-      id: 1,
-      data_source_id: dataSourceId || 1,
-      framework: 'SOC 2',
-      requirement_id: 'CC1.1',
-      title: 'Control Environment',
-      description: 'The entity demonstrates a commitment to integrity and ethical values',
-      category: 'Control Environment',
-      status: 'compliant',
-      compliance_percentage: 95,
-      last_assessed: '2024-01-15T10:00:00Z',
-      next_assessment: '2024-04-15T10:00:00Z',
-      assessor: 'John Smith',
-      assessment_notes: 'All controls are operating effectively',
-      risk_level: 'low',
-      remediation_plan: null,
-      remediation_deadline: null,
-      remediation_owner: null,
-      evidence_files: ['control_environment_policy.pdf', 'ethics_training_records.xlsx'],
-      documentation_links: ['https://company.com/policies/ethics'],
-      impact_description: 'Ensures ethical behavior across the organization',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-      created_by: 'admin',
-      updated_by: 'john.smith',
-      version: 1,
-      tags: ['ethics', 'control_environment'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    },
-    {
-      id: 2,
-      data_source_id: dataSourceId || 1,
-      framework: 'GDPR',
-      requirement_id: 'Art.32',
-      title: 'Security of Processing',
-      description: 'Implement appropriate technical and organizational measures',
-      category: 'Security',
-      status: 'partially_compliant',
-      compliance_percentage: 75,
-      last_assessed: '2024-01-10T14:30:00Z',
-      next_assessment: '2024-02-10T14:30:00Z',
-      assessor: 'Jane Doe',
-      assessment_notes: 'Some security measures need improvement',
-      risk_level: 'medium',
-      remediation_plan: 'Implement additional encryption controls',
-      remediation_deadline: '2024-03-01T00:00:00Z',
-      remediation_owner: 'security-team',
-      evidence_files: ['security_policy.pdf'],
-      documentation_links: ['https://company.com/security'],
-      impact_description: 'Protects personal data from unauthorized access',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-10T14:30:00Z',
-      created_by: 'admin',
-      updated_by: 'jane.doe',
-      version: 2,
-      tags: ['security', 'encryption'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    },
-    {
-      id: 3,
-      data_source_id: dataSourceId || 1,
-      framework: 'HIPAA',
-      requirement_id: '164.312(a)(1)',
-      title: 'Access Control',
-      description: 'Implement technical safeguards to allow access only to authorized persons',
-      category: 'Access Control',
-      status: 'non_compliant',
-      compliance_percentage: 45,
-      last_assessed: '2024-01-05T09:15:00Z',
-      next_assessment: '2024-02-05T09:15:00Z',
-      assessor: 'Mike Johnson',
-      assessment_notes: 'Access controls are insufficient',
-      risk_level: 'high',
-      remediation_plan: 'Implement role-based access control system',
-      remediation_deadline: '2024-02-15T00:00:00Z',
-      remediation_owner: 'it-team',
-      evidence_files: [],
-      documentation_links: [],
-      impact_description: 'Critical for protecting PHI',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-05T09:15:00Z',
-      created_by: 'admin',
-      updated_by: 'mike.johnson',
-      version: 1,
-      tags: ['access_control', 'phi'],
-      controls: [],
-      gaps: [],
-      evidence: [],
-      metadata: {}
-    }
-  ]
-
-  // Load requirements
+  // Load requirements from backend
   useEffect(() => {
     const loadRequirements = async () => {
       setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setRequirements(mockRequirements)
-        setPagination(prev => ({ ...prev, total: mockRequirements.length }))
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceManagement.getRequirements({
+          data_source_id: dataSourceId,
+          framework: filters.framework,
+          status: filters.status,
+          risk_level: filters.risk_level,
+          category: filters.category,
+          search: searchQuery || undefined,
+          page: pagination.page,
+          limit: pagination.limit,
+          sort: 'created_at',
+          sort_order: 'desc'
+        })
+        
+        setRequirements(response.data || [])
+        setPagination(prev => ({ 
+          ...prev, 
+          total: response.total || 0,
+          pages: response.pages || 0
+        }))
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirements_loaded', count: response.data?.length || 0 },
+          source: 'ComplianceRuleList',
+          severity: 'low'
+        })
+        
       } catch (error) {
         console.error('Failed to load requirements:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance requirements')
         onError?.('Failed to load compliance requirements')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirements_load_failed', error: error.message },
+          source: 'ComplianceRuleList',
+          severity: 'high'
+        })
       } finally {
         setLoading(false)
       }
     }
 
     loadRequirements()
-  }, [dataSourceId, searchQuery, filters, sortField, sortDirection, pagination.page, pagination.limit])
+  }, [dataSourceId, searchQuery, filters, pagination.page, pagination.limit, enterprise])
 
   // Filter and sort requirements
   const filteredAndSortedRequirements = useMemo(() => {
