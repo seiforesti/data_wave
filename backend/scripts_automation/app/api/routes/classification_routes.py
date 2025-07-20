@@ -410,7 +410,7 @@ async def create_classification_framework(
         
         # Schedule background task to update dependent systems
         background_tasks.add_task(
-            _notify_framework_creation, framework.id, user
+            _notify_framework_creation, framework.id, str(current_user["id"])
         )
         
         return ClassificationFrameworkResponse.from_orm(framework)
@@ -559,6 +559,7 @@ async def delete_classification_framework(
 @router.post("/rules", response_model=ClassificationRuleResponse)
 async def create_classification_rule(
     rule_data: ClassificationRuleCreate,
+    background_tasks: BackgroundTasks,
     user: str = Query(..., description="User creating the rule"),
     validate_only: bool = Query(default=False, description="Only validate, don't create"),
     session: Session = Depends(get_session)
@@ -572,6 +573,11 @@ async def create_classification_rule(
         
         rule = await classification_service.create_classification_rule(
             session, rule_data.dict(), user
+        )
+        
+        # Add background notification for rule creation
+        background_tasks.add_task(
+            _notify_rule_creation, rule.id, rule.framework_id, user
         )
         
         return ClassificationRuleResponse.from_orm(rule)
@@ -853,17 +859,28 @@ async def bulk_upload_classification_data(
         
         # For large files, process in background
         if len(file_data) > 100:
+            operation_id = f"bulk_upload_{uuid.uuid4().hex[:12]}"
             background_tasks.add_task(
                 _process_bulk_upload_background,
                 file_data,
                 file_extension,
                 framework_id,
+                user,
+                operation_id
+            )
+            
+            # Send initial progress notification
+            background_tasks.add_task(
+                _notify_bulk_operation_progress,
+                operation_id,
+                {"percentage": 0, "status": "started", "total_entries": len(file_data)},
                 user
             )
             
             return {
                 "message": f"Bulk upload started for {len(file_data)} entries in background",
-                "total_entries": len(file_data)
+                "total_entries": len(file_data),
+                "operation_id": operation_id
             }
         else:
             # Process immediately for smaller files
@@ -1054,24 +1071,215 @@ async def _apply_rules_to_catalog_background(catalog_item_ids: List[int], user: 
     except Exception as e:
         logger.error(f"Error in background catalog classification: {str(e)}")
 
-async def _process_bulk_upload_background(file_data: List[Dict[str, Any]], file_type: str, framework_id: Optional[int], user: str):
+async def _process_bulk_upload_background(file_data: List[Dict[str, Any]], file_type: str, framework_id: Optional[int], user: str, operation_id: str):
     """Background task for bulk upload processing"""
     try:
         with get_session() as session:
+            # Send progress notification at 50%
+            await _notify_bulk_operation_progress(
+                operation_id,
+                {"percentage": 50, "status": "processing", "total_entries": len(file_data)},
+                user
+            )
+            
             await classification_service.bulk_upload_classification_files(
                 session, file_data, file_type, framework_id, user
             )
+            
+            # Send completion notification
+            await _notify_bulk_operation_progress(
+                operation_id,
+                {"percentage": 100, "status": "completed", "total_entries": len(file_data)},
+                user
+            )
+            
     except Exception as e:
         logger.error(f"Error in background bulk upload: {str(e)}")
+        # Send failure notification
+        await _notify_classification_failure(
+            {"error": str(e), "operation_id": operation_id, "operation_type": "bulk_upload"},
+            user
+        )
 
 async def _notify_framework_creation(framework_id: int, user: str):
     """Background task to notify systems about framework creation"""
     try:
-        # This would integrate with notification services
-        # notification_service.send_notification(...)
-        pass
+        from ...services.notification_service import NotificationService
+        
+        notification_service = NotificationService()
+        
+        # Send notification to user
+        await notification_service.send_notification(
+            user_id=user,
+            title="Classification Framework Created",
+            message=f"Classification framework {framework_id} has been successfully created",
+            notification_type="classification_framework_created",
+            metadata={
+                "framework_id": framework_id,
+                "action": "created",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+        
+        # Send notification to administrators
+        await notification_service.send_notification_to_role(
+            role="administrator",
+            title="New Classification Framework",
+            message=f"User {user} created classification framework {framework_id}",
+            notification_type="admin_alert",
+            metadata={
+                "framework_id": framework_id,
+                "created_by": user,
+                "action": "framework_created"
+            }
+        )
+        
+        # Trigger system integration notifications
+        await notification_service.send_system_notification(
+            system="data_catalog",
+            event_type="framework_created",
+            payload={
+                "framework_id": framework_id,
+                "created_by": user,
+                "requires_integration": True
+            }
+        )
+        
+        logger.info(f"Successfully sent notifications for framework {framework_id} creation")
+        
     except Exception as e:
         logger.error(f"Error notifying framework creation: {str(e)}")
+
+async def _notify_rule_creation(rule_id: int, framework_id: int, user: str):
+    """Background task to notify systems about rule creation"""
+    try:
+        from ...services.notification_service import NotificationService
+        
+        notification_service = NotificationService()
+        
+        # Send notification to user
+        await notification_service.send_notification(
+            user_id=user,
+            title="Classification Rule Created",
+            message=f"Classification rule {rule_id} has been added to framework {framework_id}",
+            notification_type="classification_rule_created",
+            metadata={
+                "rule_id": rule_id,
+                "framework_id": framework_id,
+                "action": "created"
+            }
+        )
+        
+        # Notify team members working on the same framework
+        await notification_service.send_notification_to_framework_team(
+            framework_id=framework_id,
+            title="New Classification Rule",
+            message=f"A new rule has been added to the classification framework",
+            notification_type="team_update",
+            exclude_user=user
+        )
+        
+        logger.info(f"Successfully sent notifications for rule {rule_id} creation")
+        
+    except Exception as e:
+        logger.error(f"Error notifying rule creation: {str(e)}")
+
+async def _notify_classification_completion(result_id: int, user: str, classification_type: str):
+    """Background task to notify about classification completion"""
+    try:
+        from ...services.notification_service import NotificationService
+        
+        notification_service = NotificationService()
+        
+        # Send completion notification
+        await notification_service.send_notification(
+            user_id=user,
+            title=f"{classification_type.title()} Classification Complete",
+            message=f"Classification process completed successfully. Result ID: {result_id}",
+            notification_type="classification_completed",
+            metadata={
+                "result_id": result_id,
+                "classification_type": classification_type,
+                "status": "completed"
+            }
+        )
+        
+        # Send analytics notification
+        await notification_service.send_system_notification(
+            system="analytics",
+            event_type="classification_completed",
+            payload={
+                "result_id": result_id,
+                "classification_type": classification_type,
+                "user_id": user,
+                "completion_time": datetime.utcnow().isoformat()
+            }
+        )
+        
+        logger.info(f"Successfully sent completion notifications for result {result_id}")
+        
+    except Exception as e:
+        logger.error(f"Error notifying classification completion: {str(e)}")
+
+async def _notify_classification_failure(error_details: Dict[str, Any], user: str):
+    """Background task to notify about classification failures"""
+    try:
+        from ...services.notification_service import NotificationService
+        
+        notification_service = NotificationService()
+        
+        # Send failure notification to user
+        await notification_service.send_notification(
+            user_id=user,
+            title="Classification Process Failed",
+            message=f"Classification failed: {error_details.get('error', 'Unknown error')}",
+            notification_type="classification_failed",
+            priority="high",
+            metadata={
+                "error_details": error_details,
+                "failure_time": datetime.utcnow().isoformat()
+            }
+        )
+        
+        # Send alert to support team
+        await notification_service.send_notification_to_role(
+            role="support",
+            title="Classification Process Failure",
+            message=f"Classification failed for user {user}",
+            notification_type="system_alert",
+            priority="high",
+            metadata=error_details
+        )
+        
+        logger.info(f"Successfully sent failure notifications for user {user}")
+        
+    except Exception as e:
+        logger.error(f"Error notifying classification failure: {str(e)}")
+
+async def _notify_bulk_operation_progress(operation_id: str, progress: Dict[str, Any], user: str):
+    """Background task to notify about bulk operation progress"""
+    try:
+        from ...services.notification_service import NotificationService
+        
+        notification_service = NotificationService()
+        
+        # Send progress update
+        await notification_service.send_notification(
+            user_id=user,
+            title="Bulk Classification Progress",
+            message=f"Bulk operation {operation_id}: {progress.get('percentage', 0)}% complete",
+            notification_type="bulk_operation_progress",
+            metadata={
+                "operation_id": operation_id,
+                "progress": progress,
+                "update_time": datetime.utcnow().isoformat()
+            }
+        )
+        
+        logger.info(f"Successfully sent progress notification for operation {operation_id}")
+        
+    except Exception as e:
+        logger.error(f"Error notifying bulk operation progress: {str(e)}")
 
 # ==================== ADDITIONAL ENDPOINTS ====================
 
