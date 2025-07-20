@@ -1,280 +1,166 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Settings, Shield, Bell, Database, Users, Lock, Globe,
-  Save, RefreshCw, Download, Upload, AlertTriangle, CheckCircle,
-  Server, Cloud, Boxes, Key, Monitor, Wifi, HardDrive
+  Settings,
+  Shield,
+  Bell,
+  Clock,
+  Users,
+  Database,
+  Zap,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  Globe,
+  Lock,
+  Unlock,
+  RefreshCw,
+  Save,
+  Download,
+  Upload,
+  Trash2,
+  Plus,
+  Minus,
+  Info
 } from "lucide-react"
-
-// Enterprise Integration
-import { useEnterpriseFeatures } from '../hooks/use-enterprise-features'
-import { useEnterpriseCompliance } from '../enterprise-integration'
-import { ComplianceAPIs } from '../services/enterprise-apis'
+import { useEnterpriseFeatures } from "../hooks/use-enterprise-features"
+import { ComplianceAPIs } from "../services/enterprise-apis"
 
 interface ComplianceRuleSettingsProps {
-  dataSourceId?: number
+  onClose?: () => void
 }
 
-const ComplianceRuleSettings: React.FC<ComplianceRuleSettingsProps> = ({ dataSourceId }) => {
-  const [settings, setSettings] = useState<any>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState('general')
+interface NotificationRule {
+  id: string
+  name: string
+  triggers: string[]
+  recipients: string[]
+  enabled: boolean
+  severity: 'low' | 'medium' | 'high' | 'critical'
+}
 
-  const enterprise = useEnterpriseCompliance()
-  const enterpriseFeatures = useEnterpriseFeatures({
+interface AutomationRule {
+  id: string
+  name: string
+  trigger: string
+  action: string
+  conditions: any
+  enabled: boolean
+}
+
+export function ComplianceRuleSettings({ onClose }: ComplianceRuleSettingsProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("general")
+  const [settings, setSettings] = useState<any>({
+    general: {
+      auto_scan_enabled: true,
+      scan_frequency: "daily",
+      max_concurrent_scans: 5,
+      retention_days: 365,
+      enable_notifications: true,
+      enable_auto_remediation: false,
+      default_severity: "medium",
+      global_timeout: 300
+    },
+    notifications: {
+      email_enabled: true,
+      slack_enabled: false,
+      webhook_enabled: false,
+      email_recipients: ["compliance@company.com"],
+      slack_channel: "#compliance",
+      webhook_url: "",
+      notification_rules: []
+    },
+    automation: {
+      auto_remediation_enabled: false,
+      auto_escalation_enabled: true,
+      workflow_automation: true,
+      automation_rules: []
+    },
+    security: {
+      encryption_enabled: true,
+      audit_logging: true,
+      access_control_enabled: true,
+      api_rate_limiting: true,
+      session_timeout: 3600,
+      require_mfa: false
+    },
+    integration: {
+      data_sources_sync: true,
+      external_apis_enabled: true,
+      webhook_integrations: [],
+      sso_enabled: false,
+      ldap_enabled: false
+    }
+  })
+
+  const { 
+    executeAction, 
+    sendNotification, 
+    getMetrics 
+  } = useEnterpriseFeatures({
     componentName: 'ComplianceRuleSettings',
-    dataSourceId,
-    enableMonitoring: true
+    enableAnalytics: true,
+    enableMonitoring: true,
+    enableWorkflows: true
   })
 
   // Load settings from API
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        setLoading(true)
-        
-        // Load current configuration from enterprise integration
-        const currentConfig = enterprise.config
-        const systemHealth = enterprise.systemHealth
-        const performanceMetrics = enterprise.performanceMetrics
-        
-        // Load additional settings from API
-        const [
-          integrationSettings,
-          notificationSettings,
-          securitySettings,
-          frameworkSettings
-        ] = await Promise.all([
-          fetch('/api/compliance/settings/integrations').then(res => res.ok ? res.json() : {}),
-          fetch('/api/compliance/settings/notifications').then(res => res.ok ? res.json() : {}),
-          fetch('/api/compliance/settings/security').then(res => res.ok ? res.json() : {}),
-          fetch('/api/compliance/settings/frameworks').then(res => res.ok ? res.json() : {})
-        ])
-
-        setSettings({
-          general: {
-            companyName: 'Enterprise Corp',
-            complianceOfficer: 'John Doe',
-            defaultFramework: 'SOC 2',
-            dataRetentionDays: 2555,
-            autoAssessment: true,
-            realTimeMonitoring: currentConfig.monitoring.enableRealTimeMonitoring,
-            aiInsights: currentConfig.analytics.enableAiInsights,
-            ...currentConfig
-          },
-          integrations: {
-            enableWebhooks: true,
-            webhookUrl: 'https://api.company.com/webhooks/compliance',
-            apiRateLimit: 1000,
-            enableSso: true,
-            ssoProvider: 'okta',
-            enableAuditLogging: true,
-            ...integrationSettings
-          },
-          notifications: {
-            emailNotifications: true,
-            slackNotifications: false,
-            teamsNotifications: true,
-            smsNotifications: false,
-            notificationFrequency: 'immediate',
-            escalationEnabled: true,
-            escalationThreshold: 24,
-            ...notificationSettings
-          },
-          security: {
-            encryptionEnabled: true,
-            encryptionAlgorithm: 'AES-256',
-            accessControlEnabled: true,
-            mfaRequired: true,
-            sessionTimeout: 480,
-            passwordPolicy: 'strong',
-            dataClassification: true,
-            ...securitySettings
-          },
-          frameworks: {
-            enabledFrameworks: ['SOC 2', 'GDPR', 'HIPAA', 'ISO 27001'],
-            autoImport: true,
-            crosswalkMapping: true,
-            customFrameworks: false,
-            assessmentFrequency: 'quarterly',
-            ...frameworkSettings
-          },
-          performance: {
-            cacheEnabled: true,
-            cacheTtl: 300,
-            batchSize: 100,
-            maxConcurrentRequests: 10,
-            enableCompression: true,
-            enableCdn: false,
-            ...performanceMetrics
-          },
-          system: {
-            status: systemHealth.status,
-            uptime: systemHealth.uptime,
-            latency: systemHealth.latency,
-            errorRate: systemHealth.errorRate,
-            version: '2.1.0',
-            lastUpdated: new Date().toISOString()
-          }
-        })
-
+        setIsLoading(true)
+        const settingsData = await ComplianceAPIs.Management.getSettings()
+        setSettings(settingsData)
       } catch (error) {
         console.error('Failed to load settings:', error)
-        enterprise.sendNotification('error', 'Failed to load settings')
-        
-        // Set default settings
-        setSettings({
-          general: {
-            companyName: '',
-            complianceOfficer: '',
-            defaultFramework: 'SOC 2',
-            dataRetentionDays: 2555,
-            autoAssessment: false,
-            realTimeMonitoring: false,
-            aiInsights: false
-          },
-          integrations: {},
-          notifications: {},
-          security: {},
-          frameworks: {},
-          performance: {},
-          system: {}
-        })
+        sendNotification('error', 'Failed to load compliance settings')
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
 
     loadSettings()
-  }, [enterprise, dataSourceId])
+  }, [sendNotification])
 
   const handleSaveSettings = async () => {
     try {
-      setSaving(true)
-      
-      // Update enterprise configuration
-      await enterprise.updateConfig({
-        monitoring: {
-          ...enterprise.config.monitoring,
-          enableRealTimeMonitoring: settings.general.realTimeMonitoring
-        },
-        analytics: {
-          ...enterprise.config.analytics,
-          enableAiInsights: settings.general.aiInsights
-        }
-      })
-
-      // Save settings to API
-      await Promise.all([
-        fetch('/api/compliance/settings/integrations', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings.integrations)
-        }),
-        fetch('/api/compliance/settings/notifications', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings.notifications)
-        }),
-        fetch('/api/compliance/settings/security', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings.security)
-        }),
-        fetch('/api/compliance/settings/frameworks', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settings.frameworks)
-        })
-      ])
-
-      enterprise.sendNotification('success', 'Settings saved successfully')
-      
+      setIsLoading(true)
+      await ComplianceAPIs.Management.updateSettings(settings)
+      sendNotification('success', 'Compliance settings saved successfully')
     } catch (error) {
       console.error('Failed to save settings:', error)
-      enterprise.sendNotification('error', 'Failed to save settings')
+      sendNotification('error', 'Failed to save compliance settings')
     } finally {
-      setSaving(false)
+      setIsLoading(false)
     }
   }
 
-  const handleResetSettings = () => {
-    setSettings({
-      general: {
-        companyName: '',
-        complianceOfficer: '',
-        defaultFramework: 'SOC 2',
-        dataRetentionDays: 2555,
-        autoAssessment: false,
-        realTimeMonitoring: false,
-        aiInsights: false
-      },
-      integrations: {},
-      notifications: {},
-      security: {},
-      frameworks: {},
-      performance: {},
-      system: {}
-    })
-    enterprise.sendNotification('info', 'Settings reset to defaults')
-  }
-
-  const handleTestIntegration = async (integrationId: number) => {
+  const handleResetSettings = async () => {
     try {
-      const result = await ComplianceAPIs.Integration.testIntegration(integrationId)
-      if (result.status === 'success') {
-        enterprise.sendNotification('success', 'Integration test successful')
-      } else {
-        enterprise.sendNotification('error', `Integration test failed: ${result.error_message}`)
-      }
+      await ComplianceAPIs.Management.resetSettings()
+      sendNotification('info', 'Settings reset to defaults')
+      // Reload settings
+      const settingsData = await ComplianceAPIs.Management.getSettings()
+      setSettings(settingsData)
     } catch (error) {
-      console.error('Failed to test integration:', error)
-      enterprise.sendNotification('error', 'Failed to test integration')
-    }
-  }
-
-  const handleExportSettings = async () => {
-    try {
-      const dataStr = JSON.stringify(settings, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `compliance-settings-${new Date().toISOString().split('T')[0]}.json`
-      link.click()
-      URL.revokeObjectURL(url)
-      
-      enterprise.sendNotification('success', 'Settings exported successfully')
-    } catch (error) {
-      console.error('Failed to export settings:', error)
-      enterprise.sendNotification('error', 'Failed to export settings')
-    }
-  }
-
-  const handleImportSettings = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    try {
-      const text = await file.text()
-      const importedSettings = JSON.parse(text)
-      setSettings(importedSettings)
-      enterprise.sendNotification('success', 'Settings imported successfully')
-    } catch (error) {
-      console.error('Failed to import settings:', error)
-      enterprise.sendNotification('error', 'Failed to import settings')
+      console.error('Failed to reset settings:', error)
+      sendNotification('error', 'Failed to reset settings')
     }
   }
 
@@ -292,101 +178,385 @@ const ComplianceRuleSettings: React.FC<ComplianceRuleSettingsProps> = ({ dataSou
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Company Information</CardTitle>
-          <CardDescription>Basic company and compliance information</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            General Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure general compliance rule behavior and system settings
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                value={settings.general?.companyName || ''}
-                onChange={(e) => updateSetting('general', 'companyName', e.target.value)}
-                placeholder="Enter company name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="complianceOfficer">Compliance Officer</Label>
-              <Input
-                id="complianceOfficer"
-                value={settings.general?.complianceOfficer || ''}
-                onChange={(e) => updateSetting('general', 'complianceOfficer', e.target.value)}
-                placeholder="Enter compliance officer name"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="defaultFramework">Default Framework</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Scan Frequency</Label>
               <Select 
-                value={settings.general?.defaultFramework || 'SOC 2'} 
-                onValueChange={(value) => updateSetting('general', 'defaultFramework', value)}
+                value={settings.general.scan_frequency} 
+                onValueChange={(value) => updateSetting('general', 'scan_frequency', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select framework" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SOC 2">SOC 2</SelectItem>
-                  <SelectItem value="GDPR">GDPR</SelectItem>
-                  <SelectItem value="HIPAA">HIPAA</SelectItem>
-                  <SelectItem value="ISO 27001">ISO 27001</SelectItem>
-                  <SelectItem value="PCI DSS">PCI DSS</SelectItem>
+                  <SelectItem value="continuous">Continuous</SelectItem>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="dataRetention">Data Retention (Days)</Label>
+
+            <div className="space-y-2">
+              <Label>Default Severity</Label>
+              <Select 
+                value={settings.general.default_severity} 
+                onValueChange={(value) => updateSetting('general', 'default_severity', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Max Concurrent Scans</Label>
               <Input
-                id="dataRetention"
                 type="number"
-                value={settings.general?.dataRetentionDays || 2555}
-                onChange={(e) => updateSetting('general', 'dataRetentionDays', parseInt(e.target.value))}
-                placeholder="2555"
+                min="1"
+                max="20"
+                value={settings.general.max_concurrent_scans}
+                onChange={(e) => updateSetting('general', 'max_concurrent_scans', parseInt(e.target.value))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data Retention (Days)</Label>
+              <Input
+                type="number"
+                min="30"
+                max="2555"
+                value={settings.general.retention_days}
+                onChange={(e) => updateSetting('general', 'retention_days', parseInt(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Auto-Scan Enabled</Label>
+                <p className="text-sm text-muted-foreground">Automatically scan data sources for compliance</p>
+              </div>
+              <Switch
+                checked={settings.general.auto_scan_enabled}
+                onCheckedChange={(checked) => updateSetting('general', 'auto_scan_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Enable Notifications</Label>
+                <p className="text-sm text-muted-foreground">Send notifications for compliance events</p>
+              </div>
+              <Switch
+                checked={settings.general.enable_notifications}
+                onCheckedChange={(checked) => updateSetting('general', 'enable_notifications', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">Auto-Remediation</Label>
+                <p className="text-sm text-muted-foreground">Automatically fix compliance violations when possible</p>
+              </div>
+              <Switch
+                checked={settings.general.enable_auto_remediation}
+                onCheckedChange={(checked) => updateSetting('general', 'enable_auto_remediation', checked)}
               />
             </div>
           </div>
         </CardContent>
       </Card>
+    </div>
+  )
 
+  const renderNotificationSettings = () => (
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Automation Settings</CardTitle>
-          <CardDescription>Configure automated compliance processes</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Channels
+          </CardTitle>
+          <CardDescription>
+            Configure how and when compliance notifications are sent
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="autoAssessment">Automatic Assessments</Label>
-              <p className="text-sm text-muted-foreground">Enable automated compliance assessments</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <Label className="text-base">Email Notifications</Label>
+                  <p className="text-sm text-muted-foreground">Send compliance alerts via email</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.notifications.email_enabled}
+                onCheckedChange={(checked) => updateSetting('notifications', 'email_enabled', checked)}
+              />
             </div>
-            <Switch
-              id="autoAssessment"
-              checked={settings.general?.autoAssessment || false}
-              onCheckedChange={(checked) => updateSetting('general', 'autoAssessment', checked)}
-            />
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <Label className="text-base">Slack Integration</Label>
+                  <p className="text-sm text-muted-foreground">Send alerts to Slack channels</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.notifications.slack_enabled}
+                onCheckedChange={(checked) => updateSetting('notifications', 'slack_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Zap className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <Label className="text-base">Webhook Integration</Label>
+                  <p className="text-sm text-muted-foreground">Send events to external webhooks</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.notifications.webhook_enabled}
+                onCheckedChange={(checked) => updateSetting('notifications', 'webhook_enabled', checked)}
+              />
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="realTimeMonitoring">Real-time Monitoring</Label>
-              <p className="text-sm text-muted-foreground">Enable real-time compliance monitoring</p>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email Recipients</Label>
+              <Textarea
+                placeholder="Enter email addresses separated by commas"
+                value={settings.notifications.email_recipients.join(', ')}
+                onChange={(e) => {
+                  const emails = e.target.value.split(',').map(email => email.trim()).filter(email => email)
+                  updateSetting('notifications', 'email_recipients', emails)
+                }}
+              />
             </div>
-            <Switch
-              id="realTimeMonitoring"
-              checked={settings.general?.realTimeMonitoring || false}
-              onCheckedChange={(checked) => updateSetting('general', 'realTimeMonitoring', checked)}
-            />
+
+            {settings.notifications.slack_enabled && (
+              <div className="space-y-2">
+                <Label>Slack Channel</Label>
+                <Input
+                  placeholder="#compliance"
+                  value={settings.notifications.slack_channel}
+                  onChange={(e) => updateSetting('notifications', 'slack_channel', e.target.value)}
+                />
+              </div>
+            )}
+
+            {settings.notifications.webhook_enabled && (
+              <div className="space-y-2">
+                <Label>Webhook URL</Label>
+                <Input
+                  placeholder="https://your-webhook-endpoint.com"
+                  value={settings.notifications.webhook_url}
+                  onChange={(e) => updateSetting('notifications', 'webhook_url', e.target.value)}
+                />
+              </div>
+            )}
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="aiInsights">AI Insights</Label>
-              <p className="text-sm text-muted-foreground">Enable AI-powered compliance insights</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  const renderAutomationSettings = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Automation & Workflows
+          </CardTitle>
+          <CardDescription>
+            Configure automated responses and workflow triggers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label className="text-base">Auto-Remediation</Label>
+                <p className="text-sm text-muted-foreground">Automatically fix violations when possible</p>
+              </div>
+              <Switch
+                checked={settings.automation.auto_remediation_enabled}
+                onCheckedChange={(checked) => updateSetting('automation', 'auto_remediation_enabled', checked)}
+              />
             </div>
-            <Switch
-              id="aiInsights"
-              checked={settings.general?.aiInsights || false}
-              onCheckedChange={(checked) => updateSetting('general', 'aiInsights', checked)}
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label className="text-base">Auto-Escalation</Label>
+                <p className="text-sm text-muted-foreground">Escalate unresolved issues automatically</p>
+              </div>
+              <Switch
+                checked={settings.automation.auto_escalation_enabled}
+                onCheckedChange={(checked) => updateSetting('automation', 'auto_escalation_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label className="text-base">Workflow Automation</Label>
+                <p className="text-sm text-muted-foreground">Enable automated workflow execution</p>
+              </div>
+              <Switch
+                checked={settings.automation.workflow_automation}
+                onCheckedChange={(checked) => updateSetting('automation', 'workflow_automation', checked)}
+              />
+            </div>
+          </div>
+
+          {settings.automation.auto_remediation_enabled && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Auto-remediation is enabled. The system will attempt to automatically fix compliance violations.
+                Ensure you have tested remediation actions thoroughly before enabling in production.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  const renderSecuritySettings = () => (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Security & Access Control
+          </CardTitle>
+          <CardDescription>
+            Configure security settings and access controls
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Lock className="h-4 w-4 text-green-600" />
+                <div>
+                  <Label className="text-base">Data Encryption</Label>
+                  <p className="text-sm text-muted-foreground">Encrypt sensitive compliance data</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.security.encryption_enabled}
+                onCheckedChange={(checked) => updateSetting('security', 'encryption_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Activity className="h-4 w-4 text-blue-600" />
+                <div>
+                  <Label className="text-base">Audit Logging</Label>
+                  <p className="text-sm text-muted-foreground">Log all compliance activities</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.security.audit_logging}
+                onCheckedChange={(checked) => updateSetting('security', 'audit_logging', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Users className="h-4 w-4 text-purple-600" />
+                <div>
+                  <Label className="text-base">Access Control</Label>
+                  <p className="text-sm text-muted-foreground">Enable role-based access control</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.security.access_control_enabled}
+                onCheckedChange={(checked) => updateSetting('security', 'access_control_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-orange-600" />
+                <div>
+                  <Label className="text-base">API Rate Limiting</Label>
+                  <p className="text-sm text-muted-foreground">Limit API requests per user</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.security.api_rate_limiting}
+                onCheckedChange={(checked) => updateSetting('security', 'api_rate_limiting', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Shield className="h-4 w-4 text-red-600" />
+                <div>
+                  <Label className="text-base">Require MFA</Label>
+                  <p className="text-sm text-muted-foreground">Require multi-factor authentication</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.security.require_mfa}
+                onCheckedChange={(checked) => updateSetting('security', 'require_mfa', checked)}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>Session Timeout (seconds)</Label>
+            <Input
+              type="number"
+              min="300"
+              max="86400"
+              value={settings.security.session_timeout}
+              onChange={(e) => updateSetting('security', 'session_timeout', parseInt(e.target.value))}
             />
+            <p className="text-sm text-muted-foreground">
+              User sessions will expire after this period of inactivity
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -397,203 +567,76 @@ const ComplianceRuleSettings: React.FC<ComplianceRuleSettingsProps> = ({ dataSou
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>API Configuration</CardTitle>
-          <CardDescription>Configure API and webhook settings</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            External Integrations
+          </CardTitle>
+          <CardDescription>
+            Configure integrations with external systems and data sources
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="webhookUrl">Webhook URL</Label>
-            <Input
-              id="webhookUrl"
-              value={settings.integrations?.webhookUrl || ''}
-              onChange={(e) => updateSetting('integrations', 'webhookUrl', e.target.value)}
-              placeholder="https://api.company.com/webhooks/compliance"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="apiRateLimit">API Rate Limit (req/min)</Label>
-              <Input
-                id="apiRateLimit"
-                type="number"
-                value={settings.integrations?.apiRateLimit || 1000}
-                onChange={(e) => updateSetting('integrations', 'apiRateLimit', parseInt(e.target.value))}
-                placeholder="1000"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ssoProvider">SSO Provider</Label>
-              <Select 
-                value={settings.integrations?.ssoProvider || 'okta'} 
-                onValueChange={(value) => updateSetting('integrations', 'ssoProvider', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select SSO provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="okta">Okta</SelectItem>
-                  <SelectItem value="azure">Azure AD</SelectItem>
-                  <SelectItem value="auth0">Auth0</SelectItem>
-                  <SelectItem value="saml">SAML</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enableWebhooks">Enable Webhooks</Label>
-                <p className="text-sm text-muted-foreground">Send compliance events via webhooks</p>
-              </div>
-              <Switch
-                id="enableWebhooks"
-                checked={settings.integrations?.enableWebhooks || false}
-                onCheckedChange={(checked) => updateSetting('integrations', 'enableWebhooks', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enableSso">Enable SSO</Label>
-                <p className="text-sm text-muted-foreground">Single sign-on integration</p>
-              </div>
-              <Switch
-                id="enableSso"
-                checked={settings.integrations?.enableSso || false}
-                onCheckedChange={(checked) => updateSetting('integrations', 'enableSso', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="enableAuditLogging">Enable Audit Logging</Label>
-                <p className="text-sm text-muted-foreground">Log all API and system activities</p>
-              </div>
-              <Switch
-                id="enableAuditLogging"
-                checked={settings.integrations?.enableAuditLogging || false}
-                onCheckedChange={(checked) => updateSetting('integrations', 'enableAuditLogging', checked)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-
-  const renderSystemStatus = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>System Health</CardTitle>
-          <CardDescription>Current system status and performance metrics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full mb-2 ${
-                settings.system?.status === 'healthy' ? 'bg-green-100 text-green-600' :
-                settings.system?.status === 'degraded' ? 'bg-yellow-100 text-yellow-600' :
-                'bg-red-100 text-red-600'
-              }`}>
-                {settings.system?.status === 'healthy' ? <CheckCircle className="h-6 w-6" /> :
-                 settings.system?.status === 'degraded' ? <AlertTriangle className="h-6 w-6" /> :
-                 <AlertTriangle className="h-6 w-6" />}
-              </div>
-              <p className="font-medium">System Status</p>
-              <p className="text-sm text-muted-foreground capitalize">
-                {settings.system?.status || 'Unknown'}
-              </p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-2">
-                <Monitor className="h-6 w-6" />
-              </div>
-              <p className="font-medium">Uptime</p>
-              <p className="text-sm text-muted-foreground">
-                {Math.floor((settings.system?.uptime || 0) / 3600)}h {Math.floor(((settings.system?.uptime || 0) % 3600) / 60)}m
-              </p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 text-purple-600 mb-2">
-                <Wifi className="h-6 w-6" />
-              </div>
-              <p className="font-medium">Latency</p>
-              <p className="text-sm text-muted-foreground">
-                {settings.system?.latency || 0}ms
-              </p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 text-orange-600 mb-2">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <p className="font-medium">Error Rate</p>
-              <p className="text-sm text-muted-foreground">
-                {settings.system?.errorRate || 0}%
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>System Information</CardTitle>
-          <CardDescription>Version and deployment information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="font-medium">Version</span>
-              <Badge variant="outline">{settings.system?.version || '2.1.0'}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Last Updated</span>
-              <span className="text-sm text-muted-foreground">
-                {settings.system?.lastUpdated ? 
-                  new Date(settings.system.lastUpdated).toLocaleDateString() : 
-                  'Unknown'
-                }
-              </span>
-            </div>
-            <Separator />
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Refresh Status
-              </Button>
-              <Button variant="outline" size="sm">
-                <HardDrive className="h-4 w-4 mr-1" />
-                System Logs
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 bg-muted animate-pulse rounded w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
-                <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted animate-pulse rounded" />
-                  <div className="h-3 bg-muted animate-pulse rounded w-2/3" />
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Database className="h-4 w-4 text-blue-600" />
+                <div>
+                  <Label className="text-base">Data Sources Sync</Label>
+                  <p className="text-sm text-muted-foreground">Automatically sync with connected data sources</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
+              </div>
+              <Switch
+                checked={settings.integration.data_sources_sync}
+                onCheckedChange={(checked) => updateSetting('integration', 'data_sources_sync', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Zap className="h-4 w-4 text-green-600" />
+                <div>
+                  <Label className="text-base">External APIs</Label>
+                  <p className="text-sm text-muted-foreground">Enable external API integrations</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.integration.external_apis_enabled}
+                onCheckedChange={(checked) => updateSetting('integration', 'external_apis_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Users className="h-4 w-4 text-purple-600" />
+                <div>
+                  <Label className="text-base">SSO Integration</Label>
+                  <p className="text-sm text-muted-foreground">Enable Single Sign-On authentication</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.integration.sso_enabled}
+                onCheckedChange={(checked) => updateSetting('integration', 'sso_enabled', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Shield className="h-4 w-4 text-orange-600" />
+                <div>
+                  <Label className="text-base">LDAP Integration</Label>
+                  <p className="text-sm text-muted-foreground">Connect to LDAP directory services</p>
+                </div>
+              </div>
+              <Switch
+                checked={settings.integration.ldap_enabled}
+                onCheckedChange={(checked) => updateSetting('integration', 'ldap_enabled', checked)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -601,165 +644,59 @@ const ComplianceRuleSettings: React.FC<ComplianceRuleSettingsProps> = ({ dataSou
         <div>
           <h2 className="text-2xl font-bold">Compliance Settings</h2>
           <p className="text-muted-foreground">
-            Configure compliance rules, integrations, and system settings
+            Configure compliance rules, notifications, and system behavior
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImportSettings}
-            className="hidden"
-            id="import-settings"
-          />
-          <Button variant="outline" size="sm" onClick={() => document.getElementById('import-settings')?.click()}>
-            <Upload className="h-4 w-4 mr-1" />
-            Import
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleResetSettings}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reset to Defaults
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportSettings}>
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleResetSettings}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Reset
-          </Button>
-          <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
-            <Save className="h-4 w-4 mr-1" />
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button onClick={handleSaveSettings} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Settings
+              </>
+            )}
           </Button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="automation">Automation</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
+          <TabsTrigger value="integration">Integration</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
           {renderGeneralSettings()}
         </TabsContent>
 
-        <TabsContent value="integrations">
-          {renderIntegrationSettings()}
+        <TabsContent value="notifications">
+          {renderNotificationSettings()}
         </TabsContent>
 
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>Configure how and when you receive compliance notifications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                  </div>
-                  <Switch
-                    id="emailNotifications"
-                    checked={settings.notifications?.emailNotifications || false}
-                    onCheckedChange={(checked) => updateSetting('notifications', 'emailNotifications', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="slackNotifications">Slack Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Send notifications to Slack</p>
-                  </div>
-                  <Switch
-                    id="slackNotifications"
-                    checked={settings.notifications?.slackNotifications || false}
-                    onCheckedChange={(checked) => updateSetting('notifications', 'slackNotifications', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="automation">
+          {renderAutomationSettings()}
         </TabsContent>
 
         <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Security Settings</CardTitle>
-              <CardDescription>Configure security and access control settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="encryptionEnabled">Data Encryption</Label>
-                    <p className="text-sm text-muted-foreground">Enable data encryption at rest</p>
-                  </div>
-                  <Switch
-                    id="encryptionEnabled"
-                    checked={settings.security?.encryptionEnabled || false}
-                    onCheckedChange={(checked) => updateSetting('security', 'encryptionEnabled', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="mfaRequired">Multi-Factor Authentication</Label>
-                    <p className="text-sm text-muted-foreground">Require MFA for all users</p>
-                  </div>
-                  <Switch
-                    id="mfaRequired"
-                    checked={settings.security?.mfaRequired || false}
-                    onCheckedChange={(checked) => updateSetting('security', 'mfaRequired', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {renderSecuritySettings()}
         </TabsContent>
 
-        <TabsContent value="frameworks">
-          <Card>
-            <CardHeader>
-              <CardTitle>Framework Settings</CardTitle>
-              <CardDescription>Configure compliance frameworks and assessment settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="autoImport">Auto Import Requirements</Label>
-                    <p className="text-sm text-muted-foreground">Automatically import framework requirements</p>
-                  </div>
-                  <Switch
-                    id="autoImport"
-                    checked={settings.frameworks?.autoImport || false}
-                    onCheckedChange={(checked) => updateSetting('frameworks', 'autoImport', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="crosswalkMapping">Crosswalk Mapping</Label>
-                    <p className="text-sm text-muted-foreground">Enable framework crosswalk mapping</p>
-                  </div>
-                  <Switch
-                    id="crosswalkMapping"
-                    checked={settings.frameworks?.crosswalkMapping || false}
-                    onCheckedChange={(checked) => updateSetting('frameworks', 'crosswalkMapping', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="system">
-          {renderSystemStatus()}
+        <TabsContent value="integration">
+          {renderIntegrationSettings()}
         </TabsContent>
       </Tabs>
     </div>
   )
 }
-
-export default ComplianceRuleSettings

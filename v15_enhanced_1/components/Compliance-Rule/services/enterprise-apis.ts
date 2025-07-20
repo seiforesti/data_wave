@@ -515,7 +515,7 @@ export class ComplianceManagementAPI {
   }): Promise<{ data: ComplianceRequirement[]; total: number; page: number; limit: number }> {
     return apiClient.request({
       method: 'GET',
-      url: '/compliance/requirements',
+      url: '/compliance/rules',
       params
     })
   }
@@ -523,14 +523,14 @@ export class ComplianceManagementAPI {
   static async getRequirement(id: number): Promise<ComplianceRequirement> {
     return apiClient.request({
       method: 'GET',
-      url: `/compliance/requirements/${id}`
+      url: `/compliance/rules/${id}`
     })
   }
 
   static async createRequirement(data: Omit<ComplianceRequirement, 'id' | 'created_at' | 'updated_at' | 'version'>): Promise<ComplianceRequirement> {
     return apiClient.request({
       method: 'POST',
-      url: '/compliance/requirements',
+      url: '/compliance/rules',
       data
     })
   }
@@ -538,7 +538,7 @@ export class ComplianceManagementAPI {
   static async updateRequirement(id: number, data: Partial<ComplianceRequirement>): Promise<ComplianceRequirement> {
     return apiClient.request({
       method: 'PUT',
-      url: `/compliance/requirements/${id}`,
+      url: `/compliance/rules/${id}`,
       data
     })
   }
@@ -546,15 +546,15 @@ export class ComplianceManagementAPI {
   static async deleteRequirement(id: number): Promise<void> {
     return apiClient.request({
       method: 'DELETE',
-      url: `/compliance/requirements/${id}`
+      url: `/compliance/rules/${id}`
     })
   }
 
   static async bulkUpdateRequirements(updates: Array<{ id: number; data: Partial<ComplianceRequirement> }>): Promise<ComplianceRequirement[]> {
     return apiClient.request({
       method: 'POST',
-      url: '/compliance/requirements/bulk-update',
-      data: { updates }
+      url: '/compliance/rules/bulk-update',
+      data: updates
     })
   }
 
@@ -567,7 +567,7 @@ export class ComplianceManagementAPI {
   }): Promise<ComplianceRequirement> {
     return apiClient.request({
       method: 'POST',
-      url: `/compliance/requirements/${id}/assess`,
+      url: `/compliance/rules/${id}/assess`,
       data: assessment
     })
   }
@@ -575,7 +575,7 @@ export class ComplianceManagementAPI {
   static async getRequirementHistory(id: number): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
-      url: `/compliance/requirements/${id}/history`
+      url: `/compliance/rules/${id}/history`
     })
   }
 
@@ -830,6 +830,42 @@ export class ComplianceManagementAPI {
       method: 'POST',
       url: `/compliance/evidence/${id}/verify`,
       data: verification
+    })
+  }
+
+  static async getComplianceMetrics(params?: {
+    data_source_id?: number
+    framework?: string
+    time_range?: string
+  }): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/statistics',
+      params
+    })
+  }
+
+  static async getComplianceInsights(params?: {
+    data_source_id?: number
+    category?: string
+    limit?: number
+  }): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/${params?.data_source_id}/insights`,
+      params
+    })
+  }
+
+  static async getComplianceTrends(params?: {
+    data_source_id?: number
+    time_range?: string
+    metrics?: string[]
+  }): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/${params?.data_source_id}/trends`,
+      params
     })
   }
 }
