@@ -284,15 +284,6 @@ class ScanRuleSet(SQLModel, table=True):
     exclude_columns: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
     sample_data: bool = Field(default=False)  # Whether to sample actual data or just metadata
     sample_size: Optional[int] = Field(default=100)  # Number of rows to sample if sample_data is True
-
-    data_source_id: int = Field(foreign_key="datasource.id", index=True)
-    
-    # Rule configuration
-    rules: List[Dict[str, Any]] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
-    rule_count: int = Field(default=0)
-    
-    # Status and metadata
-    is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -300,7 +291,7 @@ class ScanRuleSet(SQLModel, table=True):
     data_source: Optional[DataSource] = Relationship(back_populates="scan_rule_sets")
     scans: List["Scan"] = Relationship(back_populates="scan_rule_set")
     
-    # **NEW: Compliance Relationships**
+    # **INTERCONNECTED: Compliance Relationships**
     compliance_rules: List["ComplianceRule"] = Relationship(back_populates="scan_rule_set")
 
 
