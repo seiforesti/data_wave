@@ -321,20 +321,33 @@ async def get_workflow_history(
         if not workflow:
             raise HTTPException(status_code=404, detail="Workflow not found")
         
-        # This would query workflow execution history
-        history = [
-            {
-                "id": f"exec_1_{workflow_id}",
-                "started_at": "2024-01-15T10:00:00Z",
-                "completed_at": "2024-01-15T10:30:00Z",
-                "status": "completed",
-                "trigger": "manual",
-                "steps_completed": workflow.total_steps,
-                "total_steps": workflow.total_steps,
-                "execution_log": ["Step 1 completed", "Step 2 completed", "Workflow completed"]
-            }
-        ]
+        # Query workflow execution history from database
+        from app.models.compliance_extended_models import ComplianceWorkflowExecution
         
+        executions = session.exec(
+            select(ComplianceWorkflowExecution).where(
+                ComplianceWorkflowExecution.workflow_id == workflow_id
+            ).order_by(ComplianceWorkflowExecution.started_at.desc())
+        ).all()
+        
+        history = []
+        for execution in executions:
+            history_item = {
+                "id": execution.execution_id,
+                "started_at": execution.started_at.isoformat(),
+                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+                "status": execution.status.value,
+                "trigger": execution.trigger_type,
+                "steps_completed": execution.steps_completed,
+                "total_steps": execution.total_steps,
+                "execution_log": execution.execution_log,
+                "triggered_by": execution.triggered_by,
+                "duration_minutes": execution.duration_minutes,
+                "error_message": execution.error_message
+            }
+            history.append(history_item)
+        
+        # If no history found, return empty list (no mock data)
         return history
         
     except HTTPException:

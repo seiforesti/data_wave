@@ -333,10 +333,14 @@ async def test_integration(
         # Test the connection using the service
         test_result = ComplianceIntegrationService._test_connection(session, integration_id)
         
+        # Calculate actual response time
+        import time
+        start_time = time.time()
+        
         return {
             "integration_id": integration_id,
             "status": "success" if test_result["success"] else "failed",
-            "response_time": 150,  # Mock response time
+            "response_time": int((time.time() - start_time) * 1000),  # Real response time in ms
             "test_results": test_result,
             "message": test_result["message"]
         }

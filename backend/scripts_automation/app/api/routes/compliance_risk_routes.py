@@ -502,47 +502,123 @@ async def get_data_source_risk_assessment(
 ):
     """Get risk assessment for a specific data source"""
     try:
-        # This would use existing risk assessment logic for data sources
+        # Get data source information first
+        from app.models.data_source import DataSource
+        
+        data_source = session.get(DataSource, data_source_id)
+        if not data_source:
+            raise HTTPException(status_code=404, detail="Data source not found")
+        
+        # Calculate real risk assessment based on data source properties
+        # This uses actual data source attributes to calculate risk
+        risk_factors = []
+        total_score = 0.0
+        total_weight = 0.0
+        
+        # Data Sensitivity Factor (based on data source metadata)
+        sensitivity_score = 70  # Default
+        if hasattr(data_source, 'metadata') and data_source.metadata:
+            if 'contains_pii' in str(data_source.metadata).lower():
+                sensitivity_score = 85
+            if 'financial' in str(data_source.metadata).lower():
+                sensitivity_score = 90
+        
+        risk_factors.append({
+            "factor": "data_sensitivity",
+            "score": sensitivity_score,
+            "weight": 0.3,
+            "description": f"Data sensitivity analysis for {data_source.name}"
+        })
+        total_score += sensitivity_score * 0.3
+        total_weight += 0.3
+        
+        # Access Controls Factor (based on connection security)
+        access_score = 60  # Default
+        if hasattr(data_source, 'connection_string') and data_source.connection_string:
+            if 'ssl=true' in data_source.connection_string.lower():
+                access_score += 15
+            if 'encrypt=true' in data_source.connection_string.lower():
+                access_score += 10
+        
+        risk_factors.append({
+            "factor": "access_controls",
+            "score": access_score,
+            "weight": 0.25,
+            "description": f"Access control assessment for {data_source.name}"
+        })
+        total_score += access_score * 0.25
+        total_weight += 0.25
+        
+        # Compliance Status Factor (based on actual compliance rules)
+        from app.models.compliance_models import ComplianceRule
+        compliance_rules = session.exec(
+            select(ComplianceRule).where(
+                ComplianceRule.data_source_id == data_source_id,
+                ComplianceRule.is_active == True
+            )
+        ).all()
+        
+        compliance_score = 50  # Default
+        if compliance_rules:
+            compliant_rules = sum(1 for rule in compliance_rules if rule.compliance_percentage >= 80)
+            compliance_score = min(95, (compliant_rules / len(compliance_rules)) * 100)
+        
+        risk_factors.append({
+            "factor": "compliance_status",
+            "score": compliance_score,
+            "weight": 0.25,
+            "description": f"Compliance rule evaluation for {data_source.name}"
+        })
+        total_score += compliance_score * 0.25
+        total_weight += 0.25
+        
+        # Security Configuration Factor
+        security_score = 65  # Default
+        if data_source.database_type in ['postgresql', 'mysql', 'sqlserver']:
+            security_score = 75  # More secure databases
+        
+        risk_factors.append({
+            "factor": "security_configuration",
+            "score": security_score,
+            "weight": 0.2,
+            "description": f"Security configuration for {data_source.database_type}"
+        })
+        total_score += security_score * 0.2
+        total_weight += 0.2
+        
+        # Calculate overall risk score
+        overall_risk_score = total_score / total_weight if total_weight > 0 else 50
+        
+        # Determine risk level
+        if overall_risk_score >= 80:
+            risk_level = "low"
+        elif overall_risk_score >= 60:
+            risk_level = "medium"
+        elif overall_risk_score >= 40:
+            risk_level = "high"
+        else:
+            risk_level = "critical"
+        
+        # Generate recommendations based on actual scores
+        recommendations = []
+        if any(factor["score"] < 70 for factor in risk_factors):
+            recommendations.append("Address low-scoring risk factors")
+        if compliance_score < 80:
+            recommendations.append("Improve compliance rule coverage and evaluation")
+        if access_score < 75:
+            recommendations.append("Enhance access controls and authentication")
+        if not recommendations:
+            recommendations.append("Maintain current security posture with regular assessments")
+        
         risk_assessment = {
             "data_source_id": data_source_id,
-            "overall_risk_score": 75.5,
-            "risk_level": "medium",
-            "risk_factors": [
-                {
-                    "factor": "data_sensitivity",
-                    "score": 80,
-                    "weight": 0.3,
-                    "description": "Contains PII and financial data"
-                },
-                {
-                    "factor": "access_controls",
-                    "score": 70,
-                    "weight": 0.25,
-                    "description": "Basic access controls implemented"
-                },
-                {
-                    "factor": "encryption_status",
-                    "score": 85,
-                    "weight": 0.2,
-                    "description": "Data encrypted at rest and in transit"
-                },
-                {
-                    "factor": "compliance_gaps",
-                    "score": 65,
-                    "weight": 0.25,
-                    "description": "Some compliance requirements not met"
-                }
-            ],
-            "risk_trends": [
-                {"date": "2024-01-01", "score": 78.0},
-                {"date": "2024-01-02", "score": 76.5},
-                {"date": "2024-01-03", "score": 75.5}
-            ],
-            "recommendations": [
-                "Implement additional access controls",
-                "Address remaining compliance gaps",
-                "Regular security assessments"
-            ],
+            "data_source_name": data_source.name,
+            "database_type": data_source.database_type,
+            "overall_risk_score": round(overall_risk_score, 1),
+            "risk_level": risk_level,
+            "risk_factors": risk_factors,
+            "recommendations": recommendations,
+            "compliance_rules_count": len(compliance_rules),
             "last_assessed": datetime.now().isoformat(),
             "next_assessment": (datetime.now() + timedelta(days=30)).isoformat()
         }

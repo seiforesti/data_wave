@@ -356,22 +356,36 @@ async def get_certifications(
 ):
     """Get certifications for an entity"""
     try:
-        # This would query a certifications table
-        # For now, return mock structure that would be replaced with real data
-        certifications = [
-            {
-                "id": 1,
-                "entity_type": entity_type,
-                "entity_id": entity_id,
-                "certification_type": "SOC 2 Type II",
-                "issuer": "Third Party Auditor",
-                "issued_date": "2024-01-15",
-                "expiry_date": "2025-01-15",
-                "status": "active",
-                "certificate_url": f"/certificates/{entity_type}_{entity_id}_soc2.pdf"
-            }
-        ]
+        # Query certifications from database
+        from app.models.compliance_extended_models import ComplianceCertification
         
+        certifications_query = session.exec(
+            select(ComplianceCertification).where(
+                ComplianceCertification.entity_type == entity_type,
+                ComplianceCertification.entity_id == entity_id,
+                ComplianceCertification.is_active == True
+            ).order_by(ComplianceCertification.issued_date.desc())
+        ).all()
+        
+        certifications = []
+        for cert in certifications_query:
+            certifications.append({
+                "id": cert.id,
+                "entity_type": cert.entity_type,
+                "entity_id": cert.entity_id,
+                "certification_type": cert.certification_type,
+                "issuer": cert.issuer,
+                "issued_date": cert.issued_date.isoformat() if cert.issued_date else None,
+                "expiry_date": cert.expiry_date.isoformat() if cert.expiry_date else None,
+                "status": cert.status,
+                "certificate_url": cert.certificate_url,
+                "scope": cert.scope,
+                "compliance_frameworks": cert.compliance_frameworks,
+                "audit_firm": cert.audit_firm,
+                "created_at": cert.created_at.isoformat()
+            })
+        
+        # If no certifications found in database, return empty list (no mock data)
         return certifications
         
     except Exception as e:

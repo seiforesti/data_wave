@@ -407,3 +407,94 @@ class ComplianceAuditLog(SQLModel, table=True):
     
     # Timestamp
     created_at: datetime = Field(default_factory=datetime.now, index=True)
+
+
+class ComplianceCertification(SQLModel, table=True):
+    """Model for compliance certifications and attestations"""
+    __tablename__ = "compliance_certifications"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Entity Information
+    entity_type: str = Field(index=True)  # data_source, system, organization, etc.
+    entity_id: str = Field(index=True)  # ID of the certified entity
+    
+    # Certification Details
+    certification_type: str = Field(index=True)  # SOC 2, ISO 27001, HIPAA, etc.
+    issuer: str  # Organization that issued the certification
+    audit_firm: Optional[str] = None  # Audit firm that performed the assessment
+    
+    # Dates
+    issued_date: Optional[date] = None
+    expiry_date: Optional[date] = Field(default=None, index=True)
+    assessment_period_start: Optional[date] = None
+    assessment_period_end: Optional[date] = None
+    next_assessment_date: Optional[date] = None
+    
+    # Status and Details
+    status: str = Field(default="active", index=True)  # active, expired, suspended, revoked
+    certificate_url: Optional[str] = None  # URL to certificate document
+    scope: Optional[str] = None  # Scope of certification
+    compliance_frameworks: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
+    
+    # Assessment Information
+    assessment_type: Optional[str] = None  # Type I, Type II, etc.
+    opinion: Optional[str] = None  # Unqualified, qualified, etc.
+    findings_count: Optional[int] = None
+    exceptions_count: Optional[int] = None
+    
+    # Control Information
+    control_objectives: Optional[List[str]] = Field(default=None, sa_column_kwargs={"type_": "JSON"})
+    tested_controls: Optional[List[str]] = Field(default=None, sa_column_kwargs={"type_": "JSON"})
+    
+    # Additional Information
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = Field(default=True, index=True)
+    
+    # Audit Fields
+    created_at: datetime = Field(default_factory=datetime.now, index=True)
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+
+
+class ComplianceWorkflowExecution(SQLModel, table=True):
+    """Model for tracking workflow execution history"""
+    __tablename__ = "compliance_workflow_executions"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    execution_id: str = Field(unique=True, index=True)  # Unique execution identifier
+    workflow_id: int = Field(foreign_key="compliance_workflows.id", index=True)
+    
+    # Execution Details
+    status: WorkflowStatus = Field(index=True)
+    trigger_type: str  # manual, scheduled, event, api
+    triggered_by: Optional[str] = None  # User or system that triggered
+    
+    # Timing
+    started_at: datetime = Field(index=True)
+    completed_at: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    
+    # Progress
+    current_step: int = Field(default=0)
+    steps_completed: int = Field(default=0)
+    total_steps: int = Field(default=0)
+    progress_percentage: float = Field(default=0.0)
+    
+    # Execution Data
+    input_parameters: Optional[Dict[str, Any]] = Field(default=None, sa_column_kwargs={"type_": "JSON"})
+    output_data: Optional[Dict[str, Any]] = Field(default=None, sa_column_kwargs={"type_": "JSON"})
+    execution_log: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
+    
+    # Error Handling
+    error_message: Optional[str] = None
+    error_details: Optional[Dict[str, Any]] = Field(default=None, sa_column_kwargs={"type_": "JSON"})
+    retry_count: int = Field(default=0)
+    
+    # Metadata
+    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    
+    # Audit
+    created_at: datetime = Field(default_factory=datetime.now, index=True)
