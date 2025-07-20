@@ -976,12 +976,20 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
   const [integrations, setIntegrations] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [issues, setIssues] = useState<any[]>([])
+  
+  // Additional analytics data
+  const [riskDistribution, setRiskDistribution] = useState<any[]>([])
+  const [keyMetrics, setKeyMetrics] = useState<any[]>([])
+  const [frameworkPerformance, setFrameworkPerformance] = useState<any[]>([])
+  const [aiRecommendations, setAiRecommendations] = useState<any[]>([])
+  
   const [loadingStates, setLoadingStates] = useState({
     assessments: false,
     workflows: false,
     integrations: false,
     reports: false,
-    issues: false
+    issues: false,
+    analytics: false
   })
 
   // Modal state management
@@ -1106,6 +1114,27 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
     }
   }, [enterpriseFeatures, dataSourceId])
 
+  const loadAnalyticsData = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, analytics: true }))
+    try {
+      const [riskData, metricsData, frameworkData, recommendationsData] = await Promise.all([
+        riskAssessment.getRiskDistribution(),
+        analyticsIntegration.getKeyMetrics(dataSourceId),
+        frameworkIntegration.getFrameworkPerformance(),
+        analyticsIntegration.getAiRecommendations(dataSourceId)
+      ])
+      setRiskDistribution(riskData || [])
+      setKeyMetrics(metricsData || [])
+      setFrameworkPerformance(frameworkData || [])
+      setAiRecommendations(recommendationsData || [])
+    } catch (error) {
+      console.error('Failed to load analytics data:', error)
+      toast.error('Failed to load analytics data')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, analytics: false }))
+    }
+  }, [riskAssessment, analyticsIntegration, frameworkIntegration, dataSourceId])
+
   // Real-time data refresh
   const refreshData = useCallback(async () => {
     setIsLoading(true)
@@ -1136,6 +1165,9 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
         case 'issues':
           loadIssues()
           break
+        case 'analytics':
+          loadAnalyticsData()
+          break
       }
       
       // Update URL with current tab
@@ -1148,7 +1180,7 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
     } finally {
       setIsLoading(false)
     }
-  }, [enterpriseFeatures, analyticsIntegration, monitoring, activeTab, router, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues])
+  }, [enterpriseFeatures, analyticsIntegration, monitoring, activeTab, router, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues, loadAnalyticsData])
 
   // Initialize data on component mount
   useEffect(() => {
@@ -1190,8 +1222,11 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
       case 'issues':
         loadIssues()
         break
+      case 'analytics':
+        loadAnalyticsData()
+        break
     }
-  }, [activeTab, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues])
+  }, [activeTab, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues, loadAnalyticsData])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1338,7 +1373,7 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
         {renderMetricsCards()}
 
         {/* Advanced Analytics Dashboard */}
-        <AnalyticsDashboard insights={insights} trends={[]} metrics={metrics} />
+        <AnalyticsDashboard insights={insights} trends={metrics?.trends || []} metrics={metrics} />
 
         {/* Risk Assessment Panel */}
         <RiskAssessmentPanel riskData={null} onUpdate={refreshData} />
@@ -1804,27 +1839,39 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {[
-                            { category: 'Low Risk', percentage: 65, color: 'green' },
-                            { category: 'Medium Risk', percentage: 25, color: 'yellow' },
-                            { category: 'High Risk', percentage: 8, color: 'orange' },
-                            { category: 'Critical Risk', percentage: 2, color: 'red' }
-                          ].map((risk, index) => (
-                            <div key={index} className="space-y-2">
+                          {loadingStates.analytics ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                              <div key={index} className="space-y-2 animate-pulse">
+                                <div className="flex items-center justify-between">
+                                  <div className="h-4 bg-muted rounded w-20"></div>
+                                  <div className="h-4 bg-muted rounded w-8"></div>
+                                </div>
+                                <div className="w-full bg-muted rounded-full h-2"></div>
+                              </div>
+                            ))
+                          ) : riskDistribution.length === 0 ? (
+                            <div className="text-center py-4">
+                              <PieChart className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-sm text-muted-foreground">No risk data available</p>
+                            </div>
+                          ) : (
+                            riskDistribution.map((risk, index) => (
+                            <div key={risk.id || index} className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span>{risk.category}</span>
-                                <span className="font-medium">{risk.percentage}%</span>
+                                <span>{risk.category || risk.name}</span>
+                                <span className="font-medium">{risk.percentage || risk.value}%</span>
                               </div>
                               <div className="w-full bg-muted rounded-full h-2">
                                 <motion.div
                                   initial={{ width: 0 }}
-                                  animate={{ width: `${risk.percentage}%` }}
+                                  animate={{ width: `${risk.percentage || risk.value}%` }}
                                   transition={{ delay: index * 0.2, duration: 0.8 }}
                                   className={`h-2 rounded-full bg-${risk.color}-500`}
                                 />
                               </div>
                             </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1838,25 +1885,40 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {[
-                            { metric: 'Time to Remediation', value: '12.5 days', target: '< 15 days', status: 'good' },
-                            { metric: 'Control Effectiveness', value: '94.2%', target: '> 90%', status: 'good' },
-                            { metric: 'Audit Readiness', value: '87%', target: '> 85%', status: 'good' },
-                            { metric: 'Policy Compliance', value: '96.8%', target: '> 95%', status: 'excellent' }
-                          ].map((item, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                          {loadingStates.analytics ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded animate-pulse">
+                                <div className="space-y-1">
+                                  <div className="h-4 bg-muted rounded w-32"></div>
+                                  <div className="h-3 bg-muted rounded w-20"></div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="h-4 bg-muted rounded w-16"></div>
+                                  <div className="h-6 bg-muted rounded w-12"></div>
+                                </div>
+                              </div>
+                            ))
+                          ) : keyMetrics.length === 0 ? (
+                            <div className="text-center py-4">
+                              <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-sm text-muted-foreground">No metrics available</p>
+                            </div>
+                          ) : (
+                            keyMetrics.map((item, index) => (
+                            <div key={item.id || index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                               <div>
-                                <p className="text-sm font-medium">{item.metric}</p>
-                                <p className="text-xs text-muted-foreground">Target: {item.target}</p>
+                                <p className="text-sm font-medium">{item.metric || item.name}</p>
+                                <p className="text-xs text-muted-foreground">Target: {item.target || item.threshold}</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm font-bold">{item.value}</p>
+                                <p className="text-sm font-bold">{item.value || item.current_value}</p>
                                 <Badge variant={item.status === 'excellent' ? 'default' : 'secondary'} className="text-xs">
-                                  {item.status}
+                                  {item.status || item.performance_status}
                                 </Badge>
                               </div>
                             </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1873,31 +1935,50 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {[
-                          { framework: 'SOC 2', score: 96, controls: 24, status: 'compliant' },
-                          { framework: 'GDPR', score: 92, controls: 18, status: 'compliant' },
-                          { framework: 'HIPAA', score: 88, controls: 32, status: 'partial' },
-                          { framework: 'PCI DSS', score: 94, controls: 28, status: 'compliant' }
-                        ].map((framework, index) => (
-                          <div key={index} className="p-3 border rounded-lg">
+                        {loadingStates.analytics ? (
+                          Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index} className="p-3 border rounded-lg animate-pulse">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="h-4 bg-muted rounded w-16"></div>
+                                <div className="h-6 bg-muted rounded w-20"></div>
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="h-3 bg-muted rounded w-24"></div>
+                                  <div className="h-3 bg-muted rounded w-8"></div>
+                                </div>
+                                <div className="h-2 bg-muted rounded w-full"></div>
+                                <div className="h-3 bg-muted rounded w-32"></div>
+                              </div>
+                            </div>
+                          ))
+                        ) : frameworkPerformance.length === 0 ? (
+                          <div className="text-center py-4">
+                            <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">No framework data available</p>
+                          </div>
+                        ) : (
+                          frameworkPerformance.map((framework, index) => (
+                          <div key={framework.id || index} className="p-3 border rounded-lg">
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium">{framework.framework}</h4>
+                              <h4 className="font-medium">{framework.framework || framework.name}</h4>
                               <Badge variant={framework.status === 'compliant' ? 'default' : 'secondary'}>
-                                {framework.status}
+                                {framework.status || framework.compliance_status}
                               </Badge>
                             </div>
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
                                 <span>Compliance Score</span>
-                                <span className="font-medium">{framework.score}%</span>
+                                <span className="font-medium">{framework.score || framework.compliance_score}%</span>
                               </div>
-                              <Progress value={framework.score} className="h-2" />
+                              <Progress value={framework.score || framework.compliance_score} className="h-2" />
                               <p className="text-xs text-muted-foreground">
-                                {framework.controls} controls assessed
+                                {framework.controls || framework.total_controls} controls assessed
                               </p>
                             </div>
                           </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1911,41 +1992,38 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {[
-                          {
-                            title: 'Automate Access Reviews',
-                            description: 'Implement automated quarterly access reviews to reduce manual effort by 60%',
-                            impact: 'High',
-                            effort: 'Medium'
-                          },
-                          {
-                            title: 'Enhanced Monitoring',
-                            description: 'Deploy additional monitoring controls for privileged account activities',
-                            impact: 'Medium',
-                            effort: 'Low'
-                          },
-                          {
-                            title: 'Policy Updates',
-                            description: 'Update data retention policies to align with latest regulatory requirements',
-                            impact: 'High',
-                            effort: 'Low'
-                          },
-                          {
-                            title: 'Training Program',
-                            description: 'Implement security awareness training for all employees',
-                            impact: 'Medium',
-                            effort: 'Medium'
-                          }
-                        ].map((rec, index) => (
-                          <div key={index} className="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border-l-4 border-yellow-400">
+                        {loadingStates.analytics ? (
+                          Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index} className="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border-l-4 border-yellow-400 animate-pulse">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="h-4 bg-muted rounded w-32"></div>
+                                <div className="flex space-x-1">
+                                  <div className="h-6 bg-muted rounded w-16"></div>
+                                  <div className="h-6 bg-muted rounded w-16"></div>
+                                </div>
+                              </div>
+                              <div className="h-3 bg-muted rounded w-full mb-2"></div>
+                              <div className="flex justify-end">
+                                <div className="h-6 bg-muted rounded w-20"></div>
+                              </div>
+                            </div>
+                          ))
+                        ) : aiRecommendations.length === 0 ? (
+                          <div className="text-center py-4">
+                            <Lightbulb className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">No recommendations available</p>
+                          </div>
+                        ) : (
+                          aiRecommendations.map((rec, index) => (
+                          <div key={rec.id || index} className="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border-l-4 border-yellow-400">
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-medium text-sm">{rec.title}</h4>
                               <div className="flex space-x-1">
                                 <Badge variant="outline" className="text-xs">
-                                  {rec.impact} Impact
+                                  {rec.impact || rec.impact_level} Impact
                                 </Badge>
                                 <Badge variant="outline" className="text-xs">
-                                  {rec.effort} Effort
+                                  {rec.effort || rec.effort_level} Effort
                                 </Badge>
                               </div>
                             </div>
@@ -1957,7 +2035,8 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                               </Button>
                             </div>
                           </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -2100,51 +2179,59 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {[
-                            { 
-                              name: 'ServiceNow GRC', 
-                              status: 'connected', 
-                              lastSync: '2 hours ago',
-                              icon: Server,
-                              config: { url: 'https://company.service-now.com', sync_frequency: 'hourly' }
-                            },
-                            { 
-                              name: 'Qualys VMDR', 
-                              status: 'connected', 
-                              lastSync: '1 day ago',
-                              icon: Shield,
-                              config: { api_endpoint: 'https://qualysapi.qg2.apps.qualys.com', sync_frequency: 'daily' }
-                            },
-                            { 
-                              name: 'Microsoft Purview', 
-                              status: 'error', 
-                              lastSync: '3 days ago',
-                              icon: Cloud,
-                              config: { tenant_id: 'xxx-xxx-xxx', sync_frequency: 'real_time' }
-                            },
-                            { 
-                              name: 'Jira Service Management', 
-                              status: 'pending', 
-                              lastSync: 'Never',
-                              icon: Boxes,
-                              config: { base_url: 'https://company.atlassian.net', sync_frequency: 'manual' }
-                            }
-                          ].map((integration, index) => (
-                            <div key={index} className="p-4 border rounded-lg">
+                          {loadingStates.integrations ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                              <div key={index} className="p-4 border rounded-lg animate-pulse">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="h-8 w-8 bg-muted rounded"></div>
+                                    <div className="space-y-1">
+                                      <div className="h-4 bg-muted rounded w-32"></div>
+                                      <div className="h-3 bg-muted rounded w-24"></div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <div className="h-6 bg-muted rounded w-16"></div>
+                                    <div className="h-8 bg-muted rounded w-20"></div>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="h-3 bg-muted rounded"></div>
+                                  <div className="h-3 bg-muted rounded"></div>
+                                </div>
+                              </div>
+                            ))
+                          ) : integrations.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Boxes className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                              <h3 className="text-lg font-medium text-muted-foreground mb-2">No Integrations Configured</h3>
+                              <p className="text-sm text-muted-foreground mb-4">Connect external systems to enhance compliance automation</p>
+                              <Button onClick={() => openModal('createIntegration')}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Integration
+                              </Button>
+                            </div>
+                          ) : (
+                            integrations.map((integration, index) => (
+                            <div key={integration.id || index} className="p-4 border rounded-lg">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center space-x-3">
                                   <div className="p-2 bg-muted rounded">
-                                    <integration.icon className="h-4 w-4" />
+                                    {integration.type === 'servicenow' && <Server className="h-4 w-4" />}
+                                    {integration.type === 'qualys' && <Shield className="h-4 w-4" />}
+                                    {integration.type === 'microsoft' && <Cloud className="h-4 w-4" />}
+                                    {integration.type === 'jira' && <Boxes className="h-4 w-4" />}
+                                    {!['servicenow', 'qualys', 'microsoft', 'jira'].includes(integration.type) && <Boxes className="h-4 w-4" />}
                                   </div>
                                   <div>
                                     <h4 className="font-medium">{integration.name}</h4>
-                                    <p className="text-sm text-muted-foreground">Last sync: {integration.lastSync}</p>
+                                    <p className="text-sm text-muted-foreground">Last sync: {integration.lastSync || integration.last_sync_at || 'Never'}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <Badge variant={
-                                    integration.status === 'connected' ? 'default' :
-                                    integration.status === 'error' ? 'destructive' : 'secondary'
+                                    integration.status === 'connected' || integration.status === 'active' ? 'default' :
+                                    integration.status === 'error' || integration.status === 'failed' ? 'destructive' : 'secondary'
                                   }>
                                     {integration.status}
                                   </Badge>
@@ -2156,15 +2243,16 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                               </div>
                               
                               <div className="grid grid-cols-2 gap-4 text-sm">
-                                {Object.entries(integration.config).map(([key, value]) => (
+                                {integration.config && Object.entries(integration.config).map(([key, value]) => (
                                   <div key={key}>
                                     <span className="text-muted-foreground">{key.replace('_', ' ')}: </span>
-                                    <span className="font-medium">{value}</span>
+                                    <span className="font-medium">{String(value)}</span>
                                   </div>
                                 ))}
                               </div>
                             </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
