@@ -5,53 +5,60 @@ from datetime import datetime
 import logging
 
 from app.db_session import get_session
+from app.services.compliance_production_services import ComplianceReportService
+from app.models.compliance_extended_models import ReportType, ReportStatus
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/compliance/reports", tags=["Compliance Reports"])
 
-@router.get("/", response_model=List[Dict[str, Any]])
+@router.get("/", response_model=Dict[str, Any])
 async def get_compliance_reports(
     report_type: Optional[str] = Query(None, description="Filter by report type"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    framework: Optional[str] = Query(None, description="Filter by framework"),
+    created_by: Optional[str] = Query(None, description="Filter by creator"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(50, ge=1, le=100, description="Items per page"),
     session: Session = Depends(get_session)
 ):
-    """Get compliance reports with filtering"""
+    """Get compliance reports with advanced filtering and pagination"""
     try:
-        # Mock data for now - in production this would query a reports table
-        reports = [
-            {
-                "id": 1,
-                "name": "SOC 2 Compliance Report",
-                "description": "Comprehensive SOC 2 compliance assessment",
-                "report_type": "compliance_status",
-                "status": "completed",
-                "generated_at": datetime.now().isoformat(),
-                "file_url": "/reports/soc2_compliance_2024.pdf",
-                "file_format": "pdf"
-            },
-            {
-                "id": 2,
-                "name": "GDPR Gap Analysis",
-                "description": "GDPR compliance gap analysis and recommendations",
-                "report_type": "gap_analysis",
-                "status": "generating",
-                "generated_at": None,
-                "file_url": None,
-                "file_format": "pdf"
-            }
-        ]
-        
-        # Apply filters
+        # Convert string parameters to enums if provided
+        report_type_enum = None
         if report_type:
-            reports = [r for r in reports if r["report_type"] == report_type]
+            try:
+                report_type_enum = ReportType(report_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid report type: {report_type}")
+        
+        status_enum = None
         if status:
-            reports = [r for r in reports if r["status"] == status]
+            try:
+                status_enum = ReportStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
         
-        return reports
+        reports, total = ComplianceReportService.get_reports(
+            session=session,
+            report_type=report_type_enum,
+            status=status_enum,
+            framework=framework,
+            created_by=created_by,
+            page=page,
+            limit=limit
+        )
         
+        return {
+            "data": reports,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting compliance reports: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -60,25 +67,37 @@ async def get_compliance_reports(
 @router.post("/", response_model=Dict[str, Any])
 async def create_report(
     report_data: Dict[str, Any] = Body(..., description="Report creation data"),
+    created_by: Optional[str] = Query(None, description="User creating the report"),
     session: Session = Depends(get_session)
 ):
-    """Create a new compliance report"""
+    """Create a new compliance report with validation and processing"""
     try:
-        # Mock implementation - in production this would create a report generation job
-        report = {
-            "id": 999,
-            "name": report_data.get("name", "New Compliance Report"),
-            "description": report_data.get("description", ""),
-            "report_type": report_data.get("report_type", "compliance_status"),
-            "status": "generating",
-            "generated_at": None,
-            "file_url": None,
-            "file_format": report_data.get("file_format", "pdf"),
-            "created_at": datetime.now().isoformat()
-        }
+        # Validate required fields
+        if not report_data.get("name"):
+            raise HTTPException(status_code=400, detail="Report name is required")
+        
+        if not report_data.get("report_type"):
+            raise HTTPException(status_code=400, detail="Report type is required")
+        
+        # Validate report type
+        try:
+            ReportType(report_data["report_type"])
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid report type: {report_data['report_type']}")
+        
+        report = ComplianceReportService.create_report(
+            session=session,
+            report_data=report_data,
+            created_by=created_by
+        )
         
         return report
         
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Validation error creating report: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating compliance report: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -86,42 +105,30 @@ async def create_report(
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def get_report_templates(
+    framework: Optional[str] = Query(None, description="Filter by framework"),
+    report_type: Optional[str] = Query(None, description="Filter by report type"),
     session: Session = Depends(get_session)
 ):
-    """Get available report templates"""
+    """Get available report templates with filtering"""
     try:
-        templates = [
-            {
-                "id": "soc2_status",
-                "name": "SOC 2 Status Report",
-                "description": "Standard SOC 2 compliance status report",
-                "framework": "soc2",
-                "report_type": "compliance_status",
-                "sections": ["executive_summary", "control_status", "findings", "recommendations"],
-                "file_formats": ["pdf", "excel"]
-            },
-            {
-                "id": "gdpr_gap_analysis",
-                "name": "GDPR Gap Analysis",
-                "description": "GDPR compliance gap analysis report",
-                "framework": "gdpr",
-                "report_type": "gap_analysis",
-                "sections": ["overview", "gap_analysis", "risk_assessment", "remediation_plan"],
-                "file_formats": ["pdf", "excel"]
-            },
-            {
-                "id": "executive_dashboard",
-                "name": "Executive Dashboard",
-                "description": "High-level compliance overview for executives",
-                "framework": "all",
-                "report_type": "executive_summary",
-                "sections": ["compliance_score", "key_metrics", "risk_summary", "priorities"],
-                "file_formats": ["pdf", "html"]
-            }
-        ]
+        # Validate report type if provided
+        report_type_enum = None
+        if report_type:
+            try:
+                report_type_enum = ReportType(report_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid report type: {report_type}")
+        
+        templates = ComplianceReportService.get_report_templates(
+            session=session,
+            framework=framework,
+            report_type=report_type_enum
+        )
         
         return templates
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting report templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

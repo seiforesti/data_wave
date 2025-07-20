@@ -5,6 +5,8 @@ from datetime import datetime
 import logging
 
 from app.db_session import get_session
+from app.services.compliance_production_services import ComplianceIntegrationService
+from app.models.compliance_extended_models import IntegrationType, IntegrationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -14,54 +16,37 @@ router = APIRouter(prefix="/compliance/integrations", tags=["Compliance Integrat
 async def get_integrations(
     integration_type: Optional[str] = Query(None, description="Filter by integration type"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    provider: Optional[str] = Query(None, description="Filter by provider"),
     session: Session = Depends(get_session)
 ):
-    """Get compliance integrations"""
+    """Get compliance integrations with filtering"""
     try:
-        # Mock data for now - in production this would query integrations table
-        integrations = [
-            {
-                "id": 1,
-                "name": "ServiceNow Integration",
-                "description": "Integration with ServiceNow for ticket management",
-                "integration_type": "ticketing",
-                "provider": "servicenow",
-                "status": "active",
-                "config": {
-                    "instance_url": "https://company.service-now.com",
-                    "api_version": "v1"
-                },
-                "last_synced_at": datetime.now().isoformat(),
-                "last_sync_status": "success",
-                "sync_frequency": "real_time",
-                "created_at": datetime.now().isoformat()
-            },
-            {
-                "id": 2,
-                "name": "AWS Config Integration",
-                "description": "Integration with AWS Config for compliance monitoring",
-                "integration_type": "security_scanner",
-                "provider": "aws",
-                "status": "active",
-                "config": {
-                    "region": "us-east-1",
-                    "account_id": "123456789012"
-                },
-                "last_synced_at": datetime.now().isoformat(),
-                "last_sync_status": "success",
-                "sync_frequency": "hourly",
-                "created_at": datetime.now().isoformat()
-            }
-        ]
-        
-        # Apply filters
+        # Convert string parameters to enums if provided
+        integration_type_enum = None
         if integration_type:
-            integrations = [i for i in integrations if i["integration_type"] == integration_type]
+            try:
+                integration_type_enum = IntegrationType(integration_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid integration type: {integration_type}")
+        
+        status_enum = None
         if status:
-            integrations = [i for i in integrations if i["status"] == status]
+            try:
+                status_enum = IntegrationStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+        
+        integrations = ComplianceIntegrationService.get_integrations(
+            session=session,
+            integration_type=integration_type_enum,
+            status=status_enum,
+            provider=provider
+        )
         
         return integrations
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting integrations: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -70,26 +55,40 @@ async def get_integrations(
 @router.post("/", response_model=Dict[str, Any])
 async def create_integration(
     integration_data: Dict[str, Any] = Body(..., description="Integration creation data"),
+    created_by: Optional[str] = Query(None, description="User creating the integration"),
     session: Session = Depends(get_session)
 ):
-    """Create a new compliance integration"""
+    """Create a new compliance integration with validation"""
     try:
-        integration = {
-            "id": 999,
-            "name": integration_data.get("name", "New Integration"),
-            "description": integration_data.get("description", ""),
-            "integration_type": integration_data.get("integration_type", "custom"),
-            "provider": integration_data.get("provider", "custom"),
-            "status": "pending",
-            "config": integration_data.get("config", {}),
-            "last_synced_at": None,
-            "last_sync_status": None,
-            "sync_frequency": integration_data.get("sync_frequency", "daily"),
-            "created_at": datetime.now().isoformat()
-        }
+        # Validate required fields
+        if not integration_data.get("name"):
+            raise HTTPException(status_code=400, detail="Integration name is required")
+        
+        if not integration_data.get("integration_type"):
+            raise HTTPException(status_code=400, detail="Integration type is required")
+        
+        if not integration_data.get("provider"):
+            raise HTTPException(status_code=400, detail="Provider is required")
+        
+        # Validate integration type
+        try:
+            IntegrationType(integration_data["integration_type"])
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid integration type: {integration_data['integration_type']}")
+        
+        integration = ComplianceIntegrationService.create_integration(
+            session=session,
+            integration_data=integration_data,
+            created_by=created_by
+        )
         
         return integration
         
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Validation error creating integration: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating integration: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

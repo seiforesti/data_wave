@@ -5,57 +5,60 @@ from datetime import datetime
 import logging
 
 from app.db_session import get_session
+from app.services.compliance_production_services import ComplianceWorkflowService
+from app.models.compliance_extended_models import WorkflowType, WorkflowStatus
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/compliance/workflows", tags=["Compliance Workflows"])
 
-@router.get("/", response_model=List[Dict[str, Any]])
+@router.get("/", response_model=Dict[str, Any])
 async def get_workflows(
     status: Optional[str] = Query(None, description="Filter by status"),
     workflow_type: Optional[str] = Query(None, description="Filter by workflow type"),
+    assigned_to: Optional[str] = Query(None, description="Filter by assignee"),
+    rule_id: Optional[int] = Query(None, description="Filter by rule ID"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(50, ge=1, le=100, description="Items per page"),
     session: Session = Depends(get_session)
 ):
-    """Get compliance workflows with filtering"""
+    """Get compliance workflows with advanced filtering and pagination"""
     try:
-        # Mock data for now - in production this would query workflows table
-        workflows = [
-            {
-                "id": 1,
-                "name": "SOC 2 Assessment Workflow",
-                "description": "Standard SOC 2 compliance assessment workflow",
-                "workflow_type": "assessment",
-                "status": "active",
-                "current_step": 2,
-                "total_steps": 5,
-                "assigned_to": "compliance.team@company.com",
-                "due_date": "2024-02-15T00:00:00Z",
-                "created_at": datetime.now().isoformat()
-            },
-            {
-                "id": 2,
-                "name": "GDPR Remediation Workflow",
-                "description": "GDPR compliance gap remediation workflow",
-                "workflow_type": "remediation",
-                "status": "in_progress",
-                "current_step": 1,
-                "total_steps": 3,
-                "assigned_to": "data.privacy@company.com",
-                "due_date": "2024-01-30T00:00:00Z",
-                "created_at": datetime.now().isoformat()
-            }
-        ]
-        
-        # Apply filters
+        # Convert string parameters to enums if provided
+        status_enum = None
         if status:
-            workflows = [w for w in workflows if w["status"] == status]
+            try:
+                status_enum = WorkflowStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+        
+        workflow_type_enum = None
         if workflow_type:
-            workflows = [w for w in workflows if w["workflow_type"] == workflow_type]
+            try:
+                workflow_type_enum = WorkflowType(workflow_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid workflow type: {workflow_type}")
         
-        return workflows
+        workflows, total = ComplianceWorkflowService.get_workflows(
+            session=session,
+            status=status_enum,
+            workflow_type=workflow_type_enum,
+            assigned_to=assigned_to,
+            rule_id=rule_id,
+            page=page,
+            limit=limit
+        )
         
+        return {
+            "data": workflows,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting workflows: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -64,25 +67,37 @@ async def get_workflows(
 @router.post("/", response_model=Dict[str, Any])
 async def create_workflow(
     workflow_data: Dict[str, Any] = Body(..., description="Workflow creation data"),
+    created_by: Optional[str] = Query(None, description="User creating the workflow"),
     session: Session = Depends(get_session)
 ):
-    """Create a new compliance workflow"""
+    """Create a new compliance workflow with validation"""
     try:
-        workflow = {
-            "id": 999,
-            "name": workflow_data.get("name", "New Workflow"),
-            "description": workflow_data.get("description", ""),
-            "workflow_type": workflow_data.get("workflow_type", "assessment"),
-            "status": "draft",
-            "current_step": 0,
-            "total_steps": len(workflow_data.get("steps", [])),
-            "assigned_to": workflow_data.get("assigned_to"),
-            "due_date": workflow_data.get("due_date"),
-            "created_at": datetime.now().isoformat()
-        }
+        # Validate required fields
+        if not workflow_data.get("name"):
+            raise HTTPException(status_code=400, detail="Workflow name is required")
+        
+        if not workflow_data.get("workflow_type"):
+            raise HTTPException(status_code=400, detail="Workflow type is required")
+        
+        # Validate workflow type
+        try:
+            WorkflowType(workflow_data["workflow_type"])
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid workflow type: {workflow_data['workflow_type']}")
+        
+        workflow = ComplianceWorkflowService.create_workflow(
+            session=session,
+            workflow_data=workflow_data,
+            created_by=created_by
+        )
         
         return workflow
         
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Validation error creating workflow: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -90,63 +105,30 @@ async def create_workflow(
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def get_workflow_templates(
+    workflow_type: Optional[str] = Query(None, description="Filter by workflow type"),
+    framework: Optional[str] = Query(None, description="Filter by framework"),
     session: Session = Depends(get_session)
 ):
-    """Get available workflow templates"""
+    """Get available workflow templates with filtering"""
     try:
-        templates = [
-            {
-                "id": "soc2_assessment",
-                "name": "SOC 2 Assessment",
-                "description": "Standard SOC 2 compliance assessment workflow",
-                "workflow_type": "assessment",
-                "framework": "soc2",
-                "steps": [
-                    {"name": "Planning", "type": "manual", "estimated_duration": "2 days"},
-                    {"name": "Data Collection", "type": "automated", "estimated_duration": "1 day"},
-                    {"name": "Control Testing", "type": "manual", "estimated_duration": "5 days"},
-                    {"name": "Review", "type": "approval", "estimated_duration": "2 days"},
-                    {"name": "Report Generation", "type": "automated", "estimated_duration": "1 day"}
-                ],
-                "triggers": ["manual", "scheduled"],
-                "estimated_completion": "11 days"
-            },
-            {
-                "id": "gdpr_gap_analysis",
-                "name": "GDPR Gap Analysis",
-                "description": "GDPR compliance gap analysis workflow",
-                "workflow_type": "assessment",
-                "framework": "gdpr",
-                "steps": [
-                    {"name": "Data Mapping", "type": "manual", "estimated_duration": "3 days"},
-                    {"name": "Privacy Impact Assessment", "type": "manual", "estimated_duration": "2 days"},
-                    {"name": "Gap Identification", "type": "automated", "estimated_duration": "1 day"},
-                    {"name": "Remediation Planning", "type": "manual", "estimated_duration": "2 days"}
-                ],
-                "triggers": ["manual", "event"],
-                "estimated_completion": "8 days"
-            },
-            {
-                "id": "incident_response",
-                "name": "Compliance Incident Response",
-                "description": "Standard compliance incident response workflow",
-                "workflow_type": "remediation",
-                "framework": "all",
-                "steps": [
-                    {"name": "Incident Detection", "type": "automated", "estimated_duration": "immediate"},
-                    {"name": "Impact Assessment", "type": "manual", "estimated_duration": "4 hours"},
-                    {"name": "Containment", "type": "manual", "estimated_duration": "2 hours"},
-                    {"name": "Remediation", "type": "manual", "estimated_duration": "24 hours"},
-                    {"name": "Recovery Validation", "type": "manual", "estimated_duration": "4 hours"},
-                    {"name": "Post-Incident Review", "type": "manual", "estimated_duration": "2 days"}
-                ],
-                "triggers": ["event", "alert"],
-                "estimated_completion": "3 days"
-            }
-        ]
+        # Validate workflow type if provided
+        workflow_type_enum = None
+        if workflow_type:
+            try:
+                workflow_type_enum = WorkflowType(workflow_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid workflow type: {workflow_type}")
+        
+        templates = ComplianceWorkflowService.get_workflow_templates(
+            session=session,
+            workflow_type=workflow_type_enum,
+            framework=framework
+        )
         
         return templates
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting workflow templates: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
