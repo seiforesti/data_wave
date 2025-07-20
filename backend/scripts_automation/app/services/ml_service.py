@@ -1595,3 +1595,102 @@ class EnterpriseMLService:
         except Exception as e:
             logger.error(f"Error processing prediction result: {str(e)}")
             raise
+    
+    # ============ Additional Helper Methods for Intelligence Scenarios ============
+    
+    async def _categorize_data_size(self, data_size: int) -> str:
+        """Categorize data size for optimization recommendations"""
+        if data_size < 1000:
+            return "small"
+        elif data_size < 100000:
+            return "medium"
+        elif data_size < 1000000:
+            return "large"
+        else:
+            return "very_large"
+    
+    async def _assess_missing_data_impact(self, missing_ratio: float) -> str:
+        """Assess the impact of missing data"""
+        if missing_ratio < 0.05:
+            return "minimal"
+        elif missing_ratio < 0.15:
+            return "moderate"
+        elif missing_ratio < 0.3:
+            return "significant"
+        else:
+            return "severe"
+    
+    async def _assess_target_balance(self, target_distribution: Dict[str, Any]) -> Dict[str, Any]:
+        """Assess target variable balance"""
+        if not target_distribution:
+            return {"balance_status": "unknown", "imbalance_ratio": 0.0}
+        
+        values = list(target_distribution.values())
+        if not values:
+            return {"balance_status": "unknown", "imbalance_ratio": 0.0}
+        
+        max_val = max(values)
+        min_val = min(values)
+        imbalance_ratio = max_val / min_val if min_val > 0 else float('inf')
+        
+        if imbalance_ratio <= 2:
+            balance_status = "balanced"
+        elif imbalance_ratio <= 5:
+            balance_status = "slightly_imbalanced"
+        elif imbalance_ratio <= 10:
+            balance_status = "moderately_imbalanced"
+        else:
+            balance_status = "severely_imbalanced"
+        
+        return {
+            "balance_status": balance_status,
+            "imbalance_ratio": imbalance_ratio,
+            "class_distribution": target_distribution
+        }
+    
+    async def _recommend_preprocessing(self, data_characteristics: Dict[str, Any]) -> List[str]:
+        """Recommend preprocessing steps based on data characteristics"""
+        recommendations = []
+        
+        missing_ratio = data_characteristics.get("missing_values_ratio", 0.0)
+        if missing_ratio > 0.1:
+            recommendations.append("missing_value_imputation")
+        
+        categorical_features = data_characteristics.get("categorical_features", [])
+        if len(categorical_features) > 0:
+            recommendations.append("categorical_encoding")
+        
+        numerical_features = data_characteristics.get("numerical_features", [])
+        if len(numerical_features) > 0:
+            recommendations.append("feature_scaling")
+        
+        text_features = data_characteristics.get("text_features", [])
+        if len(text_features) > 0:
+            recommendations.append("text_preprocessing")
+            recommendations.append("text_vectorization")
+        
+        return recommendations
+    
+    async def _assess_scalability_needs(self, data_size: int) -> Dict[str, Any]:
+        """Assess scalability requirements based on data size"""
+        if data_size < 10000:
+            return {
+                "parallel_processing": False,
+                "distributed_training": False,
+                "memory_optimization": False,
+                "recommended_batch_size": 32
+            }
+        elif data_size < 1000000:
+            return {
+                "parallel_processing": True,
+                "distributed_training": False,
+                "memory_optimization": True,
+                "recommended_batch_size": 128
+            }
+        else:
+            return {
+                "parallel_processing": True,
+                "distributed_training": True,
+                "memory_optimization": True,
+                "recommended_batch_size": 256
+            }
