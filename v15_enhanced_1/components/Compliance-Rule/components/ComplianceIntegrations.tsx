@@ -60,10 +60,15 @@ const ComplianceIntegrations: React.FC<ComplianceIntegrationsProps> = ({
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
   const [activeTab, setActiveTab] = useState('all')
 
+<<<<<<< HEAD
   // Load integrations from API
+=======
+  // Load integrations from backend
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
   useEffect(() => {
     const loadIntegrations = async () => {
       try {
+<<<<<<< HEAD
         setLoading(true)
         
         const params: any = {}
@@ -115,12 +120,44 @@ const ComplianceIntegrations: React.FC<ComplianceIntegrationsProps> = ({
         
         // Fallback to empty state
         setIntegrations([])
+=======
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.Integration.getIntegrations({
+          integration_type: filters.integration_type,
+          provider: filters.provider,
+          status: activeTab !== 'all' ? activeTab : undefined
+        })
+        
+        setIntegrations(response || [])
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_loaded', count: response?.length || 0 },
+          source: 'ComplianceIntegrations',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load integrations:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance integrations')
+        onError?.('Failed to load compliance integrations')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'integrations_load_failed', error: error.message },
+          source: 'ComplianceIntegrations',
+          severity: 'high'
+        })
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
       } finally {
         setLoading(false)
       }
     }
 
     loadIntegrations()
+<<<<<<< HEAD
   }, [dataSourceId, searchQuery, filters, onError])
 
   // Real-time updates for integration status
@@ -176,6 +213,9 @@ const ComplianceIntegrations: React.FC<ComplianceIntegrationsProps> = ({
 
     return () => clearInterval(interval)
   }, [integrations])
+=======
+  }, [dataSourceId, filters, activeTab, enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   // Filter integrations based on active tab and search
   const filteredIntegrations = integrations.filter(integration => {

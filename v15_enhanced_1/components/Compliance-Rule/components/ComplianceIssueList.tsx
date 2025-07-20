@@ -54,14 +54,25 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
+<<<<<<< HEAD
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'created_at', direction: 'desc' })
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
   const [activeTab, setActiveTab] = useState('all')
 
   // Load issues from API
+=======
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0
+  })
+
+  // Load issues from backend
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
   useEffect(() => {
     const loadIssues = async () => {
       try {
+<<<<<<< HEAD
         setLoading(true)
         
         const params: any = {
@@ -123,12 +134,52 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
         // Fallback to empty state
         setIssues([])
         setPagination(prev => ({ ...prev, total: 0 }))
+=======
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceManagement.getIssues({
+          rule_id: filters.rule_id,
+          status: filters.status,
+          severity: filters.severity,
+          assigned_to: filters.assigned_to,
+          data_source_id: dataSourceId,
+          page: pagination.page,
+          limit: pagination.limit
+        })
+        
+        setIssues(response.data || [])
+        setPagination(prev => ({ 
+          ...prev, 
+          total: response.total || 0
+        }))
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'issues_loaded', count: response.data?.length || 0 },
+          source: 'ComplianceIssueList',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load issues:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance issues')
+        onError?.('Failed to load compliance issues')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'issues_load_failed', error: error.message },
+          source: 'ComplianceIssueList',
+          severity: 'high'
+        })
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
       } finally {
         setLoading(false)
       }
     }
 
     loadIssues()
+<<<<<<< HEAD
   }, [dataSourceId, searchQuery, filters, sortConfig, pagination.page, pagination.pageSize, onError])
 
   // Real-time updates for issue status
@@ -164,14 +215,17 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
 
     return () => clearInterval(interval)
   }, [issues])
+=======
+  }, [dataSourceId, searchQuery, filters, pagination.page, pagination.limit, enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   // Filter issues based on active tab and search
   const filteredIssues = issues.filter(issue => {
     // Tab filter
-    if (activeTab !== 'all') {
-      if (activeTab === 'open' && issue.status !== 'open') return false
-      if (activeTab === 'in_progress' && issue.status !== 'in_progress') return false
-      if (activeTab === 'resolved' && issue.status !== 'resolved') return false
+    if (filters.status) {
+      if (filters.status === 'open' && issue.status !== 'open') return false
+      if (filters.status === 'in_progress' && issue.status !== 'in_progress') return false
+      if (filters.status === 'resolved' && issue.status !== 'resolved') return false
     }
 
     // Search filter
@@ -303,7 +357,7 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={filters.status || 'all'} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value || undefined }))}>
         <TabsList>
           <TabsTrigger value="all">All Issues</TabsTrigger>
           <TabsTrigger value="open">Open</TabsTrigger>
@@ -311,7 +365,7 @@ const ComplianceIssueList: React.FC<ComplianceIssueListProps> = ({
           <TabsTrigger value="resolved">Resolved</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4">
+        <TabsContent value={filters.status || 'all'} className="space-y-4">
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, index) => (

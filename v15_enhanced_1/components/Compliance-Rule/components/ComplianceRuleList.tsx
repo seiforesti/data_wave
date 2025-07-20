@@ -76,6 +76,7 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
   const auditFeatures = ComplianceHooks.useAuditFeatures('compliance_requirement')
   
   // State
+<<<<<<< HEAD
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
@@ -86,9 +87,24 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
   const [requirements, setRequirements] = useState<ComplianceRequirement[]>([])
 
   // Load requirements from API
+=======
+  const [requirements, setRequirements] = useState<ComplianceRequirement[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
+  const [filters, setFilters] = useState(initialFilters)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0
+  })
+
+  // Load requirements from backend
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
   useEffect(() => {
     const loadRequirements = async () => {
       try {
+<<<<<<< HEAD
         setLoading(true)
         
         const params: any = {
@@ -153,12 +169,56 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
         // Fallback to empty state
         setRequirements([])
         setPagination(prev => ({ ...prev, total: 0 }))
+=======
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceManagement.getRequirements({
+          data_source_id: dataSourceId,
+          framework: filters.framework,
+          status: filters.status,
+          risk_level: filters.risk_level,
+          category: filters.category,
+          search: searchQuery || undefined,
+          page: pagination.page,
+          limit: pagination.limit,
+          sort: 'created_at',
+          sort_order: 'desc'
+        })
+        
+        setRequirements(response.data || [])
+        setPagination(prev => ({ 
+          ...prev, 
+          total: response.total || 0,
+          pages: response.pages || 0
+        }))
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirements_loaded', count: response.data?.length || 0 },
+          source: 'ComplianceRuleList',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load requirements:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance requirements')
+        onError?.('Failed to load compliance requirements')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirements_load_failed', error: error.message },
+          source: 'ComplianceRuleList',
+          severity: 'high'
+        })
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
       } finally {
         setLoading(false)
       }
     }
 
     loadRequirements()
+<<<<<<< HEAD
   }, [dataSourceId, searchQuery, filters, sortConfig, pagination.page, pagination.pageSize, onError])
 
   // Real-time updates for requirement status
@@ -197,6 +257,9 @@ const ComplianceRuleList: React.FC<ComplianceListProps> = ({
 
     return () => clearInterval(interval)
   }, [requirements])
+=======
+  }, [dataSourceId, searchQuery, filters, pagination.page, pagination.limit, enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   // Filter and sort requirements
   const filteredAndSortedRequirements = useMemo(() => {

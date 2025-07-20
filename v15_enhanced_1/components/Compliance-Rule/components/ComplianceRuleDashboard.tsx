@@ -22,6 +22,7 @@ import { useEnterpriseFeatures } from '../hooks/use-enterprise-features'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import { ComplianceAPIs } from '../services/enterprise-apis'
 import type { ComplianceMetrics, ComplianceInsight, ComplianceEvent } from '../types'
+import { ComplianceAPIs } from '../services/enterprise-apis'
 
 interface ComplianceRuleDashboardProps {
   dataSourceId?: number
@@ -101,6 +102,7 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
   const [selectedTimeRange, setSelectedTimeRange] = useState('30d')
   const [activeTab, setActiveTab] = useState('overview')
 
+<<<<<<< HEAD
   const enterprise = useEnterpriseCompliance()
   const enterpriseFeatures = useEnterpriseFeatures({
     componentName: 'ComplianceRuleDashboard',
@@ -178,17 +180,82 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
           },
           activities: [],
           insights: []
+=======
+  // Load metrics from backend
+  useEffect(() => {
+    const loadMetrics = async () => {
+      setLoading(true)
+      try {
+        // Use real backend API call to get compliance metrics
+        const metricsResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({
+          data_source_id: dataSourceId,
+          page: 1,
+          limit: 1000 // Get all for metrics calculation
+        })
+        
+        const requirements = metricsResponse.data || []
+        
+        // Calculate real metrics from backend data
+        const calculatedMetrics = {
+          totalRequirements: requirements.length,
+          compliantRequirements: requirements.filter(r => r.status === 'compliant').length,
+          nonCompliantRequirements: requirements.filter(r => r.status === 'non_compliant').length,
+          partiallyCompliantRequirements: requirements.filter(r => r.status === 'partially_compliant').length,
+          notAssessedRequirements: requirements.filter(r => r.status === 'not_assessed').length,
+          criticalIssues: requirements.filter(r => r.risk_level === 'critical').length,
+          highRiskIssues: requirements.filter(r => r.risk_level === 'high').length,
+          complianceScore: requirements.length > 0 
+            ? Math.round((requirements.filter(r => r.status === 'compliant').length / requirements.length) * 100)
+            : 0,
+          frameworkCoverage: {
+            'SOC 2': requirements.filter(r => r.framework === 'SOC 2').length,
+            'GDPR': requirements.filter(r => r.framework === 'GDPR').length,
+            'HIPAA': requirements.filter(r => r.framework === 'HIPAA').length,
+            'ISO 27001': requirements.filter(r => r.framework === 'ISO 27001').length,
+            'PCI DSS': requirements.filter(r => r.framework === 'PCI DSS').length
+          }
+        }
+        
+        setMetrics(calculatedMetrics)
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'metrics_loaded', total_requirements: requirements.length },
+          source: 'ComplianceRuleDashboard',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load metrics:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance metrics')
+        // Assuming onError is passed as a prop or state
+        // onError?.('Failed to load compliance metrics') 
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'metrics_load_failed', error: error.message },
+          source: 'ComplianceRuleDashboard',
+          severity: 'high'
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
         })
       } finally {
         setLoading(false)
       }
     }
 
+<<<<<<< HEAD
     loadDashboardData()
   }, [dataSourceId, selectedTimeRange, enterprise])
+=======
+    loadMetrics()
+  }, [dataSourceId, enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   // Real-time data refresh
   useEffect(() => {
+<<<<<<< HEAD
     const interval = setInterval(async () => {
       if (dashboardData) {
         try {
@@ -203,6 +270,12 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
         } catch (error) {
           console.error('Failed to refresh metrics:', error)
         }
+=======
+    const unsubscribe = enterprise.addEventListener('*', (event) => {
+      if (event.type === 'compliance_status_updated' || event.type === 'metrics_updated') {
+        // Refresh relevant data
+        // enterpriseFeatures.getMetrics().then(setMetrics) // This line is no longer needed as metrics are loaded via API
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
       }
     }, 300000) // Refresh every 5 minutes
 

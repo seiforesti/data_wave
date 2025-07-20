@@ -1,18 +1,12 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import { ComplianceAPIs } from '../services/enterprise-apis'
 import type {
-  ComplianceRequirement,
-  ComplianceAssessment,
-  ComplianceGap,
-  ComplianceEvidence,
-  ComplianceWorkflow,
-  ComplianceReport,
-  ComplianceIntegration,
-  ComplianceFramework
-} from '../services/enterprise-apis'
+  ComplianceRequirement, ComplianceAssessment, ComplianceGap, ComplianceEvidence,
+  ComplianceWorkflow, ComplianceReport, ComplianceIntegration, ComplianceFramework
+} from '../types'
 
 // Core enterprise features hook for compliance components
 export function useEnterpriseFeatures({
@@ -34,189 +28,181 @@ export function useEnterpriseFeatures({
 }) {
   const enterprise = useEnterpriseCompliance()
   
-  const [localData, setLocalData] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // Enhanced state management with caching
+  const [cache, setCache] = useState<Map<string, { data: any; timestamp: number }>>(new Map())
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cache, setCache] = useState<Map<string, any>>(new Map())
-
-  // Execute actions with comprehensive error handling and caching
-  const executeAction = useCallback(async (action: string, params: any) => {
+  
+  // Performance monitoring
+  const performanceRef = useRef({
+    actionCount: 0,
+    averageResponseTime: 0,
+    errorRate: 0
+  })
+  
+  // Execute enterprise actions with caching and performance monitoring
+  const executeAction = useCallback(async (action: string, params: any = {}) => {
+    const startTime = Date.now()
+    const cacheKey = `${action}_${JSON.stringify(params)}`
+    
     try {
-      setIsLoading(true)
+      setLoading(true)
       setError(null)
       
-      const cacheKey = `${action}_${JSON.stringify(params)}`
-      
-      // Check cache first for read operations
-      if (action.startsWith('get') && cache.has(cacheKey)) {
-        const cachedData = cache.get(cacheKey)
-        if (Date.now() - cachedData.timestamp < 300000) { // 5 minutes cache
-          setLocalData(cachedData.data)
-          return cachedData.data
+      // Check cache for read operations
+      if (action.startsWith('get')) {
+        const cached = cache.get(cacheKey)
+        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minutes cache
+          return cached.data
         }
       }
       
+      // Execute the action through enterprise integration
       const result = await enterprise.executeAction(action, {
+        ...params,
         componentName,
         complianceId,
-        dataSourceId,
-        ...params
+        dataSourceId
       })
       
       // Cache the result for read operations
       if (action.startsWith('get')) {
-        setCache(prev => new Map(prev).set(cacheKey, {
+        setCache((prev: Map<string, { data: any; timestamp: number }>) => new Map(prev).set(cacheKey, {
           data: result,
           timestamp: Date.now()
         }))
       }
       
-      setLocalData(result)
+      // Update performance metrics
+      const responseTime = Date.now() - startTime
+      performanceRef.current.actionCount++
+      performanceRef.current.averageResponseTime = 
+        (performanceRef.current.averageResponseTime + responseTime) / 2
+      
       return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Action failed'
-      setError(errorMessage)
-      enterprise.sendNotification('error', errorMessage)
+      
+    } catch (err: any) {
+      setError(err.message || 'Action failed')
+      performanceRef.current.errorRate = 
+        (performanceRef.current.errorRate + 1) / performanceRef.current.actionCount
       throw err
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [enterprise, componentName, complianceId, dataSourceId, cache])
-
-  // Batch execute multiple actions
+  
+  // Batch operations for improved performance
   const batchExecuteActions = useCallback(async (actions: Array<{ action: string; params: any }>) => {
     try {
-      setIsLoading(true)
-      setError(null)
-      
+      setLoading(true)
       const results = await enterprise.batchExecuteActions(actions.map(({ action, params }) => ({
         action,
-        params: {
-          componentName,
-          complianceId,
-          dataSourceId,
-          ...params
-        }
+        params: { ...params, componentName, complianceId, dataSourceId }
       })))
-      
       return results
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Batch actions failed'
-      setError(errorMessage)
-      enterprise.sendNotification('error', errorMessage)
+    } catch (err: any) {
+      setError(err.message || 'Batch operation failed')
       throw err
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }, [enterprise, componentName, complianceId, dataSourceId])
-
-  // Get real-time metrics with caching
-  const getMetrics = useCallback(async () => {
-    if (!enableMonitoring) return null
-    
-    try {
-      const metrics = await enterprise.getComplianceStatus({ 
-        data_source_id: dataSourceId,
-        compliance_id: complianceId 
+  
+  // Real-time data subscription
+  const subscribeToUpdates = useCallback((eventTypes: string[]) => {
+    const unsubscribers = eventTypes.map(eventType => 
+      enterprise.addEventListener(eventType, (event: any) => {
+        // Invalidate relevant cache entries
+        const keysToInvalidate = Array.from(cache.keys()).filter(key => 
+          key.includes(eventType) || key.includes(event.entityType)
+        )
+        
+        setCache((prev: Map<string, { data: any; timestamp: number }>) => {
+          const newCache = new Map(prev)
+          keysToInvalidate.forEach(key => newCache.delete(key))
+          return newCache
+        })
       })
-      return metrics
-    } catch (err) {
-      console.error('Failed to get metrics:', err)
-      return null
-    }
-  }, [enterprise, enableMonitoring, dataSourceId, complianceId])
-
-  // Send notifications with enterprise features
-  const sendNotification = useCallback((type: 'success' | 'error' | 'warning' | 'info', message: string, options?: any) => {
-    enterprise.sendNotification(type, message, {
-      component: componentName,
-      complianceId,
-      dataSourceId,
-      ...options
-    })
-  }, [enterprise, componentName, complianceId, dataSourceId])
-
-  // Join collaboration workspace
-  const joinWorkspace = useCallback(async (workspaceId: string) => {
-    if (!enableCollaboration) return
+    )
     
-    try {
-      await enterprise.joinCollaboration(workspaceId)
-      sendNotification('success', 'Joined collaboration workspace')
-    } catch (err) {
-      sendNotification('error', 'Failed to join workspace')
-    }
-  }, [enterprise, enableCollaboration, sendNotification])
-
-  // Start workflow with context
-  const startWorkflow = useCallback(async (workflowId: string, params: any) => {
-    if (!enableWorkflows) return
-    
-    try {
-      const instanceId = await enterprise.startWorkflow(workflowId, {
-        component: componentName,
-        complianceId,
-        dataSourceId,
-        ...params
+    return () => unsubscribers.forEach(unsub => unsub())
+  }, [enterprise, cache])
+  
+  // Analytics integration
+  const analytics = useMemo(() => ({
+    getInsights: () => executeAction('getAnalyticsInsights', { enableAnalytics }),
+    getTrends: () => executeAction('getAnalyticsTrends', { enableAnalytics }),
+    getMetrics: () => executeAction('getAnalyticsMetrics', { enableAnalytics }),
+    generateReport: (reportType: string) => executeAction('generateAnalyticsReport', { reportType, enableAnalytics })
+  }), [executeAction, enableAnalytics])
+  
+  // Collaboration features
+  const collaboration = useMemo(() => ({
+    startSession: () => executeAction('startCollaborationSession', { enableCollaboration }),
+    joinSession: (sessionId: string) => executeAction('joinCollaborationSession', { sessionId, enableCollaboration }),
+    leaveSession: () => executeAction('leaveCollaborationSession', { enableCollaboration }),
+    shareComponent: (shareOptions: any) => executeAction('shareComponent', { shareOptions, enableCollaboration })
+  }), [executeAction, enableCollaboration])
+  
+  // Workflow automation
+  const workflows = useMemo(() => ({
+    execute: (workflowId: string) => executeAction('executeWorkflow', { workflowId, enableWorkflows }),
+    schedule: (workflowId: string, schedule: any) => executeAction('scheduleWorkflow', { workflowId, schedule, enableWorkflows }),
+    monitor: () => executeAction('monitorWorkflows', { enableWorkflows }),
+    getTemplates: () => executeAction('getWorkflowTemplates', { enableWorkflows })
+  }), [executeAction, enableWorkflows])
+  
+  // Monitoring and alerting
+  const monitoring = useMemo(() => ({
+    getStatus: () => executeAction('getMonitoringStatus', { enableMonitoring }),
+    getAlerts: () => executeAction('getMonitoringAlerts', { enableMonitoring }),
+    createAlert: (alertConfig: any) => executeAction('createMonitoringAlert', { alertConfig, enableMonitoring }),
+    getMetrics: () => executeAction('getMonitoringMetrics', { enableMonitoring })
+  }), [executeAction, enableMonitoring])
+  
+  // Performance metrics
+  const getPerformanceMetrics = useCallback(() => ({
+    ...performanceRef.current,
+    cacheSize: cache.size,
+    cacheHitRate: cache.size > 0 ? 1 - performanceRef.current.errorRate : 0
+  }), [cache.size])
+  
+  // Cleanup cache periodically
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now()
+      setCache((prev: Map<string, { data: any; timestamp: number }>) => {
+        const newCache = new Map()
+        prev.forEach((value, key) => {
+          if (now - value.timestamp < 600000) { // Keep for 10 minutes
+            newCache.set(key, value)
+          }
+        })
+        return newCache
       })
-      sendNotification('success', 'Workflow started successfully')
-      return instanceId
-    } catch (err) {
-      sendNotification('error', 'Failed to start workflow')
-      throw err
-    }
-  }, [enterprise, enableWorkflows, sendNotification, componentName, complianceId, dataSourceId])
-
-  // Get analytics insights
-  const getInsights = useCallback(async () => {
-    if (!enableAnalytics) return null
+    }, 300000) // Cleanup every 5 minutes
     
-    try {
-      const insights = await enterprise.getInsights('compliance', 10)
-      return insights
-    } catch (err) {
-      console.error('Failed to get insights:', err)
-      return null
-    }
-  }, [enterprise, enableAnalytics])
-
-  // Clear cache
-  const clearCache = useCallback(() => {
-    setCache(new Map())
+    return () => clearInterval(cleanup)
   }, [])
-
+  
   return {
-    // Core features
     executeAction,
     batchExecuteActions,
-    sendNotification,
-    getMetrics,
-    getInsights,
-    clearCache,
-    
-    // Collaboration
-    joinWorkspace,
-    leaveWorkspace: enterprise.leaveCollaboration,
-    
-    // Workflows
-    startWorkflow,
-    approveWorkflow: enterprise.approveWorkflow,
-    
-    // Data
-    backendData: enterprise.backendData,
-    localData,
-    isLoading,
+    subscribeToUpdates,
+    analytics,
+    collaboration,
+    workflows,
+    monitoring,
+    loading,
     error,
-    
-    // Features
-    features: enterprise.features,
-    
-    // Status
-    isConnected: enterprise.isConnected,
-    metrics: enterprise.metrics,
-    events: enterprise.events,
-    notifications: enterprise.notifications,
-    insights: enterprise.insights
+    getPerformanceMetrics,
+    // Feature flags
+    features: {
+      analytics: enableAnalytics,
+      collaboration: enableCollaboration,
+      workflows: enableWorkflows,
+      monitoring: enableMonitoring
+    }
   }
 }
 
@@ -226,95 +212,76 @@ export function useComplianceMonitoring(dataSourceId?: number, complianceId?: nu
   
   const [monitoringData, setMonitoringData] = useState<any>(null)
   const [alerts, setAlerts] = useState<any[]>([])
-  const [realTimeUpdates, setRealTimeUpdates] = useState<boolean>(true)
+  const [realTimeUpdates, setRealTimeUpdates] = useState(true)
+  const [loading, setLoading] = useState(false)
 
-  // Get comprehensive compliance status
-  const getComplianceStatus = useCallback(async (filters?: any) => {
+  // Load monitoring data
+  const loadMonitoringData = useCallback(async () => {
+    setLoading(true)
     try {
-      const status = await ComplianceAPIs.Management.getRequirements({
-        data_source_id: dataSourceId,
-        ...filters
-      })
-      setMonitoringData(status)
-      return status
-    } catch (err) {
-      console.error('Failed to get compliance status:', err)
-      return null
+      const [status, metrics, riskData] = await Promise.all([
+        enterprise.getComplianceStatus({ data_source_id: dataSourceId }),
+        enterprise.getAnalytics('30d', { data_source_id: dataSourceId }),
+        enterprise.getRiskAssessment(dataSourceId?.toString() || '', 'data_source')
+      ])
+      
+      setMonitoringData({ status, metrics, riskData })
+    } catch (error) {
+      console.error('Failed to load monitoring data:', error)
+      enterprise.sendNotification('error', 'Failed to load monitoring data')
+    } finally {
+      setLoading(false)
     }
-  }, [dataSourceId])
+  }, [enterprise, dataSourceId])
 
-  // Get risk assessment with detailed analysis
-  const getRiskAssessment = useCallback(async () => {
-    try {
-      if (!dataSourceId) return null
-      const assessment = await ComplianceAPIs.Risk.getRiskAssessment(dataSourceId.toString())
-      return assessment
-    } catch (err) {
-      console.error('Failed to get risk assessment:', err)
-      return null
-    }
-  }, [dataSourceId])
-
-  // Get compliance trends
-  const getComplianceTrends = useCallback(async (period: string = '30d') => {
-    try {
-      if (!dataSourceId) return null
-      const trends = await ComplianceAPIs.Risk.getRiskTrends(dataSourceId.toString(), 'data_source', period)
-      return trends
-    } catch (err) {
-      console.error('Failed to get compliance trends:', err)
-      return null
-    }
-  }, [dataSourceId])
-
-  // Monitor for compliance alerts
-  useEffect(() => {
-    if (!enterprise.config.monitoring.enableComplianceAlerts || !realTimeUpdates) return
+  // Monitor compliance status with real-time updates
+  const startMonitoring = useCallback(() => {
+    if (!realTimeUpdates) return
 
     const checkAlerts = () => {
-      const newAlerts = enterprise.events.filter(event => 
+      const newAlerts = enterprise.events.filter((event: any) => 
         (event.type === 'compliance_alert' || event.type === 'risk_threshold_exceeded') &&
         (event.severity === 'high' || event.severity === 'critical')
       )
       
-      if (newAlerts.length > alerts.length) {
-        setAlerts(newAlerts)
-        const alertCount = newAlerts.length - alerts.length
-        enterprise.sendNotification('warning', `${alertCount} new compliance alert${alertCount > 1 ? 's' : ''}`)
+      if (newAlerts.length > 0) {
+        setAlerts((prev: any[]) => [...prev, ...newAlerts])
       }
     }
 
-    const interval = setInterval(checkAlerts, enterprise.config.monitoring.monitoringInterval * 1000)
-    return () => clearInterval(interval)
-  }, [enterprise, alerts, realTimeUpdates])
+    // Check alerts every 30 seconds
+    const alertInterval = setInterval(checkAlerts, 30000)
 
-  // Subscribe to real-time events
-  useEffect(() => {
-    if (!realTimeUpdates) return
-
-    const unsubscribeCompliance = enterprise.addEventListener('compliance_alert', (event) => {
-      setAlerts(prev => [...prev, event])
+    // Subscribe to real-time events
+    const unsubscribeCompliance = enterprise.addEventListener('compliance_alert', (event: any) => {
+      setAlerts((prev: any[]) => [...prev, event])
     })
 
-    const unsubscribeRisk = enterprise.addEventListener('risk_threshold_exceeded', (event) => {
-      setAlerts(prev => [...prev, event])
+    const unsubscribeRisk = enterprise.addEventListener('risk_threshold_exceeded', (event: any) => {
+      setAlerts((prev: any[]) => [...prev, event])
     })
 
     return () => {
+      clearInterval(alertInterval)
       unsubscribeCompliance()
       unsubscribeRisk()
     }
   }, [enterprise, realTimeUpdates])
 
+  useEffect(() => {
+    loadMonitoringData()
+    const cleanup = startMonitoring()
+    return cleanup
+  }, [loadMonitoringData, startMonitoring])
+
   return {
-    getComplianceStatus,
-    getRiskAssessment,
-    getComplianceTrends,
     monitoringData,
     alerts,
-    isMonitoring: enterprise.config.monitoring.enableRealTimeMonitoring,
+    loading,
     realTimeUpdates,
-    setRealTimeUpdates
+    setRealTimeUpdates,
+    loadMonitoringData,
+    clearAlerts: () => setAlerts([])
   }
 }
 
@@ -588,11 +555,17 @@ export function useAuditFeatures(entityType: string = 'compliance', entityId?: s
         metadata: {}
       }
       
-      const report = await ComplianceAPIs.Audit.createReport(reportData)
-      const generated = await ComplianceAPIs.Audit.generateReport(report.id)
+      // Create and generate report through enterprise API
+      const reportResult = await enterprise.executeAction('generateAuditReport', {
+        reportType,
+        entityType,
+        entityId,
+        schedule,
+        recipients
+      })
       
-      enterprise.sendNotification('success', 'Report generated successfully')
-      return generated
+              enterprise.sendNotification('success', 'Report generated successfully')
+        return reportResult
     } catch (err) {
       enterprise.sendNotification('error', 'Failed to generate report')
       throw err
@@ -792,7 +765,7 @@ export function useWorkflowIntegration() {
   // Create workflow from template
   const createWorkflowFromTemplate = useCallback(async (templateId: string, customizations?: any) => {
     try {
-      const template = workflowTemplates.find(t => t.id === templateId)
+      const template = workflowTemplates.find((t: any) => t.id === templateId)
       if (!template) throw new Error('Template not found')
       
       const workflowData = {

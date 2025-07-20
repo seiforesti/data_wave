@@ -56,17 +56,21 @@ const ComplianceWorkflows: React.FC<ComplianceWorkflowsProps> = ({
   
   // State
   const [workflows, setWorkflows] = useState<ComplianceWorkflow[]>([])
-  const [activeExecutions, setActiveExecutions] = useState<ComplianceWorkflowExecution[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
   const [activeTab, setActiveTab] = useState('all')
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10, total: 0 })
 
+<<<<<<< HEAD
   // Load workflows from API
+=======
+  // Load workflows from backend
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
   useEffect(() => {
     const loadWorkflows = async () => {
       try {
+<<<<<<< HEAD
         setLoading(true)
         
         const params: any = {
@@ -134,12 +138,46 @@ const ComplianceWorkflows: React.FC<ComplianceWorkflowsProps> = ({
         // Fallback to empty state
         setWorkflows([])
         setPagination(prev => ({ ...prev, total: 0 }))
+=======
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceManagement.getWorkflows({
+          rule_id: filters.rule_id,
+          status: activeTab !== 'all' ? activeTab : undefined,
+          workflow_type: filters.workflow_type,
+          page: 1,
+          limit: 50
+        })
+        
+        setWorkflows(response.data || [])
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'workflows_loaded', count: response.data?.length || 0 },
+          source: 'ComplianceWorkflows',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load workflows:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance workflows')
+        onError?.('Failed to load compliance workflows')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'workflows_load_failed', error: error.message },
+          source: 'ComplianceWorkflows',
+          severity: 'high'
+        })
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
       } finally {
         setLoading(false)
       }
     }
 
     loadWorkflows()
+<<<<<<< HEAD
   }, [dataSourceId, searchQuery, filters, pagination.page, pagination.pageSize, onError])
 
   // Real-time updates for workflow status
@@ -189,6 +227,9 @@ const ComplianceWorkflows: React.FC<ComplianceWorkflowsProps> = ({
 
     return () => clearInterval(interval)
   }, [workflows])
+=======
+  }, [dataSourceId, filters, activeTab, enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   // Filter workflows based on active tab and search
   const filteredWorkflows = workflows.filter(workflow => {

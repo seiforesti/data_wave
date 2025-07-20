@@ -324,7 +324,7 @@ const NotificationCenter: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))
+                ))}
               )}
             </div>
           </ScrollArea>
@@ -523,6 +523,7 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
   const [isLoading, setIsLoading] = useState(true)
   const enterprise = useEnterpriseCompliance()
 
+<<<<<<< HEAD
   // Load real workflow data from API
   useEffect(() => {
     const loadWorkflowData = async () => {
@@ -596,6 +597,32 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
       enterprise.sendNotification('error', 'Failed to execute workflow')
     }
   }
+=======
+
+
+  // Load active workflows from backend
+  const [loadingWorkflows, setLoadingWorkflows] = useState(false)
+
+  useEffect(() => {
+    const loadActiveWorkflows = async () => {
+      setLoadingWorkflows(true)
+      try {
+        const response = await ComplianceAPIs.ComplianceManagement.getWorkflows({
+          status: 'active',
+          limit: 5
+        })
+        setActiveWorkflows(response.data || [])
+      } catch (error) {
+        console.error('Failed to load active workflows:', error)
+        enterprise.sendNotification('error', 'Failed to load active workflows')
+      } finally {
+        setLoadingWorkflows(false)
+      }
+    }
+
+    loadActiveWorkflows()
+  }, [enterprise])
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   return (
     <Card className="mb-6">
@@ -617,11 +644,31 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
               </Button>
             </div>
             <div className="space-y-3">
+<<<<<<< HEAD
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="p-4 border rounded-lg bg-muted/50 animate-pulse">
                     <div className="h-4 bg-muted animate-pulse rounded w-3/4 mb-2" />
                     <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+=======
+              {loadingWorkflows ? (
+                <div className="text-center py-4">Loading workflows...</div>
+              ) : activeWorkflows.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">No active workflows</div>
+              ) : (
+                activeWorkflows.map((workflow) => (
+                <motion.div
+                  key={workflow.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 border rounded-lg bg-gradient-to-r from-purple-50 to-blue-50"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-medium">{workflow.name}</h5>
+                    <Badge variant={workflow.status === 'in_progress' ? 'default' : 'secondary'}>
+                      {workflow.status.replace('_', ' ')}
+                    </Badge>
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
                   </div>
                 ))
               ) : activeWorkflows.length === 0 ? (
@@ -677,7 +724,12 @@ const WorkflowOrchestrationPanel: React.FC<{ workflows: any[]; onExecute: (id: s
                         </Button>
                       </div>
                     </div>
+<<<<<<< HEAD
                   </motion.div>
+=======
+                  </div>
+                </motion.div>
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
                 ))
               )}
             </div>

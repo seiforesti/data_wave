@@ -52,6 +52,7 @@ interface ComplianceRuleDetailsProps {
   onDelete?: (requirement: ComplianceRequirement) => void
 }
 
+<<<<<<< HEAD
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"]
 
 export function ComplianceRuleDetails({ isOpen, onClose, requirement, onEdit, onDelete }: ComplianceRuleDetailsProps) {
@@ -63,6 +64,22 @@ export function ComplianceRuleDetails({ isOpen, onClose, requirement, onEdit, on
   const [issues, setIssues] = useState<any[]>([])
   const [trendData, setTrendData] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<any>(null)
+=======
+export function ComplianceRuleDetails({ 
+  isOpen, 
+  onClose, 
+  requirement, 
+  onEdit, 
+  onDelete 
+}: ComplianceRuleDetailsProps) {
+  // State
+  const [requirement, setRequirement] = useState<ComplianceRequirement | null>(null)
+  const [assessmentHistory, setAssessmentHistory] = useState<any[]>([])
+  const [evidenceFiles, setEvidenceFiles] = useState<any[]>([])
+  const [relatedRequirements, setRelatedRequirements] = useState<ComplianceRequirement[]>([])
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
 
   const { 
     executeAction, 
@@ -76,6 +93,7 @@ export function ComplianceRuleDetails({ isOpen, onClose, requirement, onEdit, on
     enableWorkflows: true
   })
 
+<<<<<<< HEAD
   // Load rule details and related data from API
   useEffect(() => {
     const loadRuleData = async () => {
@@ -109,6 +127,70 @@ export function ComplianceRuleDetails({ isOpen, onClose, requirement, onEdit, on
       } finally {
         setIsLoading(false)
       }
+=======
+  // Load requirement details from backend
+  useEffect(() => {
+    const loadRequirementDetails = async () => {
+      if (!requirementId) return
+      
+      setLoading(true)
+      try {
+        // Load main requirement data
+        const requirementData = await ComplianceAPIs.ComplianceManagement.getRequirement(requirementId)
+        setRequirement(requirementData)
+        
+        // Load evaluation history
+        const evaluationsResponse = await ComplianceAPIs.ComplianceManagement.getRuleEvaluations(requirementId, {
+          page: 1,
+          limit: 10
+        })
+        setAssessmentHistory(evaluationsResponse.data || [])
+        
+        // Load related requirements (same framework)
+        if (requirementData.framework) {
+          const relatedResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({
+            framework: requirementData.framework,
+            limit: 5
+          })
+          setRelatedRequirements((relatedResponse.data || []).filter(r => r.id !== requirementId))
+        }
+        
+        // Emit success event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirement_details_loaded', requirement_id: requirementId },
+          source: 'ComplianceRuleDetails',
+          severity: 'low'
+        })
+        
+      } catch (error) {
+        console.error('Failed to load requirement details:', error)
+        enterprise.sendNotification('error', 'Failed to load compliance requirement details')
+        onError?.('Failed to load compliance requirement details')
+        
+        // Emit error event
+        enterprise.emitEvent({
+          type: 'system_event',
+          data: { action: 'requirement_details_load_failed', error: error.message },
+          source: 'ComplianceRuleDetails',
+          severity: 'high'
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadRequirementDetails()
+  }, [requirementId, enterprise])
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      compliant: { variant: 'default' as const, color: 'text-green-600', icon: CheckCircle },
+      non_compliant: { variant: 'destructive' as const, color: 'text-red-600', icon: AlertTriangle },
+      partially_compliant: { variant: 'secondary' as const, color: 'text-yellow-600', icon: Clock },
+      not_assessed: { variant: 'outline' as const, color: 'text-gray-600', icon: FileText },
+      in_progress: { variant: 'secondary' as const, color: 'text-blue-600', icon: Activity }
+>>>>>>> 78c9608 (Refactor compliance components with real API calls and enhanced features)
     }
 
     if (isOpen && requirement) {
