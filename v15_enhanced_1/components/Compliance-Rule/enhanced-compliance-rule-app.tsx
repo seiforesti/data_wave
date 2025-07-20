@@ -967,6 +967,22 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
   const [metrics, setMetrics] = useState<any>(null)
   const [insights, setInsights] = useState<any[]>([])
   const [alerts, setAlerts] = useState<any[]>([])
+  
+  // Enhanced data management for all tabs
+  const [assessments, setAssessments] = useState<any[]>([])
+  const [assessmentInsights, setAssessmentInsights] = useState<any[]>([])
+  const [assessmentTemplates, setAssessmentTemplates] = useState<any[]>([])
+  const [workflows, setWorkflows] = useState<any[]>([])
+  const [integrations, setIntegrations] = useState<any[]>([])
+  const [reports, setReports] = useState<any[]>([])
+  const [issues, setIssues] = useState<any[]>([])
+  const [loadingStates, setLoadingStates] = useState({
+    assessments: false,
+    workflows: false,
+    integrations: false,
+    reports: false,
+    issues: false
+  })
 
   // Modal state management
   const [modals, setModals] = useState({
@@ -1009,6 +1025,87 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
     setSelectedItem(null)
   }, [])
 
+  // Enhanced data loading functions using enterprise hooks
+  const loadAssessments = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, assessments: true }))
+    try {
+      const [assessmentsData, insightsData, templatesData] = await Promise.all([
+        enterpriseFeatures.getAssessments({ dataSourceId, status: ['active', 'in_progress', 'pending_review'] }),
+        analyticsIntegration.getAssessmentInsights(dataSourceId),
+        enterpriseFeatures.getAssessmentTemplates()
+      ])
+      setAssessments(assessmentsData?.data || [])
+      setAssessmentInsights(insightsData || [])
+      setAssessmentTemplates(templatesData || [])
+    } catch (error) {
+      console.error('Failed to load assessments:', error)
+      toast.error('Failed to load assessments')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, assessments: false }))
+    }
+  }, [enterpriseFeatures, analyticsIntegration, dataSourceId])
+
+  const loadWorkflows = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, workflows: true }))
+    try {
+      const workflowsData = await workflowIntegration.getWorkflows({ 
+        dataSourceId, 
+        status: ['active', 'pending', 'running'] 
+      })
+      setWorkflows(workflowsData?.data || [])
+    } catch (error) {
+      console.error('Failed to load workflows:', error)
+      toast.error('Failed to load workflows')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, workflows: false }))
+    }
+  }, [workflowIntegration, dataSourceId])
+
+  const loadIntegrations = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, integrations: true }))
+    try {
+      const integrationsData = await enterpriseFeatures.getIntegrations({ dataSourceId })
+      setIntegrations(integrationsData?.data || [])
+    } catch (error) {
+      console.error('Failed to load integrations:', error)
+      toast.error('Failed to load integrations')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, integrations: false }))
+    }
+  }, [enterpriseFeatures, dataSourceId])
+
+  const loadReports = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, reports: true }))
+    try {
+      const reportsData = await auditFeatures.getComplianceReports({ 
+        entityType: 'data_source', 
+        entityId: dataSourceId?.toString() 
+      })
+      setReports(reportsData || [])
+    } catch (error) {
+      console.error('Failed to load reports:', error)
+      toast.error('Failed to load reports')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, reports: false }))
+    }
+  }, [auditFeatures, dataSourceId])
+
+  const loadIssues = useCallback(async () => {
+    setLoadingStates(prev => ({ ...prev, issues: true }))
+    try {
+      const issuesData = await enterpriseFeatures.getIssues({ 
+        dataSourceId, 
+        status: ['open', 'in_progress', 'pending_review'] 
+      })
+      setIssues(issuesData?.data || [])
+    } catch (error) {
+      console.error('Failed to load issues:', error)
+      toast.error('Failed to load issues')
+    } finally {
+      setLoadingStates(prev => ({ ...prev, issues: false }))
+    }
+  }, [enterpriseFeatures, dataSourceId])
+
   // Real-time data refresh
   const refreshData = useCallback(async () => {
     setIsLoading(true)
@@ -1022,6 +1119,25 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
       setMetrics(metricsData)
       setInsights(insightsData || [])
       
+      // Load tab-specific data based on active tab
+      switch (activeTab) {
+        case 'assessments':
+          loadAssessments()
+          break
+        case 'workflows':
+          loadWorkflows()
+          break
+        case 'integrations':
+          loadIntegrations()
+          break
+        case 'reports':
+          loadReports()
+          break
+        case 'issues':
+          loadIssues()
+          break
+      }
+      
       // Update URL with current tab
       if (activeTab !== 'dashboard') {
         router.push(`?tab=${activeTab}`, { scroll: false })
@@ -1032,7 +1148,7 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
     } finally {
       setIsLoading(false)
     }
-  }, [enterpriseFeatures, analyticsIntegration, monitoring, activeTab, router])
+  }, [enterpriseFeatures, analyticsIntegration, monitoring, activeTab, router, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues])
 
   // Initialize data on component mount
   useEffect(() => {
@@ -1055,6 +1171,27 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
 
     return unsubscribe
   }, [enterprise])
+
+  // Load data when tab changes
+  useEffect(() => {
+    switch (activeTab) {
+      case 'assessments':
+        loadAssessments()
+        break
+      case 'workflows':
+        loadWorkflows()
+        break
+      case 'integrations':
+        loadIntegrations()
+        break
+      case 'reports':
+        loadReports()
+        break
+      case 'issues':
+        loadIssues()
+        break
+    }
+  }, [activeTab, loadAssessments, loadWorkflows, loadIntegrations, loadReports, loadIssues])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1311,38 +1448,38 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {[
-                            {
-                              id: 'assess-001',
-                              framework: 'SOC 2 Type II',
-                              progress: 75,
-                              status: 'in_progress',
-                              assessor: 'External Auditor',
-                              dueDate: '2024-03-15',
-                              findings: 3,
-                              lastActivity: '2 hours ago'
-                            },
-                            {
-                              id: 'assess-002',
-                              framework: 'GDPR Compliance',
-                              progress: 45,
-                              status: 'pending_review',
-                              assessor: 'Internal Team',
-                              dueDate: '2024-03-30',
-                              findings: 7,
-                              lastActivity: '1 day ago'
-                            },
-                            {
-                              id: 'assess-003',
-                              framework: 'HIPAA Security Rule',
-                              progress: 90,
-                              status: 'near_completion',
-                              assessor: 'Healthcare Specialist',
-                              dueDate: '2024-02-28',
-                              findings: 1,
-                              lastActivity: '30 minutes ago'
-                            }
-                          ].map((assessment) => (
+                          {loadingStates.assessments ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                              <div key={index} className="p-4 border rounded-lg animate-pulse">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="space-y-2">
+                                    <div className="h-4 bg-muted rounded w-32"></div>
+                                    <div className="h-3 bg-muted rounded w-24"></div>
+                                  </div>
+                                  <div className="h-6 bg-muted rounded w-20"></div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="h-2 bg-muted rounded w-full"></div>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="h-3 bg-muted rounded"></div>
+                                    <div className="h-3 bg-muted rounded"></div>
+                                    <div className="h-3 bg-muted rounded"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : assessments.length === 0 ? (
+                            <div className="text-center py-8">
+                              <Scan className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                              <h3 className="text-lg font-medium text-muted-foreground mb-2">No Active Assessments</h3>
+                              <p className="text-sm text-muted-foreground mb-4">Create your first compliance assessment to get started</p>
+                              <Button onClick={() => openModal('createAssessment')}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Create Assessment
+                              </Button>
+                            </div>
+                          ) : (
+                            assessments.map((assessment) => (
                             <motion.div
                               key={assessment.id}
                               initial={{ opacity: 0, y: 10 }}
@@ -1402,7 +1539,8 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                                 </div>
                               </div>
                             </motion.div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1414,36 +1552,39 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {[
-                            {
-                              title: 'Risk Trend Analysis',
-                              description: 'Overall risk decreasing by 12% this quarter',
-                              type: 'positive',
-                              icon: TrendingDown
-                            },
-                            {
-                              title: 'Control Effectiveness',
-                              description: '94% of controls are operating effectively',
-                              type: 'positive',
-                              icon: Shield
-                            },
-                            {
-                              title: 'Remediation Progress',
-                              description: '23 gaps closed, 8 remain open',
-                              type: 'warning',
-                              icon: Target
-                            }
-                          ].map((insight, index) => (
+                          {loadingStates.assessments ? (
+                            Array.from({ length: 3 }).map((_, index) => (
+                              <div key={index} className="p-3 rounded-lg border-l-4 border-muted animate-pulse">
+                                <div className="flex items-start space-x-2">
+                                  <div className="h-4 w-4 bg-muted rounded mt-0.5"></div>
+                                  <div className="space-y-1 flex-1">
+                                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                                    <div className="h-3 bg-muted rounded w-full"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : assessmentInsights.length === 0 ? (
+                            <div className="text-center py-4">
+                              <Lightbulb className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-sm text-muted-foreground">No insights available</p>
+                            </div>
+                          ) : (
+                            assessmentInsights.map((insight, index) => (
                             <div key={index} className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-l-4 border-green-400">
                               <div className="flex items-start space-x-2">
-                                <insight.icon className="h-4 w-4 text-green-500 mt-0.5" />
+                                {insight.type === 'positive' && <TrendingUp className="h-4 w-4 text-green-500 mt-0.5" />}
+                                {insight.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
+                                {insight.type === 'negative' && <TrendingDown className="h-4 w-4 text-red-500 mt-0.5" />}
+                                {!insight.type && <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5" />}
                                 <div>
                                   <p className="text-sm font-medium">{insight.title}</p>
                                   <p className="text-xs text-muted-foreground">{insight.description}</p>
                                 </div>
                               </div>
                             </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1454,24 +1595,38 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
-                          {[
-                            { name: 'SOC 2 Type I', duration: '4-6 weeks', complexity: 'Medium' },
-                            { name: 'ISO 27001', duration: '8-12 weeks', complexity: 'High' },
-                            { name: 'NIST Framework', duration: '6-8 weeks', complexity: 'Medium' },
-                            { name: 'Custom Assessment', duration: 'Variable', complexity: 'Custom' }
-                          ].map((template, index) => (
-                            <div key={index} className="p-2 border rounded hover:bg-muted/50 cursor-pointer">
+                          {loadingStates.assessments ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                              <div key={index} className="p-2 border rounded animate-pulse">
+                                <div className="flex items-center justify-between">
+                                  <div className="space-y-1">
+                                    <div className="h-4 bg-muted rounded w-24"></div>
+                                    <div className="h-3 bg-muted rounded w-16"></div>
+                                  </div>
+                                  <div className="h-6 bg-muted rounded w-12"></div>
+                                </div>
+                              </div>
+                            ))
+                          ) : assessmentTemplates.length === 0 ? (
+                            <div className="text-center py-4">
+                              <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-sm text-muted-foreground">No templates available</p>
+                            </div>
+                          ) : (
+                            assessmentTemplates.map((template, index) => (
+                            <div key={template.id || index} className="p-2 border rounded hover:bg-muted/50 cursor-pointer">
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-sm font-medium">{template.name}</p>
-                                  <p className="text-xs text-muted-foreground">{template.duration}</p>
+                                  <p className="text-xs text-muted-foreground">{template.duration || template.estimated_duration}</p>
                                 </div>
                                 <Badge variant="outline" className="text-xs">
-                                  {template.complexity}
+                                  {template.complexity || template.difficulty_level}
                                 </Badge>
                               </div>
                             </div>
-                          ))}
+                            ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1505,12 +1660,51 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
 
               <TabsContent value="analytics" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-                  {[
-                    { label: 'Compliance Score', value: '94.2%', change: '+2.1%', trend: 'up', color: 'green' },
-                    { label: 'Risk Level', value: 'Medium', change: '-5%', trend: 'down', color: 'yellow' },
-                    { label: 'Open Findings', value: '12', change: '-8', trend: 'down', color: 'orange' },
-                    { label: 'Controls Tested', value: '247', change: '+15', trend: 'up', color: 'blue' }
-                  ].map((metric, index) => (
+                  {isLoading ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <Card className="relative overflow-hidden">
+                          <CardContent className="p-4">
+                            <div className="space-y-2">
+                              <div className="h-4 bg-muted rounded w-3/4"></div>
+                              <div className="h-8 bg-muted rounded w-1/2"></div>
+                              <div className="h-3 bg-muted rounded w-1/3"></div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))
+                  ) : (
+                    [
+                      { 
+                        label: 'Compliance Score', 
+                        value: `${metrics?.complianceScore || 0}%`, 
+                        change: metrics?.complianceScoreChange || '+0%', 
+                        trend: metrics?.complianceScoreChange?.includes('-') ? 'down' : 'up', 
+                        color: 'green' 
+                      },
+                      { 
+                        label: 'Risk Level', 
+                        value: metrics?.riskLevel || 'Unknown', 
+                        change: metrics?.riskLevelChange || '0%', 
+                        trend: metrics?.riskLevelChange?.includes('-') ? 'down' : 'up', 
+                        color: 'yellow' 
+                      },
+                      { 
+                        label: 'Open Findings', 
+                        value: String(metrics?.openFindings || 0), 
+                        change: metrics?.openFindingsChange || '0', 
+                        trend: metrics?.openFindingsChange?.includes('-') ? 'down' : 'up', 
+                        color: 'orange' 
+                      },
+                      { 
+                        label: 'Controls Tested', 
+                        value: String(metrics?.controlsTested || 0), 
+                        change: metrics?.controlsTestedChange || '+0', 
+                        trend: metrics?.controlsTestedChange?.includes('-') ? 'down' : 'up', 
+                        color: 'blue' 
+                      }
+                    ].map((metric, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, y: 20 }}
@@ -1539,7 +1733,8 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
                         </CardContent>
                       </Card>
                     </motion.div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
