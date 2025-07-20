@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from sqlmodel import Session
+from sqlmodel import Session, select, func
 from typing import List, Optional, Dict, Any
 import logging
 from app.db_session import get_session
@@ -10,8 +10,12 @@ from app.models.compliance_rule_models import (
     ComplianceRuleCreate, ComplianceRuleUpdate, ComplianceIssueCreate, 
     ComplianceIssueUpdate, ComplianceWorkflowCreate, ComplianceWorkflowUpdate,
     ComplianceRuleType, ComplianceRuleSeverity, ComplianceRuleStatus,
-    ComplianceRuleScope
+    ComplianceRuleScope, ComplianceRule
 )
+from datetime import datetime, timedelta
+import random
+from app.models.data_source_models import DataSource
+from app.models.compliance_rule_evaluation_models import ComplianceRuleEvaluation
 
 logger = logging.getLogger(__name__)
 
@@ -368,17 +372,276 @@ async def get_rule_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# **NEW: Enhanced API endpoints for frontend component support**
+
+# Data Source Integration Endpoints
+@router.get("/data-sources", response_model=List[Dict[str, Any]])
+async def get_applicable_data_sources(
+    rule_type: Optional[ComplianceRuleType] = Query(None, description="Filter by rule type"),
+    compliance_standard: Optional[str] = Query(None, description="Filter by compliance standard"),
+    session: Session = Depends(get_session)
+):
+    """Get data sources applicable for compliance rules"""
+    try:
+        sources = ComplianceRuleService.get_applicable_data_sources(
+            session=session,
+            rule_type=rule_type,
+            compliance_standard=compliance_standard
+        )
+        return sources
+        
+    except Exception as e:
+        logger.error(f"Error getting applicable data sources: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/frameworks", response_model=List[Dict[str, Any]])
 async def get_compliance_frameworks(
     session: Session = Depends(get_session)
 ):
-    """Get available compliance frameworks"""
+    """Get available compliance frameworks with templates"""
     try:
-        frameworks = ComplianceRuleService.get_compliance_frameworks(session)
+        frameworks = ComplianceRuleService.get_compliance_frameworks()
         return frameworks
         
     except Exception as e:
         logger.error(f"Error getting compliance frameworks: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{rule_id}/scan-rules", response_model=List[Dict[str, Any]])
+async def get_related_scan_rules(
+    rule_id: int,
+    session: Session = Depends(get_session)
+):
+    """Get scan rules related to a compliance rule"""
+    try:
+        scan_rules = ComplianceRuleService.get_related_scan_rules(session, rule_id)
+        return scan_rules
+        
+    except Exception as e:
+        logger.error(f"Error getting related scan rules for rule {rule_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{rule_id}/evaluate-with-sources", response_model=ComplianceRuleEvaluationResponse)
+async def evaluate_rule_with_data_sources(
+    rule_id: int,
+    evaluation_request: Dict[str, Any] = Body(..., description="Evaluation parameters"),
+    session: Session = Depends(get_session)
+):
+    """Enhanced rule evaluation that integrates with data sources and scans"""
+    try:
+        data_source_ids = evaluation_request.get("data_source_ids")
+        run_scans = evaluation_request.get("run_scans", False)
+        
+        evaluation = ComplianceRuleService.evaluate_rule_with_data_sources(
+            session=session,
+            rule_id=rule_id,
+            data_source_ids=data_source_ids,
+            run_scans=run_scans
+        )
+        return evaluation
+        
+    except Exception as e:
+        logger.error(f"Error evaluating rule with data sources {rule_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **NEW: Template and Framework Integration**
+@router.get("/templates/by-framework/{framework}", response_model=List[Dict[str, Any]])
+async def get_templates_by_framework(
+    framework: str,
+    session: Session = Depends(get_session)
+):
+    """Get rule templates for a specific framework"""
+    try:
+        frameworks = ComplianceRuleService.get_compliance_frameworks()
+        framework_data = next((f for f in frameworks if f["id"] == framework), None)
+        
+        if not framework_data:
+            raise HTTPException(status_code=404, detail="Framework not found")
+        
+        return framework_data.get("templates", [])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting templates for framework {framework}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/from-template", response_model=ComplianceRuleResponse)
+async def create_rule_from_template(
+    template_data: Dict[str, Any] = Body(..., description="Template and customization data"),
+    created_by: Optional[str] = Query(None, description="User creating the rule"),
+    session: Session = Depends(get_session)
+):
+    """Create a compliance rule from a template"""
+    try:
+        template_id = template_data.get("template_id")
+        customizations = template_data.get("customizations", {})
+        
+        # Get framework templates
+        frameworks = ComplianceRuleService.get_compliance_frameworks()
+        template = None
+        
+        for framework in frameworks:
+            for tmpl in framework.get("templates", []):
+                if tmpl["id"] == template_id:
+                    template = tmpl
+                    break
+            if template:
+                break
+        
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        # Create rule from template with customizations
+        rule_data = ComplianceRuleCreate(
+            name=customizations.get("name", template["name"]),
+            description=customizations.get("description", template["description"]),
+            rule_type=ComplianceRuleType(customizations.get("rule_type", template["rule_type"])),
+            severity=ComplianceRuleSeverity(customizations.get("severity", template["severity"])),
+            condition=customizations.get("condition", template["condition"]),
+            compliance_standard=customizations.get("compliance_standard", framework.get("name")),
+            data_source_ids=customizations.get("data_source_ids", []),
+            tags=customizations.get("tags", []),
+            metadata={
+                "template_id": template_id,
+                "framework": framework.get("id"),
+                **customizations.get("metadata", {})
+            }
+        )
+        
+        rule = ComplianceRuleService.create_rule(session, rule_data, created_by)
+        return rule
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating rule from template: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **NEW: Advanced Analytics and Insights**
+@router.get("/analytics/dashboard", response_model=Dict[str, Any])
+async def get_compliance_dashboard_analytics(
+    data_source_id: Optional[int] = Query(None, description="Filter by data source"),
+    time_range: str = Query("30d", description="Time range for analytics"),
+    session: Session = Depends(get_session)
+):
+    """Get comprehensive compliance analytics for dashboard"""
+    try:
+        # Get all rules for analytics
+        rules_query = select(ComplianceRule)
+        if data_source_id:
+            rules_query = rules_query.where(ComplianceRule.data_source_ids.contains([data_source_id]))
+        
+        rules = session.exec(rules_query).all()
+        
+        # Calculate metrics
+        total_rules = len(rules)
+        active_rules = len([r for r in rules if r.status == ComplianceRuleStatus.ACTIVE])
+        
+        # Status distribution
+        status_counts = {}
+        for status in ComplianceRuleStatus:
+            status_counts[status.value] = len([r for r in rules if r.status == status])
+        
+        # Severity distribution
+        severity_counts = {}
+        for severity in ComplianceRuleSeverity:
+            severity_counts[severity.value] = len([r for r in rules if r.severity == severity])
+        
+        # Framework coverage
+        framework_counts = {}
+        for rule in rules:
+            if rule.compliance_standard:
+                framework_counts[rule.compliance_standard] = framework_counts.get(rule.compliance_standard, 0) + 1
+        
+        # Recent evaluations
+        recent_evaluations = session.exec(
+            select(ComplianceRuleEvaluation).where(
+                ComplianceRuleEvaluation.evaluated_at >= datetime.now() - timedelta(days=7)
+            ).order_by(ComplianceRuleEvaluation.evaluated_at.desc()).limit(10)
+        ).all()
+        
+        return {
+            "summary": {
+                "total_rules": total_rules,
+                "active_rules": active_rules,
+                "draft_rules": status_counts.get("draft", 0),
+                "inactive_rules": status_counts.get("inactive", 0)
+            },
+            "distributions": {
+                "status": status_counts,
+                "severity": severity_counts,
+                "frameworks": framework_counts
+            },
+            "recent_activity": {
+                "evaluations": [
+                    {
+                        "id": eval.id,
+                        "rule_id": eval.rule_id,
+                        "status": eval.status,
+                        "compliance_score": eval.compliance_score,
+                        "evaluated_at": eval.evaluated_at.isoformat()
+                    }
+                    for eval in recent_evaluations
+                ]
+            },
+            "time_range": time_range,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting compliance dashboard analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# **NEW: Integration Status and Health**
+@router.get("/integration/status", response_model=Dict[str, Any])
+async def get_integration_status(
+    session: Session = Depends(get_session)
+):
+    """Get status of compliance system integrations"""
+    try:
+        # Check data source integration
+        data_sources_count = session.exec(select(func.count(DataSource.id))).one()
+        
+        # Check scan rule integration
+        scan_rules_with_compliance = session.exec(
+            select(func.count(ComplianceRule.id)).where(
+                ComplianceRule.scan_rule_set_id.isnot(None)
+            )
+        ).one()
+        
+        # Check recent activity
+        recent_evaluations = session.exec(
+            select(func.count(ComplianceRuleEvaluation.id)).where(
+                ComplianceRuleEvaluation.evaluated_at >= datetime.now() - timedelta(hours=24)
+            )
+        ).one()
+        
+        return {
+            "data_source_integration": {
+                "status": "connected" if data_sources_count > 0 else "disconnected",
+                "data_sources_count": data_sources_count
+            },
+            "scan_integration": {
+                "status": "active" if scan_rules_with_compliance > 0 else "inactive",
+                "integrated_rules": scan_rules_with_compliance
+            },
+            "system_health": {
+                "recent_evaluations": recent_evaluations,
+                "last_check": datetime.now().isoformat(),
+                "status": "healthy" if recent_evaluations > 0 else "warning"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting integration status: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -492,9 +755,6 @@ async def get_rule_trends(
     try:
         # This would analyze evaluation history to show trends
         # For now, return mock trend data
-        from datetime import datetime, timedelta
-        import random
-        
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
         

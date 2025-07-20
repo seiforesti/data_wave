@@ -728,7 +728,7 @@ export class ComplianceManagementAPI {
   static async getDataSources(): Promise<any[]> {
     return apiClient.request({
       method: 'GET',
-      url: '/scan/data-sources'
+      url: '/compliance/rules/data-sources'
     })
   }
 
@@ -743,6 +743,68 @@ export class ComplianceManagementAPI {
     return apiClient.request({
       method: 'GET',
       url: `/scan/data-sources/${id}/compliance-status`
+    })
+  }
+
+  // **NEW: Enhanced Framework and Template APIs**
+  static async getFrameworks(): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/frameworks'
+    })
+  }
+
+  static async getTemplatesByFramework(framework: string): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/templates/by-framework/${framework}`
+    })
+  }
+
+  static async createRuleFromTemplate(templateData: any, created_by?: string): Promise<ComplianceRequirement> {
+    return apiClient.request({
+      method: 'POST',
+      url: '/compliance/rules/from-template',
+      data: templateData,
+      params: created_by ? { created_by } : undefined
+    })
+  }
+
+  // **NEW: Scan Rule Integration APIs**
+  static async getRelatedScanRules(rule_id: number): Promise<any[]> {
+    return apiClient.request({
+      method: 'GET',
+      url: `/compliance/rules/${rule_id}/scan-rules`
+    })
+  }
+
+  static async evaluateRuleWithDataSources(rule_id: number, params: {
+    data_source_ids?: number[]
+    run_scans?: boolean
+  }): Promise<any> {
+    return apiClient.request({
+      method: 'POST',
+      url: `/compliance/rules/${rule_id}/evaluate-with-sources`,
+      data: params
+    })
+  }
+
+  // **NEW: Advanced Analytics APIs**
+  static async getDashboardAnalytics(params?: {
+    data_source_id?: number
+    time_range?: string
+  }): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/analytics/dashboard',
+      params
+    })
+  }
+
+  static async getIntegrationStatus(): Promise<any> {
+    return apiClient.request({
+      method: 'GET',
+      url: '/compliance/rules/integration/status'
     })
   }
 }

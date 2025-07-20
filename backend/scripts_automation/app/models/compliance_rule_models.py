@@ -78,10 +78,19 @@ class ComplianceRule(SQLModel, table=True):
     entity_types: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
     data_source_ids: List[int] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
     
+    # **NEW: Direct Relationships to Backend Models**
+    scan_rule_set_id: Optional[int] = Field(default=None, foreign_key="scan_rule_sets.id")
+    custom_scan_rule_ids: List[int] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
+    
     # Rule Definition
     condition: str  # JSON or expression string representing the condition
     rule_definition: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
     parameters: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    
+    # **NEW: Integration with Scan Results**
+    scan_integration_config: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    auto_scan_on_evaluation: bool = Field(default=False)
+    scan_triggers: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})  # schedule, on_change, manual
     
     # Compliance Framework
     compliance_standard: Optional[str] = None  # e.g., "GDPR", "SOX", "HIPAA"
@@ -91,6 +100,12 @@ class ComplianceRule(SQLModel, table=True):
     # Remediation
     remediation_steps: Optional[str] = None
     auto_remediation: bool = Field(default=False)
+    remediation_workflow_id: Optional[int] = Field(default=None)  # Link to workflow
+    
+    # **NEW: Data Source Integration**
+    data_source_filters: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    applies_to_all_sources: bool = Field(default=False)
+    source_type_filters: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
     
     # Validation and Monitoring
     validation_frequency: str = Field(default="daily")  # daily, weekly, monthly
@@ -98,9 +113,20 @@ class ComplianceRule(SQLModel, table=True):
     last_evaluated_at: Optional[datetime] = None
     next_evaluation_at: Optional[datetime] = None
     
+    # **NEW: Performance and Metrics Integration**
+    performance_thresholds: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    alert_conditions: Dict[str, Any] = Field(default_factory=dict, sa_column_kwargs={"type_": "JSON"})
+    
     # Business Context
     business_impact: str = Field(default="medium")  # low, medium, high, critical
     regulatory_requirement: bool = Field(default=False)
+    
+    # **NEW: Relationships (will be added via Relationship in actual implementation)**
+    # data_sources: List["DataSource"] = Relationship(back_populates="compliance_rules")
+    # scan_rule_set: Optional["ScanRuleSet"] = Relationship(back_populates="compliance_rules")
+    # evaluations: List["ComplianceRuleEvaluation"] = Relationship(back_populates="rule")
+    # issues: List["ComplianceIssue"] = Relationship(back_populates="rule")
+    # workflows: List["ComplianceWorkflow"] = Relationship(back_populates="rule")
     
     # Metadata
     tags: List[str] = Field(default_factory=list, sa_column_kwargs={"type_": "JSON"})
@@ -116,17 +142,6 @@ class ComplianceRule(SQLModel, table=True):
     created_by: Optional[str] = None
     updated_at: datetime = Field(default_factory=datetime.now)
     updated_by: Optional[str] = None
-    
-    # Performance Metrics
-    pass_rate: float = Field(default=0.0)
-    total_entities: int = Field(default=0)
-    passing_entities: int = Field(default=0)
-    failing_entities: int = Field(default=0)
-    
-    # Relationships
-    evaluations: List["ComplianceRuleEvaluation"] = Relationship(back_populates="rule")
-    issues: List["ComplianceIssue"] = Relationship(back_populates="rule")
-    workflows: List["ComplianceWorkflow"] = Relationship(back_populates="rule")
 
 
 class ComplianceRuleTemplate(SQLModel, table=True):
