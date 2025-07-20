@@ -43,13 +43,25 @@ import {
 import { EnterpriseComplianceProvider, useEnterpriseCompliance } from './enterprise-integration'
 import { ComplianceHooks } from './hooks/use-enterprise-features'
 
-// Existing Components (we'll enhance these)
+// Enhanced Components with Enterprise Integration
 import ComplianceRuleList from './components/ComplianceRuleList'
 import ComplianceRuleDashboard from './components/ComplianceRuleDashboard'
-import ComplianceRuleReports from './components/ComplianceRuleReports'
-import ComplianceRuleIntegrations from './components/ComplianceRuleIntegrations'
-import ComplianceRuleWorkflows from './components/ComplianceRuleWorkflows'
 import ComplianceRuleSettings from './components/ComplianceRuleSettings'
+import ComplianceReports from './components/ComplianceReports'
+import ComplianceWorkflows from './components/ComplianceWorkflows'
+import ComplianceIntegrations from './components/ComplianceIntegrations'
+import ComplianceIssueList from './components/ComplianceIssueList'
+
+// Modal Components
+import { ComplianceRuleCreateModal } from './components/ComplianceRuleCreateModal'
+import { ComplianceRuleEditModal } from './components/ComplianceRuleEditModal'
+import { ComplianceRuleDetails } from './components/ComplianceRuleDetails'
+import { IntegrationCreateModal } from './components/IntegrationCreateModal'
+import { IntegrationEditModal } from './components/IntegrationEditModal'
+import { ReportCreateModal } from './components/ReportCreateModal'
+import { ReportEditModal } from './components/ReportEditModal'
+import { WorkflowCreateModal } from './components/WorkflowCreateModal'
+import { WorkflowEditModal } from './components/WorkflowEditModal'
 
 // Advanced Enterprise Components
 interface MetricCardProps {
@@ -863,6 +875,47 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
   const [insights, setInsights] = useState<any[]>([])
   const [alerts, setAlerts] = useState<any[]>([])
 
+  // Modal state management
+  const [modals, setModals] = useState({
+    createRequirement: false,
+    editRequirement: false,
+    viewRequirement: false,
+    createIntegration: false,
+    editIntegration: false,
+    createReport: false,
+    editReport: false,
+    createWorkflow: false,
+    editWorkflow: false
+  })
+  
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+
+  // Modal handlers
+  const openModal = useCallback((modalName: string, item?: any) => {
+    setModals(prev => ({ ...prev, [modalName]: true }))
+    if (item) setSelectedItem(item)
+  }, [])
+
+  const closeModal = useCallback((modalName: string) => {
+    setModals(prev => ({ ...prev, [modalName]: false }))
+    setSelectedItem(null)
+  }, [])
+
+  const closeAllModals = useCallback(() => {
+    setModals({
+      createRequirement: false,
+      editRequirement: false,
+      viewRequirement: false,
+      createIntegration: false,
+      editIntegration: false,
+      createReport: false,
+      editReport: false,
+      createWorkflow: false,
+      editWorkflow: false
+    })
+    setSelectedItem(null)
+  }, [])
+
   // Real-time data refresh
   const refreshData = useCallback(async () => {
     setIsLoading(true)
@@ -1079,7 +1132,7 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:grid-cols-8">
+          <TabsList className="grid w-full grid-cols-7 lg:grid-cols-9">
             <TabsTrigger value="dashboard" className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -1103,6 +1156,10 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
             <TabsTrigger value="integrations" className="flex items-center space-x-2">
               <Boxes className="h-4 w-4" />
               <span className="hidden sm:inline">Integrations</span>
+            </TabsTrigger>
+            <TabsTrigger value="issues" className="flex items-center space-x-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="hidden sm:inline">Issues</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center space-x-2">
               <TrendingUp className="h-4 w-4" />
@@ -1620,6 +1677,42 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-6">
+                <ComplianceRuleSettings dataSourceId={dataSourceId} />
+              </TabsContent>
+
+              <TabsContent value="workflows" className="space-y-6">
+                <ComplianceWorkflows 
+                  dataSourceId={dataSourceId}
+                  searchQuery={searchQuery}
+                  filters={filters}
+                />
+              </TabsContent>
+
+              <TabsContent value="integrations" className="space-y-6">
+                <ComplianceIntegrations 
+                  dataSourceId={dataSourceId}
+                  searchQuery={searchQuery}
+                  filters={filters}
+                />
+              </TabsContent>
+
+              <TabsContent value="reports" className="space-y-6">
+                <ComplianceReports 
+                  dataSourceId={dataSourceId}
+                  searchQuery={searchQuery}
+                  filters={filters}
+                />
+              </TabsContent>
+
+              <TabsContent value="issues" className="space-y-6">
+                <ComplianceIssueList 
+                  dataSourceId={dataSourceId}
+                  searchQuery={searchQuery}
+                  filters={filters}
+                />
+              </TabsContent>
+
+              <TabsContent value="legacy-settings" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
                     <Card>
@@ -1877,6 +1970,101 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
           </AnimatePresence>
         </Tabs>
       </div>
+
+      {/* Modal Components */}
+      <ComplianceRuleCreateModal
+        isOpen={modals.createRequirement}
+        onClose={() => closeModal('createRequirement')}
+        onSuccess={(requirement) => {
+          closeModal('createRequirement')
+          refreshData()
+        }}
+        dataSourceId={dataSourceId}
+      />
+
+      <ComplianceRuleEditModal
+        isOpen={modals.editRequirement}
+        onClose={() => closeModal('editRequirement')}
+        requirement={selectedItem}
+        onSuccess={(requirement) => {
+          closeModal('editRequirement')
+          refreshData()
+        }}
+      />
+
+      <ComplianceRuleDetails
+        isOpen={modals.viewRequirement}
+        onClose={() => closeModal('viewRequirement')}
+        requirement={selectedItem}
+        onEdit={(requirement) => {
+          closeModal('viewRequirement')
+          openModal('editRequirement', requirement)
+        }}
+        onDelete={(requirement) => {
+          closeModal('viewRequirement')
+          refreshData()
+        }}
+      />
+
+      <IntegrationCreateModal
+        isOpen={modals.createIntegration}
+        onClose={() => closeModal('createIntegration')}
+        onSuccess={(integration) => {
+          closeModal('createIntegration')
+          refreshData()
+        }}
+        dataSourceId={dataSourceId}
+      />
+
+      <IntegrationEditModal
+        isOpen={modals.editIntegration}
+        onClose={() => closeModal('editIntegration')}
+        integration={selectedItem}
+        onSuccess={(integration) => {
+          closeModal('editIntegration')
+          refreshData()
+        }}
+      />
+
+      <ReportCreateModal
+        isOpen={modals.createReport}
+        onClose={() => closeModal('createReport')}
+        onSuccess={(report) => {
+          closeModal('createReport')
+          refreshData()
+        }}
+        dataSourceId={dataSourceId}
+      />
+
+      <ReportEditModal
+        isOpen={modals.editReport}
+        onClose={() => closeModal('editReport')}
+        report={selectedItem}
+        onSuccess={(report) => {
+          closeModal('editReport')
+          refreshData()
+        }}
+      />
+
+      <WorkflowCreateModal
+        isOpen={modals.createWorkflow}
+        onClose={() => closeModal('createWorkflow')}
+        onSuccess={(workflow) => {
+          closeModal('createWorkflow')
+          refreshData()
+        }}
+        dataSourceId={dataSourceId}
+      />
+
+      <WorkflowEditModal
+        isOpen={modals.editWorkflow}
+        onClose={() => closeModal('editWorkflow')}
+        workflow={selectedItem}
+        onSuccess={(workflow) => {
+          closeModal('editWorkflow')
+          refreshData()
+        }}
+      />
 
       {/* Footer */}
       <footer className="border-t bg-muted/50 mt-12">
