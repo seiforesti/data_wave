@@ -38,11 +38,14 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { toast } from 'sonner';
 
 // Import custom hooks and APIs
-import { useClassificationState } from '../core/hooks/useClassificationState';
-import { useRealTimeMonitoring } from '../core/hooks/useRealTimeMonitoring';
-import { useWorkflowOrchestration } from '../core/hooks/useWorkflowOrchestration';
-import { classificationApi } from '../core/api/classificationApi';
-import { websocketApi } from '../core/api/websocketApi';
+import { useClassificationState } from '../../core/hooks/useClassificationState';
+import { useRealTimeMonitoring } from '../../core/hooks/useRealTimeMonitoring';
+import { useWorkflowOrchestration } from '../../core/hooks/useWorkflowOrchestration';
+import { classificationApi } from '../../core/api/classificationApi';
+import { websocketApi } from '../../core/api/websocketApi';
+import { useClassification } from '../providers/ClassificationProvider';
+import { intelligenceProcessor } from '../../core/utils/intelligenceProcessor';
+import { performanceOptimizer } from '../../core/utils/performanceOptimizer';
 
 // Advanced TypeScript interfaces for enterprise-grade layout
 interface ClassificationLayoutProps {
@@ -313,13 +316,24 @@ export const ClassificationLayout: React.FC<ClassificationLayoutProps> = ({
   const [recentActivities, setRecentActivities] = useState<UserActivity[]>([]);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
 
-  // Custom hooks
+  // Enhanced Custom hooks with real API integration
   const {
     state: classificationState,
-    actions: classificationActions,
+    actions: classificationActions
+  } = useClassification();
+
+  const {
+    state: workflowState,
+    actions: workflowActions,
     realTimeData,
     performance
-  } = useClassificationState();
+  } = useClassificationState({
+    apiEndpoint: process.env.NEXT_PUBLIC_API_URL,
+    enableRealTime: realTimeEnabled,
+    enableCache: true,
+    cacheStrategy: 'intelligent',
+    performanceTracking: true
+  });
 
   const {
     monitoringData,
@@ -334,17 +348,29 @@ export const ClassificationLayout: React.FC<ClassificationLayoutProps> = ({
   });
 
   const {
-    workflowState,
+    workflowState: orchestrationState,
     currentStep,
     progress,
     executeStep,
     pauseWorkflow,
     resumeWorkflow,
-    resetWorkflow
+    resetWorkflow,
+    optimizeWorkflow,
+    predictNextStep,
+    validateStepDependencies
   } = useWorkflowOrchestration({
     enabled: workflowEnabled,
     autoProgress: true,
-    stepTimeout: 30000
+    stepTimeout: 30000,
+    intelligentRouting: true,
+    performanceOptimization: true,
+    predictiveAnalytics: true,
+    contextualAssistance: true,
+    apiIntegration: {
+      endpoint: `${process.env.NEXT_PUBLIC_API_URL}/workflows`,
+      realTimeUpdates: realTimeEnabled,
+      batchOperations: true
+    }
   });
 
   // Animation controls

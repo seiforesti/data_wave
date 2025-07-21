@@ -210,11 +210,51 @@ const DataTable = forwardRef<DataTableRef, DataTableProps>(({
   const [columnsPanelOpen, setColumnsPanelOpen] = useState(false);
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState<BatchAction | null>(null);
+  
+  // Advanced enterprise features state
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban'>('table');
+  const [pinnedColumns, setPinnedColumns] = useState<Set<string>>(new Set());
+  const [customViews, setCustomViews] = useState<Record<string, any>>({});
+  const [activeView, setActiveView] = useState<string>('default');
+  const [performanceMetrics, setPerformanceMetrics] = useState({
+    renderTime: 0,
+    dataProcessingTime: 0,
+    totalRows: data.length,
+    visibleRows: 0,
+    lastUpdate: new Date().toISOString(),
+    memoryUsage: 0,
+    scrollPosition: 0
+  });
+  const [intelligentSuggestions, setIntelligentSuggestions] = useState<Array<{
+    type: 'filter' | 'sort' | 'group' | 'column' | 'optimization';
+    suggestion: string;
+    confidence: number;
+    impact: 'low' | 'medium' | 'high';
+    action: () => void;
+  }>>([]);
+  const [dataQualityMetrics, setDataQualityMetrics] = useState({
+    completeness: 0,
+    accuracy: 0,
+    consistency: 0,
+    timeliness: 0,
+    validity: 0,
+    duplicates: 0,
+    outliers: 0
+  });
+  const [realTimeConnection, setRealTimeConnection] = useState<WebSocket | null>(null);
+  const [auditTrail, setAuditTrail] = useState<Array<{
+    timestamp: string;
+    action: string;
+    user: string;
+    details: any;
+  }>>([]);
 
   // Refs
   const tableRef = useRef<HTMLDivElement>(null);
   const virtualListRef = useRef<List>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const performanceObserverRef = useRef<PerformanceObserver | null>(null);
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
 
   // Computed values
   const visibleColumns = useMemo(() => {

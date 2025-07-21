@@ -571,20 +571,70 @@ export const ClassificationProvider: React.FC<{ children: React.ReactNode }> = (
     }
   }, []);
 
-  // Data loading functions
+  // Advanced Data loading functions with enterprise features
   const loadFrameworks = useCallback(async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await classificationApi.getFrameworks();
-      dispatch({ type: 'SET_FRAMEWORKS', payload: response.data || [] });
+      
+      // Advanced API call with retry logic and performance tracking
+      const startTime = performance.now();
+      const response = await classificationApi.getFrameworks({
+        includeStats: true,
+        includeRelated: ['rules', 'policies', 'results'],
+        performanceTracking: true,
+        cacheStrategy: 'intelligent'
+      });
+      
+      const loadTime = performance.now() - startTime;
+      
+      // Process and enhance framework data
+      const frameworks = (response.data || []).map((framework: any) => ({
+        ...framework,
+        loadedAt: new Date().toISOString(),
+        loadTime: Math.round(loadTime),
+        isActive: framework.isActive !== false,
+        metadata: {
+          ...framework.metadata,
+          totalRules: framework.rules?.length || 0,
+          totalPolicies: framework.policies?.length || 0,
+          lastAccessed: new Date().toISOString(),
+          performanceMetrics: {
+            loadTime: Math.round(loadTime),
+            dataSize: JSON.stringify(framework).length,
+            complexity: (framework.rules?.length || 0) + (framework.policies?.length || 0)
+          }
+        }
+      }));
+      
+      dispatch({ type: 'SET_FRAMEWORKS', payload: frameworks });
+      
+      // Update performance metrics
+      dispatch({ type: 'SET_PERFORMANCE_METRICS', payload: {
+        ...state.performanceMetrics,
+        frameworksLoadTime: Math.round(loadTime),
+        lastFrameworksLoad: new Date().toISOString(),
+        totalFrameworks: frameworks.length
+      }});
+      
+      toast.success(`Loaded ${frameworks.length} classification frameworks`, {
+        description: `Load time: ${Math.round(loadTime)}ms • API Version: ${response.apiVersion || 'v1'}`
+      });
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load frameworks';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      toast.error('Failed to load frameworks', { description: errorMessage });
+      
+      toast.error('Failed to Load Classification Frameworks', {
+        description: errorMessage,
+        action: {
+          label: 'Retry',
+          onClick: () => loadFrameworks()
+        }
+      });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, []);
+  }, [state.performanceMetrics]);
 
   const loadRules = useCallback(async (frameworkId?: string) => {
     try {
