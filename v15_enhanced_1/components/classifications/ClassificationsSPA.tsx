@@ -116,8 +116,22 @@ const BusinessIntelligenceHub = lazy(() => import('./orchestration/BusinessIntel
 // Import custom hooks and utilities
 import { useClassificationState } from './core/hooks/useClassificationState';
 import { useAIIntelligence } from './core/hooks/useAIIntelligence';
+import { useMLIntelligence } from './core/hooks/useMLIntelligence';
+import { useRealTimeMonitoring } from './core/hooks/useRealTimeMonitoring';
+import { useWorkflowOrchestration } from './core/hooks/useWorkflowOrchestration';
+import { classificationApi } from './core/api/classificationApi';
 import { aiApi } from './core/api/aiApi';
+import { mlApi } from './core/api/mlApi';
 import { websocketApi } from './core/api/websocketApi';
+
+// Import shared components
+import ClassificationLayout from './shared/layouts/ClassificationLayout';
+import IntelligenceLayout from './shared/layouts/IntelligenceLayout';
+import DataTable from './shared/ui/DataTable';
+
+// Import utility processors
+import { defaultProcessor } from './core/utils/intelligenceProcessor';
+import { defaultOptimizer } from './core/utils/performanceOptimizer';
 
 // TypeScript Interfaces for Classifications SPA
 interface ClassificationsSPAState {
