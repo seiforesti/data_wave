@@ -586,232 +586,11 @@ const CHART_COLORS = [
   '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
 ] as const;
 
-// Mock data generators
-const generateSystemStatus = (): SystemStatus => ({
-  overall: 'healthy',
-  services: [
-    { id: 'api', name: 'API Gateway', status: 'healthy', uptime: 99.9, responseTime: 45 },
-    { id: 'database', name: 'Database', status: 'healthy', uptime: 99.8, responseTime: 12 },
-    { id: 'ml-engine', name: 'ML Engine', status: 'degraded', uptime: 98.5, responseTime: 230 },
-    { id: 'ai-processor', name: 'AI Processor', status: 'healthy', uptime: 99.7, responseTime: 180 },
-    { id: 'storage', name: 'Storage', status: 'healthy', uptime: 99.9, responseTime: 8 },
-    { id: 'cache', name: 'Cache Layer', status: 'healthy', uptime: 99.6, responseTime: 3 }
-  ],
-  infrastructure: {} as InfrastructureStatus,
-  performance: {} as PerformanceStatus,
-  security: {} as SecurityStatus,
-  compliance: {} as ComplianceStatus,
-  monitoring: {} as MonitoringStatus,
-  alerts: [],
-  incidents: [],
-  maintenance: {} as MaintenanceStatus,
-  updates: {} as UpdateStatus,
-  health: {} as HealthStatus,
-  availability: {} as AvailabilityStatus,
-  reliability: {} as ReliabilityStatus,
-  scalability: {} as ScalabilityStatus,
-  efficiency: {} as EfficiencyStatus,
-  quality: {} as QualityStatus,
-  satisfaction: {} as SatisfactionStatus
-});
+// All data now comes from real APIs - no mock data
 
-const generateRecentActivities = (): Activity[] => [
-  {
-    id: 'activity-001',
-    type: 'create',
-    title: 'New ML Model Deployed',
-    description: 'Document classifier v2.1 has been successfully deployed to production',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    user: { id: 'user-001', name: 'Alice Johnson', avatar: '/avatars/alice.jpg' },
-    context: { component: 'ml-model-orchestrator', version: 'v2-ml' },
-    metadata: { model: 'document-classifier-v2.1', accuracy: 94.5 },
-    severity: 'medium',
-    category: 'system',
-    tags: ['deployment', 'ml', 'production'],
-    related: [],
-    actions: [],
-    status: 'completed',
-    visibility: 'public',
-    retention: {} as ActivityRetention
-  },
-  {
-    id: 'activity-002',
-    type: 'analyze',
-    title: 'Performance Analysis Completed',
-    description: 'Weekly performance analysis shows 12% improvement in processing speed',
-    timestamp: new Date(Date.now() - 45 * 60 * 1000),
-    user: { id: 'user-002', name: 'Bob Smith', avatar: '/avatars/bob.jpg' },
-    context: { component: 'ai-analytics-dashboard', version: 'v3-ai' },
-    metadata: { improvement: 12, metric: 'processing-speed' },
-    severity: 'low',
-    category: 'performance',
-    tags: ['analysis', 'performance', 'improvement'],
-    related: [],
-    actions: [],
-    status: 'completed',
-    visibility: 'public',
-    retention: {} as ActivityRetention
-  },
-  {
-    id: 'activity-003',
-    type: 'update',
-    title: 'Security Policy Updated',
-    description: 'Enhanced security policies for data classification have been implemented',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    user: { id: 'user-003', name: 'Carol Davis', avatar: '/avatars/carol.jpg' },
-    context: { component: 'policy-orchestrator', version: 'v1-manual' },
-    metadata: { policies: 3, level: 'enhanced' },
-    severity: 'high',
-    category: 'security',
-    tags: ['security', 'policy', 'compliance'],
-    related: [],
-    actions: [],
-    status: 'completed',
-    visibility: 'restricted',
-    retention: {} as ActivityRetention
-  }
-];
+// Mock data generators removed - using real APIs now
 
-const generateNotifications = (): Notification[] => [
-  {
-    id: 'notif-001',
-    type: 'warning',
-    title: 'Model Drift Detected',
-    message: 'The sentiment analysis model is showing signs of drift. Consider retraining.',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    priority: 'high',
-    category: 'technical',
-    source: { id: 'drift-monitor', name: 'Drift Detection Monitor' },
-    target: { users: ['ml-team'], roles: ['data-scientist'] },
-    actions: [
-      { id: 'retrain', label: 'Retrain Model', type: 'primary' },
-      { id: 'investigate', label: 'Investigate', type: 'secondary' }
-    ],
-    status: 'sent',
-    read: false,
-    dismissed: false,
-    archived: false,
-    metadata: { model: 'sentiment-analyzer', drift: 0.23 },
-    delivery: {} as NotificationDelivery,
-    tracking: {} as NotificationTracking,
-    preferences: {} as NotificationPreferences,
-    automation: {} as NotificationAutomation,
-    escalation: {} as NotificationEscalation,
-    grouping: {} as NotificationGrouping,
-    batching: {} as NotificationBatching,
-    throttling: {} as NotificationThrottling,
-    filtering: {} as NotificationFiltering,
-    routing: {} as NotificationRouting,
-    formatting: {} as NotificationFormatting,
-    localization: {} as NotificationLocalization,
-    personalization: {} as NotificationPersonalization,
-    analytics: {} as NotificationAnalytics,
-    feedback: {} as NotificationFeedback,
-    compliance: {} as NotificationCompliance,
-    security: {} as NotificationSecurity,
-    privacy: {} as NotificationPrivacy
-  },
-  {
-    id: 'notif-002',
-    type: 'success',
-    title: 'Backup Completed',
-    message: 'Daily system backup has been completed successfully.',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    priority: 'low',
-    category: 'system',
-    source: { id: 'backup-service', name: 'Backup Service' },
-    target: { users: ['admin'], roles: ['system-admin'] },
-    actions: [],
-    status: 'delivered',
-    read: true,
-    dismissed: false,
-    archived: false,
-    metadata: { size: '2.3GB', duration: '45min' },
-    delivery: {} as NotificationDelivery,
-    tracking: {} as NotificationTracking,
-    preferences: {} as NotificationPreferences,
-    automation: {} as NotificationAutomation,
-    escalation: {} as NotificationEscalation,
-    grouping: {} as NotificationGrouping,
-    batching: {} as NotificationBatching,
-    throttling: {} as NotificationThrottling,
-    filtering: {} as NotificationFiltering,
-    routing: {} as NotificationRouting,
-    formatting: {} as NotificationFormatting,
-    localization: {} as NotificationLocalization,
-    personalization: {} as NotificationPersonalization,
-    analytics: {} as NotificationAnalytics,
-    feedback: {} as NotificationFeedback,
-    compliance: {} as NotificationCompliance,
-    security: {} as NotificationSecurity,
-    privacy: {} as NotificationPrivacy
-  },
-  {
-    id: 'notif-003',
-    type: 'info',
-    title: 'New Feature Available',
-    message: 'Real-time intelligence streaming is now available in the AI-Intelligent version.',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    priority: 'medium',
-    category: 'user',
-    source: { id: 'feature-service', name: 'Feature Service' },
-    target: { users: ['all'], roles: ['user'] },
-    actions: [
-      { id: 'learn-more', label: 'Learn More', type: 'primary' },
-      { id: 'dismiss', label: 'Dismiss', type: 'secondary' }
-    ],
-    status: 'delivered',
-    read: false,
-    dismissed: false,
-    archived: false,
-    metadata: { feature: 'real-time-streaming', version: 'v3-ai' },
-    delivery: {} as NotificationDelivery,
-    tracking: {} as NotificationTracking,
-    preferences: {} as NotificationPreferences,
-    automation: {} as NotificationAutomation,
-    escalation: {} as NotificationEscalation,
-    grouping: {} as NotificationGrouping,
-    batching: {} as NotificationBatching,
-    throttling: {} as NotificationThrottling,
-    filtering: {} as NotificationFiltering,
-    routing: {} as NotificationRouting,
-    formatting: {} as NotificationFormatting,
-    localization: {} as NotificationLocalization,
-    personalization: {} as NotificationPersonalization,
-    analytics: {} as NotificationAnalytics,
-    feedback: {} as NotificationFeedback,
-    compliance: {} as NotificationCompliance,
-    security: {} as NotificationSecurity,
-    privacy: {} as NotificationPrivacy
-  }
-];
-
-const generatePerformanceMetrics = () => ({
-  cpu: { current: 45, average: 52, peak: 78 },
-  memory: { current: 68, average: 71, peak: 89 },
-  network: { current: 23, average: 28, peak: 45 },
-  storage: { current: 34, average: 36, peak: 52 },
-  requests: { current: 1250, average: 1180, peak: 2340 },
-  errors: { current: 12, average: 8, peak: 23 },
-  latency: { current: 145, average: 167, peak: 289 },
-  throughput: { current: 890, average: 856, peak: 1456 }
-});
-
-const generateAnalyticsData = () => {
-  const data = [];
-  const now = new Date();
-  for (let i = 23; i >= 0; i--) {
-    const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
-    data.push({
-      hour: hour.getHours(),
-      users: Math.floor(50 + Math.random() * 200),
-      classifications: Math.floor(100 + Math.random() * 500),
-      accuracy: 90 + Math.random() * 8,
-      processing_time: 100 + Math.random() * 100
-    });
-  }
-  return data;
-};
+// All mock data removed - using real APIs now
 
 // Loading component
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message = 'Loading...' }) => (
@@ -913,14 +692,14 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     profileOpen: false,
     searchQuery: '',
     globalFilters: [],
-    recentActivities: generateRecentActivities(),
-    systemStatus: generateSystemStatus(),
+    recentActivities: activities || [],
+    systemStatus: systemMetrics?.systemStatus || { overall: 'healthy', services: [] } as any,
     userPreferences: {} as UserPreferences,
     theme: 'light',
     layout: {} as LayoutConfiguration,
     performance: {} as PerformanceMetrics,
     analytics: {} as AnalyticsData,
-    notifications: generateNotifications(),
+    notifications: notifications || [],
     shortcuts: [],
     integrations: [],
     security: {} as SecurityConfiguration,
@@ -977,24 +756,47 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     hotfixes: {} as HotfixConfiguration
   });
 
-  // Custom hooks
-  const { classifications, updateClassification } = useClassificationState();
-  const { aiModels, aiAgents, startIntelligence, stopIntelligence } = useAIIntelligence();
+  // Real data hooks - no more mock data
+  const { classifications, updateClassification, isLoading: classificationsLoading } = useClassificationState();
+  const { aiModels, aiAgents, conversations, startIntelligence, stopIntelligence, isLoading: aiLoading } = useAIIntelligence();
+  const { models: mlModels, trainingJobs, deployments, isLoading: mlLoading } = useMLIntelligence();
+  const { systemMetrics, notifications, activities, isLoading: monitoringLoading } = useRealTimeMonitoring();
+  const { workflows, createWorkflow: createWorkflowFromHook, executeWorkflow: executeWorkflowFromHook, isLoading: workflowLoading } = useWorkflowOrchestration();
 
   // Refs for performance optimization
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const websocketRef = useRef<WebSocket | null>(null);
   const commandPaletteRef = useRef<HTMLDivElement>(null);
 
-  // Memoized data
-  const performanceMetrics = useMemo(() => generatePerformanceMetrics(), []);
-  const analyticsData = useMemo(() => generateAnalyticsData(), []);
+  // Real data from hooks - no memoized mock data
+  const performanceData = useMemo(() => systemMetrics?.performance || {}, [systemMetrics]);
+  const analyticsData = useMemo(() => systemMetrics?.analytics || [], [systemMetrics]);
   const filteredVersions = useMemo(() => {
     if (state.currentVersion === 'all') return CLASSIFICATION_VERSIONS;
     return CLASSIFICATION_VERSIONS.filter(v => v.id === state.currentVersion);
   }, [state.currentVersion]);
 
   // Effects
+  
+  // Update state with real data from hooks
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      recentActivities: activities || prev.recentActivities,
+      notifications: notifications || prev.notifications,
+      systemStatus: systemMetrics?.systemStatus || prev.systemStatus,
+      activeWorkflows: workflows || prev.activeWorkflows
+    }));
+  }, [activities, notifications, systemMetrics, workflows]);
+
+  // Update loading state based on hooks
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      isLoading: classificationsLoading || aiLoading || mlLoading || monitoringLoading || workflowLoading
+    }));
+  }, [classificationsLoading, aiLoading, mlLoading, monitoringLoading, workflowLoading]);
+
   useEffect(() => {
     // Initialize real-time updates
     if (state.realTimeMode) {
@@ -1090,18 +892,18 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // Refresh system status, activities, and notifications
-      const [systemStatus, activities, notifications] = await Promise.all([
-        aiApi.getSystemStatus(),
-        aiApi.getRecentActivities(),
-        aiApi.getNotifications()
+      // Refresh data from real APIs
+      const [systemHealthData, performanceMetrics, aiModelsData, mlModelsData] = await Promise.all([
+        classificationApi.getSystemHealth(),
+        classificationApi.getPerformanceMetrics(),
+        aiApi.getAIModels(),
+        mlApi.getModels()
       ]);
 
       setState(prev => ({
         ...prev,
-        systemStatus,
-        recentActivities: activities,
-        notifications,
+        systemStatus: systemHealthData.data || { overall: 'healthy', services: [] },
+        performance: performanceMetrics.data || {},
         isLoading: false
       }));
     } catch (error) {
@@ -1231,7 +1033,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
   };
 
   const getUnreadNotificationsCount = (): number => {
-    return state.notifications.filter(n => !n.read).length;
+    return (notifications || []).filter(n => !n.read).length;
   };
 
   const renderComponent = useCallback(() => {
@@ -1507,7 +1309,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
                 </div>
                 <ScrollArea className="h-64">
                   <div className="space-y-2">
-                    {state.notifications.slice(0, 5).map((notification) => (
+                    {(notifications || []).slice(0, 5).map((notification) => (
                       <div
                         key={notification.id}
                         className={`p-3 rounded-lg border ${!notification.read ? 'bg-muted/50' : ''}`}
@@ -1641,9 +1443,9 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,543</div>
+            <div className="text-2xl font-bold">{classifications?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              {classificationsLoading ? 'Loading...' : 'Total classifications'}
             </p>
           </CardContent>
         </Card>
@@ -1654,9 +1456,9 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23</div>
+            <div className="text-2xl font-bold">{(aiModels?.length || 0) + (mlModels?.length || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              3 models training
+              {aiLoading || mlLoading ? 'Loading...' : `${trainingJobs?.filter(j => j.status === 'running').length || 0} training`}
             </p>
           </CardContent>
         </Card>
@@ -1667,9 +1469,13 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94.7%</div>
+            <div className="text-2xl font-bold">
+              {systemMetrics?.performance?.averageAccuracy 
+                ? `${(systemMetrics.performance.averageAccuracy * 100).toFixed(1)}%` 
+                : 'N/A'}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +2.1% improvement
+              {monitoringLoading ? 'Loading...' : 'Average accuracy'}
             </p>
           </CardContent>
         </Card>
@@ -1680,9 +1486,13 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1.2s</div>
+            <div className="text-2xl font-bold">
+              {systemMetrics?.performance?.averageResponseTime 
+                ? `${systemMetrics.performance.averageResponseTime}ms` 
+                : 'N/A'}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Average response time
+              {monitoringLoading ? 'Loading...' : 'Response time'}
             </p>
           </CardContent>
         </Card>
@@ -1724,7 +1534,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
           <CardContent>
             <ScrollArea className="h-80">
               <div className="space-y-4">
-                {state.recentActivities.map((activity) => (
+                {(activities || []).map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={activity.user.avatar} />
@@ -1800,30 +1610,30 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">CPU Usage</span>
-                <span className="text-sm text-muted-foreground">{performanceMetrics.cpu.current}%</span>
+                <span className="text-sm text-muted-foreground">{systemMetrics?.cpu || 0}%</span>
               </div>
-              <Progress value={performanceMetrics.cpu.current} className="h-2" />
+              <Progress value={systemMetrics?.cpu || 0} className="h-2" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Memory Usage</span>
-                <span className="text-sm text-muted-foreground">{performanceMetrics.memory.current}%</span>
+                <span className="text-sm text-muted-foreground">{systemMetrics?.memory || 0}%</span>
               </div>
-              <Progress value={performanceMetrics.memory.current} className="h-2" />
+              <Progress value={systemMetrics?.memory || 0} className="h-2" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Network I/O</span>
-                <span className="text-sm text-muted-foreground">{performanceMetrics.network.current}%</span>
+                <span className="text-sm text-muted-foreground">{systemMetrics?.network || 0}%</span>
               </div>
-              <Progress value={performanceMetrics.network.current} className="h-2" />
+              <Progress value={systemMetrics?.network || 0} className="h-2" />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Storage</span>
-                <span className="text-sm text-muted-foreground">{performanceMetrics.storage.current}%</span>
+                <span className="text-sm text-muted-foreground">{systemMetrics?.storage || 0}%</span>
               </div>
-              <Progress value={performanceMetrics.storage.current} className="h-2" />
+              <Progress value={systemMetrics?.storage || 0} className="h-2" />
             </div>
           </div>
         </CardContent>
