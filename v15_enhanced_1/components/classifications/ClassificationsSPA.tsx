@@ -22,6 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from '@/components/ui/navigation-menu';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -140,7 +142,7 @@ import { IntelligenceProvider } from './shared/providers/IntelligenceProvider';
 import { defaultProcessor } from './core/utils/intelligenceProcessor';
 import { defaultOptimizer } from './core/utils/performanceOptimizer';
 
-// TypeScript Interfaces for Classifications SPA
+// Advanced Enterprise TypeScript Interfaces for Classifications SPA
 interface ClassificationsSPAState {
   isLoading: boolean;
   error: string | null;
@@ -148,9 +150,103 @@ interface ClassificationsSPAState {
   currentVersion: ClassificationVersion;
   currentComponent: string | null;
   sidebarOpen: boolean;
-  commandPaletteOpen: boolean;
-  notificationsOpen: boolean;
-  settingsOpen: boolean;
+  // Advanced enterprise state
+  workflowMode: 'guided' | 'advanced' | 'expert';
+  intelligenceLevel: 'manual' | 'assisted' | 'autonomous';
+  collaborationMode: boolean;
+  realTimeSync: boolean;
+  performanceMode: 'balanced' | 'speed' | 'accuracy';
+  systemHealth: 'optimal' | 'good' | 'warning' | 'critical';
+  activeWorkflows: WorkflowInstance[];
+  globalSearch: string;
+  commandPalette: boolean;
+  notifications: NotificationItem[];
+  contextualHelp: boolean;
+  advancedFilters: FilterState;
+  customViews: CustomViewState[];
+  activeView: string;
+  splitViewMode: boolean;
+  focusMode: boolean;
+  darkMode: boolean;
+}
+
+// Advanced Enterprise Interfaces
+interface WorkflowInstance {
+  id: string;
+  name: string;
+  type: 'classification' | 'training' | 'deployment' | 'analysis';
+  status: 'running' | 'paused' | 'completed' | 'failed';
+  progress: number;
+  startTime: string;
+  estimatedCompletion?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  owner: string;
+  dependencies: string[];
+  metrics: {
+    accuracy?: number;
+    throughput: number;
+    resourceUsage: number;
+    cost: number;
+  };
+}
+
+interface NotificationItem {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  actionable: boolean;
+  actions?: Array<{
+    label: string;
+    action: () => void;
+    variant: 'default' | 'destructive';
+  }>;
+}
+
+interface FilterState {
+  quickFilters: Record<string, boolean>;
+  dateRange: { start: string; end: string } | null;
+  statusFilters: string[];
+  typeFilters: string[];
+  ownerFilters: string[];
+  customFilters: Array<{
+    field: string;
+    operator: 'equals' | 'contains' | 'gt' | 'lt' | 'between';
+    value: any;
+  }>;
+}
+
+interface CustomViewState {
+  id: string;
+  name: string;
+  description: string;
+  layout: 'grid' | 'list' | 'kanban' | 'timeline';
+  filters: FilterState;
+  sorting: { field: string; direction: 'asc' | 'desc' }[];
+  grouping: string[];
+  columns: string[];
+  isDefault: boolean;
+  isPublic: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface ClassificationsSPAProps {
+  initialView?: ClassificationView;
+  embedded?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
+  permissions?: {
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canDeploy: boolean;
+    canViewAnalytics: boolean;
+  };
+  onNavigate?: (view: ClassificationView) => void;
+  onWorkflowComplete?: (workflowId: string, result: any) => void;
+}
   profileOpen: boolean;
   searchQuery: string;
   globalFilters: GlobalFilter[];
@@ -772,7 +868,20 @@ class ErrorBoundary extends React.Component<
 }
 
 // Main Component
-export const ClassificationsSPA: React.FC = () => {
+export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
+  initialView = 'overview',
+  embedded = false,
+  theme = 'auto',
+  permissions = {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canDeploy: true,
+    canViewAnalytics: true
+  },
+  onNavigate,
+  onWorkflowComplete
+}) => {
   // State Management
   const [state, setState] = useState<ClassificationsSPAState>({
     isLoading: false,
