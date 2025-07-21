@@ -49,9 +49,9 @@ import { useMLIntelligence } from '../core/hooks/useMLIntelligence';
 import { useAIIntelligence } from '../core/hooks/useAIIntelligence';
 import { useRealTimeMonitoring } from '../core/hooks/useRealTimeMonitoring';
 import { useWorkflowOrchestration } from '../core/hooks/useWorkflowOrchestration';
-import { mlApi } from '../core/api/mlApi';
-import { aiApi } from '../core/api/aiApi';
-import { websocketApi } from '../core/api/websocketApi';
+import { mlApi } from '../../core/api/mlApi';
+import { aiApi } from '../../core/api/aiApi';
+import { websocketApi } from '../../core/api/websocketApi';
 
 // Advanced TypeScript interfaces for intelligence layout
 interface IntelligenceLayoutProps {
@@ -540,9 +540,26 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
   const handleStartTraining = useCallback(async () => {
     try {
       if (type === 'ml' && currentModel) {
-        await startTraining(currentModel.id);
+        // Use ML API directly for training operations
+        const response = await mlApi.startTraining(currentModel.id, 'default-dataset-id', {
+          algorithm: 'auto',
+          hyperparameters: {},
+          features: [],
+          validationSplit: 0.2,
+          crossValidationFolds: 5,
+          earlyStoppingPatience: 10,
+          maxTrainingTime: 3600,
+          autoHyperparameterTuning: true,
+          preprocessing: {
+            scaleFeatures: true,
+            handleMissingValues: 'mean',
+            encodeCategorical: 'onehot',
+            featureSelection: true
+          }
+        });
+        
         toast.success('Training Started', {
-          description: 'Model training has been initiated'
+          description: `Training job ${response.data.id} has been initiated`
         });
       }
     } catch (error) {
@@ -550,12 +567,13 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [type, currentModel, startTraining]);
+  }, [type, currentModel]);
 
   const handleStopTraining = useCallback(async () => {
     try {
       if (type === 'ml' && currentModel) {
-        await stopTraining(currentModel.id);
+        // Use ML API directly for stopping training
+        await mlApi.stopTraining(currentModel.id);
         toast.success('Training Stopped', {
           description: 'Model training has been stopped'
         });
@@ -565,35 +583,95 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [type, currentModel, stopTraining]);
+  }, [type, currentModel]);
 
   const handleDeployModel = useCallback(async () => {
     try {
       if (currentModel) {
         if (type === 'ml') {
-          await deployModel(currentModel.id);
+          // Use ML API directly for deployment
+          const response = await mlApi.deployModel(currentModel.id, 'production', {
+            replicas: 2,
+            autoScaling: {
+              enabled: true,
+              minReplicas: 1,
+              maxReplicas: 5,
+              targetCpuUtilization: 70,
+              targetMemoryUtilization: 80
+            },
+            healthCheck: {
+              enabled: true,
+              endpoint: '/health',
+              interval: 30,
+              timeout: 5,
+              retries: 3
+            },
+            monitoring: {
+              enabled: true,
+              metricsEndpoint: '/metrics',
+              alerting: true
+            },
+            resources: {
+              cpu: '1000m',
+              memory: '2Gi'
+            }
+          });
+          
+          toast.success('Model Deployed', {
+            description: `Model deployed to ${response.data.endpoint}`
+          });
         }
-        toast.success('Model Deployed', {
-          description: 'Model is now available for inference'
-        });
       }
     } catch (error) {
       toast.error('Deployment Failed', {
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [type, currentModel, deployModel]);
+  }, [type, currentModel]);
 
   const handleStartAIConversation = useCallback(async () => {
     try {
       if (type === 'ai') {
-        const conversation = await startConversation({
+        // Use AI API directly for conversation management
+        const response = await aiApi.createConversation({
           title: `New Conversation - ${new Date().toLocaleTimeString()}`,
-          context: { component, modelId: currentModel?.id }
+          modelId: currentModel?.id || 'default-ai-model',
+          context: {
+            domain: 'classification',
+            purpose: 'data_governance',
+            classification: component,
+            entities: [],
+            topics: ['data classification', 'governance', 'compliance'],
+            sentiment: {
+              overall: 'neutral',
+              confidence: 0.8,
+              scores: { positive: 0.3, negative: 0.2, neutral: 0.5 },
+              emotions: []
+            },
+            intent: {
+              primary: 'assistance',
+              confidence: 0.9,
+              alternatives: [],
+              parameters: {}
+            },
+            knowledgeBase: ['classification_rules', 'compliance_policies'],
+            constraints: [],
+            preferences: {}
+          },
+          settings: {
+            maxMessages: 100,
+            autoSave: true,
+            enableReasoning: true,
+            enableCitations: true,
+            enableMultimodal: false,
+            privacyMode: false,
+            collaborativeMode: false,
+            realTimeTranscription: false
+          }
         });
         
-        setAiConversations(prev => [...prev, conversation]);
-        setActiveConversation(conversation.id);
+        setAiConversations(prev => [...prev, response.data]);
+        setActiveConversation(response.data.id);
         setConversationPanelOpen(true);
         
         toast.success('AI Conversation Started', {
@@ -605,7 +683,7 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [type, component, currentModel, startConversation]);
+  }, [type, component, currentModel]);
 
   const handleSendMessage = useCallback(async (message: string) => {
     try {
@@ -613,9 +691,10 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         // Add user message immediately
         const userMessage: AIMessage = {
           id: `msg-${Date.now()}`,
+          conversationId: activeConversation,
           role: 'user',
           content: message,
-          timestamp: new Date()
+          timestamp: new Date().toISOString()
         };
         
         setAiConversations(prev => prev.map(conv => 
@@ -624,9 +703,51 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
             : conv
         ));
         
-        // Send to AI service
+        // Send to AI service using streaming
         setIsStreaming(true);
-        await sendMessage(activeConversation, message);
+        await aiApi.streamMessage(
+          activeConversation, 
+          message, 
+          (chunk: string) => {
+            // Update the last assistant message or create new one
+            setAiConversations(prev => prev.map(conv => {
+              if (conv.id === activeConversation) {
+                const lastMessage = conv.messages[conv.messages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  // Append to existing message
+                  return {
+                    ...conv,
+                    messages: [
+                      ...conv.messages.slice(0, -1),
+                      { ...lastMessage, content: lastMessage.content + chunk }
+                    ]
+                  };
+                } else {
+                  // Create new assistant message
+                  return {
+                    ...conv,
+                    messages: [...conv.messages, {
+                      id: `msg-${Date.now()}`,
+                      conversationId: activeConversation,
+                      role: 'assistant',
+                      content: chunk,
+                      timestamp: new Date().toISOString()
+                    }]
+                  };
+                }
+              }
+              return conv;
+            }));
+          },
+          {
+            enableReasoning: true,
+            enableCitations: true,
+            temperature: 0.7,
+            maxTokens: 1000
+          }
+        );
+        
+        setIsStreaming(false);
       }
     } catch (error) {
       setIsStreaming(false);
@@ -634,19 +755,39 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [type, activeConversation, sendMessage]);
+  }, [type, activeConversation]);
 
   const handleGenerateExplanation = useCallback(async () => {
     try {
       if (currentModel) {
-        const explanation = await generateExplanation(currentModel.id, {
-          type: 'comprehensive',
-          includeFeatureImportance: true,
-          includeShap: true,
-          includeLime: true
-        });
+        // Use appropriate API based on model type
+        let explanation;
+        if (type === 'ml') {
+          const response = await mlApi.explainPrediction(currentModel.id, {
+            sample_data: 'example_input'
+          });
+          explanation = response.data;
+        } else {
+          const response = await aiApi.generateExplanation(currentModel.id, {
+            sample_input: 'example_input'
+          }, {
+            type: 'comprehensive',
+            includeVisualization: true,
+            maxLength: 1000
+          });
+          explanation = response.data;
+        }
         
-        setExplainabilityData(explanation);
+        // Transform explanation data to match expected format
+        const explainabilityData = {
+          featureImportance: explanation.featureImportance || [],
+          shap: explanation.shap || [],
+          lime: explanation.lime || [],
+          attentionWeights: explanation.attentionWeights || [],
+          saliencyMaps: explanation.saliencyMaps || []
+        };
+        
+        setExplainabilityData(explainabilityData);
         setExplainabilityPanelOpen(true);
         
         toast.success('Explanation Generated', {
@@ -658,7 +799,7 @@ export const IntelligenceLayout: React.FC<IntelligenceLayoutProps> = ({
         description: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
-  }, [currentModel, generateExplanation]);
+  }, [currentModel, type]);
 
   // Render helpers
   const renderModelStatus = () => {

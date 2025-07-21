@@ -1,682 +1,547 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { 
-  MLModel, 
-  TrainingJob, 
-  Prediction, 
-  MLMetrics, 
-  HyperparameterConfig,
-  MLDriftDetection,
-  FeatureEngineering,
-  ModelEnsemble,
-  MLAnalytics,
-  MLModelCreate,
-  MLModelUpdate,
-  TrainingJobCreate,
-  PredictionRequest,
-  MLBulkOperation,
-  MLOptimizationRequest,
-  MLModelComparison,
-  MLDeploymentConfig,
-  MLMonitoringConfig,
-  MLFeatureImportance,
-  MLModelValidation,
-  MLResourceUsage
-} from '../types';
+// Advanced ML API Integration for Classifications
+// Comprehensive ML model management, training, and inference API client
 
-// Advanced caching interface for ML operations
-interface MLCacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-  metadata?: Record<string, any>;
+import { toast } from 'sonner';
+
+// ML API Types
+export interface MLModel {
+  id: string;
+  name: string;
+  type: 'classification' | 'regression' | 'clustering' | 'nlp' | 'cv';
+  framework: 'tensorflow' | 'pytorch' | 'scikit-learn' | 'xgboost' | 'huggingface';
+  status: 'training' | 'trained' | 'deployed' | 'failed' | 'stopped';
+  version: string;
+  accuracy?: number;
+  loss?: number;
+  f1Score?: number;
+  precision?: number;
+  recall?: number;
+  auc?: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  tags: string[];
+  metadata: Record<string, any>;
+  configuration: ModelConfiguration;
+  performance?: ModelPerformance;
 }
 
-interface MLRequestInterceptor {
-  onRequest?: (config: AxiosRequestConfig) => AxiosRequestConfig | Promise<AxiosRequestConfig>;
-  onRequestError?: (error: any) => any;
+export interface ModelConfiguration {
+  algorithm: string;
+  hyperparameters: Record<string, any>;
+  features: string[];
+  targetColumn?: string;
+  validationSplit: number;
+  crossValidationFolds?: number;
+  earlyStoppingPatience?: number;
+  maxTrainingTime?: number;
+  autoHyperparameterTuning: boolean;
+  preprocessing: {
+    scaleFeatures: boolean;
+    handleMissingValues: 'drop' | 'mean' | 'median' | 'mode' | 'forward_fill';
+    encodeCategorical: 'onehot' | 'label' | 'target';
+    featureSelection: boolean;
+    dimensionalityReduction?: 'pca' | 'tsne' | 'umap';
+  };
 }
 
-interface MLResponseInterceptor {
-  onResponse?: (response: AxiosResponse) => AxiosResponse | Promise<AxiosResponse>;
-  onResponseError?: (error: any) => any;
+export interface ModelPerformance {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  auc?: number;
+  loss: number;
+  confusionMatrix?: number[][];
+  featureImportance?: Array<{
+    feature: string;
+    importance: number;
+  }>;
+  trainingTime: number;
+  inferenceTime: number;
 }
 
-interface MLRetryConfig {
-  retries: number;
-  retryDelay: number;
-  retryCondition?: (error: any) => boolean;
-  exponentialBackoff?: boolean;
+export interface TrainingJob {
+  id: string;
+  modelId: string;
+  modelName: string;
+  status: 'queued' | 'preparing' | 'training' | 'validating' | 'completed' | 'failed' | 'stopped';
+  progress: TrainingProgress;
+  startTime: string;
+  endTime?: string;
+  datasetId: string;
+  datasetSize: number;
+  configuration: ModelConfiguration;
+  metrics?: ModelPerformance;
+  logs: Array<{
+    timestamp: string;
+    level: 'info' | 'warning' | 'error' | 'debug';
+    message: string;
+    data?: any;
+  }>;
+  artifacts: Array<{
+    id: string;
+    name: string;
+    type: 'model' | 'weights' | 'config' | 'metrics' | 'plot';
+    url: string;
+    size: number;
+  }>;
+  resourceUsage: {
+    cpuUsage: number;
+    memoryUsage: number;
+    gpuUsage?: number;
+    diskUsage: number;
+  };
 }
 
-interface MLApiConfig {
-  baseURL: string;
-  timeout: number;
-  retryConfig: MLRetryConfig;
-  cacheConfig: {
+export interface TrainingProgress {
+  currentEpoch: number;
+  totalEpochs: number;
+  currentStep: number;
+  totalSteps: number;
+  trainingLoss: number;
+  validationLoss: number;
+  trainingAccuracy?: number;
+  validationAccuracy?: number;
+  estimatedTimeRemaining: number;
+  elapsedTime: number;
+  learningRate: number;
+  batchSize: number;
+}
+
+export interface Prediction {
+  id: string;
+  modelId: string;
+  input: any;
+  output: any;
+  confidence: number;
+  timestamp: string;
+  metadata: Record<string, any>;
+  explanation?: {
+    featureImportance: Array<{
+      feature: string;
+      importance: number;
+    }>;
+    shap?: any;
+    lime?: any;
+  };
+}
+
+export interface ModelDeployment {
+  id: string;
+  modelId: string;
+  version: string;
+  environment: 'development' | 'staging' | 'production';
+  endpoint: string;
+  status: 'deploying' | 'active' | 'inactive' | 'failed';
+  replicas: number;
+  autoScaling: {
     enabled: boolean;
-    defaultTTL: number;
-    maxEntries: number;
+    minReplicas: number;
+    maxReplicas: number;
+    targetCpuUtilization: number;
+    targetMemoryUtilization: number;
   };
-  interceptors: {
-    request: MLRequestInterceptor[];
-    response: MLResponseInterceptor[];
+  healthCheck: {
+    enabled: boolean;
+    endpoint: string;
+    interval: number;
+    timeout: number;
+    retries: number;
+  };
+  monitoring: {
+    enabled: boolean;
+    metricsEndpoint: string;
+    alerting: boolean;
+  };
+  resources: {
+    cpu: string;
+    memory: string;
+    gpu?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Experiment {
+  id: string;
+  name: string;
+  description: string;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  models: string[];
+  metrics: Record<string, any>;
+  parameters: Record<string, any>;
+  results: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface ApiResponse<T = any> {
+  data: T;
+  success: boolean;
+  message?: string;
+  timestamp: string;
+  requestId: string;
+  metadata?: {
+    executionTime: number;
+    cacheHit: boolean;
+    dataSource: string;
   };
 }
 
+// ML API Client Class
 class MLApiClient {
-  private client: AxiosInstance;
-  private cache: Map<string, MLCacheEntry<any>> = new Map();
-  private config: MLApiConfig;
-  private requestId = 0;
+  private baseUrl: string;
+  private cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map();
 
-  constructor(config: MLApiConfig) {
-    this.config = config;
-    this.client = axios.create({
-      baseURL: config.baseURL,
-      timeout: config.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    });
-
-    this.setupInterceptors();
-    this.setupRetryLogic();
-    this.startCacheCleanup();
+  constructor() {
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
-  private setupInterceptors(): void {
-    // Request interceptors
-    this.config.interceptors.request.forEach(interceptor => {
-      this.client.interceptors.request.use(
-        interceptor.onRequest,
-        interceptor.onRequestError
-      );
-    });
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const requestId = crypto.randomUUID();
 
-    // Response interceptors
-    this.config.interceptors.response.forEach(interceptor => {
-      this.client.interceptors.response.use(
-        interceptor.onResponse,
-        interceptor.onResponseError
-      );
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'X-Request-ID': requestId,
+          ...options.headers
+        }
+      });
 
-    // Built-in request ID interceptor
-    this.client.interceptors.request.use(config => {
-      config.headers = {
-        ...config.headers,
-        'X-Request-ID': `ml-${++this.requestId}-${Date.now()}`
+      if (!response.ok) {
+        throw new Error(`ML API Error: ${response.status} - ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return {
+        ...data,
+        requestId,
+        timestamp: new Date().toISOString()
       };
-      return config;
+    } catch (error) {
+      console.error('ML API request failed:', error);
+      throw error;
+    }
+  }
+
+  // Model Management
+  async getModels(): Promise<ApiResponse<MLModel[]>> {
+    return this.request('/api/v1/ml/models');
+  }
+
+  async getModel(id: string): Promise<ApiResponse<MLModel>> {
+    return this.request(`/api/v1/ml/models/${id}`);
+  }
+
+  async createModel(config: Omit<MLModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<MLModel>> {
+    return this.request('/api/v1/ml/models', {
+      method: 'POST',
+      body: JSON.stringify(config)
     });
   }
 
-  private setupRetryLogic(): void {
-    this.client.interceptors.response.use(
-      response => response,
-      async error => {
-        const { retries, retryDelay, retryCondition, exponentialBackoff } = this.config.retryConfig;
-        
-        if (
-          error.config &&
-          !error.config.__retryCount &&
-          retries > 0 &&
-          (!retryCondition || retryCondition(error))
-        ) {
-          error.config.__retryCount = 0;
-        }
+  async updateModel(id: string, updates: Partial<MLModel>): Promise<ApiResponse<MLModel>> {
+    return this.request(`/api/v1/ml/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  }
 
-        if (error.config && error.config.__retryCount < retries) {
-          error.config.__retryCount += 1;
-          
-          const delay = exponentialBackoff 
-            ? retryDelay * Math.pow(2, error.config.__retryCount - 1)
-            : retryDelay;
-          
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return this.client(error.config);
-        }
+  async deleteModel(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/api/v1/ml/models/${id}`, {
+      method: 'DELETE'
+    });
+  }
 
-        return Promise.reject(error);
+  // Training Management
+  async getTrainingJobs(): Promise<ApiResponse<TrainingJob[]>> {
+    return this.request('/api/v1/ml/training/jobs');
+  }
+
+  async getTrainingJob(id: string): Promise<ApiResponse<TrainingJob>> {
+    return this.request(`/api/v1/ml/training/jobs/${id}`);
+  }
+
+  async startTraining(modelId: string, datasetId: string, config?: Partial<ModelConfiguration>): Promise<ApiResponse<TrainingJob>> {
+    return this.request('/api/v1/ml/training/start', {
+      method: 'POST',
+      body: JSON.stringify({
+        modelId,
+        datasetId,
+        configuration: config
+      })
+    });
+  }
+
+  async stopTraining(jobId: string): Promise<ApiResponse<void>> {
+    return this.request(`/api/v1/ml/training/jobs/${jobId}/stop`, {
+      method: 'POST'
+    });
+  }
+
+  async getTrainingLogs(jobId: string): Promise<ApiResponse<TrainingJob['logs']>> {
+    return this.request(`/api/v1/ml/training/jobs/${jobId}/logs`);
+  }
+
+  async downloadTrainingArtifacts(jobId: string, artifactId: string): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/ml/training/jobs/${jobId}/artifacts/${artifactId}/download`,
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
       }
     );
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `artifact-${artifactId}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
   }
 
-  private startCacheCleanup(): void {
-    if (this.config.cacheConfig.enabled) {
-      setInterval(() => {
-        const now = Date.now();
-        for (const [key, entry] of this.cache.entries()) {
-          if (now - entry.timestamp > entry.ttl) {
-            this.cache.delete(key);
-          }
+  // Inference Management
+  async runInference(request: {
+    modelId: string;
+    data: any;
+    includeExplanations?: boolean;
+    confidenceThreshold?: number;
+  }): Promise<ApiResponse<Prediction>> {
+    return this.request('/api/v1/ml/inference', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+  }
+
+  async batchInference(requests: Array<{
+    modelId: string;
+    data: any;
+    includeExplanations?: boolean;
+  }>): Promise<ApiResponse<Prediction[]>> {
+    return this.request('/api/v1/ml/inference/batch', {
+      method: 'POST',
+      body: JSON.stringify({ requests })
+    });
+  }
+
+  async cancelInference(requestId: string): Promise<ApiResponse<void>> {
+    return this.request(`/api/v1/ml/inference/${requestId}/cancel`, {
+      method: 'POST'
+    });
+  }
+
+  // Deployment Management
+  async getDeployments(): Promise<ApiResponse<ModelDeployment[]>> {
+    return this.request('/api/v1/ml/deployments');
+  }
+
+  async deployModel(
+    modelId: string, 
+    environment: ModelDeployment['environment'],
+    config?: Partial<ModelDeployment>
+  ): Promise<ApiResponse<ModelDeployment>> {
+    return this.request('/api/v1/ml/deployments', {
+      method: 'POST',
+      body: JSON.stringify({
+        modelId,
+        environment,
+        ...config
+      })
+    });
+  }
+
+  async updateDeployment(deploymentId: string, updates: Partial<ModelDeployment>): Promise<ApiResponse<ModelDeployment>> {
+    return this.request(`/api/v1/ml/deployments/${deploymentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  }
+
+  async scaleDeployment(deploymentId: string, replicas: number): Promise<ApiResponse<void>> {
+    return this.request(`/api/v1/ml/deployments/${deploymentId}/scale`, {
+      method: 'POST',
+      body: JSON.stringify({ replicas })
+    });
+  }
+
+  async undeployModel(deploymentId: string): Promise<ApiResponse<void>> {
+    return this.request(`/api/v1/ml/deployments/${deploymentId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Experiment Management
+  async getExperiments(): Promise<ApiResponse<Experiment[]>> {
+    return this.request('/api/v1/ml/experiments');
+  }
+
+  async createExperiment(experiment: Omit<Experiment, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Experiment>> {
+    return this.request('/api/v1/ml/experiments', {
+      method: 'POST',
+      body: JSON.stringify(experiment)
+    });
+  }
+
+  // Model Operations
+  async validateModel(modelId: string, testDatasetId: string): Promise<ApiResponse<ModelPerformance>> {
+    return this.request(`/api/v1/ml/models/${modelId}/validate`, {
+      method: 'POST',
+      body: JSON.stringify({ testDatasetId })
+    });
+  }
+
+  async explainPrediction(modelId: string, input: any): Promise<ApiResponse<any>> {
+    return this.request(`/api/v1/ml/models/${modelId}/explain`, {
+      method: 'POST',
+      body: JSON.stringify({ input })
+    });
+  }
+
+  async compareModels(modelIds: string[]): Promise<ApiResponse<any>> {
+    return this.request('/api/v1/ml/models/compare', {
+      method: 'POST',
+      body: JSON.stringify({ modelIds })
+    });
+  }
+
+  // AutoML Operations
+  async autoML(datasetId: string, targetColumn: string, problemType: MLModel['type']): Promise<ApiResponse<TrainingJob>> {
+    return this.request('/api/v1/ml/automl', {
+      method: 'POST',
+      body: JSON.stringify({
+        datasetId,
+        targetColumn,
+        problemType
+      })
+    });
+  }
+
+  async hyperparameterTuning(modelId: string, searchSpace: Record<string, any>): Promise<ApiResponse<TrainingJob>> {
+    return this.request(`/api/v1/ml/models/${modelId}/hyperparameter-tuning`, {
+      method: 'POST',
+      body: JSON.stringify({ searchSpace })
+    });
+  }
+
+  // Monitoring and Observability
+  async getModelMetrics(modelId: string, timeRange?: string): Promise<ApiResponse<any>> {
+    const params = timeRange ? `?timeRange=${timeRange}` : '';
+    return this.request(`/api/v1/ml/models/${modelId}/metrics${params}`);
+  }
+
+  async getSystemHealth(): Promise<ApiResponse<any>> {
+    return this.request('/api/v1/ml/system/health');
+  }
+
+  // Utilities
+  async exportModel(modelId: string, format: 'onnx' | 'tensorflow' | 'pytorch' | 'pickle'): Promise<Blob> {
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/ml/models/${modelId}/export?format=${format}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
-      }, 60000); // Cleanup every minute
-    }
-  }
-
-  private getCacheKey(method: string, url: string, params?: any): string {
-    const paramString = params ? JSON.stringify(params) : '';
-    return `${method}:${url}:${paramString}`;
-  }
-
-  private getCachedData<T>(cacheKey: string): T | null {
-    if (!this.config.cacheConfig.enabled) return null;
+      }
+    );
     
-    const entry = this.cache.get(cacheKey);
-    if (!entry) return null;
-    
-    const now = Date.now();
-    if (now - entry.timestamp > entry.ttl) {
-      this.cache.delete(cacheKey);
-      return null;
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
     }
     
-    return entry.data;
+    return response.blob();
   }
 
-  private setCachedData<T>(cacheKey: string, data: T, ttl?: number): void {
-    if (!this.config.cacheConfig.enabled) return;
-    
-    if (this.cache.size >= this.config.cacheConfig.maxEntries) {
-      const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+  async importModel(file: File, metadata: Partial<MLModel>): Promise<ApiResponse<MLModel>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('metadata', JSON.stringify(metadata));
+
+    const response = await fetch(`${this.baseUrl}/api/v1/ml/models/import`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Import failed: ${response.statusText}`);
     }
-    
-    this.cache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-      ttl: ttl || this.config.cacheConfig.defaultTTL,
-    });
+
+    return response.json();
   }
 
-  // ML Model Management
-  async getMLModels(params?: {
-    page?: number;
-    pageSize?: number;
-    search?: string;
-    status?: string;
-    modelType?: string;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ models: MLModel[]; total: number; page: number; pageSize: number }> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/models', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/models', { params });
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
+  // Performance Analytics
+  async getPerformanceMetrics(): Promise<ApiResponse<{
+    accuracy: number;
+    throughput: number;
+    latency: number;
+    errorRate: number;
+  }>> {
+    return this.request('/api/v1/ml/metrics/performance');
   }
 
-  async getMLModel(modelId: string): Promise<MLModel> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
+  // Real-time WebSocket connection for ML updates
+  createWebSocketConnection(onMessage: (data: any) => void): WebSocket {
+    const wsUrl = this.baseUrl.replace('http', 'ws') + '/api/v1/ml/ws';
+    const ws = new WebSocket(wsUrl);
 
-    const response = await this.client.get(`/v2/ml/models/${modelId}`);
-    this.setCachedData(cacheKey, response.data, 600000); // 10 minutes
-    return response.data;
-  }
+    ws.onopen = () => {
+      console.log('ML WebSocket connected');
+      toast.success('ML real-time connection established');
+    };
 
-  async createMLModel(model: MLModelCreate): Promise<MLModel> {
-    const response = await this.client.post('/v2/ml/models', model);
-    this.invalidateMLModelCaches();
-    return response.data;
-  }
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onMessage(data);
+      } catch (error) {
+        console.error('ML WebSocket message parsing error:', error);
+      }
+    };
 
-  async updateMLModel(modelId: string, updates: MLModelUpdate): Promise<MLModel> {
-    const response = await this.client.put(`/v2/ml/models/${modelId}`, updates);
-    this.invalidateMLModelCaches();
-    this.cache.delete(this.getCacheKey('GET', `/v2/ml/models/${modelId}`));
-    return response.data;
-  }
+    ws.onclose = () => {
+      console.log('ML WebSocket disconnected');
+      toast.warning('ML real-time connection lost');
+    };
 
-  async deleteMLModel(modelId: string): Promise<void> {
-    await this.client.delete(`/v2/ml/models/${modelId}`);
-    this.invalidateMLModelCaches();
-    this.cache.delete(this.getCacheKey('GET', `/v2/ml/models/${modelId}`));
-  }
+    ws.onerror = (error) => {
+      console.error('ML WebSocket error:', error);
+      toast.error('ML real-time connection error');
+    };
 
-  async deployMLModel(modelId: string, config: MLDeploymentConfig): Promise<MLModel> {
-    const response = await this.client.post(`/v2/ml/models/${modelId}/deploy`, config);
-    this.invalidateMLModelCaches();
-    return response.data;
-  }
-
-  async retireMLModel(modelId: string): Promise<MLModel> {
-    const response = await this.client.post(`/v2/ml/models/${modelId}/retire`);
-    this.invalidateMLModelCaches();
-    return response.data;
-  }
-
-  // Training Job Management
-  async getTrainingJobs(params?: {
-    page?: number;
-    pageSize?: number;
-    modelId?: string;
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-  }): Promise<{ jobs: TrainingJob[]; total: number; page: number; pageSize: number }> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/training-jobs', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/training-jobs', { params });
-    this.setCachedData(cacheKey, response.data, 120000); // 2 minutes
-    return response.data;
-  }
-
-  async getTrainingJob(jobId: string): Promise<TrainingJob> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/training-jobs/${jobId}`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/training-jobs/${jobId}`);
-    this.setCachedData(cacheKey, response.data, 60000); // 1 minute for training jobs
-    return response.data;
-  }
-
-  async createTrainingJob(job: TrainingJobCreate): Promise<TrainingJob> {
-    const response = await this.client.post('/v2/ml/training-jobs', job);
-    this.invalidateTrainingJobCaches();
-    return response.data;
-  }
-
-  async stopTrainingJob(jobId: string): Promise<TrainingJob> {
-    const response = await this.client.post(`/v2/ml/training-jobs/${jobId}/stop`);
-    this.invalidateTrainingJobCaches();
-    return response.data;
-  }
-
-  async getTrainingJobLogs(jobId: string, params?: { 
-    level?: string; 
-    limit?: number; 
-    offset?: number 
-  }): Promise<{ logs: string[]; total: number }> {
-    const response = await this.client.get(`/v2/ml/training-jobs/${jobId}/logs`, { params });
-    return response.data;
-  }
-
-  async getTrainingJobMetrics(jobId: string): Promise<MLMetrics> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/training-jobs/${jobId}/metrics`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/training-jobs/${jobId}/metrics`);
-    this.setCachedData(cacheKey, response.data, 30000); // 30 seconds
-    return response.data;
-  }
-
-  // Prediction Management
-  async makePrediction(request: PredictionRequest): Promise<Prediction> {
-    const response = await this.client.post('/v2/ml/predictions', request);
-    return response.data;
-  }
-
-  async getPredictions(params?: {
-    page?: number;
-    pageSize?: number;
-    modelId?: string;
-    startDate?: string;
-    endDate?: string;
-    confidence?: number;
-  }): Promise<{ predictions: Prediction[]; total: number; page: number; pageSize: number }> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/predictions', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/predictions', { params });
-    this.setCachedData(cacheKey, response.data, 180000); // 3 minutes
-    return response.data;
-  }
-
-  async getPrediction(predictionId: string): Promise<Prediction> {
-    const response = await this.client.get(`/v2/ml/predictions/${predictionId}`);
-    return response.data;
-  }
-
-  async provideFeedback(predictionId: string, feedback: {
-    correctClassification?: string;
-    confidence?: number;
-    notes?: string;
-  }): Promise<Prediction> {
-    const response = await this.client.post(`/v2/ml/predictions/${predictionId}/feedback`, feedback);
-    return response.data;
-  }
-
-  // Hyperparameter Optimization
-  async optimizeHyperparameters(request: MLOptimizationRequest): Promise<HyperparameterConfig> {
-    const response = await this.client.post('/v2/ml/hyperparameter-optimization', request);
-    return response.data;
-  }
-
-  async getHyperparameterOptimizations(modelId: string): Promise<HyperparameterConfig[]> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/hyperparameters`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/hyperparameters`);
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  // Drift Detection
-  async getDriftDetection(modelId: string, params?: {
-    startDate?: string;
-    endDate?: string;
-    threshold?: number;
-  }): Promise<MLDriftDetection> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/drift`, params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/drift`, { params });
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  async configureDriftDetection(modelId: string, config: MLMonitoringConfig): Promise<MLDriftDetection> {
-    const response = await this.client.post(`/v2/ml/models/${modelId}/drift/configure`, config);
-    return response.data;
-  }
-
-  // Feature Engineering
-  async getFeatureEngineering(modelId: string): Promise<FeatureEngineering> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/features`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/features`);
-    this.setCachedData(cacheKey, response.data, 600000); // 10 minutes
-    return response.data;
-  }
-
-  async updateFeatureEngineering(modelId: string, features: Partial<FeatureEngineering>): Promise<FeatureEngineering> {
-    const response = await this.client.put(`/v2/ml/models/${modelId}/features`, features);
-    this.cache.delete(this.getCacheKey('GET', `/v2/ml/models/${modelId}/features`));
-    return response.data;
-  }
-
-  async getFeatureImportance(modelId: string): Promise<MLFeatureImportance> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/feature-importance`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/feature-importance`);
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  // Model Ensemble
-  async createEnsemble(ensemble: Omit<ModelEnsemble, 'id' | 'createdAt' | 'updatedAt'>): Promise<ModelEnsemble> {
-    const response = await this.client.post('/v2/ml/ensembles', ensemble);
-    this.invalidateEnsembleCaches();
-    return response.data;
-  }
-
-  async getEnsembles(params?: {
-    page?: number;
-    pageSize?: number;
-    status?: string;
-  }): Promise<{ ensembles: ModelEnsemble[]; total: number }> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/ensembles', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/ensembles', { params });
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  async getEnsemble(ensembleId: string): Promise<ModelEnsemble> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/ensembles/${ensembleId}`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/ensembles/${ensembleId}`);
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  async updateEnsemble(ensembleId: string, updates: Partial<ModelEnsemble>): Promise<ModelEnsemble> {
-    const response = await this.client.put(`/v2/ml/ensembles/${ensembleId}`, updates);
-    this.invalidateEnsembleCaches();
-    return response.data;
-  }
-
-  async deleteEnsemble(ensembleId: string): Promise<void> {
-    await this.client.delete(`/v2/ml/ensembles/${ensembleId}`);
-    this.invalidateEnsembleCaches();
-  }
-
-  // Model Comparison
-  async compareModels(modelIds: string[], metrics: string[]): Promise<MLModelComparison> {
-    const response = await this.client.post('/v2/ml/models/compare', {
-      modelIds,
-      metrics
-    });
-    return response.data;
-  }
-
-  // Model Validation
-  async validateModel(modelId: string, validationConfig: {
-    testDatasetId?: string;
-    validationType: 'cross_validation' | 'holdout' | 'bootstrap';
-    folds?: number;
-    testSize?: number;
-    metrics: string[];
-  }): Promise<MLModelValidation> {
-    const response = await this.client.post(`/v2/ml/models/${modelId}/validate`, validationConfig);
-    return response.data;
-  }
-
-  async getModelValidations(modelId: string): Promise<MLModelValidation[]> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/validations`);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/validations`);
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  // Analytics and Monitoring
-  async getMLAnalytics(params?: {
-    startDate?: string;
-    endDate?: string;
-    modelIds?: string[];
-    granularity?: 'hour' | 'day' | 'week' | 'month';
-  }): Promise<MLAnalytics> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/analytics', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/analytics', { params });
-    this.setCachedData(cacheKey, response.data, 300000); // 5 minutes
-    return response.data;
-  }
-
-  async getResourceUsage(params?: {
-    startDate?: string;
-    endDate?: string;
-    resourceType?: 'cpu' | 'memory' | 'gpu';
-  }): Promise<MLResourceUsage> {
-    const cacheKey = this.getCacheKey('GET', '/v2/ml/resource-usage', params);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get('/v2/ml/resource-usage', { params });
-    this.setCachedData(cacheKey, response.data, 60000); // 1 minute
-    return response.data;
-  }
-
-  async getModelPerformanceMetrics(modelId: string, timeRange?: {
-    startDate: string;
-    endDate: string;
-  }): Promise<MLMetrics> {
-    const cacheKey = this.getCacheKey('GET', `/v2/ml/models/${modelId}/performance`, timeRange);
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
-    const response = await this.client.get(`/v2/ml/models/${modelId}/performance`, {
-      params: timeRange
-    });
-    this.setCachedData(cacheKey, response.data, 180000); // 3 minutes
-    return response.data;
-  }
-
-  // Bulk Operations
-  async performBulkOperation(operation: MLBulkOperation): Promise<{ operationId: string; status: string }> {
-    const response = await this.client.post('/v2/ml/bulk-operations', operation);
-    this.invalidateMLModelCaches();
-    return response.data;
-  }
-
-  async getBulkOperationStatus(operationId: string): Promise<{
-    id: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
-    progress: number;
-    results?: any;
-    error?: string;
-  }> {
-    const response = await this.client.get(`/v2/ml/bulk-operations/${operationId}`);
-    return response.data;
-  }
-
-  // Auto ML
-  async startAutoML(config: {
-    datasetId: string;
-    targetColumn: string;
-    problemType: 'classification' | 'regression';
-    timeLimit?: number;
-    evaluationMetric?: string;
-    featureEngineering?: boolean;
-    hyperparameterOptimization?: boolean;
-  }): Promise<{ jobId: string; status: string }> {
-    const response = await this.client.post('/v2/ml/automl', config);
-    return response.data;
-  }
-
-  async getAutoMLStatus(jobId: string): Promise<{
-    jobId: string;
-    status: 'running' | 'completed' | 'failed';
-    progress: number;
-    bestModel?: MLModel;
-    leaderboard?: Array<{ modelId: string; score: number; metrics: Record<string, number> }>;
-  }> {
-    const response = await this.client.get(`/v2/ml/automl/${jobId}`);
-    return response.data;
+    return ws;
   }
 
   // Cache management
-  private invalidateMLModelCaches(): void {
-    for (const key of this.cache.keys()) {
-      if (key.includes('/v2/ml/models')) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  private invalidateTrainingJobCaches(): void {
-    for (const key of this.cache.keys()) {
-      if (key.includes('/v2/ml/training-jobs')) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  private invalidateEnsembleCaches(): void {
-    for (const key of this.cache.keys()) {
-      if (key.includes('/v2/ml/ensembles')) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
   clearCache(): void {
     this.cache.clear();
+    toast.success('ML API cache cleared');
   }
 
-  getCacheStats(): {
-    size: number;
-    maxSize: number;
-    hitRate: number;
-    entries: Array<{ key: string; age: number; size: number }>;
-  } {
-    const entries = Array.from(this.cache.entries()).map(([key, entry]) => ({
-      key,
-      age: Date.now() - entry.timestamp,
-      size: JSON.stringify(entry.data).length
-    }));
-
+  getCacheStats(): { size: number; entries: string[] } {
     return {
       size: this.cache.size,
-      maxSize: this.config.cacheConfig.maxEntries,
-      hitRate: 0, // Would need to track hits/misses for accurate calculation
-      entries
+      entries: Array.from(this.cache.keys())
     };
   }
 }
 
-// Default configuration
-const defaultMLApiConfig: MLApiConfig = {
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000',
-  timeout: 30000,
-  retryConfig: {
-    retries: 3,
-    retryDelay: 1000,
-    exponentialBackoff: true,
-    retryCondition: (error) => {
-      return !error.response || error.response.status >= 500;
-    }
-  },
-  cacheConfig: {
-    enabled: true,
-    defaultTTL: 300000, // 5 minutes
-    maxEntries: 1000
-  },
-  interceptors: {
-    request: [{
-      onRequest: (config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          config.headers = {
-            ...config.headers,
-            Authorization: `Bearer ${token}`
-          };
-        }
-        return config;
-      }
-    }],
-    response: [{
-      onResponse: (response) => {
-        // Log successful requests in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`ML API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`);
-        }
-        return response;
-      },
-      onResponseError: (error) => {
-        // Log errors and handle common error scenarios
-        if (process.env.NODE_ENV === 'development') {
-          console.error(`ML API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error);
-        }
-        
-        if (error.response?.status === 401) {
-          localStorage.removeItem('authToken');
-          window.location.href = '/login';
-        }
-        
-        return Promise.reject(error);
-      }
-    }]
-  }
-};
-
 // Export singleton instance
-export const mlApi = new MLApiClient(defaultMLApiConfig);
-export { MLApiClient };
-export type { MLApiConfig, MLCacheEntry, MLRequestInterceptor, MLResponseInterceptor, MLRetryConfig };
+export const mlApi = new MLApiClient();
+export default mlApi;
