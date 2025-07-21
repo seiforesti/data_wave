@@ -126,6 +126,7 @@ app.include_router(compliance_audit_routes)
 app.include_router(classification_routes)  # Add enterprise classification routes
 app.include_router(ml_routes)  # Add ML classification routes (Version 2)
 app.include_router(ai_routes)  # Add AI classification routes (Version 3)
+
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
 @app.get("/")
