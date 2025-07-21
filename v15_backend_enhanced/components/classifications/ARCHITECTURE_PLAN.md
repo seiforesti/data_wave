@@ -66,7 +66,7 @@ v15_backend_enhanced/components/classifications/
 │   └── providers/
 │       ├── ClassificationProvider.tsx
 │       └── IntelligenceProvider.tsx
-├── v1-manual/                       # Version 1: Manual & Rule-Based (1200+ lines each)
+├── v1-manual/                       # Version 1: Manual & Rule-Based (2000+ lines each)
 │   ├── FrameworkManager.tsx
 │   ├── RuleEngine.tsx
 │   ├── PolicyOrchestrator.tsx
@@ -95,7 +95,7 @@ v15_backend_enhanced/components/classifications/
 │   ├── ClassificationWorkflow.tsx   # Master workflow orchestrator
 │   ├── IntelligenceCoordinator.tsx  # AI/ML coordination
 │   └── BusinessIntelligenceHub.tsx  # BI and analytics
-└── ClassificationsSPA.tsx           # Main SPA page (2000+ lines)
+└── ClassificationsSPA.tsx           # Main SPA page (3000+ lines)
 ```
 
 ## 🎨 UI/UX Design Strategy
