@@ -128,6 +128,13 @@ import { websocketApi } from './core/api/websocketApi';
 import ClassificationLayout from './shared/layouts/ClassificationLayout';
 import IntelligenceLayout from './shared/layouts/IntelligenceLayout';
 import DataTable from './shared/ui/DataTable';
+import IntelligentChart from './shared/ui/IntelligentChart';
+import RealTimeIndicator from './shared/ui/RealTimeIndicator';
+import WorkflowStepper from './shared/ui/WorkflowStepper';
+
+// Import providers
+import { ClassificationProvider } from './shared/providers/ClassificationProvider';
+import { IntelligenceProvider } from './shared/providers/IntelligenceProvider';
 
 // Import utility processors
 import { defaultProcessor } from './core/utils/intelligenceProcessor';
