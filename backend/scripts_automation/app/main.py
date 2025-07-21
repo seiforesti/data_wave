@@ -123,9 +123,10 @@ app.include_router(compliance_reports_routes)
 app.include_router(compliance_workflows_routes)
 app.include_router(compliance_integrations_routes)
 app.include_router(compliance_audit_routes)
-app.include_router(classification_routes)  # Version 1: Manual & Rule-Based
-app.include_router(ml_routes)              # Version 2: ML-Driven
-app.include_router(ai_routes)              # Version 3: AI-Intelligent
+app.include_router(classification_routes)  # Add enterprise classification routes
+app.include_router(ml_routes)  # Add ML classification routes (Version 2)
+app.include_router(ai_routes)  # Add AI classification routes (Version 3)
+
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
 @app.get("/")
