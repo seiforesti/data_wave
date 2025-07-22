@@ -637,7 +637,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // WebSocket connection
   const connectWebSocket = useCallback(() => {
     try {
-      wsRef.current = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/intelligence`);
+      wsRef.current = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ai/intelligence/stream/${Date.now()}`);
       
       wsRef.current.onopen = () => {
         dispatch({ type: 'SET_WEBSOCKET_CONNECTED', payload: true });
@@ -708,7 +708,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const initializeIntelligenceProcessor = useCallback(async () => {
     try {
       // Initialize advanced AI/ML processing capabilities
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/initialize`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/agents/initialize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -724,7 +724,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const initializePerformanceOptimizer = useCallback(async () => {
     try {
       // Initialize performance optimization engine
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/performance/initialize`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/performance/monitoring/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -740,7 +740,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const validateSystemHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system/health`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/performance/system/health`);
       const health = await response.json();
       
       if (health.status !== 'healthy') {
@@ -758,7 +758,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const loadSystemConfiguration = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system/config`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classifications/system/performance`);
       const config = await response.json();
       
       // Apply system configuration
@@ -839,7 +839,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const getPerformanceMetrics = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/metrics/performance`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classifications/system/performance`);
       return await response.json();
     } catch (error) {
       console.warn('Performance metrics collection failed:', error);
@@ -849,7 +849,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const getResourceUtilization = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/metrics/resources`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classifications/system/capacity`);
       return await response.json();
     } catch (error) {
       console.warn('Resource utilization collection failed:', error);
@@ -859,7 +859,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const getBusinessMetrics = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/metrics/business`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/classifications/system/compliance`);
       return await response.json();
     } catch (error) {
       console.warn('Business metrics collection failed:', error);
@@ -869,7 +869,7 @@ export const IntelligenceProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const triggerPredictiveOptimization = useCallback(async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/optimization/predict`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/intelligence/optimize-workload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
