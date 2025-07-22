@@ -1446,3 +1446,620 @@ async def get_ml_system_metrics(
     except Exception as e:
         logger.error(f"Error getting ML system metrics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# ADVANCED ML API ENDPOINTS - MISSING IMPLEMENTATIONS
+# ============================================================================
+
+@router.get("/models/health-metrics")
+async def get_model_health_metrics(session: Session = Depends(get_session)):
+    """Get comprehensive ML model health metrics with advanced monitoring"""
+    try:
+        # Get all active ML models
+        models = await _get_active_ml_models(session)
+        
+        health_metrics = {
+            'system_health': {
+                'overall_score': 0.0,
+                'status': 'unknown',
+                'total_models': len(models),
+                'healthy_models': 0,
+                'degraded_models': 0,
+                'failed_models': 0
+            },
+            'model_metrics': [],
+            'performance_trends': {},
+            'resource_utilization': {},
+            'alerts': [],
+            'recommendations': []
+        }
+        
+        total_health_score = 0.0
+        
+        for model in models:
+            # Calculate comprehensive health score
+            model_health = await _calculate_comprehensive_model_health(model, session)
+            
+            # Get performance trends
+            performance_trend = await _get_model_performance_trend(model['id'], session)
+            
+            # Get resource utilization
+            resource_usage = await _get_model_resource_usage(model['id'], session)
+            
+            # Detect anomalies
+            anomalies = await _detect_model_anomalies(model['id'], session)
+            
+            # Generate health recommendations
+            recommendations = await _generate_model_health_recommendations(model, model_health, session)
+            
+            model_metric = {
+                'model_id': model['id'],
+                'name': model['name'],
+                'type': model['type'],
+                'version': model.get('version', '1.0'),
+                'health_score': model_health['overall_score'],
+                'status': model_health['status'],
+                'accuracy': model_health['accuracy'],
+                'latency': model_health['latency'],
+                'throughput': model_health['throughput'],
+                'error_rate': model_health['error_rate'],
+                'memory_usage': resource_usage['memory'],
+                'cpu_usage': resource_usage['cpu'],
+                'gpu_usage': resource_usage.get('gpu', 0),
+                'prediction_drift': model_health.get('prediction_drift', 0),
+                'data_drift': model_health.get('data_drift', 0),
+                'concept_drift': model_health.get('concept_drift', 0),
+                'performance_trend': performance_trend,
+                'anomalies': anomalies,
+                'last_training': model.get('last_training_date'),
+                'training_accuracy': model.get('training_accuracy', 0),
+                'validation_accuracy': model.get('validation_accuracy', 0),
+                'uptime_percentage': await _calculate_model_uptime_percentage(model['id'], session),
+                'recommendations': recommendations
+            }
+            
+            health_metrics['model_metrics'].append(model_metric)
+            total_health_score += model_health['overall_score']
+            
+            # Count model statuses
+            if model_health['status'] == 'healthy':
+                health_metrics['system_health']['healthy_models'] += 1
+            elif model_health['status'] == 'degraded':
+                health_metrics['system_health']['degraded_models'] += 1
+            else:
+                health_metrics['system_health']['failed_models'] += 1
+        
+        # Calculate system-wide metrics
+        if models:
+            health_metrics['system_health']['overall_score'] = total_health_score / len(models)
+            
+            if health_metrics['system_health']['overall_score'] > 0.8:
+                health_metrics['system_health']['status'] = 'healthy'
+            elif health_metrics['system_health']['overall_score'] > 0.6:
+                health_metrics['system_health']['status'] = 'degraded'
+            else:
+                health_metrics['system_health']['status'] = 'critical'
+        
+        # Generate system-wide performance trends
+        health_metrics['performance_trends'] = await _calculate_system_performance_trends(models, session)
+        
+        # Calculate resource utilization
+        health_metrics['resource_utilization'] = await _calculate_system_resource_utilization(models, session)
+        
+        # Generate system alerts
+        health_metrics['alerts'] = await _generate_system_health_alerts(health_metrics, session)
+        
+        # Generate system recommendations
+        health_metrics['recommendations'] = await _generate_system_health_recommendations(health_metrics, session)
+        
+        return {
+            'success': True,
+            'data': health_metrics,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting model health metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get model health metrics: {str(e)}")
+
+@router.post("/models/retrain")
+async def start_retraining(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Start intelligent model retraining with advanced optimization"""
+    try:
+        model_id = config.get('modelId')
+        retrain_strategy = config.get('strategy', 'incremental')  # incremental, full, transfer_learning
+        trigger_reason = config.get('triggerReason', 'scheduled')  # drift_detected, performance_degraded, scheduled
+        optimization_config = config.get('optimization', {})
+        
+        # Validate model exists
+        model = await _get_ml_model_by_id(model_id, session)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        
+        # Check if model is currently training
+        if model.get('status') == 'training':
+            raise HTTPException(status_code=409, detail=f"Model {model_id} is already training")
+        
+        # Generate retraining plan
+        retraining_plan = await _generate_retraining_plan(model, retrain_strategy, trigger_reason, session)
+        
+        # Validate retraining requirements
+        validation_result = await _validate_retraining_requirements(model, retraining_plan, session)
+        if not validation_result['valid']:
+            raise HTTPException(status_code=400, detail=f"Retraining validation failed: {validation_result['errors']}")
+        
+        # Create retraining job
+        job_id = str(uuid.uuid4())
+        retraining_job = {
+            'job_id': job_id,
+            'model_id': model_id,
+            'strategy': retrain_strategy,
+            'trigger_reason': trigger_reason,
+            'plan': retraining_plan,
+            'optimization_config': optimization_config,
+            'status': 'queued',
+            'created_at': datetime.utcnow().isoformat(),
+            'estimated_duration': retraining_plan.get('estimated_duration', 3600),
+            'resource_requirements': retraining_plan.get('resource_requirements', {}),
+            'progress': 0,
+            'metrics': {}
+        }
+        
+        # Store job in database
+        await _store_retraining_job(retraining_job, session)
+        
+        # Start retraining in background
+        background_tasks.add_task(
+            _execute_model_retraining,
+            retraining_job, session
+        )
+        
+        # Update model status
+        await _update_model_status(model_id, 'training', session)
+        
+        return {
+            'success': True,
+            'data': {
+                'job_id': job_id,
+                'model_id': model_id,
+                'strategy': retrain_strategy,
+                'estimated_duration': retraining_plan.get('estimated_duration'),
+                'status': 'queued',
+                'plan_summary': {
+                    'data_sources': len(retraining_plan.get('data_sources', [])),
+                    'training_steps': len(retraining_plan.get('training_steps', [])),
+                    'validation_strategy': retraining_plan.get('validation_strategy'),
+                    'optimization_techniques': retraining_plan.get('optimization_techniques', [])
+                },
+                'message': f'Retraining job {job_id} created and queued for model {model_id}'
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting model retraining: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start retraining: {str(e)}")
+
+@router.post("/models/scale")
+async def scale_model(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Dynamically scale model resources with intelligent optimization"""
+    try:
+        model_id = config.get('modelId')
+        scaling_action = config.get('action', 'auto')  # scale_up, scale_down, auto
+        target_metrics = config.get('targetMetrics', {})
+        resource_constraints = config.get('resourceConstraints', {})
+        
+        # Validate model exists
+        model = await _get_ml_model_by_id(model_id, session)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        
+        # Get current resource allocation
+        current_resources = await _get_current_model_resources(model_id, session)
+        
+        # Get current performance metrics
+        current_performance = await _get_current_model_performance(model_id, session)
+        
+        # Calculate optimal scaling configuration
+        scaling_analysis = await _analyze_scaling_requirements(
+            model, current_resources, current_performance, target_metrics, session
+        )
+        
+        # Generate scaling plan
+        scaling_plan = await _generate_scaling_plan(
+            model, scaling_action, scaling_analysis, resource_constraints, session
+        )
+        
+        # Validate scaling plan
+        validation_result = await _validate_scaling_plan(scaling_plan, session)
+        if not validation_result['valid']:
+            raise HTTPException(status_code=400, detail=f"Scaling validation failed: {validation_result['errors']}")
+        
+        # Execute scaling
+        scaling_result = await _execute_model_scaling(model_id, scaling_plan, session)
+        
+        # Monitor scaling progress
+        scaling_status = await _monitor_scaling_progress(model_id, scaling_result['scaling_id'], session)
+        
+        return {
+            'success': True,
+            'data': {
+                'model_id': model_id,
+                'scaling_id': scaling_result['scaling_id'],
+                'action': scaling_action,
+                'current_resources': current_resources,
+                'target_resources': scaling_plan['target_resources'],
+                'expected_performance_improvement': scaling_plan.get('expected_improvement', {}),
+                'estimated_completion_time': scaling_plan.get('estimated_completion_time'),
+                'status': scaling_status['status'],
+                'cost_impact': scaling_plan.get('cost_impact', {}),
+                'rollback_plan': scaling_plan.get('rollback_plan', {}),
+                'message': f'Model {model_id} scaling {scaling_action} initiated successfully'
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error scaling model: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to scale model: {str(e)}")
+
+@router.get("/analytics/workload-trends")
+async def predict_workload_trends(
+    time_horizon: int = Query(24, description="Prediction horizon in hours"),
+    session: Session = Depends(get_session)
+):
+    """Predict ML workload trends using advanced time series analysis"""
+    try:
+        # Get historical workload data
+        historical_data = await _get_historical_workload_data(time_horizon * 7, session)  # 7x time horizon for training
+        
+        # Prepare time series data
+        time_series_data = await _prepare_workload_time_series(historical_data, session)
+        
+        # Apply multiple forecasting models
+        forecasting_models = ['arima', 'lstm', 'prophet', 'ensemble']
+        predictions = {}
+        
+        for model_type in forecasting_models:
+            try:
+                model_prediction = await _apply_forecasting_model(
+                    time_series_data, model_type, time_horizon, session
+                )
+                predictions[model_type] = model_prediction
+            except Exception as model_error:
+                logger.warning(f"Forecasting model {model_type} failed: {str(model_error)}")
+                continue
+        
+        # Ensemble predictions
+        ensemble_prediction = await _create_ensemble_prediction(predictions, session)
+        
+        # Calculate confidence intervals
+        confidence_intervals = await _calculate_prediction_confidence(
+            ensemble_prediction, historical_data, session
+        )
+        
+        # Identify trend patterns
+        trend_analysis = await _analyze_workload_trends(ensemble_prediction, historical_data, session)
+        
+        # Generate capacity recommendations
+        capacity_recommendations = await _generate_capacity_recommendations(
+            ensemble_prediction, trend_analysis, session
+        )
+        
+        # Detect anomalies in predictions
+        anomaly_detection = await _detect_prediction_anomalies(
+            ensemble_prediction, historical_data, session
+        )
+        
+        return {
+            'success': True,
+            'data': {
+                'time_horizon_hours': time_horizon,
+                'prediction_timestamp': datetime.utcnow().isoformat(),
+                'ensemble_prediction': ensemble_prediction,
+                'individual_predictions': predictions,
+                'confidence_intervals': confidence_intervals,
+                'trend_analysis': trend_analysis,
+                'capacity_recommendations': capacity_recommendations,
+                'anomaly_detection': anomaly_detection,
+                'model_performance': await _evaluate_prediction_accuracy(predictions, session),
+                'business_insights': await _generate_business_insights(
+                    ensemble_prediction, trend_analysis, session
+                )
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error predicting workload trends: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to predict workload trends: {str(e)}")
+
+@router.post("/search/models")
+async def search_models(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Advanced ML model search with intelligent ranking and filtering"""
+    try:
+        query = config.get('query', '')
+        filters = config.get('filters', {})
+        search_type = config.get('searchType', 'semantic')  # semantic, keyword, hybrid
+        ranking_strategy = config.get('rankingStrategy', 'relevance')  # relevance, performance, popularity
+        max_results = config.get('maxResults', 50)
+        
+        # Build search criteria
+        search_criteria = await _build_model_search_criteria(query, filters, session)
+        
+        # Execute search based on type
+        if search_type == 'semantic':
+            search_results = await _execute_semantic_model_search(search_criteria, session)
+        elif search_type == 'keyword':
+            search_results = await _execute_keyword_model_search(search_criteria, session)
+        else:  # hybrid
+            semantic_results = await _execute_semantic_model_search(search_criteria, session)
+            keyword_results = await _execute_keyword_model_search(search_criteria, session)
+            search_results = await _merge_search_results(semantic_results, keyword_results, session)
+        
+        # Apply intelligent ranking
+        ranked_results = await _apply_model_search_ranking(
+            search_results, ranking_strategy, query, session
+        )
+        
+        # Enrich results with metadata
+        enriched_results = []
+        for result in ranked_results[:max_results]:
+            enriched_result = await _enrich_model_search_result(result, session)
+            enriched_results.append(enriched_result)
+        
+        # Generate search insights
+        search_insights = await _generate_model_search_insights(
+            query, enriched_results, search_criteria, session
+        )
+        
+        # Track search analytics
+        await _track_model_search_analytics({
+            'query': query,
+            'filters': filters,
+            'search_type': search_type,
+            'result_count': len(enriched_results),
+            'timestamp': datetime.utcnow().isoformat()
+        }, session)
+        
+        return {
+            'success': True,
+            'data': {
+                'query': query,
+                'total_results': len(search_results),
+                'returned_results': len(enriched_results),
+                'results': enriched_results,
+                'search_insights': search_insights,
+                'filters_applied': filters,
+                'search_type': search_type,
+                'ranking_strategy': ranking_strategy,
+                'suggestions': await _generate_model_search_suggestions(query, session),
+                'related_queries': await _generate_related_model_queries(query, session)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error searching models: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to search models: {str(e)}")
+
+@router.post("/data/prepare-training")
+async def prepare_training_data(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Prepare training data with advanced preprocessing and augmentation"""
+    try:
+        data_source = config.get('dataSource')
+        preprocessing_pipeline = config.get('preprocessingPipeline', [])
+        augmentation_config = config.get('augmentationConfig', {})
+        validation_split = config.get('validationSplit', 0.2)
+        test_split = config.get('testSplit', 0.1)
+        quality_checks = config.get('qualityChecks', True)
+        
+        # Validate data source
+        data_source_validation = await _validate_training_data_source(data_source, session)
+        if not data_source_validation['valid']:
+            raise HTTPException(status_code=400, detail=f"Invalid data source: {data_source_validation['errors']}")
+        
+        # Create data preparation job
+        job_id = str(uuid.uuid4())
+        preparation_job = {
+            'job_id': job_id,
+            'data_source': data_source,
+            'preprocessing_pipeline': preprocessing_pipeline,
+            'augmentation_config': augmentation_config,
+            'validation_split': validation_split,
+            'test_split': test_split,
+            'quality_checks': quality_checks,
+            'status': 'queued',
+            'created_at': datetime.utcnow().isoformat(),
+            'progress': 0,
+            'metrics': {}
+        }
+        
+        # Store job in database
+        await _store_data_preparation_job(preparation_job, session)
+        
+        # Start data preparation in background
+        background_tasks.add_task(
+            _execute_data_preparation,
+            preparation_job, session
+        )
+        
+        return {
+            'success': True,
+            'data': {
+                'job_id': job_id,
+                'status': 'queued',
+                'data_source': data_source,
+                'estimated_processing_time': await _estimate_data_preparation_time(config, session),
+                'preprocessing_steps': len(preprocessing_pipeline),
+                'augmentation_enabled': bool(augmentation_config),
+                'quality_checks_enabled': quality_checks,
+                'splits': {
+                    'training': 1 - validation_split - test_split,
+                    'validation': validation_split,
+                    'test': test_split
+                },
+                'message': f'Data preparation job {job_id} queued successfully'
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error preparing training data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to prepare training data: {str(e)}")
+
+@router.post("/models/optimize-hyperparameters")
+async def optimize_hyperparameters(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Advanced hyperparameter optimization using multiple strategies"""
+    try:
+        model_id = config.get('modelId')
+        optimization_strategy = config.get('strategy', 'bayesian')  # grid, random, bayesian, genetic, optuna
+        parameter_space = config.get('parameterSpace', {})
+        optimization_budget = config.get('budget', {'max_trials': 100, 'max_time_hours': 24})
+        objective_metrics = config.get('objectiveMetrics', ['accuracy'])
+        
+        # Validate model exists
+        model = await _get_ml_model_by_id(model_id, session)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        
+        # Validate parameter space
+        parameter_validation = await _validate_parameter_space(parameter_space, model, session)
+        if not parameter_validation['valid']:
+            raise HTTPException(status_code=400, detail=f"Invalid parameter space: {parameter_validation['errors']}")
+        
+        # Create optimization job
+        job_id = str(uuid.uuid4())
+        optimization_job = {
+            'job_id': job_id,
+            'model_id': model_id,
+            'optimization_strategy': optimization_strategy,
+            'parameter_space': parameter_space,
+            'optimization_budget': optimization_budget,
+            'objective_metrics': objective_metrics,
+            'status': 'queued',
+            'created_at': datetime.utcnow().isoformat(),
+            'progress': 0,
+            'best_parameters': {},
+            'best_score': 0.0,
+            'trial_history': [],
+            'convergence_metrics': {}
+        }
+        
+        # Store job in database
+        await _store_hyperparameter_optimization_job(optimization_job, session)
+        
+        # Start optimization in background
+        background_tasks.add_task(
+            _execute_hyperparameter_optimization,
+            optimization_job, session
+        )
+        
+        return {
+            'success': True,
+            'data': {
+                'job_id': job_id,
+                'model_id': model_id,
+                'optimization_strategy': optimization_strategy,
+                'parameter_space_size': await _calculate_parameter_space_size(parameter_space),
+                'max_trials': optimization_budget.get('max_trials', 100),
+                'max_time_hours': optimization_budget.get('max_time_hours', 24),
+                'objective_metrics': objective_metrics,
+                'status': 'queued',
+                'estimated_completion': await _estimate_optimization_completion_time(
+                    optimization_strategy, parameter_space, optimization_budget, session
+                ),
+                'message': f'Hyperparameter optimization job {job_id} queued for model {model_id}'
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error optimizing hyperparameters: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to optimize hyperparameters: {str(e)}")
+
+@router.post("/models/train")
+async def start_training(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Start advanced model training with intelligent monitoring"""
+    try:
+        model_config = config.get('modelConfig', {})
+        training_data_id = config.get('trainingDataId')
+        hyperparameters = config.get('hyperparameters', {})
+        training_strategy = config.get('strategy', 'standard')  # standard, distributed, federated
+        monitoring_config = config.get('monitoringConfig', {})
+        
+        # Validate training data
+        training_data = await _validate_training_data(training_data_id, session)
+        if not training_data['valid']:
+            raise HTTPException(status_code=400, detail=f"Invalid training data: {training_data['errors']}")
+        
+        # Create training job
+        job_id = str(uuid.uuid4())
+        model_id = str(uuid.uuid4())
+        
+        training_job = {
+            'job_id': job_id,
+            'model_id': model_id,
+            'model_config': model_config,
+            'training_data_id': training_data_id,
+            'hyperparameters': hyperparameters,
+            'training_strategy': training_strategy,
+            'monitoring_config': monitoring_config,
+            'status': 'queued',
+            'created_at': datetime.utcnow().isoformat(),
+            'progress': 0,
+            'current_epoch': 0,
+            'training_metrics': {},
+            'validation_metrics': {},
+            'resource_usage': {}
+        }
+        
+        # Store job in database
+        await _store_training_job(training_job, session)
+        
+        # Start training in background
+        background_tasks.add_task(
+            _execute_model_training,
+            training_job, session
+        )
+        
+        return {
+            'success': True,
+            'data': {
+                'job_id': job_id,
+                'model_id': model_id,
+                'training_strategy': training_strategy,
+                'estimated_training_time': await _estimate_training_time(
+                    model_config, training_data_id, session
+                ),
+                'resource_requirements': await _calculate_training_resource_requirements(
+                    model_config, training_strategy, session
+                ),
+                'monitoring_enabled': bool(monitoring_config),
+                'status': 'queued',
+                'message': f'Training job {job_id} queued for new model {model_id}'
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting training: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
+
+# Additional ML endpoints would continue here...
+# This provides comprehensive ML functionality with advanced algorithms

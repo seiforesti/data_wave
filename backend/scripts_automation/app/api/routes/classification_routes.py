@@ -1380,5 +1380,728 @@ async def classification_health_check():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
+# ============================================================================
+# ADVANCED API ENDPOINTS - MISSING IMPLEMENTATIONS
+# ============================================================================
+
+# Framework Validation and Management Endpoints
+@router.post("/frameworks/validate")
+async def validate_frameworks(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Advanced framework validation with conflict detection"""
+    try:
+        framework_ids = request.get('frameworkIds', [])
+        
+        # Validate framework existence and status
+        validation_results = []
+        for framework_id in framework_ids:
+            framework = session.query(ClassificationFramework).filter_by(id=framework_id).first()
+            if not framework:
+                validation_results.append({
+                    'frameworkId': framework_id,
+                    'isValid': False,
+                    'message': f'Framework {framework_id} not found'
+                })
+                continue
+                
+            if not framework.is_active:
+                validation_results.append({
+                    'frameworkId': framework_id,
+                    'isValid': False,
+                    'message': f'Framework {framework_id} is inactive'
+                })
+                continue
+                
+            # Check framework dependencies
+            dependencies_valid = await classification_service.validate_framework_dependencies(framework_id, session)
+            if not dependencies_valid:
+                validation_results.append({
+                    'frameworkId': framework_id,
+                    'isValid': False,
+                    'message': f'Framework {framework_id} has unmet dependencies'
+                })
+                continue
+                
+            validation_results.append({
+                'frameworkId': framework_id,
+                'isValid': True,
+                'message': f'Framework {framework_id} is valid'
+            })
+        
+        overall_valid = all(result['isValid'] for result in validation_results)
+        return {
+            'success': True,
+            'data': {
+                'isValid': overall_valid,
+                'message': 'All frameworks valid' if overall_valid else 'Some frameworks are invalid',
+                'details': validation_results
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Framework validation failed: {str(e)}")
+
+@router.post("/frameworks/check-conflicts")
+async def check_framework_conflicts(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Check for conflicts between frameworks"""
+    try:
+        framework_ids = request.get('frameworkIds', [])
+        
+        conflicts = await classification_service.detect_framework_conflicts(framework_ids, session)
+        
+        return {
+            'success': True,
+            'data': {
+                'hasConflicts': len(conflicts) > 0,
+                'conflicts': conflicts
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Conflict detection failed: {str(e)}")
+
+@router.get("/frameworks/{framework_id}/capabilities")
+async def get_framework_capabilities(
+    framework_id: str,
+    session: Session = Depends(get_session)
+):
+    """Get framework capabilities and limitations"""
+    try:
+        capabilities = await classification_service.get_framework_capabilities(framework_id, session)
+        
+        return {
+            'success': True,
+            'data': capabilities
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get capabilities: {str(e)}")
+
+@router.get("/frameworks/{framework_id}/security-validation")
+async def validate_framework_security(
+    framework_id: str,
+    session: Session = Depends(get_session)
+):
+    """Validate framework security"""
+    try:
+        security_status = await classification_service.validate_framework_security(framework_id, session)
+        
+        return {
+            'success': True,
+            'data': security_status
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Security validation failed: {str(e)}")
+
+@router.get("/frameworks/{framework_id}/fallback")
+async def get_fallback_framework(
+    framework_id: str,
+    session: Session = Depends(get_session)
+):
+    """Get fallback framework for the specified framework"""
+    try:
+        fallback = await classification_service.get_fallback_framework(framework_id, session)
+        
+        return {
+            'success': True,
+            'data': fallback
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get fallback framework: {str(e)}")
+
+# Rule Validation and Management Endpoints
+@router.post("/rules/validate")
+async def validate_rules(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Advanced rule validation"""
+    try:
+        rule_ids = request.get('ruleIds', [])
+        
+        validation_result = await classification_service.validate_rules(rule_ids, session)
+        
+        return {
+            'success': True,
+            'data': validation_result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rule validation failed: {str(e)}")
+
+@router.post("/rules/analyze-performance")
+async def analyze_rule_performance(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Analyze rule performance impact"""
+    try:
+        rule_ids = request.get('ruleIds', [])
+        
+        performance_analysis = await classification_service.analyze_rule_performance(rule_ids, session)
+        
+        return {
+            'success': True,
+            'data': performance_analysis
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Performance analysis failed: {str(e)}")
+
+@router.post("/rules/optimize")
+async def optimize_rules(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Optimize rules for better performance"""
+    try:
+        optimized_rules = await classification_service.optimize_rules(config, session)
+        
+        return {
+            'success': True,
+            'data': {
+                'optimizedRules': optimized_rules
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rule optimization failed: {str(e)}")
+
+@router.post("/rules/security-validation")
+async def validate_rules_security(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Validate rules for security risks"""
+    try:
+        rule_ids = request.get('ruleIds', [])
+        
+        security_validation = await classification_service.validate_rules_security(rule_ids, session)
+        
+        return {
+            'success': True,
+            'data': security_validation
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Security validation failed: {str(e)}")
+
+# Data Source Management Endpoints
+@router.get("/data-sources/{data_source:path}/metadata")
+async def get_data_source_metadata(
+    data_source: str,
+    session: Session = Depends(get_session)
+):
+    """Get comprehensive data source metadata"""
+    try:
+        metadata = await classification_service.get_data_source_metadata(data_source, session)
+        
+        return {
+            'success': True,
+            'data': metadata
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get metadata: {str(e)}")
+
+@router.post("/data-sources/validate-access")
+async def validate_data_source_access(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Validate data source accessibility"""
+    try:
+        data_source = request.get('dataSource')
+        
+        access_validation = await classification_service.validate_data_source_access(data_source, session)
+        
+        return {
+            'success': True,
+            'data': access_validation
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Access validation failed: {str(e)}")
+
+@router.post("/data-sources/validate-schema")
+async def validate_data_source_schema(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Validate data source schema compatibility"""
+    try:
+        data_source = request.get('dataSource')
+        
+        schema_validation = await classification_service.validate_data_source_schema(data_source, session)
+        
+        return {
+            'success': True,
+            'data': schema_validation
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Schema validation failed: {str(e)}")
+
+@router.post("/data-sources/security-validation")
+async def validate_data_source_security(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Validate data source security"""
+    try:
+        data_source = request.get('dataSource')
+        
+        security_validation = await classification_service.validate_data_source_security(data_source, session)
+        
+        return {
+            'success': True,
+            'data': security_validation
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Security validation failed: {str(e)}")
+
+@router.get("/data-sources/{data_source:path}/sensitivity")
+async def check_data_sensitivity(
+    data_source: str,
+    session: Session = Depends(get_session)
+):
+    """Check data sensitivity requirements"""
+    try:
+        sensitivity_info = await classification_service.check_data_sensitivity(data_source, session)
+        
+        return {
+            'success': True,
+            'data': sensitivity_info
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sensitivity check failed: {str(e)}")
+
+@router.post("/data-sources/preprocess")
+async def preprocess_data(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Advanced data preprocessing"""
+    try:
+        # Start preprocessing in background for large datasets
+        task_id = str(uuid.uuid4())
+        background_tasks.add_task(
+            classification_service.preprocess_data_async,
+            config, task_id, session
+        )
+        
+        # For smaller datasets, process synchronously
+        if config.get('synchronous', False):
+            result = await classification_service.preprocess_data(config, session)
+            return {
+                'success': True,
+                'data': result
+            }
+        else:
+            return {
+                'success': True,
+                'data': {
+                    'taskId': task_id,
+                    'status': 'processing',
+                    'message': 'Data preprocessing started'
+                }
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preprocessing failed: {str(e)}")
+
+@router.post("/data-sources/assess-quality")
+async def assess_data_quality(
+    request: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Assess data quality with comprehensive metrics"""
+    try:
+        data = request.get('data')
+        
+        quality_assessment = await classification_service.assess_data_quality(data, session)
+        
+        return {
+            'success': True,
+            'data': quality_assessment
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Quality assessment failed: {str(e)}")
+
+@router.post("/data-sources/enrich")
+async def enrich_data(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Enrich data with additional features and metadata"""
+    try:
+        enriched_data = await classification_service.enrich_data(config, session)
+        
+        return {
+            'success': True,
+            'data': enriched_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Data enrichment failed: {str(e)}")
+
+@router.post("/data-sources/sample")
+async def sample_data(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Intelligent data sampling for large datasets"""
+    try:
+        sampled_data = await classification_service.sample_data(config, session)
+        
+        return {
+            'success': True,
+            'data': sampled_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Data sampling failed: {str(e)}")
+
+# Data Preparation Endpoints
+@router.post("/data-preparation/text")
+async def prepare_text_data(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Prepare text data for classification"""
+    try:
+        prepared_data = await classification_service.prepare_text_data(config, session)
+        
+        return {
+            'success': True,
+            'data': prepared_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Text preparation failed: {str(e)}")
+
+@router.post("/data-preparation/structured")
+async def prepare_structured_data(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Prepare structured data for classification"""
+    try:
+        prepared_data = await classification_service.prepare_structured_data(config, session)
+        
+        return {
+            'success': True,
+            'data': prepared_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Structured data preparation failed: {str(e)}")
+
+@router.post("/data-preparation/image")
+async def prepare_image_data(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Prepare image data for classification"""
+    try:
+        prepared_data = await classification_service.prepare_image_data(config, session)
+        
+        return {
+            'success': True,
+            'data': prepared_data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image preparation failed: {str(e)}")
+
+# Classification Execution Endpoints
+@router.post("/classification/execute")
+async def execute_classification(
+    config: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session)
+):
+    """Execute advanced classification with intelligent orchestration"""
+    try:
+        # Create execution context
+        execution_id = str(uuid.uuid4())
+        
+        # Start classification in background if not real-time
+        if not config.get('realTime', False):
+            background_tasks.add_task(
+                classification_service.execute_classification_async,
+                config, execution_id, session
+            )
+            
+            return {
+                'success': True,
+                'data': {
+                    'executionId': execution_id,
+                    'status': 'processing',
+                    'estimatedCompletion': await classification_service.estimate_completion_time(config)
+                }
+            }
+        else:
+            # Execute synchronously for real-time processing
+            results = await classification_service.execute_classification(config, session)
+            
+            return {
+                'success': True,
+                'data': results
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Classification execution failed: {str(e)}")
+
+@router.post("/classification/execute-simple")
+async def execute_simple_classification(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Execute simple rule-based classification"""
+    try:
+        results = await classification_service.execute_simple_classification(config, session)
+        
+        return {
+            'success': True,
+            'data': results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Simple classification failed: {str(e)}")
+
+# System Health and Monitoring Endpoints
+@router.get("/system/health")
+async def get_system_health(session: Session = Depends(get_session)):
+    """Get comprehensive system health status"""
+    try:
+        health_status = await classification_service.get_system_health(session)
+        
+        return {
+            'success': True,
+            'data': health_status
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+
+@router.get("/system/performance")
+async def get_performance_metrics(session: Session = Depends(get_session)):
+    """Get system performance metrics"""
+    try:
+        performance_metrics = await classification_service.get_performance_metrics(session)
+        
+        return {
+            'success': True,
+            'data': performance_metrics
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Performance metrics failed: {str(e)}")
+
+@router.get("/system/capacity")
+async def get_capacity_metrics(session: Session = Depends(get_session)):
+    """Get system capacity metrics"""
+    try:
+        capacity_metrics = await classification_service.get_capacity_metrics(session)
+        
+        return {
+            'success': True,
+            'data': capacity_metrics
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Capacity metrics failed: {str(e)}")
+
+@router.get("/system/compliance")
+async def get_compliance_metrics(session: Session = Depends(get_session)):
+    """Get compliance metrics"""
+    try:
+        compliance_metrics = await classification_service.get_compliance_metrics(session)
+        
+        return {
+            'success': True,
+            'data': compliance_metrics
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Compliance metrics failed: {str(e)}")
+
+# Advanced Search Endpoints
+@router.post("/search/classifications")
+async def search_classifications(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Advanced AI-powered classification search"""
+    try:
+        search_results = await classification_service.search_classifications(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@router.post("/search/workflows")
+async def search_workflows(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Search classification workflows"""
+    try:
+        search_results = await classification_service.search_workflows(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Workflow search failed: {str(e)}")
+
+@router.post("/search/frameworks")
+async def search_frameworks(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Search classification frameworks"""
+    try:
+        search_results = await classification_service.search_frameworks(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Framework search failed: {str(e)}")
+
+@router.post("/search/rules")
+async def search_rules(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Search classification rules"""
+    try:
+        search_results = await classification_service.search_rules(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rule search failed: {str(e)}")
+
+@router.post("/search/users")
+async def search_users(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Search users and permissions"""
+    try:
+        search_results = await classification_service.search_users(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"User search failed: {str(e)}")
+
+@router.post("/search/reports")
+async def search_reports(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Search classification reports"""
+    try:
+        search_results = await classification_service.search_reports(config, session)
+        
+        return {
+            'success': True,
+            'data': search_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report search failed: {str(e)}")
+
+@router.post("/search/suggestions")
+async def get_search_suggestions(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Get intelligent search suggestions"""
+    try:
+        suggestions = await classification_service.get_search_suggestions(config, session)
+        
+        return {
+            'success': True,
+            'data': suggestions
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search suggestions failed: {str(e)}")
+
+@router.post("/search/related-queries")
+async def get_related_queries(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Get related search queries"""
+    try:
+        related_queries = await classification_service.get_related_queries(config, session)
+        
+        return {
+            'success': True,
+            'data': related_queries
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Related queries failed: {str(e)}")
+
+@router.post("/search/rank-results")
+async def rank_search_results(
+    config: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Apply intelligent ranking to search results"""
+    try:
+        ranked_results = await classification_service.rank_search_results(config, session)
+        
+        return {
+            'success': True,
+            'data': ranked_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Result ranking failed: {str(e)}")
+
+# Analytics and Tracking Endpoints
+@router.post("/search/track-analytics")
+async def track_search_analytics(
+    data: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Track search analytics"""
+    try:
+        await classification_service.track_search_analytics(data, session)
+        
+        return {
+            'success': True,
+            'message': 'Analytics tracked successfully'
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics tracking failed: {str(e)}")
+
+@router.post("/search/track-interaction")
+async def track_search_interaction(
+    data: Dict[str, Any],
+    session: Session = Depends(get_session)
+):
+    """Track search interactions"""
+    try:
+        await classification_service.track_search_interaction(data, session)
+        
+        return {
+            'success': True,
+            'message': 'Interaction tracked successfully'
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Interaction tracking failed: {str(e)}")
+
+# Emergency Response
+@router.post("/system/emergency-response")
+async def trigger_emergency_response(session: Session = Depends(get_session)):
+    """Trigger emergency response protocols"""
+    try:
+        await classification_service.trigger_emergency_response(session)
+        
+        return {
+            'success': True,
+            'message': 'Emergency response activated'
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Emergency response failed: {str(e)}")
+
 # Export router for main application integration
 __all__ = ["router"]
