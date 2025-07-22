@@ -1217,7 +1217,12 @@ class AdvancedWorkflowOrchestrator implements WorkflowOrchestrator {
 
   // Private helper methods
   private generateExecutionId(): string {
-    return `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate cryptographically secure execution ID with timestamp and UUID
+    const timestamp = Date.now().toString(36);
+    const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+    const randomString = Array.from(randomBytes, byte => byte.toString(36)).join('').slice(0, 12);
+    const machineId = navigator.userAgent.split('').reduce((a, b) => a + b.charCodeAt(0), 0).toString(36).slice(0, 4);
+    return `exec_${timestamp}_${randomString}_${machineId}`;
   }
 
   private initializeMetrics(): ExecutionMetrics {
@@ -1232,13 +1237,173 @@ class AdvancedWorkflowOrchestrator implements WorkflowOrchestrator {
   }
 
   private async validateWorkflowConfig(config: ClassificationWorkflowConfig, execution: WorkflowExecution): Promise<void> {
-    // Implement configuration validation logic
-    if (!config.frameworks || config.frameworks.length === 0) {
-      throw new Error('At least one classification framework must be specified');
+    // Advanced configuration validation with comprehensive checks
+    const validationResults = await Promise.all([
+      this.validateFrameworkConfiguration(config.frameworks, execution),
+      this.validateRuleConfiguration(config.rules, execution),
+      this.validateDataSourceAccess(config.dataSource, execution),
+      this.validateQualityThresholds(config.qualityThreshold, execution),
+      this.validateSecurityRequirements(config, execution),
+      this.validateResourceRequirements(config, execution)
+    ]);
+
+    // Collect validation errors
+    const errors = validationResults.filter(result => !result.isValid);
+    if (errors.length > 0) {
+      const errorMessages = errors.map(e => e.message).join('; ');
+      throw new Error(`Configuration validation failed: ${errorMessages}`);
     }
-    
-    // Security validation
-    await this.securityManager.validateWorkflowConfig(config);
+
+    // Performance optimization validation
+    if (config.parallelProcessing && config.frameworks.length > 10) {
+      console.warn('High framework count with parallel processing may impact performance');
+      execution.errors.push({
+        code: 'PERFORMANCE_WARNING',
+        message: 'Consider reducing framework count or disabling parallel processing',
+        severity: 'low',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { frameworkCount: config.frameworks.length }
+      });
+    }
+
+    // Real-time processing validation
+    if (config.realTimeProcessing && config.qualityThreshold > 0.95) {
+      console.warn('High quality threshold with real-time processing may cause delays');
+    }
+  }
+
+  private async validateFrameworkConfiguration(frameworks: string[], execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    if (!frameworks || frameworks.length === 0) {
+      return { isValid: false, message: 'At least one classification framework must be specified' };
+    }
+
+    // Check framework availability and compatibility
+    const frameworkValidation = await classificationApi.validateFrameworks(frameworks);
+    if (!frameworkValidation.success) {
+      return { isValid: false, message: `Framework validation failed: ${frameworkValidation.message}` };
+    }
+
+    // Check for framework conflicts
+    const conflicts = await classificationApi.checkFrameworkConflicts(frameworks);
+    if (conflicts.success && conflicts.data.hasConflicts) {
+      return { isValid: false, message: `Framework conflicts detected: ${conflicts.data.conflicts.join(', ')}` };
+    }
+
+    return { isValid: true, message: 'Framework configuration valid' };
+  }
+
+  private async validateRuleConfiguration(rules: string[], execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    if (!rules || rules.length === 0) {
+      return { isValid: true, message: 'No rules specified - using default rules' };
+    }
+
+    // Validate rule syntax and dependencies
+    const ruleValidation = await classificationApi.validateRules(rules);
+    if (!ruleValidation.success) {
+      return { isValid: false, message: `Rule validation failed: ${ruleValidation.message}` };
+    }
+
+    // Check rule performance impact
+    const performanceAnalysis = await classificationApi.analyzeRulePerformance(rules);
+    if (performanceAnalysis.success && performanceAnalysis.data.estimatedLatency > 5000) {
+      execution.errors.push({
+        code: 'RULE_PERFORMANCE_WARNING',
+        message: `High rule complexity may cause delays (estimated: ${performanceAnalysis.data.estimatedLatency}ms)`,
+        severity: 'medium',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { estimatedLatency: performanceAnalysis.data.estimatedLatency }
+      });
+    }
+
+    return { isValid: true, message: 'Rule configuration valid' };
+  }
+
+  private async validateDataSourceAccess(dataSource: string, execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    // Validate data source accessibility and permissions
+    const accessValidation = await classificationApi.validateDataSourceAccess(dataSource);
+    if (!accessValidation.success) {
+      return { isValid: false, message: `Data source access validation failed: ${accessValidation.message}` };
+    }
+
+    // Check data source schema compatibility
+    const schemaValidation = await classificationApi.validateDataSourceSchema(dataSource);
+    if (!schemaValidation.success) {
+      return { isValid: false, message: `Data source schema validation failed: ${schemaValidation.message}` };
+    }
+
+    return { isValid: true, message: 'Data source access valid' };
+  }
+
+  private async validateQualityThresholds(threshold: number, execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    if (threshold < 0 || threshold > 1) {
+      return { isValid: false, message: 'Quality threshold must be between 0 and 1' };
+    }
+
+    // Validate threshold against historical performance
+    const historicalPerformance = await classificationApi.getHistoricalPerformance();
+    if (historicalPerformance.success) {
+      const avgAccuracy = historicalPerformance.data.averageAccuracy;
+      if (threshold > avgAccuracy + 0.1) {
+        execution.errors.push({
+          code: 'THRESHOLD_WARNING',
+          message: `Quality threshold (${threshold}) significantly higher than historical average (${avgAccuracy})`,
+          severity: 'medium',
+          recoverable: true,
+          timestamp: new Date(),
+          context: { threshold, historicalAverage: avgAccuracy }
+        });
+      }
+    }
+
+    return { isValid: true, message: 'Quality threshold valid' };
+  }
+
+  private async validateSecurityRequirements(config: ClassificationWorkflowConfig, execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    // Comprehensive security validation
+    const securityValidation = await this.securityManager.validateWorkflowConfig(config);
+    if (!securityValidation.isValid) {
+      return { isValid: false, message: securityValidation.message };
+    }
+
+    // Check data sensitivity requirements
+    const sensitivityCheck = await classificationApi.checkDataSensitivity(config.dataSource);
+    if (sensitivityCheck.success && sensitivityCheck.data.requiresAudit && !config.auditEnabled) {
+      return { isValid: false, message: 'Audit trail required for sensitive data sources' };
+    }
+
+    return { isValid: true, message: 'Security requirements satisfied' };
+  }
+
+  private async validateResourceRequirements(config: ClassificationWorkflowConfig, execution: WorkflowExecution): Promise<{isValid: boolean, message: string}> {
+    // Estimate resource requirements
+    const resourceEstimate = await classificationApi.estimateResourceRequirements({
+      frameworks: config.frameworks,
+      rules: config.rules,
+      dataSource: config.dataSource,
+      parallelProcessing: config.parallelProcessing
+    });
+
+    if (!resourceEstimate.success) {
+      return { isValid: false, message: 'Failed to estimate resource requirements' };
+    }
+
+    // Check available resources
+    const availableResources = await classificationApi.getAvailableResources();
+    if (availableResources.success) {
+      const required = resourceEstimate.data;
+      const available = availableResources.data;
+
+      if (required.cpu > available.cpu * 0.8) {
+        return { isValid: false, message: 'Insufficient CPU resources available' };
+      }
+      if (required.memory > available.memory * 0.8) {
+        return { isValid: false, message: 'Insufficient memory resources available' };
+      }
+    }
+
+    return { isValid: true, message: 'Resource requirements satisfied' };
   }
 
   private async initializeFrameworks(frameworkIds: string[], execution: WorkflowExecution): Promise<any[]> {
@@ -1273,9 +1438,141 @@ class AdvancedWorkflowOrchestrator implements WorkflowOrchestrator {
   }
 
   private async processDataSource(dataSource: string, execution: WorkflowExecution): Promise<any> {
-    // Implement data source processing logic
-    const data = await classificationApi.getDataSource(dataSource);
-    return data.success ? data.data : null;
+    // Advanced data source processing with intelligent preprocessing
+    try {
+      // Step 1: Retrieve data source metadata and configuration
+      const sourceMetadata = await classificationApi.getDataSourceMetadata(dataSource);
+      if (!sourceMetadata.success) {
+        throw new Error(`Failed to retrieve data source metadata: ${sourceMetadata.message}`);
+      }
+
+      // Step 2: Intelligent data preprocessing based on source type
+      const preprocessingConfig = await this.determinePreprocessingStrategy(sourceMetadata.data);
+      
+      // Step 3: Apply data transformations and cleaning
+      const preprocessedData = await classificationApi.preprocessData({
+        dataSource: dataSource,
+        config: preprocessingConfig,
+        includeMetadata: true,
+        validateSchema: true
+      });
+
+      if (!preprocessedData.success) {
+        throw new Error(`Data preprocessing failed: ${preprocessedData.message}`);
+      }
+
+      // Step 4: Data quality assessment
+      const qualityMetrics = await classificationApi.assessDataQuality(preprocessedData.data);
+      if (qualityMetrics.success) {
+        execution.metrics.qualityScore = qualityMetrics.data.overallScore;
+        
+        // Add quality warnings if needed
+        if (qualityMetrics.data.overallScore < 0.8) {
+          execution.errors.push({
+            code: 'DATA_QUALITY_WARNING',
+            message: `Data quality score (${qualityMetrics.data.overallScore}) below recommended threshold`,
+            severity: 'medium',
+            recoverable: true,
+            timestamp: new Date(),
+            context: { qualityMetrics: qualityMetrics.data }
+          });
+        }
+      }
+
+      // Step 5: Data sampling for large datasets
+      const sampledData = await this.applySamplingStrategy(preprocessedData.data, execution);
+
+      // Step 6: Feature extraction and enrichment
+      const enrichedData = await classificationApi.enrichData({
+        data: sampledData,
+        extractFeatures: true,
+        includeStatistics: true,
+        generateEmbeddings: true
+      });
+
+      return enrichedData.success ? enrichedData.data : sampledData;
+
+    } catch (error) {
+      execution.errors.push({
+        code: 'DATA_PROCESSING_FAILED',
+        message: `Data source processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'high',
+        recoverable: false,
+        timestamp: new Date(),
+        context: { dataSource }
+      });
+      throw error;
+    }
+  }
+
+  private async determinePreprocessingStrategy(metadata: any): Promise<any> {
+    // Intelligent preprocessing strategy based on data characteristics
+    const strategy = {
+      cleaningRules: [],
+      transformations: [],
+      validationRules: [],
+      optimizations: []
+    };
+
+    // Determine cleaning rules based on data type and quality
+    if (metadata.dataType === 'text') {
+      strategy.cleaningRules.push('remove_duplicates', 'normalize_whitespace', 'handle_encoding');
+    }
+    if (metadata.dataType === 'structured') {
+      strategy.cleaningRules.push('validate_schema', 'handle_missing_values', 'normalize_formats');
+    }
+
+    // Add transformations based on size and complexity
+    if (metadata.size > 1000000) { // Large dataset
+      strategy.transformations.push('parallel_processing', 'chunked_processing');
+    }
+    if (metadata.complexity === 'high') {
+      strategy.transformations.push('feature_extraction', 'dimensionality_reduction');
+    }
+
+    // Performance optimizations
+    if (metadata.estimatedProcessingTime > 300000) { // > 5 minutes
+      strategy.optimizations.push('caching', 'incremental_processing');
+    }
+
+    return strategy;
+  }
+
+  private async applySamplingStrategy(data: any, execution: WorkflowExecution): Promise<any> {
+    // Intelligent sampling for large datasets
+    const dataSize = Array.isArray(data) ? data.length : (data.records ? data.records.length : 0);
+    
+    if (dataSize <= 10000) {
+      return data; // No sampling needed for small datasets
+    }
+
+    // Determine optimal sample size based on data characteristics
+    const sampleSize = Math.min(
+      Math.max(1000, Math.ceil(dataSize * 0.1)), // At least 1000 or 10% of data
+      50000 // Maximum 50k samples
+    );
+
+    const samplingResult = await classificationApi.sampleData({
+      data: data,
+      sampleSize: sampleSize,
+      method: 'stratified', // Maintain data distribution
+      preserveRareClasses: true
+    });
+
+    if (samplingResult.success) {
+      execution.errors.push({
+        code: 'DATA_SAMPLED',
+        message: `Dataset sampled from ${dataSize} to ${sampleSize} records for processing efficiency`,
+        severity: 'low',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { originalSize: dataSize, sampleSize: sampleSize }
+      });
+      
+      return samplingResult.data;
+    }
+
+    return data; // Return original data if sampling fails
   }
 
   private async executeClassification(frameworks: any[], rules: any[], data: any, config: ClassificationWorkflowConfig, execution: WorkflowExecution): Promise<any[]> {
@@ -1325,40 +1622,597 @@ class AdvancedWorkflowOrchestrator implements WorkflowOrchestrator {
   }
 
   private async classifyWithFramework(framework: any, rules: any[], data: any, config: ClassificationWorkflowConfig): Promise<any[]> {
-    // Implement framework-specific classification logic
-    const results = await classificationApi.executeClassification({
-      frameworkId: framework.id,
-      rules: rules.map(r => r.id),
-      data: data,
-      realTime: config.realTimeProcessing,
-      qualityThreshold: config.qualityThreshold
-    });
-    
-    return results.success ? results.data : [];
-  }
+    // Advanced framework-specific classification with intelligent optimization
+    try {
+      // Step 1: Framework-specific preprocessing
+      const frameworkData = await this.prepareDataForFramework(framework, data);
+      
+      // Step 2: Rule optimization and ordering
+      const optimizedRules = await this.optimizeRulesForFramework(framework, rules);
+      
+      // Step 3: Dynamic batch sizing based on framework capabilities
+      const batchSize = await this.calculateOptimalBatchSize(framework, frameworkData.length);
+      
+      // Step 4: Execute classification with monitoring
+      const executionConfig = {
+        frameworkId: framework.id,
+        rules: optimizedRules.map(r => r.id),
+        data: frameworkData,
+        realTime: config.realTimeProcessing,
+        qualityThreshold: config.qualityThreshold,
+        batchSize: batchSize,
+        enableMetrics: true,
+        enableCaching: framework.supportsCaching,
+        timeoutMs: config.realTimeProcessing ? 30000 : 300000
+      };
 
-  private async generateOutput(results: any[], format: string, execution: WorkflowExecution): Promise<any[]> {
-    // Implement output generation logic based on format
-    switch (format) {
-      case 'json':
-        return results;
-      case 'csv':
-        return this.convertToCSV(results);
-      case 'xml':
-        return this.convertToXML(results);
-      default:
-        return results;
+      const results = await classificationApi.executeClassification(executionConfig);
+      
+      if (!results.success) {
+        throw new Error(`Classification failed: ${results.message}`);
+      }
+
+      // Step 5: Post-process results with confidence scoring
+      const enhancedResults = await this.enhanceClassificationResults(
+        results.data, 
+        framework, 
+        config.qualityThreshold
+      );
+
+      // Step 6: Performance metrics collection
+      await this.collectFrameworkMetrics(framework.id, enhancedResults, executionConfig);
+
+      return enhancedResults;
+
+    } catch (error) {
+      console.error(`Framework ${framework.id} classification failed:`, error);
+      
+      // Attempt fallback classification if available
+      if (framework.fallbackEnabled) {
+        const fallbackResults = await this.executeFallbackClassification(framework, rules, data, config);
+        return fallbackResults;
+      }
+      
+      return [];
     }
   }
 
-  private convertToCSV(results: any[]): any[] {
-    // Implement CSV conversion logic
-    return results; // Simplified for now
+  private async prepareDataForFramework(framework: any, data: any): Promise<any> {
+    // Framework-specific data preparation
+    if (framework.type === 'nlp') {
+      return await classificationApi.prepareTextData({
+        data: data,
+        tokenize: true,
+        removeStopWords: framework.removeStopWords,
+        stemming: framework.enableStemming,
+        encoding: framework.preferredEncoding
+      });
+    } else if (framework.type === 'structured') {
+      return await classificationApi.prepareStructuredData({
+        data: data,
+        normalizeColumns: true,
+        handleMissingValues: framework.missingValueStrategy,
+        scaleFeatures: framework.featureScaling
+      });
+    } else if (framework.type === 'image') {
+      return await classificationApi.prepareImageData({
+        data: data,
+        resize: framework.imageSize,
+        normalize: true,
+        augment: framework.dataAugmentation
+      });
+    }
+    
+    return data;
   }
 
-  private convertToXML(results: any[]): any[] {
-    // Implement XML conversion logic
-    return results; // Simplified for now
+  private async optimizeRulesForFramework(framework: any, rules: any[]): Promise<any[]> {
+    // Intelligent rule optimization based on framework capabilities
+    const ruleOptimization = await classificationApi.optimizeRules({
+      frameworkId: framework.id,
+      rules: rules,
+      optimizationLevel: 'aggressive',
+      considerPerformance: true,
+      maintainAccuracy: true
+    });
+
+    if (ruleOptimization.success) {
+      return ruleOptimization.data.optimizedRules;
+    }
+
+    // Fallback: order rules by estimated performance
+    return rules.sort((a, b) => (b.estimatedPerformance || 0) - (a.estimatedPerformance || 0));
+  }
+
+  private async calculateOptimalBatchSize(framework: any, dataSize: number): Promise<number> {
+    // Dynamic batch size calculation based on framework and data characteristics
+    const frameworkCapabilities = await classificationApi.getFrameworkCapabilities(framework.id);
+    
+    if (frameworkCapabilities.success) {
+      const capabilities = frameworkCapabilities.data;
+      const maxBatchSize = capabilities.maxBatchSize || 1000;
+      const recommendedBatchSize = capabilities.recommendedBatchSize || 100;
+      
+      // Calculate optimal batch size based on available memory and data size
+      const memoryBasedBatch = Math.floor(capabilities.availableMemory / capabilities.memoryPerItem);
+      const optimalBatch = Math.min(maxBatchSize, Math.max(recommendedBatchSize, memoryBasedBatch));
+      
+      return Math.min(optimalBatch, dataSize);
+    }
+
+    // Default batch sizing strategy
+    if (dataSize < 100) return dataSize;
+    if (dataSize < 1000) return 100;
+    if (dataSize < 10000) return 500;
+    return 1000;
+  }
+
+  private async enhanceClassificationResults(results: any[], framework: any, qualityThreshold: number): Promise<any[]> {
+    // Post-processing and enhancement of classification results
+    const enhancedResults = [];
+
+    for (const result of results) {
+      const enhanced = {
+        ...result,
+        framework: framework.id,
+        confidence: result.confidence || 0,
+        metadata: {
+          ...result.metadata,
+          processingTime: result.processingTime,
+          qualityScore: result.qualityScore || 0,
+          enhancementTimestamp: new Date().toISOString()
+        }
+      };
+
+      // Apply confidence calibration
+      if (framework.confidenceCalibration) {
+        enhanced.confidence = await this.calibrateConfidence(enhanced.confidence, framework);
+      }
+
+      // Quality filtering
+      if (enhanced.confidence >= qualityThreshold) {
+        enhancedResults.push(enhanced);
+      }
+    }
+
+    return enhancedResults;
+  }
+
+  private async calibrateConfidence(rawConfidence: number, framework: any): Promise<number> {
+    // Confidence calibration based on framework historical performance
+    const calibration = await classificationApi.getConfidenceCalibration(framework.id);
+    
+    if (calibration.success && calibration.data.calibrationFunction) {
+      // Apply calibration function
+      return calibration.data.calibrationFunction(rawConfidence);
+    }
+
+    // Default calibration: no change
+    return rawConfidence;
+  }
+
+  private async collectFrameworkMetrics(frameworkId: string, results: any[], config: any): Promise<void> {
+    // Collect and store framework performance metrics
+    const metrics = {
+      frameworkId: frameworkId,
+      executionTime: Date.now() - config.startTime,
+      resultCount: results.length,
+      averageConfidence: results.reduce((sum, r) => sum + r.confidence, 0) / results.length,
+      qualityScore: results.reduce((sum, r) => sum + (r.metadata?.qualityScore || 0), 0) / results.length,
+      memoryUsage: config.memoryUsage,
+      cpuUsage: config.cpuUsage,
+      timestamp: new Date().toISOString()
+    };
+
+    await classificationApi.recordFrameworkMetrics(metrics);
+  }
+
+  private async executeFallbackClassification(framework: any, rules: any[], data: any, config: ClassificationWorkflowConfig): Promise<any[]> {
+    // Fallback classification strategy when primary framework fails
+    console.warn(`Executing fallback classification for framework ${framework.id}`);
+    
+    const fallbackFramework = await classificationApi.getFallbackFramework(framework.id);
+    if (fallbackFramework.success) {
+      return await this.classifyWithFramework(fallbackFramework.data, rules, data, config);
+    }
+
+    // Last resort: simple rule-based classification
+    const simpleResults = await classificationApi.executeSimpleClassification({
+      rules: rules.map(r => r.id),
+      data: data,
+      qualityThreshold: config.qualityThreshold * 0.8 // Lower threshold for fallback
+    });
+
+    return simpleResults.success ? simpleResults.data : [];
+  }
+
+  private async generateOutput(results: any[], format: string, execution: WorkflowExecution): Promise<any[]> {
+    // Advanced output generation with intelligent formatting and optimization
+    try {
+      // Add metadata to results
+      const enrichedResults = results.map(result => ({
+        ...result,
+        exportMetadata: {
+          exportTimestamp: new Date().toISOString(),
+          executionId: execution.id,
+          format: format,
+          version: '2.0',
+          totalResults: results.length
+        }
+      }));
+
+      switch (format.toLowerCase()) {
+        case 'json':
+          return await this.generateJSONOutput(enrichedResults, execution);
+        case 'csv':
+          return await this.generateCSVOutput(enrichedResults, execution);
+        case 'xml':
+          return await this.generateXMLOutput(enrichedResults, execution);
+        case 'excel':
+        case 'xlsx':
+          return await this.generateExcelOutput(enrichedResults, execution);
+        case 'parquet':
+          return await this.generateParquetOutput(enrichedResults, execution);
+        case 'avro':
+          return await this.generateAvroOutput(enrichedResults, execution);
+        default:
+          console.warn(`Unsupported format: ${format}, defaulting to JSON`);
+          return await this.generateJSONOutput(enrichedResults, execution);
+      }
+    } catch (error) {
+      execution.errors.push({
+        code: 'OUTPUT_GENERATION_FAILED',
+        message: `Failed to generate ${format} output: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'high',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { format, resultCount: results.length }
+      });
+      
+      // Fallback to JSON format
+      return results;
+    }
+  }
+
+  private async generateJSONOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Enhanced JSON output with schema validation and optimization
+    const jsonOutput = {
+      metadata: {
+        executionId: execution.id,
+        timestamp: new Date().toISOString(),
+        resultCount: results.length,
+        format: 'json',
+        schema: 'classification-results-v2.0'
+      },
+      summary: {
+        totalResults: results.length,
+        averageConfidence: results.reduce((sum, r) => sum + (r.confidence || 0), 0) / results.length,
+        uniqueLabels: [...new Set(results.map(r => r.label))].length,
+        processingTime: execution.endTime ? 
+          new Date(execution.endTime).getTime() - new Date(execution.startTime).getTime() : 0
+      },
+      results: results
+    };
+
+    // Validate JSON schema
+    const validation = await classificationApi.validateOutputSchema(jsonOutput, 'json');
+    if (validation.success && !validation.data.isValid) {
+      execution.errors.push({
+        code: 'SCHEMA_VALIDATION_WARNING',
+        message: 'Output schema validation failed, but continuing with generation',
+        severity: 'low',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { validationErrors: validation.data.errors }
+      });
+    }
+
+    return [jsonOutput];
+  }
+
+  private async generateCSVOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Advanced CSV generation with intelligent column mapping
+    if (results.length === 0) {
+      return ['id,label,confidence,timestamp\n']; // Header only
+    }
+
+    // Analyze data structure to determine optimal columns
+    const columnAnalysis = await this.analyzeResultsStructure(results);
+    const columns = columnAnalysis.recommendedColumns;
+
+    // Generate header
+    let csvContent = columns.join(',') + '\n';
+
+    // Generate rows with proper escaping and formatting
+    for (const result of results) {
+      const row = columns.map(column => {
+        let value = this.getNestedValue(result, column);
+        
+        // Handle different data types
+        if (value === null || value === undefined) {
+          return '';
+        }
+        if (typeof value === 'object') {
+          value = JSON.stringify(value);
+        }
+        if (typeof value === 'string') {
+          // Escape CSV special characters
+          value = value.replace(/"/g, '""');
+          if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+            value = `"${value}"`;
+          }
+        }
+        
+        return value;
+      });
+      
+      csvContent += row.join(',') + '\n';
+    }
+
+    // Add metadata as comments
+    const metadata = [
+      `# Classification Results Export`,
+      `# Execution ID: ${execution.id}`,
+      `# Timestamp: ${new Date().toISOString()}`,
+      `# Total Results: ${results.length}`,
+      `# Columns: ${columns.length}`,
+      ''
+    ].join('\n');
+
+    return [metadata + csvContent];
+  }
+
+  private async generateXMLOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Advanced XML generation with schema compliance
+    let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xmlContent += '<classificationResults>\n';
+    
+    // Add metadata
+    xmlContent += '  <metadata>\n';
+    xmlContent += `    <executionId>${execution.id}</executionId>\n`;
+    xmlContent += `    <timestamp>${new Date().toISOString()}</timestamp>\n`;
+    xmlContent += `    <resultCount>${results.length}</resultCount>\n`;
+    xmlContent += `    <format>xml</format>\n`;
+    xmlContent += '  </metadata>\n';
+    
+    // Add results
+    xmlContent += '  <results>\n';
+    for (const result of results) {
+      xmlContent += '    <result>\n';
+      xmlContent += this.objectToXML(result, '      ');
+      xmlContent += '    </result>\n';
+    }
+    xmlContent += '  </results>\n';
+    xmlContent += '</classificationResults>';
+
+    // Validate XML structure
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+      const parseError = xmlDoc.getElementsByTagName('parsererror');
+      
+      if (parseError.length > 0) {
+        throw new Error('Invalid XML structure generated');
+      }
+    } catch (error) {
+      execution.errors.push({
+        code: 'XML_VALIDATION_FAILED',
+        message: `XML validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        severity: 'medium',
+        recoverable: true,
+        timestamp: new Date(),
+        context: { xmlLength: xmlContent.length }
+      });
+    }
+
+    return [xmlContent];
+  }
+
+  private async generateExcelOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Generate Excel-compatible format (will be processed by backend)
+    const excelData = {
+      metadata: {
+        executionId: execution.id,
+        timestamp: new Date().toISOString(),
+        format: 'excel'
+      },
+      sheets: [
+        {
+          name: 'Classification Results',
+          data: results,
+          formatting: {
+            headers: true,
+            autoFilter: true,
+            freezePane: { row: 1, column: 0 }
+          }
+        },
+        {
+          name: 'Summary',
+          data: [
+            { metric: 'Total Results', value: results.length },
+            { metric: 'Average Confidence', value: results.reduce((sum, r) => sum + (r.confidence || 0), 0) / results.length },
+            { metric: 'Unique Labels', value: [...new Set(results.map(r => r.label))].length },
+            { metric: 'Execution Time', value: execution.endTime ? 
+              new Date(execution.endTime).getTime() - new Date(execution.startTime).getTime() : 0 }
+          ]
+        }
+      ]
+    };
+
+    return [excelData];
+  }
+
+  private async generateParquetOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Generate Parquet-compatible format (optimized for big data)
+    const parquetData = {
+      metadata: {
+        executionId: execution.id,
+        timestamp: new Date().toISOString(),
+        format: 'parquet',
+        schema: await this.generateParquetSchema(results)
+      },
+      data: results,
+      compression: 'snappy',
+      encoding: 'utf8'
+    };
+
+    return [parquetData];
+  }
+
+  private async generateAvroOutput(results: any[], execution: WorkflowExecution): Promise<any[]> {
+    // Generate Avro-compatible format (schema evolution support)
+    const avroSchema = await this.generateAvroSchema(results);
+    
+    const avroData = {
+      metadata: {
+        executionId: execution.id,
+        timestamp: new Date().toISOString(),
+        format: 'avro'
+      },
+      schema: avroSchema,
+      data: results
+    };
+
+    return [avroData];
+  }
+
+  private async analyzeResultsStructure(results: any[]): Promise<{ recommendedColumns: string[] }> {
+    // Analyze data structure to determine optimal column layout
+    const allKeys = new Set<string>();
+    const keyFrequency = new Map<string, number>();
+
+    // Collect all possible keys
+    results.forEach(result => {
+      this.collectKeys(result, '', allKeys, keyFrequency);
+    });
+
+    // Sort keys by frequency and importance
+    const sortedKeys = Array.from(keyFrequency.entries())
+      .sort((a, b) => b[1] - a[1]) // Sort by frequency
+      .map(([key]) => key);
+
+    // Prioritize important fields
+    const priorityFields = ['id', 'label', 'confidence', 'timestamp', 'category', 'score'];
+    const recommendedColumns = [
+      ...priorityFields.filter(field => sortedKeys.includes(field)),
+      ...sortedKeys.filter(key => !priorityFields.includes(key)).slice(0, 20) // Limit to 20 additional columns
+    ];
+
+    return { recommendedColumns };
+  }
+
+  private collectKeys(obj: any, prefix: string, allKeys: Set<string>, frequency: Map<string, number>): void {
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      Object.keys(obj).forEach(key => {
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        allKeys.add(fullKey);
+        frequency.set(fullKey, (frequency.get(fullKey) || 0) + 1);
+        
+        // Recursively collect nested keys (max depth 3)
+        if (prefix.split('.').length < 3) {
+          this.collectKeys(obj[key], fullKey, allKeys, frequency);
+        }
+      });
+    }
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  }
+
+  private objectToXML(obj: any, indent: string): string {
+    let xml = '';
+    
+    for (const [key, value] of Object.entries(obj)) {
+      const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
+      
+      if (value === null || value === undefined) {
+        xml += `${indent}<${sanitizedKey}></${sanitizedKey}>\n`;
+      } else if (typeof value === 'object' && !Array.isArray(value)) {
+        xml += `${indent}<${sanitizedKey}>\n`;
+        xml += this.objectToXML(value, indent + '  ');
+        xml += `${indent}</${sanitizedKey}>\n`;
+      } else if (Array.isArray(value)) {
+        xml += `${indent}<${sanitizedKey}>\n`;
+        value.forEach((item, index) => {
+          xml += `${indent}  <item index="${index}">\n`;
+          if (typeof item === 'object') {
+            xml += this.objectToXML(item, indent + '    ');
+          } else {
+            xml += `${indent}    ${this.escapeXML(String(item))}\n`;
+          }
+          xml += `${indent}  </item>\n`;
+        });
+        xml += `${indent}</${sanitizedKey}>\n`;
+      } else {
+        xml += `${indent}<${sanitizedKey}>${this.escapeXML(String(value))}</${sanitizedKey}>\n`;
+      }
+    }
+    
+    return xml;
+  }
+
+  private escapeXML(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  private async generateParquetSchema(results: any[]): Promise<any> {
+    // Generate Parquet schema based on data structure
+    if (results.length === 0) return null;
+    
+    const sampleResult = results[0];
+    const schema = {
+      type: 'record',
+      name: 'ClassificationResult',
+      fields: []
+    };
+
+    // Analyze field types from sample data
+    for (const [key, value] of Object.entries(sampleResult)) {
+      let fieldType = 'string'; // Default type
+      
+      if (typeof value === 'number') {
+        fieldType = Number.isInteger(value) ? 'int64' : 'double';
+      } else if (typeof value === 'boolean') {
+        fieldType = 'boolean';
+      } else if (value instanceof Date) {
+        fieldType = 'timestamp';
+      }
+
+      schema.fields.push({
+        name: key,
+        type: fieldType,
+        nullable: true
+      });
+    }
+
+    return schema;
+  }
+
+  private async generateAvroSchema(results: any[]): Promise<any> {
+    // Generate Avro schema with evolution support
+    if (results.length === 0) return null;
+    
+    return {
+      type: 'record',
+      name: 'ClassificationResult',
+      namespace: 'com.enterprise.classification',
+      doc: 'Classification result schema with evolution support',
+      fields: [
+        { name: 'id', type: ['null', 'string'], default: null },
+        { name: 'label', type: ['null', 'string'], default: null },
+        { name: 'confidence', type: ['null', 'double'], default: null },
+        { name: 'timestamp', type: ['null', 'string'], default: null },
+        { name: 'metadata', type: ['null', { type: 'map', values: 'string' }], default: null },
+        { name: 'framework', type: ['null', 'string'], default: null },
+        { name: 'version', type: 'string', default: '1.0' }
+      ]
+    };
   }
 
   private async generateAuditTrail(execution: WorkflowExecution, config: ClassificationWorkflowConfig): Promise<void> {
@@ -1560,8 +2414,91 @@ class AdvancedWorkflowOrchestrator implements WorkflowOrchestrator {
   }
 
   private getHealthScore(metric: any): number {
-    // Implement health score calculation
-    return Math.random(); // Simplified for now
+    // Advanced health score calculation with weighted metrics
+    if (!metric) return 0;
+    
+    let score = 0;
+    let weightSum = 0;
+    
+    // Service availability weight: 40%
+    if (metric.services && Array.isArray(metric.services)) {
+      const healthyServices = metric.services.filter((s: any) => s.status === 'healthy').length;
+      const totalServices = metric.services.length;
+      const availabilityScore = totalServices > 0 ? (healthyServices / totalServices) : 1;
+      score += availabilityScore * 0.4;
+      weightSum += 0.4;
+    }
+    
+    // Performance metrics weight: 30%
+    if (metric.performance) {
+      let perfScore = 1;
+      const perf = metric.performance;
+      
+      // Response time impact (lower is better)
+      if (perf.averageResponseTime) {
+        perfScore *= Math.max(0, 1 - (perf.averageResponseTime / 5000)); // 5s baseline
+      }
+      
+      // Error rate impact (lower is better)
+      if (perf.errorRate !== undefined) {
+        perfScore *= Math.max(0, 1 - (perf.errorRate * 10)); // 10% error rate = 0 score
+      }
+      
+      // Throughput impact (higher is better, normalized)
+      if (perf.throughput) {
+        perfScore *= Math.min(1, perf.throughput / 1000); // 1000 req/s baseline
+      }
+      
+      score += perfScore * 0.3;
+      weightSum += 0.3;
+    }
+    
+    // Capacity utilization weight: 20%
+    if (metric.capacity) {
+      let capacityScore = 1;
+      const cap = metric.capacity;
+      
+      // CPU utilization (optimal around 70%)
+      if (cap.cpu && cap.cpu.utilization !== undefined) {
+        const cpuUtil = cap.cpu.utilization / 100;
+        capacityScore *= cpuUtil < 0.7 ? cpuUtil / 0.7 : Math.max(0, 2 - (cpuUtil / 0.7));
+      }
+      
+      // Memory utilization (optimal around 80%)
+      if (cap.memory && cap.memory.utilization !== undefined) {
+        const memUtil = cap.memory.utilization / 100;
+        capacityScore *= memUtil < 0.8 ? memUtil / 0.8 : Math.max(0, 2 - (memUtil / 0.8));
+      }
+      
+      score += capacityScore * 0.2;
+      weightSum += 0.2;
+    }
+    
+    // Security score weight: 10%
+    if (metric.security) {
+      let securityScore = 1;
+      const sec = metric.security;
+      
+      // Threat level impact
+      const threatLevels = { low: 1, medium: 0.7, high: 0.3, critical: 0 };
+      securityScore *= threatLevels[sec.threatLevel as keyof typeof threatLevels] || 0.5;
+      
+      // Active threats impact
+      if (sec.activeThreats) {
+        securityScore *= Math.max(0, 1 - (sec.activeThreats * 0.1));
+      }
+      
+      // Compliance score impact
+      if (sec.complianceScore !== undefined) {
+        securityScore *= sec.complianceScore / 100;
+      }
+      
+      score += securityScore * 0.1;
+      weightSum += 0.1;
+    }
+    
+    // Normalize score
+    return weightSum > 0 ? Math.max(0, Math.min(1, score / weightSum)) : 0;
   }
 
   private getDefaultPerformanceMetrics(): PerformanceMetrics {
@@ -1684,25 +2621,249 @@ class QualityController {
   }
 }
 
-class SecurityManager {
-  async validateWorkflowConfig(config: any): Promise<void> {
-    // Implement security validation
-    if (!config.auditEnabled) {
-      console.warn('Audit trail is disabled - security risk');
+  class SecurityManager {
+    async validateWorkflowConfig(config: any): Promise<{isValid: boolean, message: string}> {
+      // Comprehensive security validation with enterprise-grade checks
+      const validationResults = [];
+      
+      // Audit trail validation
+      if (!config.auditEnabled) {
+        validationResults.push({
+          severity: 'medium',
+          message: 'Audit trail is disabled - required for compliance',
+          code: 'AUDIT_DISABLED'
+        });
+      }
+      
+      // Data source security validation
+      if (config.dataSource) {
+        const dataSourceSecurity = await classificationApi.validateDataSourceSecurity(config.dataSource);
+        if (!dataSourceSecurity.success || !dataSourceSecurity.data.isSecure) {
+          validationResults.push({
+            severity: 'high',
+            message: 'Data source security validation failed',
+            code: 'INSECURE_DATA_SOURCE'
+          });
+        }
+      }
+      
+      // Framework security validation
+      if (config.frameworks && config.frameworks.length > 0) {
+        for (const frameworkId of config.frameworks) {
+          const frameworkSecurity = await classificationApi.validateFrameworkSecurity(frameworkId);
+          if (!frameworkSecurity.success || frameworkSecurity.data.hasVulnerabilities) {
+            validationResults.push({
+              severity: 'high',
+              message: `Framework ${frameworkId} has security vulnerabilities`,
+              code: 'VULNERABLE_FRAMEWORK'
+            });
+          }
+        }
+      }
+      
+      // Rule security validation
+      if (config.rules && config.rules.length > 0) {
+        const rulesSecurity = await classificationApi.validateRulesSecurity(config.rules);
+        if (!rulesSecurity.success || rulesSecurity.data.hasSecurityRisks) {
+          validationResults.push({
+            severity: 'medium',
+            message: 'Classification rules contain potential security risks',
+            code: 'RISKY_RULES'
+          });
+        }
+      }
+      
+      // Access control validation
+      const currentUser = await classificationApi.getCurrentUser();
+      if (currentUser.success) {
+        const permissions = await classificationApi.validateUserPermissions({
+          userId: currentUser.data.id,
+          action: 'execute_workflow',
+          resources: config.frameworks.concat(config.rules)
+        });
+        
+        if (!permissions.success || !permissions.data.hasPermission) {
+          validationResults.push({
+            severity: 'critical',
+            message: 'Insufficient permissions to execute workflow',
+            code: 'PERMISSION_DENIED'
+          });
+        }
+      }
+      
+      // Encryption validation for sensitive data
+      if (config.dataSource && config.dataSource.includes('sensitive')) {
+        if (!config.encryptionEnabled) {
+          validationResults.push({
+            severity: 'high',
+            message: 'Encryption required for sensitive data sources',
+            code: 'ENCRYPTION_REQUIRED'
+          });
+        }
+      }
+      
+      // Network security validation
+      const networkSecurity = await this.validateNetworkSecurity();
+      if (!networkSecurity.isSecure) {
+        validationResults.push({
+          severity: 'medium',
+          message: 'Network security concerns detected',
+          code: 'NETWORK_SECURITY_RISK'
+        });
+      }
+      
+      // Determine overall validation result
+      const criticalIssues = validationResults.filter(r => r.severity === 'critical');
+      const highIssues = validationResults.filter(r => r.severity === 'high');
+      
+      if (criticalIssues.length > 0) {
+        return {
+          isValid: false,
+          message: `Critical security issues: ${criticalIssues.map(i => i.message).join('; ')}`
+        };
+      }
+      
+      if (highIssues.length > 0) {
+        console.warn('High severity security issues detected:', highIssues);
+        return {
+          isValid: false,
+          message: `High severity security issues: ${highIssues.map(i => i.message).join('; ')}`
+        };
+      }
+      
+      // Log medium and low severity issues as warnings
+      const warnings = validationResults.filter(r => ['medium', 'low'].includes(r.severity));
+      if (warnings.length > 0) {
+        console.warn('Security warnings:', warnings);
+      }
+      
+      return {
+        isValid: true,
+        message: 'Security validation passed'
+      };
+    }
+
+    async getSecurityMetrics(): Promise<SecurityMetrics> {
+      try {
+        // Collect real-time security metrics from various sources
+        const [threatAssessment, vulnerabilityReport, accessLogs, complianceCheck] = await Promise.all([
+          this.assessCurrentThreats(),
+          this.scanVulnerabilities(),
+          this.analyzeAccessLogs(),
+          this.checkComplianceStatus()
+        ]);
+        
+        return {
+          threatLevel: threatAssessment.level,
+          activeThreats: threatAssessment.count,
+          vulnerabilities: vulnerabilityReport.totalVulnerabilities,
+          lastSecurityScan: new Date(vulnerabilityReport.lastScanTime),
+          complianceScore: complianceCheck.score,
+          accessAttempts: {
+            successful: accessLogs.successful,
+            failed: accessLogs.failed,
+            blocked: accessLogs.blocked,
+            suspicious: accessLogs.suspicious
+          }
+        };
+      } catch (error) {
+        console.error('Failed to collect security metrics:', error);
+        
+        // Return safe defaults if collection fails
+        return {
+          threatLevel: 'medium', // Conservative default
+          activeThreats: 0,
+          vulnerabilities: 0,
+          lastSecurityScan: new Date(),
+          complianceScore: 50, // Conservative default
+          accessAttempts: { successful: 0, failed: 0, blocked: 0, suspicious: 0 }
+        };
+      }
+    }
+    
+    private async validateNetworkSecurity(): Promise<{isSecure: boolean, issues: string[]}> {
+      const issues = [];
+      
+      // Check SSL/TLS configuration
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        issues.push('Insecure HTTP connection detected');
+      }
+      
+      // Check for mixed content
+      if (document.querySelectorAll('script[src^="http:"], link[href^="http:"]').length > 0) {
+        issues.push('Mixed content detected (HTTP resources on HTTPS page)');
+      }
+      
+      // Validate API endpoints security
+      const apiSecurity = await classificationApi.validateAPIEndpointsSecurity();
+      if (!apiSecurity.success || apiSecurity.data.hasInsecureEndpoints) {
+        issues.push('Insecure API endpoints detected');
+      }
+      
+      return {
+        isSecure: issues.length === 0,
+        issues
+      };
+    }
+    
+    private async assessCurrentThreats(): Promise<{level: 'low' | 'medium' | 'high' | 'critical', count: number}> {
+      const threatAssessment = await classificationApi.getCurrentThreatAssessment();
+      
+      if (threatAssessment.success) {
+        return {
+          level: threatAssessment.data.overallLevel,
+          count: threatAssessment.data.activeThreatCount
+        };
+      }
+      
+      return { level: 'low', count: 0 };
+    }
+    
+    private async scanVulnerabilities(): Promise<{totalVulnerabilities: number, lastScanTime: string}> {
+      const vulnerabilityReport = await classificationApi.getLatestVulnerabilityReport();
+      
+      if (vulnerabilityReport.success) {
+        return {
+          totalVulnerabilities: vulnerabilityReport.data.totalVulnerabilities,
+          lastScanTime: vulnerabilityReport.data.scanTimestamp
+        };
+      }
+      
+      return {
+        totalVulnerabilities: 0,
+        lastScanTime: new Date().toISOString()
+      };
+    }
+    
+    private async analyzeAccessLogs(): Promise<{successful: number, failed: number, blocked: number, suspicious: number}> {
+      const accessAnalysis = await classificationApi.getAccessLogAnalysis({
+        timeRange: '24h',
+        aggregateBy: 'status'
+      });
+      
+      if (accessAnalysis.success) {
+        const data = accessAnalysis.data;
+        return {
+          successful: data.successful || 0,
+          failed: data.failed || 0,
+          blocked: data.blocked || 0,
+          suspicious: data.suspicious || 0
+        };
+      }
+      
+      return { successful: 0, failed: 0, blocked: 0, suspicious: 0 };
+    }
+    
+    private async checkComplianceStatus(): Promise<{score: number}> {
+      const complianceReport = await classificationApi.getComplianceReport();
+      
+      if (complianceReport.success) {
+        return { score: complianceReport.data.overallScore };
+      }
+      
+      return { score: 100 }; // Optimistic default
     }
   }
-
-  async getSecurityMetrics(): Promise<SecurityMetrics> {
-    return {
-      threatLevel: 'low',
-      activeThreats: 0,
-      vulnerabilities: 0,
-      lastSecurityScan: new Date(),
-      complianceScore: 100,
-      accessAttempts: { successful: 0, failed: 0, blocked: 0, suspicious: 0 }
-    };
-  }
-}
 
 // Initialize the advanced workflow orchestrator
 const workflowOrchestrator = new AdvancedWorkflowOrchestrator();
@@ -2514,7 +3675,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         notifications: [
           ...prev.notifications,
           ...healthReport.alerts.map((alert: any) => ({
-            id: `health_${Date.now()}_${Math.random()}`,
+            id: `health_${Date.now()}_${crypto.getRandomValues(new Uint8Array(4)).join('')}`,
             type: alert.severity,
             title: alert.title,
             message: alert.message,
@@ -2734,6 +3895,134 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     }
   }, []);
 
+  // Advanced search result handlers
+  const handleSearchResultClick = useCallback(async (result: any, category: string) => {
+    try {
+      // Track search result interaction
+      await classificationApi.trackSearchInteraction({
+        resultId: result.id,
+        category: category,
+        query: state.searchQuery,
+        timestamp: new Date().toISOString()
+      });
+
+      // Navigate to appropriate view based on category
+      switch (category) {
+        case 'classifications':
+          setState(prev => ({
+            ...prev,
+            currentView: { ...prev.currentView, id: 'classification-detail', name: result.name },
+            currentComponent: 'classification-detail',
+            searchResults: null
+          }));
+          break;
+        
+        case 'models':
+          if (result.type === 'ml') {
+            setState(prev => ({
+              ...prev,
+              currentVersion: 'v2-ml',
+              currentComponent: 'ml-model-orchestrator',
+              searchResults: null
+            }));
+          } else if (result.type === 'ai') {
+            setState(prev => ({
+              ...prev,
+              currentVersion: 'v3-ai',
+              currentComponent: 'ai-intelligence-orchestrator',
+              searchResults: null
+            }));
+          }
+          break;
+        
+        case 'workflows':
+          setState(prev => ({
+            ...prev,
+            currentVersion: 'orchestration',
+            currentComponent: 'classification-workflow',
+            searchResults: null
+          }));
+          break;
+        
+        case 'frameworks':
+          setState(prev => ({
+            ...prev,
+            currentVersion: 'v1-manual',
+            currentComponent: 'framework-manager',
+            searchResults: null
+          }));
+          break;
+        
+        case 'rules':
+          setState(prev => ({
+            ...prev,
+            currentVersion: 'v1-manual',
+            currentComponent: 'rule-engine',
+            searchResults: null
+          }));
+          break;
+        
+        case 'users':
+          // Navigate to user management or profile
+          setState(prev => ({
+            ...prev,
+            currentView: { ...prev.currentView, id: 'user-profile', name: result.name },
+            searchResults: null
+          }));
+          break;
+        
+        case 'reports':
+          await handleViewReports();
+          setState(prev => ({ ...prev, searchResults: null }));
+          break;
+        
+        default:
+          console.warn(`Unknown search category: ${category}`);
+      }
+    } catch (error) {
+      console.error('Failed to handle search result click:', error);
+    }
+  }, [state.searchQuery]);
+
+  const handleViewAllResults = useCallback(async (category: string) => {
+    try {
+      // Navigate to dedicated search results view for category
+      const searchResultsView = {
+        id: `search-results-${category}`,
+        name: `Search Results: ${category}`,
+        type: 'search-results' as const,
+        category: category,
+        query: state.searchQuery
+      };
+
+      setState(prev => ({
+        ...prev,
+        currentView: searchResultsView,
+        currentComponent: 'search-results',
+        breadcrumbs: [
+          ...prev.breadcrumbs,
+          { 
+            id: searchResultsView.id, 
+            label: `Search: ${category}`, 
+            href: `/search/${category}` 
+          }
+        ],
+        searchResults: null
+      }));
+
+      // Track "view all" interaction
+      await classificationApi.trackSearchInteraction({
+        action: 'view_all',
+        category: category,
+        query: state.searchQuery,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('Failed to view all search results:', error);
+    }
+  }, [state.searchQuery]);
+
   const handleNotificationAction = useCallback(async (notificationId: string, actionId: string) => {
     try {
       // Execute the notification action through the workflow orchestrator
@@ -2766,10 +4055,158 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     document.documentElement.className = theme;
   }, []);
 
-  const handleSearch = useCallback((query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
     setState(prev => ({ ...prev, searchQuery: query }));
-    // Implement search logic
+    
+    if (!query.trim()) {
+      // Clear search results if query is empty
+      setState(prev => ({ ...prev, searchResults: null }));
+      return;
+    }
+
+    try {
+      // Advanced intelligent search with multi-source querying
+      const searchConfig = {
+        query: query.trim(),
+        sources: ['classifications', 'models', 'workflows', 'frameworks', 'rules', 'users', 'reports'],
+        searchType: 'intelligent', // Uses AI-powered semantic search
+        filters: {
+          includeArchived: false,
+          minRelevanceScore: 0.3,
+          maxResults: 50
+        },
+        enableFuzzyMatching: true,
+        enableSemanticSearch: true,
+        includeMetadata: true,
+        rankByRelevance: true
+      };
+
+      // Execute parallel search across all sources
+      const [
+        classificationResults,
+        modelResults, 
+        workflowResults,
+        frameworkResults,
+        ruleResults,
+        userResults,
+        reportResults
+      ] = await Promise.allSettled([
+        classificationApi.searchClassifications(searchConfig),
+        mlApi.searchModels({ ...searchConfig, source: 'models' }),
+        classificationApi.searchWorkflows({ ...searchConfig, source: 'workflows' }),
+        classificationApi.searchFrameworks({ ...searchConfig, source: 'frameworks' }),
+        classificationApi.searchRules({ ...searchConfig, source: 'rules' }),
+        classificationApi.searchUsers({ ...searchConfig, source: 'users' }),
+        classificationApi.searchReports({ ...searchConfig, source: 'reports' })
+      ]);
+
+      // Aggregate and rank results
+      const aggregatedResults = {
+        query: query,
+        timestamp: new Date().toISOString(),
+        totalResults: 0,
+        categories: {
+          classifications: classificationResults.status === 'fulfilled' ? classificationResults.value.data : [],
+          models: modelResults.status === 'fulfilled' ? modelResults.value.data : [],
+          workflows: workflowResults.status === 'fulfilled' ? workflowResults.value.data : [],
+          frameworks: frameworkResults.status === 'fulfilled' ? frameworkResults.value.data : [],
+          rules: ruleResults.status === 'fulfilled' ? ruleResults.value.data : [],
+          users: userResults.status === 'fulfilled' ? userResults.value.data : [],
+          reports: reportResults.status === 'fulfilled' ? reportResults.value.data : []
+        },
+        suggestions: await generateSearchSuggestions(query),
+        relatedQueries: await generateRelatedQueries(query)
+      };
+
+      // Calculate total results
+      aggregatedResults.totalResults = Object.values(aggregatedResults.categories)
+        .reduce((sum, results) => sum + (Array.isArray(results) ? results.length : 0), 0);
+
+      // Apply intelligent ranking across all results
+      const rankedResults = await applyIntelligentRanking(aggregatedResults, query);
+
+      setState(prev => ({
+        ...prev,
+        searchResults: rankedResults,
+        searchSuggestions: rankedResults.suggestions
+      }));
+
+      // Track search analytics
+      await classificationApi.trackSearchAnalytics({
+        query: query,
+        resultCount: aggregatedResults.totalResults,
+        timestamp: new Date().toISOString(),
+        userId: 'current-user',
+        sources: searchConfig.sources
+      });
+
+    } catch (error) {
+      console.error('Search failed:', error);
+      setState(prev => ({
+        ...prev,
+        searchResults: {
+          query: query,
+          error: 'Search temporarily unavailable',
+          totalResults: 0,
+          categories: {},
+          suggestions: [],
+          relatedQueries: []
+        }
+      }));
+    }
   }, []);
+
+  // Advanced search helper functions
+  const generateSearchSuggestions = async (query: string): Promise<string[]> => {
+    try {
+      const suggestions = await classificationApi.getSearchSuggestions({
+        query: query,
+        maxSuggestions: 5,
+        includeTypoCorrection: true,
+        includeSemanticSimilar: true
+      });
+      
+      return suggestions.success ? suggestions.data : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const generateRelatedQueries = async (query: string): Promise<string[]> => {
+    try {
+      const relatedQueries = await classificationApi.getRelatedQueries({
+        query: query,
+        maxQueries: 3,
+        basedOnUserHistory: true,
+        basedOnPopularQueries: true
+      });
+      
+      return relatedQueries.success ? relatedQueries.data : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const applyIntelligentRanking = async (results: any, query: string): Promise<any> => {
+    try {
+      // Apply AI-powered ranking algorithm
+      const rankingResult = await classificationApi.rankSearchResults({
+        results: results,
+        query: query,
+        userContext: {
+          recentActivity: state.recentActivities.slice(0, 10),
+          preferences: state.userPreferences,
+          currentView: state.currentView.id
+        },
+        rankingAlgorithm: 'ml-enhanced' // Uses ML model for ranking
+      });
+
+      return rankingResult.success ? rankingResult.data : results;
+    } catch (error) {
+      console.error('Ranking failed, using original results:', error);
+      return results;
+    }
+  };
 
   // Utility functions
   const formatUptime = (uptime: number): string => {
@@ -3020,11 +4457,159 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search classifications, models, or workflows..."
+              placeholder="Search classifications, models, workflows, and more..."
               value={state.searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-16"
             />
+            {/* Advanced Search Results Dropdown */}
+            {state.searchResults && state.searchQuery && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-96 overflow-hidden">
+                <ScrollArea className="max-h-96">
+                  <div className="p-4">
+                    {/* Search Summary */}
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-sm text-muted-foreground">
+                        {state.searchResults.totalResults} results for "{state.searchResults.query}"
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setState(prev => ({ ...prev, searchResults: null, searchQuery: '' }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Search Categories */}
+                    {Object.entries(state.searchResults.categories).map(([category, results]) => {
+                      if (!Array.isArray(results) || results.length === 0) return null;
+                      
+                      return (
+                        <div key={category} className="mb-4">
+                          <h4 className="text-sm font-medium capitalize mb-2 flex items-center">
+                            {category === 'classifications' && <Database className="h-4 w-4 mr-2" />}
+                            {category === 'models' && <Brain className="h-4 w-4 mr-2" />}
+                            {category === 'workflows' && <Workflow className="h-4 w-4 mr-2" />}
+                            {category === 'frameworks' && <Building className="h-4 w-4 mr-2" />}
+                            {category === 'rules' && <Zap className="h-4 w-4 mr-2" />}
+                            {category === 'users' && <Users className="h-4 w-4 mr-2" />}
+                            {category === 'reports' && <FileText className="h-4 w-4 mr-2" />}
+                            {category} ({results.length})
+                          </h4>
+                          <div className="space-y-1">
+                            {results.slice(0, 3).map((result: any, index: number) => (
+                              <div
+                                key={result.id || index}
+                                className="p-2 rounded hover:bg-muted cursor-pointer transition-colors"
+                                onClick={() => handleSearchResultClick(result, category)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate">
+                                      {result.name || result.title || result.label || 'Unnamed'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {result.description || result.summary || 'No description'}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2 ml-2">
+                                    {result.confidence && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {(result.confidence * 100).toFixed(0)}%
+                                      </Badge>
+                                    )}
+                                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            {results.length > 3 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full text-xs"
+                                onClick={() => handleViewAllResults(category)}
+                              >
+                                View all {results.length} {category}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Search Suggestions */}
+                    {state.searchResults.suggestions && state.searchResults.suggestions.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium mb-2">Suggestions</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {state.searchResults.suggestions.map((suggestion, index) => (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-6"
+                              onClick={() => handleSearch(suggestion)}
+                            >
+                              {suggestion}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Related Queries */}
+                    {state.searchResults.relatedQueries && state.searchResults.relatedQueries.length > 0 && (
+                      <div className="border-t pt-4 mt-4">
+                        <h4 className="text-sm font-medium mb-2">Related Searches</h4>
+                        <div className="space-y-1">
+                          {state.searchResults.relatedQueries.map((query, index) => (
+                            <Button
+                              key={index}
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs justify-start h-6 w-full"
+                              onClick={() => handleSearch(query)}
+                            >
+                              <Search className="h-3 w-3 mr-2" />
+                              {query}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Results */}
+                    {state.searchResults.totalResults === 0 && !state.searchResults.error && (
+                      <div className="text-center py-8">
+                        <Search className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No results found</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Try different keywords or check suggestions above
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Error State */}
+                    {state.searchResults.error && (
+                      <div className="text-center py-8">
+                        <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                        <p className="text-sm text-red-600">{state.searchResults.error}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => handleSearch(state.searchQuery)}
+                        >
+                          Try Again
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
           </div>
         </div>
 
