@@ -1144,6 +1144,510 @@ export class ClassificationApi {
     this.results.clearCache()
     this.auditTrail.clearCache()
   }
+
+  // ============================================================================
+  // MISSING API METHODS - ADVANCED IMPLEMENTATIONS
+  // ============================================================================
+
+  // Framework Validation and Management
+  async validateFrameworks(frameworkIds: string[]): Promise<ApiResponse<{isValid: boolean, message: string}>> {
+    return this.request<{isValid: boolean, message: string}>({
+      method: 'POST',
+      endpoint: '/frameworks/validate',
+      data: { frameworkIds },
+      timeout: 15000
+    });
+  }
+
+  async checkFrameworkConflicts(frameworkIds: string[]): Promise<ApiResponse<{hasConflicts: boolean, conflicts: string[]}>> {
+    return this.request<{hasConflicts: boolean, conflicts: string[]}>({
+      method: 'POST',
+      endpoint: '/frameworks/check-conflicts',
+      data: { frameworkIds }
+    });
+  }
+
+  async getFrameworkCapabilities(frameworkId: string): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: `/frameworks/${frameworkId}/capabilities`
+    });
+  }
+
+  async validateFrameworkSecurity(frameworkId: string): Promise<ApiResponse<{isSecure: boolean, hasVulnerabilities: boolean}>> {
+    return this.request<{isSecure: boolean, hasVulnerabilities: boolean}>({
+      method: 'GET',
+      endpoint: `/frameworks/${frameworkId}/security-validation`
+    });
+  }
+
+  async getFallbackFramework(frameworkId: string): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: `/frameworks/${frameworkId}/fallback`
+    });
+  }
+
+  // Rule Validation and Management
+  async validateRules(ruleIds: string[]): Promise<ApiResponse<{isValid: boolean, message: string}>> {
+    return this.request<{isValid: boolean, message: string}>({
+      method: 'POST',
+      endpoint: '/rules/validate',
+      data: { ruleIds }
+    });
+  }
+
+  async analyzeRulePerformance(ruleIds: string[]): Promise<ApiResponse<{estimatedLatency: number}>> {
+    return this.request<{estimatedLatency: number}>({
+      method: 'POST',
+      endpoint: '/rules/analyze-performance',
+      data: { ruleIds }
+    });
+  }
+
+  async optimizeRules(config: any): Promise<ApiResponse<{optimizedRules: any[]}>> {
+    return this.request<{optimizedRules: any[]}>({
+      method: 'POST',
+      endpoint: '/rules/optimize',
+      data: config
+    });
+  }
+
+  async validateRulesSecurity(ruleIds: string[]): Promise<ApiResponse<{hasSecurityRisks: boolean}>> {
+    return this.request<{hasSecurityRisks: boolean}>({
+      method: 'POST',
+      endpoint: '/rules/security-validation',
+      data: { ruleIds }
+    });
+  }
+
+  // Data Source Management
+  async getDataSourceMetadata(dataSource: string): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: `/data-sources/${encodeURIComponent(dataSource)}/metadata`
+    });
+  }
+
+  async validateDataSourceAccess(dataSource: string): Promise<ApiResponse<{isAccessible: boolean, message: string}>> {
+    return this.request<{isAccessible: boolean, message: string}>({
+      method: 'POST',
+      endpoint: '/data-sources/validate-access',
+      data: { dataSource }
+    });
+  }
+
+  async validateDataSourceSchema(dataSource: string): Promise<ApiResponse<{isValid: boolean, message: string}>> {
+    return this.request<{isValid: boolean, message: string}>({
+      method: 'POST',
+      endpoint: '/data-sources/validate-schema',
+      data: { dataSource }
+    });
+  }
+
+  async validateDataSourceSecurity(dataSource: string): Promise<ApiResponse<{isSecure: boolean}>> {
+    return this.request<{isSecure: boolean}>({
+      method: 'POST',
+      endpoint: '/data-sources/security-validation',
+      data: { dataSource }
+    });
+  }
+
+  async checkDataSensitivity(dataSource: string): Promise<ApiResponse<{requiresAudit: boolean}>> {
+    return this.request<{requiresAudit: boolean}>({
+      method: 'GET',
+      endpoint: `/data-sources/${encodeURIComponent(dataSource)}/sensitivity`
+    });
+  }
+
+  async preprocessData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-sources/preprocess',
+      data: config,
+      timeout: 60000
+    });
+  }
+
+  async assessDataQuality(data: any): Promise<ApiResponse<{overallScore: number}>> {
+    return this.request<{overallScore: number}>({
+      method: 'POST',
+      endpoint: '/data-sources/assess-quality',
+      data: { data },
+      timeout: 30000
+    });
+  }
+
+  async enrichData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-sources/enrich',
+      data: config,
+      timeout: 45000
+    });
+  }
+
+  async sampleData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-sources/sample',
+      data: config
+    });
+  }
+
+  // Data Preparation Methods
+  async prepareTextData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-preparation/text',
+      data: config,
+      timeout: 30000
+    });
+  }
+
+  async prepareStructuredData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-preparation/structured',
+      data: config,
+      timeout: 30000
+    });
+  }
+
+  async prepareImageData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data-preparation/image',
+      data: config,
+      timeout: 60000
+    });
+  }
+
+  // Classification Execution
+  async executeClassification(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/classification/execute',
+      data: config,
+      timeout: config.timeoutMs || 300000
+    });
+  }
+
+  async executeSimpleClassification(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/classification/execute-simple',
+      data: config,
+      timeout: 60000
+    });
+  }
+
+  async getConfidenceCalibration(frameworkId: string): Promise<ApiResponse<{calibrationFunction: Function}>> {
+    return this.request<{calibrationFunction: Function}>({
+      method: 'GET',
+      endpoint: `/frameworks/${frameworkId}/confidence-calibration`
+    });
+  }
+
+  async recordFrameworkMetrics(metrics: any): Promise<ApiResponse<void>> {
+    return this.request<void>({
+      method: 'POST',
+      endpoint: '/frameworks/metrics',
+      data: metrics
+    });
+  }
+
+  // Performance and Historical Data
+  async getHistoricalPerformance(): Promise<ApiResponse<{averageAccuracy: number}>> {
+    return this.request<{averageAccuracy: number}>({
+      method: 'GET',
+      endpoint: '/analytics/historical-performance'
+    });
+  }
+
+  async estimateResourceRequirements(config: any): Promise<ApiResponse<{cpu: number, memory: number}>> {
+    return this.request<{cpu: number, memory: number}>({
+      method: 'POST',
+      endpoint: '/resources/estimate',
+      data: config
+    });
+  }
+
+  async getAvailableResources(): Promise<ApiResponse<{cpu: number, memory: number}>> {
+    return this.request<{cpu: number, memory: number}>({
+      method: 'GET',
+      endpoint: '/resources/available'
+    });
+  }
+
+  async getCurrentSystemLoad(): Promise<ApiResponse<{load: number}>> {
+    return this.request<{load: number}>({
+      method: 'GET',
+      endpoint: '/system/load'
+    });
+  }
+
+  // System Health and Monitoring
+  async getSystemHealth(): Promise<ApiResponse<{overall: string, services: any[]}>> {
+    return this.request<{overall: string, services: any[]}>({
+      method: 'GET',
+      endpoint: '/system/health'
+    });
+  }
+
+  async getPerformanceMetrics(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/system/performance'
+    });
+  }
+
+  async getCapacityMetrics(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/system/capacity'
+    });
+  }
+
+  async getComplianceMetrics(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/system/compliance'
+    });
+  }
+
+  async getResourceAllocation(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/resources/allocation'
+    });
+  }
+
+  async getUtilizationPatterns(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/resources/utilization-patterns'
+    });
+  }
+
+  // Security and Compliance
+  async getCurrentUser(): Promise<ApiResponse<{id: string, name: string}>> {
+    return this.request<{id: string, name: string}>({
+      method: 'GET',
+      endpoint: '/auth/current-user'
+    });
+  }
+
+  async validateUserPermissions(config: any): Promise<ApiResponse<{hasPermission: boolean}>> {
+    return this.request<{hasPermission: boolean}>({
+      method: 'POST',
+      endpoint: '/auth/validate-permissions',
+      data: config
+    });
+  }
+
+  async validateAPIEndpointsSecurity(): Promise<ApiResponse<{hasInsecureEndpoints: boolean}>> {
+    return this.request<{hasInsecureEndpoints: boolean}>({
+      method: 'GET',
+      endpoint: '/security/api-endpoints'
+    });
+  }
+
+  async getCurrentThreatAssessment(): Promise<ApiResponse<{overallLevel: string, activeThreatCount: number}>> {
+    return this.request<{overallLevel: string, activeThreatCount: number}>({
+      method: 'GET',
+      endpoint: '/security/threat-assessment'
+    });
+  }
+
+  async getLatestVulnerabilityReport(): Promise<ApiResponse<{totalVulnerabilities: number, scanTimestamp: string}>> {
+    return this.request<{totalVulnerabilities: number, scanTimestamp: string}>({
+      method: 'GET',
+      endpoint: '/security/vulnerability-report'
+    });
+  }
+
+  async getAccessLogAnalysis(config: any): Promise<ApiResponse<{successful: number, failed: number, blocked: number, suspicious: number}>> {
+    return this.request<{successful: number, failed: number, blocked: number, suspicious: number}>({
+      method: 'POST',
+      endpoint: '/security/access-log-analysis',
+      data: config
+    });
+  }
+
+  async getComplianceReport(): Promise<ApiResponse<{overallScore: number}>> {
+    return this.request<{overallScore: number}>({
+      method: 'GET',
+      endpoint: '/compliance/report'
+    });
+  }
+
+  // Data Import/Export
+  async getSupportedDataFormats(): Promise<ApiResponse<{extension: string}[]>> {
+    return this.request<{extension: string}[]>({
+      method: 'GET',
+      endpoint: '/data/supported-formats'
+    });
+  }
+
+  async importData(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/data/import',
+      data: config,
+      timeout: 120000
+    });
+  }
+
+  async exportResults(config: any): Promise<ApiResponse<{content: any, mimeType: string, filename: string}>> {
+    return this.request<{content: any, mimeType: string, filename: string}>({
+      method: 'POST',
+      endpoint: '/data/export',
+      data: config,
+      timeout: 60000
+    });
+  }
+
+  // Task Scheduling
+  async scheduleTask(config: any): Promise<ApiResponse<{id: string}>> {
+    return this.request<{id: string}>({
+      method: 'POST',
+      endpoint: '/tasks/schedule',
+      data: config
+    });
+  }
+
+  async getLowUsagePeriods(): Promise<ApiResponse<{nextOptimal: Date}>> {
+    return this.request<{nextOptimal: Date}>({
+      method: 'GET',
+      endpoint: '/system/low-usage-periods'
+    });
+  }
+
+  // Reporting
+  async generateReports(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/reports/generate',
+      data: config,
+      timeout: 120000
+    });
+  }
+
+  // Emergency Response
+  async triggerEmergencyResponse(): Promise<ApiResponse<void>> {
+    return this.request<void>({
+      method: 'POST',
+      endpoint: '/system/emergency-response'
+    });
+  }
+
+  // Search and Analytics
+  async searchClassifications(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/classifications',
+      data: config
+    });
+  }
+
+  async searchWorkflows(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/workflows',
+      data: config
+    });
+  }
+
+  async searchFrameworks(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/frameworks',
+      data: config
+    });
+  }
+
+  async searchRules(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/rules',
+      data: config
+    });
+  }
+
+  async searchUsers(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/users',
+      data: config
+    });
+  }
+
+  async searchReports(config: any): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>({
+      method: 'POST',
+      endpoint: '/search/reports',
+      data: config
+    });
+  }
+
+  async getSearchSuggestions(config: any): Promise<ApiResponse<string[]>> {
+    return this.request<string[]>({
+      method: 'POST',
+      endpoint: '/search/suggestions',
+      data: config
+    });
+  }
+
+  async getRelatedQueries(config: any): Promise<ApiResponse<string[]>> {
+    return this.request<string[]>({
+      method: 'POST',
+      endpoint: '/search/related-queries',
+      data: config
+    });
+  }
+
+  async rankSearchResults(config: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/search/rank-results',
+      data: config
+    });
+  }
+
+  async trackSearchAnalytics(data: any): Promise<ApiResponse<void>> {
+    return this.request<void>({
+      method: 'POST',
+      endpoint: '/search/track-analytics',
+      data: data
+    });
+  }
+
+  async trackSearchInteraction(data: any): Promise<ApiResponse<void>> {
+    return this.request<void>({
+      method: 'POST',
+      endpoint: '/search/track-interaction',
+      data: data
+    });
+  }
+
+  // Output Validation
+  async validateOutputSchema(data: any, format: string): Promise<ApiResponse<{isValid: boolean, errors: string[]}>> {
+    return this.request<{isValid: boolean, errors: string[]}>({
+      method: 'POST',
+      endpoint: '/validation/output-schema',
+      data: { data, format }
+    });
+  }
+
+  // Audit Trail
+  async createAuditEntry(entry: any): Promise<ApiResponse<void>> {
+    return this.request<void>({
+      method: 'POST',
+      endpoint: '/audit/create-entry',
+      data: entry
+    });
+  }
 }
 
 // Default export

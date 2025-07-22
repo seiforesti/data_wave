@@ -676,7 +676,70 @@ const defaultMLApiConfig: MLApiConfig = {
   }
 };
 
-// Export singleton instance
-export const mlApi = new MLApiClient(defaultMLApiConfig);
-export { MLApiClient };
+}
+
+// ============================================================================
+// MISSING ML API METHODS - ADVANCED IMPLEMENTATIONS
+// ============================================================================
+
+// Add missing methods to MLApiClient class
+class EnhancedMLApiClient extends MLApiClient {
+  // Model Health and Management
+  async getModelHealthMetrics(): Promise<any> {
+    return this.get('/models/health-metrics');
+  }
+
+  async startRetraining(config: any): Promise<any> {
+    return this.post('/models/retrain', config);
+  }
+
+  async scaleModel(config: any): Promise<any> {
+    return this.post('/models/scale', config);
+  }
+
+  async predictWorkloadTrends(): Promise<any> {
+    return this.get('/analytics/workload-trends');
+  }
+
+  async searchModels(config: any): Promise<any> {
+    return this.post('/search/models', config);
+  }
+
+  async prepareTrainingData(config: any): Promise<any> {
+    return this.post('/data/prepare-training', config);
+  }
+
+  async optimizeHyperparameters(config: any): Promise<any> {
+    return this.post('/models/optimize-hyperparameters', config);
+  }
+
+  async startTraining(config: any): Promise<any> {
+    return this.post('/models/train', config);
+  }
+
+  async validateModel(config: any): Promise<any> {
+    return this.post('/models/validate', config);
+  }
+
+  async setupDriftDetection(config: any): Promise<any> {
+    return this.post('/models/drift-detection', config);
+  }
+
+  async deployModel(config: any): Promise<any> {
+    return this.post('/models/deploy', config);
+  }
+
+  async getMLModels(filter?: any): Promise<any> {
+    const params = filter ? new URLSearchParams(filter).toString() : '';
+    return this.get(`/models${params ? '?' + params : ''}`);
+  }
+
+  async getMLModel(id: string): Promise<any> {
+    return this.get(`/models/${id}`);
+  }
+}
+
+// Export singleton instance with enhanced methods
+export const mlApi = new EnhancedMLApiClient(defaultMLApiConfig);
+export { MLApiClient, EnhancedMLApiClient };
 export type { MLApiConfig, MLCacheEntry, MLRequestInterceptor, MLResponseInterceptor, MLRetryConfig };

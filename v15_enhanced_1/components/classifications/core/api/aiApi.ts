@@ -761,9 +761,53 @@ const defaultAIApiConfig: AIApiConfig = {
   }
 };
 
-// Export singleton instance
-export const aiApi = new AIApiClient(defaultAIApiConfig);
-export { AIApiClient };
+}
+
+// ============================================================================
+// MISSING AI API METHODS - ADVANCED IMPLEMENTATIONS
+// ============================================================================
+
+// Add missing methods to AIApiClient class
+class EnhancedAIApiClient extends AIApiClient {
+  // Agent Management
+  async initializeAgents(config: any): Promise<any> {
+    return this.post('/agents/initialize', config);
+  }
+
+  async loadKnowledgeBase(config: any): Promise<any> {
+    return this.post('/knowledge/load', config);
+  }
+
+  async executeReasoning(config: any): Promise<any> {
+    return this.post('/reasoning/execute', config);
+  }
+
+  async generateExplanations(config: any): Promise<any> {
+    return this.post('/explanations/generate', config);
+  }
+
+  async getAIModelStatus(): Promise<any> {
+    return this.get('/models/status');
+  }
+
+  async updateAIModel(config: any): Promise<any> {
+    return this.put(`/models/${config.modelId}`, config.updates);
+  }
+
+  async getKnowledgeSources(filter?: any): Promise<any> {
+    const params = filter ? new URLSearchParams(filter).toString() : '';
+    return this.get(`/knowledge/sources${params ? '?' + params : ''}`);
+  }
+
+  async getAIModels(filter?: any): Promise<any> {
+    const params = filter ? new URLSearchParams(filter).toString() : '';
+    return this.get(`/models${params ? '?' + params : ''}`);
+  }
+}
+
+// Export singleton instance with enhanced methods
+export const aiApi = new EnhancedAIApiClient(defaultAIApiConfig);
+export { AIApiClient, EnhancedAIApiClient };
 export type { 
   AIApiConfig, 
   AIStreamingResponse, 
