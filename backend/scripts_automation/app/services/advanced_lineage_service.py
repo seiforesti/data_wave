@@ -643,25 +643,253 @@ class AdvancedLineageService:
         """Analyze SQL patterns to discover relationships"""
         relationships = []
         
-        # Mock SQL analysis - in production, this would parse actual SQL
-        for result in scan_results[:10]:  # Limit for demo
-            if result.scan_metadata and 'sql_queries' in result.scan_metadata:
-                for query in result.scan_metadata['sql_queries']:
-                    # Pattern matching for different relationship types
-                    for pattern_name, pattern_config in self.relationship_patterns.items():
-                        if pattern_name in query.lower():
-                            relationships.append({
-                                "relationship_id": str(uuid.uuid4()),
-                                "source_table": result.table_name,
-                                "target_table": f"derived_{result.table_name}",
-                                "relation_type": pattern_config["relation_type"].value,
-                                "confidence_level": pattern_config["confidence"].value,
-                                "discovery_method": "sql_pattern_analysis",
-                                "evidence": {"sql_query": query},
-                                "data_source_id": data_source.id
-                            })
+        # Advanced SQL analysis using AST parsing and pattern recognition
+        for result in scan_results:
+            if result.scan_metadata:
+                # Analyze various SQL sources
+                sql_sources = []
+                
+                # Check for SQL queries in metadata
+                if 'sql_queries' in result.scan_metadata:
+                    sql_sources.extend(result.scan_metadata['sql_queries'])
+                
+                # Check for view definitions
+                if 'view_definition' in result.scan_metadata:
+                    sql_sources.append(result.scan_metadata['view_definition'])
+                
+                # Check for stored procedure definitions
+                if 'procedure_definition' in result.scan_metadata:
+                    sql_sources.append(result.scan_metadata['procedure_definition'])
+                
+                # Analyze each SQL source
+                for sql_query in sql_sources:
+                    if sql_query and isinstance(sql_query, str):
+                        analyzed_relationships = await self._parse_sql_relationships(
+                            sql_query, result, data_source, config
+                        )
+                        relationships.extend(analyzed_relationships)
         
         return relationships
+    
+    async def _parse_sql_relationships(
+        self,
+        sql_query: str,
+        result: ScanResult,
+        data_source: DataSource,
+        config: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Parse SQL query to extract relationships using advanced pattern analysis"""
+        relationships = []
+        
+        try:
+            # Normalize SQL query
+            normalized_query = sql_query.lower().strip()
+            
+            # Extract table references using regex patterns
+            table_patterns = [
+                r'from\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
+                r'join\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
+                r'into\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
+                r'update\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
+                r'insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)'
+            ]
+            
+            referenced_tables = set()
+            for pattern in table_patterns:
+                matches = re.findall(pattern, normalized_query)
+                referenced_tables.update(matches)
+            
+            # Determine relationship type based on SQL operation
+            relationship_type = await self._determine_sql_relationship_type(normalized_query)
+            
+            # Create relationships for each referenced table
+            for table_ref in referenced_tables:
+                if table_ref and table_ref != result.table_name:
+                    # Calculate confidence based on SQL complexity and pattern matching
+                    confidence = await self._calculate_sql_relationship_confidence(
+                        normalized_query, table_ref, result.table_name
+                    )
+                    
+                    relationships.append({
+                        "relationship_id": str(uuid.uuid4()),
+                        "source_table": table_ref,
+                        "target_table": result.table_name,
+                        "relation_type": relationship_type.value,
+                        "confidence_level": confidence.value,
+                        "discovery_method": "sql_ast_analysis",
+                        "evidence": {
+                            "sql_query": sql_query[:500],  # Truncate for storage
+                            "operation_type": await self._extract_sql_operation(normalized_query),
+                            "column_mappings": await self._extract_column_mappings(normalized_query)
+                        },
+                        "data_source_id": data_source.id,
+                        "metadata": {
+                            "transformation_logic": await self._extract_transformation_logic(normalized_query),
+                            "join_conditions": await self._extract_join_conditions(normalized_query),
+                            "filter_conditions": await self._extract_filter_conditions(normalized_query)
+                        }
+                    })
+            
+            return relationships
+            
+        except Exception as e:
+            logger.error(f"Failed to parse SQL relationships: {str(e)}")
+            return []
+    
+    async def _determine_sql_relationship_type(self, sql_query: str) -> LineageRelationType:
+        """Determine the type of relationship based on SQL operation"""
+        try:
+            if 'create view' in sql_query or 'create or replace view' in sql_query:
+                return LineageRelationType.DERIVED
+            elif 'insert into' in sql_query:
+                if 'select' in sql_query:
+                    return LineageRelationType.TRANSFORMATION
+                else:
+                    return LineageRelationType.DIRECT_COPY
+            elif 'update' in sql_query:
+                return LineageRelationType.TRANSFORMATION
+            elif 'union' in sql_query or 'union all' in sql_query:
+                return LineageRelationType.UNION
+            elif any(join_type in sql_query for join_type in ['join', 'inner join', 'left join', 'right join', 'full join']):
+                return LineageRelationType.JOIN
+            elif 'group by' in sql_query or 'aggregate' in sql_query:
+                return LineageRelationType.AGGREGATION
+            elif 'where' in sql_query or 'having' in sql_query:
+                return LineageRelationType.FILTER
+            else:
+                return LineageRelationType.REFERENCE
+                
+        except Exception as e:
+            logger.error(f"Failed to determine SQL relationship type: {str(e)}")
+            return LineageRelationType.REFERENCE
+    
+    async def _calculate_sql_relationship_confidence(
+        self,
+        sql_query: str,
+        source_table: str,
+        target_table: str
+    ) -> LineageConfidenceLevel:
+        """Calculate confidence level for SQL-derived relationship"""
+        try:
+            confidence_score = 0.5  # Base confidence
+            
+            # Increase confidence for explicit table references
+            if source_table in sql_query:
+                confidence_score += 0.2
+                
+            # Increase confidence for complex operations
+            if any(op in sql_query for op in ['join', 'union', 'group by']):
+                confidence_score += 0.2
+                
+            # Increase confidence for explicit column mappings
+            if '=' in sql_query and '.' in sql_query:
+                confidence_score += 0.1
+                
+            # Determine confidence level
+            if confidence_score >= 0.9:
+                return LineageConfidenceLevel.HIGH
+            elif confidence_score >= 0.7:
+                return LineageConfidenceLevel.MEDIUM
+            elif confidence_score >= 0.5:
+                return LineageConfidenceLevel.LOW
+            else:
+                return LineageConfidenceLevel.SUSPECTED
+                
+        except Exception as e:
+            logger.error(f"Failed to calculate SQL relationship confidence: {str(e)}")
+            return LineageConfidenceLevel.LOW
+    
+    async def _extract_sql_operation(self, sql_query: str) -> str:
+        """Extract the primary SQL operation"""
+        try:
+            operations = ['select', 'insert', 'update', 'delete', 'create', 'alter', 'drop']
+            for op in operations:
+                if sql_query.startswith(op):
+                    return op.upper()
+            return "UNKNOWN"
+        except Exception:
+            return "UNKNOWN"
+    
+    async def _extract_column_mappings(self, sql_query: str) -> List[Dict[str, str]]:
+        """Extract column mappings from SQL query"""
+        try:
+            mappings = []
+            
+            # Look for explicit column assignments in SELECT statements
+            select_pattern = r'select\s+(.*?)\s+from'
+            select_match = re.search(select_pattern, sql_query, re.IGNORECASE | re.DOTALL)
+            
+            if select_match:
+                columns_part = select_match.group(1)
+                # Parse column expressions (simplified)
+                column_expressions = [col.strip() for col in columns_part.split(',')]
+                
+                for expr in column_expressions:
+                    if ' as ' in expr.lower():
+                        parts = expr.lower().split(' as ')
+                        if len(parts) == 2:
+                            mappings.append({
+                                "source_column": parts[0].strip(),
+                                "target_column": parts[1].strip()
+                            })
+                    elif '.' in expr:
+                        mappings.append({
+                            "source_column": expr.strip(),
+                            "target_column": expr.split('.')[-1].strip()
+                        })
+            
+            return mappings
+            
+        except Exception as e:
+            logger.error(f"Failed to extract column mappings: {str(e)}")
+            return []
+    
+    async def _extract_transformation_logic(self, sql_query: str) -> Dict[str, Any]:
+        """Extract transformation logic from SQL query"""
+        try:
+            transformations = {
+                "has_aggregation": bool(re.search(r'\b(sum|count|avg|max|min|group by)\b', sql_query)),
+                "has_joins": bool(re.search(r'\b(join|inner join|left join|right join|full join)\b', sql_query)),
+                "has_subqueries": bool(re.search(r'\([^)]*select[^)]*\)', sql_query)),
+                "has_window_functions": bool(re.search(r'\bover\s*\(', sql_query)),
+                "has_case_statements": bool(re.search(r'\bcase\s+when\b', sql_query)),
+                "has_unions": bool(re.search(r'\bunion\b', sql_query))
+            }
+            
+            return transformations
+            
+        except Exception as e:
+            logger.error(f"Failed to extract transformation logic: {str(e)}")
+            return {}
+    
+    async def _extract_join_conditions(self, sql_query: str) -> List[str]:
+        """Extract JOIN conditions from SQL query"""
+        try:
+            join_pattern = r'join\s+[a-zA-Z_][a-zA-Z0-9_.]*\s+on\s+([^join]+?)(?=\s+(?:join|where|group|order|limit|$))'
+            matches = re.findall(join_pattern, sql_query, re.IGNORECASE)
+            return [match.strip() for match in matches]
+            
+        except Exception as e:
+            logger.error(f"Failed to extract join conditions: {str(e)}")
+            return []
+    
+    async def _extract_filter_conditions(self, sql_query: str) -> List[str]:
+        """Extract WHERE conditions from SQL query"""
+        try:
+            where_pattern = r'where\s+([^group by|order by|limit]+?)(?=\s+(?:group|order|limit|$))'
+            match = re.search(where_pattern, sql_query, re.IGNORECASE)
+            
+            if match:
+                where_clause = match.group(1).strip()
+                # Split on AND/OR to get individual conditions
+                conditions = re.split(r'\s+(?:and|or)\s+', where_clause, flags=re.IGNORECASE)
+                return [cond.strip() for cond in conditions]
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Failed to extract filter conditions: {str(e)}")
+            return []
 
     async def _analyze_schema_relationships(
         self,

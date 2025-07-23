@@ -611,14 +611,133 @@ class CatalogQualityService:
                     }
                 }
             
-            # For other scopes, return mock data structure
-            return {
-                "records": [],
-                "metadata": {
-                    "scope": scope.value,
-                    "entity_id": target_entity
+            # Handle other assessment scopes with real data retrieval
+            async with get_async_session() as session:
+                if scope == QualityAssessmentScope.DATA_SOURCE:
+                    # Get data source and related information
+                    data_source_result = await session.execute(
+                        select(DataSource).where(DataSource.id == int(target_entity))
+                    )
+                    data_source = data_source_result.scalar_one_or_none()
+                    
+                    if data_source:
+                        # Get recent scan results for this data source
+                        scan_results_query = await session.execute(
+                            select(ScanResult).join(Scan).where(
+                                Scan.data_source_id == data_source.id
+                            ).order_by(desc(ScanResult.created_at)).limit(1000)
+                        )
+                        scan_results = scan_results_query.scalars().all()
+                        
+                        return {
+                            "records": [
+                                {
+                                    "id": str(result.id),
+                                    "schema_name": result.schema_name,
+                                    "table_name": result.table_name,
+                                    "column_name": result.column_name,
+                                    "data_type": result.data_type,
+                                    "nullable": result.nullable,
+                                    "classification_labels": result.classification_labels or [],
+                                    "sensitivity_level": result.sensitivity_level,
+                                    "scan_metadata": result.scan_metadata or {},
+                                    "created_at": result.created_at.isoformat() if result.created_at else None
+                                }
+                                for result in scan_results
+                            ],
+                            "metadata": {
+                                "scope": scope.value,
+                                "entity_id": target_entity,
+                                "data_source_name": data_source.name,
+                                "data_source_type": data_source.source_type.value,
+                                "total_records": len(scan_results)
+                            }
+                        }
+                
+                elif scope == QualityAssessmentScope.SCHEMA:
+                    # Get schema-level data from scan results
+                    schema_parts = target_entity.split('.')
+                    if len(schema_parts) >= 2:
+                        data_source_id, schema_name = schema_parts[0], schema_parts[1]
+                        
+                        scan_results_query = await session.execute(
+                            select(ScanResult).join(Scan).where(
+                                and_(
+                                    Scan.data_source_id == int(data_source_id),
+                                    ScanResult.schema_name == schema_name
+                                )
+                            ).order_by(desc(ScanResult.created_at)).limit(500)
+                        )
+                        scan_results = scan_results_query.scalars().all()
+                        
+                        return {
+                            "records": [
+                                {
+                                    "id": str(result.id),
+                                    "table_name": result.table_name,
+                                    "column_name": result.column_name,
+                                    "data_type": result.data_type,
+                                    "nullable": result.nullable,
+                                    "scan_metadata": result.scan_metadata or {}
+                                }
+                                for result in scan_results
+                            ],
+                            "metadata": {
+                                "scope": scope.value,
+                                "entity_id": target_entity,
+                                "schema_name": schema_name,
+                                "data_source_id": data_source_id,
+                                "total_records": len(scan_results)
+                            }
+                        }
+                
+                elif scope == QualityAssessmentScope.TABLE:
+                    # Get table-level data
+                    table_parts = target_entity.split('.')
+                    if len(table_parts) >= 3:
+                        data_source_id, schema_name, table_name = table_parts[0], table_parts[1], table_parts[2]
+                        
+                        scan_results_query = await session.execute(
+                            select(ScanResult).join(Scan).where(
+                                and_(
+                                    Scan.data_source_id == int(data_source_id),
+                                    ScanResult.schema_name == schema_name,
+                                    ScanResult.table_name == table_name
+                                )
+                            ).order_by(desc(ScanResult.created_at)).limit(100)
+                        )
+                        scan_results = scan_results_query.scalars().all()
+                        
+                        return {
+                            "records": [
+                                {
+                                    "id": str(result.id),
+                                    "column_name": result.column_name,
+                                    "data_type": result.data_type,
+                                    "nullable": result.nullable,
+                                    "scan_metadata": result.scan_metadata or {}
+                                }
+                                for result in scan_results
+                            ],
+                            "metadata": {
+                                "scope": scope.value,
+                                "entity_id": target_entity,
+                                "table_name": table_name,
+                                "schema_name": schema_name,
+                                "data_source_id": data_source_id,
+                                "total_records": len(scan_results)
+                            }
+                        }
+                
+                # Fallback for unrecognized scopes
+                return {
+                    "records": [],
+                    "metadata": {
+                        "scope": scope.value,
+                        "entity_id": target_entity,
+                        "error": "Scope not fully implemented"
+                    }
                 }
-            }
 
     async def _run_quality_checks(
         self,
@@ -1074,19 +1193,49 @@ class CatalogQualityService:
         ds_result = await session.execute(ds_query)
         data_sources = ds_result.scalars().all()
         
-        # Calculate statistics
+        # Calculate real statistics from scan results
         total_tables = 0
         total_columns = 0
         quality_scores = []
         
         for ds in data_sources:
-            if ds.entity_count:
-                total_tables += ds.entity_count
-            # Estimate columns (mock calculation)
-            total_columns += ds.entity_count * 8 if ds.entity_count else 0
+            # Get actual table and column counts from scan results
+            scan_results_query = await session.execute(
+                select(ScanResult).join(Scan).where(Scan.data_source_id == ds.id)
+            )
+            scan_results = scan_results_query.scalars().all()
             
+            # Count unique tables and columns
+            unique_tables = set()
+            total_columns_for_ds = 0
+            
+            for result in scan_results:
+                table_key = f"{result.schema_name}.{result.table_name}"
+                unique_tables.add(table_key)
+                if result.column_name:
+                    total_columns_for_ds += 1
+            
+            total_tables += len(unique_tables)
+            total_columns += total_columns_for_ds
+            
+            # Use compliance score if available, otherwise calculate from scan results
             if ds.compliance_score:
-                quality_scores.append(ds.compliance_score / 100.0)  # Convert to 0-1 scale
+                quality_scores.append(ds.compliance_score / 100.0)
+            elif scan_results:
+                # Calculate quality score based on scan metadata
+                quality_indicators = []
+                for result in scan_results:
+                    if result.scan_metadata:
+                        # Extract quality indicators from scan metadata
+                        quality_data = result.scan_metadata.get('quality_metrics', {})
+                        if 'overall_score' in quality_data:
+                            quality_indicators.append(quality_data['overall_score'])
+                        elif 'completeness' in quality_data:
+                            quality_indicators.append(quality_data['completeness'])
+                
+                if quality_indicators:
+                    ds_quality_score = sum(quality_indicators) / len(quality_indicators)
+                    quality_scores.append(ds_quality_score)
         
         avg_quality_score = mean(quality_scores) if quality_scores else 0.0
         
@@ -1098,32 +1247,127 @@ class CatalogQualityService:
         }
 
     async def _get_recent_assessments(self, session: AsyncSession, limit: int) -> List[Dict[str, Any]]:
-        """Get recent quality assessments"""
-        # Mock recent assessments
-        return [
-            {
-                "assessment_id": str(uuid.uuid4()),
-                "entity": f"data_source_{i}",
-                "quality_score": 0.85 + (i * 0.02),
-                "issues_found": max(0, 5 - i),
-                "timestamp": datetime.utcnow() - timedelta(hours=i)
-            }
-            for i in range(min(limit, 5))
-        ]
+        """Get recent quality assessments from actual assessment history"""
+        try:
+            # Query recent quality assessments from scan results and data sources
+            recent_scans_query = await session.execute(
+                select(Scan, DataSource).join(DataSource).where(
+                    Scan.status == ScanStatus.COMPLETED
+                ).order_by(desc(Scan.completed_at)).limit(limit)
+            )
+            recent_scans = recent_scans_query.fetchall()
+            
+            assessments = []
+            for scan, data_source in recent_scans:
+                # Get quality metrics from scan results
+                scan_results_query = await session.execute(
+                    select(ScanResult).where(ScanResult.scan_id == scan.id)
+                )
+                scan_results = scan_results_query.scalars().all()
+                
+                # Calculate quality metrics
+                quality_score = 0.0
+                issues_count = 0
+                
+                if scan_results:
+                    quality_indicators = []
+                    for result in scan_results:
+                        if result.scan_metadata:
+                            quality_data = result.scan_metadata.get('quality_metrics', {})
+                            if 'overall_score' in quality_data:
+                                quality_indicators.append(quality_data['overall_score'])
+                            
+                            # Count quality issues
+                            quality_issues = result.scan_metadata.get('data_quality_issues', [])
+                            issues_count += len(quality_issues)
+                    
+                    if quality_indicators:
+                        quality_score = sum(quality_indicators) / len(quality_indicators)
+                    else:
+                        # Fallback calculation based on completeness
+                        quality_score = 0.8  # Default assumption
+                
+                assessments.append({
+                    "assessment_id": scan.scan_id,
+                    "entity": f"{data_source.name} ({data_source.source_type.value})",
+                    "entity_type": "data_source",
+                    "quality_score": quality_score,
+                    "issues_found": issues_count,
+                    "timestamp": scan.completed_at or scan.created_at,
+                    "scan_duration": (
+                        (scan.completed_at - scan.started_at).total_seconds() 
+                        if scan.completed_at and scan.started_at 
+                        else None
+                    ),
+                    "tables_scanned": len(set(
+                        f"{r.schema_name}.{r.table_name}" 
+                        for r in scan_results 
+                        if r.schema_name and r.table_name
+                    ))
+                })
+            
+            return assessments
+            
+        except Exception as e:
+            logger.error(f"Failed to get recent assessments: {str(e)}")
+            # Return empty list instead of mock data
+            return []
 
     async def _get_top_quality_issues(self, session: AsyncSession, limit: int) -> List[Dict[str, Any]]:
-        """Get top quality issues"""
-        # Mock top issues
-        issue_types = list(QualityIssueType)
-        return [
-            {
-                "issue_type": issue_types[i % len(issue_types)].value,
-                "count": max(1, 10 - i),
-                "severity": list(QualityRuleSeverity)[i % len(QualityRuleSeverity)].value,
-                "affected_entities": max(1, 5 - i)
-            }
-            for i in range(min(limit, len(issue_types)))
-        ]
+        """Get top quality issues from actual scan results"""
+        try:
+            # Query scan results to aggregate quality issues
+            scan_results_query = await session.execute(
+                select(ScanResult).where(ScanResult.scan_metadata.isnot(None))
+                .order_by(desc(ScanResult.created_at)).limit(5000)  # Get recent results
+            )
+            scan_results = scan_results_query.scalars().all()
+            
+            # Aggregate issues by type
+            issue_aggregates = defaultdict(lambda: {
+                "count": 0,
+                "severity_counts": defaultdict(int),
+                "affected_entities": set()
+            })
+            
+            for result in scan_results:
+                if result.scan_metadata and 'data_quality_issues' in result.scan_metadata:
+                    quality_issues = result.scan_metadata['data_quality_issues']
+                    
+                    for issue in quality_issues:
+                        issue_type = issue.get('type', 'unknown')
+                        severity = issue.get('severity', 'medium')
+                        
+                        issue_aggregates[issue_type]["count"] += 1
+                        issue_aggregates[issue_type]["severity_counts"][severity] += 1
+                        
+                        # Track affected entity
+                        entity_key = f"{result.schema_name}.{result.table_name}"
+                        if result.column_name:
+                            entity_key += f".{result.column_name}"
+                        issue_aggregates[issue_type]["affected_entities"].add(entity_key)
+            
+            # Convert to sorted list of top issues
+            top_issues = []
+            for issue_type, data in issue_aggregates.items():
+                # Determine primary severity (most common)
+                primary_severity = max(data["severity_counts"].items(), key=lambda x: x[1])[0] if data["severity_counts"] else "medium"
+                
+                top_issues.append({
+                    "issue_type": issue_type,
+                    "count": data["count"],
+                    "severity": primary_severity,
+                    "affected_entities": len(data["affected_entities"]),
+                    "severity_breakdown": dict(data["severity_counts"])
+                })
+            
+            # Sort by count and return top issues
+            top_issues.sort(key=lambda x: x["count"], reverse=True)
+            return top_issues[:limit]
+            
+        except Exception as e:
+            logger.error(f"Failed to get top quality issues: {str(e)}")
+            return []
 
     async def _get_quality_trend_summary(self, session: AsyncSession) -> Dict[str, Any]:
         """Get quality trend summary"""

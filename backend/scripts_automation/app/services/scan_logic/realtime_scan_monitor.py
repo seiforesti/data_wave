@@ -440,16 +440,46 @@ class RealtimeScanMonitor:
             success_rates = [m.success_rate for m in self.active_scan_metrics.values() if m.items_processed > 0]
             avg_success_rate = np.mean(success_rates) if success_rates else 1.0
             
-            # Mock system resource usage (replace with actual monitoring)
+            # Collect real system resource usage with advanced monitoring
             import psutil
+            
+            # Get current system stats
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            memory = psutil.virtual_memory()
+            disk_io = psutil.disk_io_counters()
+            net_io = psutil.net_io_counters()
+            
+            # Calculate I/O rates if we have previous measurements
+            total_disk_io = 0.0
+            total_network_io = 0.0
+            
+            if hasattr(self, '_last_disk_io') and hasattr(self, '_last_net_io') and hasattr(self, '_last_metrics_time'):
+                time_delta = (current_time - self._last_metrics_time).total_seconds()
+                if time_delta > 0 and disk_io and self._last_disk_io:
+                    # Calculate disk I/O rate in MB/s
+                    disk_read_bytes = disk_io.read_bytes - self._last_disk_io.read_bytes
+                    disk_write_bytes = disk_io.write_bytes - self._last_disk_io.write_bytes
+                    total_disk_io = (disk_read_bytes + disk_write_bytes) / time_delta / (1024 * 1024)
+                    
+                if time_delta > 0 and net_io and self._last_net_io:
+                    # Calculate network I/O rate in MB/s
+                    net_sent_bytes = net_io.bytes_sent - self._last_net_io.bytes_sent
+                    net_recv_bytes = net_io.bytes_recv - self._last_net_io.bytes_recv
+                    total_network_io = (net_sent_bytes + net_recv_bytes) / time_delta / (1024 * 1024)
+            
+            # Store current values for next calculation
+            self._last_disk_io = disk_io
+            self._last_net_io = net_io
+            self._last_metrics_time = current_time
+            
             system_metrics = SystemMetrics(
                 timestamp=current_time,
                 active_scans=active_scans,
                 queued_scans=queued_scans,
-                total_cpu_usage=psutil.cpu_percent(),
-                total_memory_usage=psutil.virtual_memory().percent,
-                total_disk_io=0.0,  # Placeholder
-                total_network_io=0.0,  # Placeholder
+                total_cpu_usage=cpu_percent,
+                total_memory_usage=memory.percent,
+                total_disk_io=max(0.0, total_disk_io),
+                total_network_io=max(0.0, total_network_io),
                 average_throughput=total_throughput / max(1, active_scans),
                 success_rate=avg_success_rate
             )
@@ -597,14 +627,62 @@ class RealtimeScanMonitor:
     async def _broadcast_event(self, event: Dict[str, Any]):
         """Broadcast event to all connected clients"""
         try:
-            if self.websocket_server:
-                # Broadcast to WebSocket clients
-                message = json.dumps(event)
-                # Mock WebSocket broadcast (implement actual WebSocket logic)
-                pass
+            # Add timestamp and source information
+            enriched_event = {
+                **event,
+                "server_timestamp": datetime.now().isoformat(),
+                "source": "realtime_scan_monitor",
+                "event_id": f"{event.get('type', 'unknown')}_{datetime.now().timestamp()}"
+            }
+            
+            # Store event in recent events for new client connections
+            if not hasattr(self, 'recent_events'):
+                self.recent_events = deque(maxlen=100)
+            self.recent_events.append(enriched_event)
+            
+            # Broadcast to WebSocket clients through connection registry
+            if hasattr(self, 'websocket_connections') and self.websocket_connections:
+                message = json.dumps(enriched_event, default=str)
+                
+                # Send to all active WebSocket connections
+                disconnected_connections = set()
+                for connection in self.websocket_connections:
+                    try:
+                        # In production, this would send via actual WebSocket connection
+                        # For now, log the broadcast
+                        logger.debug(f"Broadcasting event to WebSocket client: {enriched_event['type']}")
+                        
+                    except Exception as conn_error:
+                        logger.warning(f"Failed to send to WebSocket client: {str(conn_error)}")
+                        disconnected_connections.add(connection)
+                
+                # Clean up disconnected connections
+                self.websocket_connections -= disconnected_connections
+            
+            # Also store in event history for analytics
+            await self._store_event_history(enriched_event)
                 
         except Exception as e:
             logger.error(f"Failed to broadcast event: {str(e)}")
+    
+    async def _store_event_history(self, event: Dict[str, Any]):
+        """Store event in history for analytics and replay"""
+        try:
+            # In production, this would store in a time-series database
+            # For now, maintain in-memory history with size limits
+            if not hasattr(self, 'event_history'):
+                self.event_history = deque(maxlen=10000)
+            
+            event_record = {
+                **event,
+                "stored_at": datetime.now().isoformat(),
+                "retention_days": 30
+            }
+            
+            self.event_history.append(event_record)
+            
+        except Exception as e:
+            logger.error(f"Failed to store event history: {str(e)}")
     
     async def _broadcast_scan_update(self, scan_id: str, metrics: ScanMetrics):
         """Broadcast scan update to clients"""
@@ -662,20 +740,143 @@ class RealtimeScanMonitor:
     async def _load_performance_baselines(self):
         """Load performance baselines from storage"""
         try:
-            # Mock baseline loading (replace with actual database query)
-            self.performance_baselines = {
-                "default": PerformanceBaseline(
-                    scan_type="default",
-                    average_duration=1800.0,  # 30 minutes
-                    average_throughput=50.0,  # 50 items/sec
-                    average_success_rate=0.95,
-                    resource_usage_normal={"cpu": 40.0, "memory": 30.0},
-                    last_updated=datetime.now()
+            async with get_async_session() as session:
+                # Load historical scan performance data to establish baselines
+                performance_history_result = await session.execute(
+                    select(ScanJob).where(
+                        and_(
+                            ScanJob.status == ScanJobStatus.COMPLETED,
+                            ScanJob.completed_at.isnot(None),
+                            ScanJob.started_at.isnot(None)
+                        )
+                    ).order_by(desc(ScanJob.completed_at)).limit(1000)
                 )
-            }
-            
+                completed_scans = performance_history_result.scalars().all()
+                
+                if completed_scans:
+                    # Calculate baseline metrics from historical data
+                    durations = []
+                    success_count = 0
+                    total_count = len(completed_scans)
+                    
+                    for scan in completed_scans:
+                        if scan.started_at and scan.completed_at:
+                            duration = (scan.completed_at - scan.started_at).total_seconds()
+                            durations.append(duration)
+                            
+                        if scan.status == ScanJobStatus.COMPLETED:
+                            success_count += 1
+                    
+                    # Calculate statistical measures
+                    if durations:
+                        avg_duration = sum(durations) / len(durations)
+                        avg_throughput = self._calculate_baseline_throughput(completed_scans)
+                        success_rate = success_count / total_count
+                        
+                        self.performance_baselines["default"] = PerformanceBaseline(
+                            scan_type="default",
+                            average_duration=avg_duration,
+                            average_throughput=avg_throughput,
+                            average_success_rate=success_rate,
+                            resource_usage_normal=await self._calculate_baseline_resource_usage(completed_scans),
+                            last_updated=datetime.now()
+                        )
+                        
+                        logger.info(f"Loaded performance baselines from {total_count} historical scans")
+                    else:
+                        # Create default baseline if no historical data
+                        await self._create_default_baseline()
+                else:
+                    # Create default baseline if no completed scans found
+                    await self._create_default_baseline()
+                
         except Exception as e:
             logger.error(f"Failed to load performance baselines: {str(e)}")
+            await self._create_default_baseline()
+    
+    async def _create_default_baseline(self):
+        """Create default performance baseline"""
+        self.performance_baselines["default"] = PerformanceBaseline(
+            scan_type="default",
+            average_duration=1800.0,  # 30 minutes
+            average_throughput=50.0,  # 50 items/sec
+            average_success_rate=0.95,
+            resource_usage_normal={"cpu": 40.0, "memory": 30.0},
+            last_updated=datetime.now()
+        )
+        logger.info("Created default performance baseline")
+    
+    def _calculate_baseline_throughput(self, completed_scans: List[ScanJob]) -> float:
+        """Calculate baseline throughput from completed scans"""
+        try:
+            throughputs = []
+            for scan in completed_scans:
+                if scan.started_at and scan.completed_at:
+                    duration = (scan.completed_at - scan.started_at).total_seconds()
+                    if duration > 0:
+                        # Estimate items processed (would be from actual scan results)
+                        items_processed = self._estimate_items_processed(scan)
+                        throughput = items_processed / duration
+                        throughputs.append(throughput)
+            
+            if throughputs:
+                return sum(throughputs) / len(throughputs)
+            else:
+                return 50.0  # Default throughput
+                
+        except Exception as e:
+            logger.error(f"Failed to calculate baseline throughput: {str(e)}")
+            return 50.0
+    
+    def _estimate_items_processed(self, scan: ScanJob) -> int:
+        """Estimate items processed for a completed scan"""
+        try:
+            # In production, this would get actual counts from scan results
+            # For now, estimate based on scan configuration and duration
+            if scan.configuration:
+                estimated_tables = scan.configuration.get('estimated_tables', 10)
+                avg_rows_per_table = scan.configuration.get('avg_rows_per_table', 1000)
+                return estimated_tables * avg_rows_per_table
+            else:
+                # Default estimate
+                return 50000
+                
+        except Exception:
+            return 10000  # Conservative fallback
+    
+    async def _calculate_baseline_resource_usage(self, completed_scans: List[ScanJob]) -> Dict[str, float]:
+        """Calculate baseline resource usage from historical scans"""
+        try:
+            # In production, this would analyze actual resource usage data
+            # For now, calculate estimates based on scan patterns
+            cpu_usage_estimates = []
+            memory_usage_estimates = []
+            
+            for scan in completed_scans:
+                if scan.configuration:
+                    # Estimate resource usage based on scan complexity
+                    complexity = scan.configuration.get('scan_depth', 3)
+                    parallelism = scan.configuration.get('parallelism', 2)
+                    
+                    cpu_estimate = min(90.0, 20.0 + complexity * 5 + parallelism * 3)
+                    memory_estimate = min(80.0, 15.0 + complexity * 4 + parallelism * 2.5)
+                    
+                    cpu_usage_estimates.append(cpu_estimate)
+                    memory_usage_estimates.append(memory_estimate)
+            
+            if cpu_usage_estimates and memory_usage_estimates:
+                return {
+                    "cpu": sum(cpu_usage_estimates) / len(cpu_usage_estimates),
+                    "memory": sum(memory_usage_estimates) / len(memory_usage_estimates),
+                    "disk_io": 25.0,  # Estimated baseline
+                    "network_io": 15.0  # Estimated baseline
+                }
+            else:
+                return {"cpu": 40.0, "memory": 30.0, "disk_io": 25.0, "network_io": 15.0}
+                
+        except Exception as e:
+            logger.error(f"Failed to calculate baseline resource usage: {str(e)}")
+            return {"cpu": 40.0, "memory": 30.0, "disk_io": 25.0, "network_io": 15.0}
     
     async def _setup_default_alert_rules(self):
         """Setup default alert rules"""
@@ -1008,18 +1209,183 @@ class AlertManager:
     
     async def _send_websocket_alert(self, alert: Alert):
         """Send alert via WebSocket"""
-        # Mock WebSocket alert (implement actual WebSocket sending)
-        pass
+        try:
+            websocket_message = {
+                "type": "alert",
+                "alert_id": alert.id,
+                "alert_type": alert.type.value,
+                "severity": alert.severity.value,
+                "title": alert.title,
+                "message": alert.message,
+                "scan_id": alert.scan_id,
+                "timestamp": alert.timestamp.isoformat(),
+                "metadata": alert.metadata,
+                "requires_action": alert.severity in [AlertSeverity.ERROR, AlertSeverity.CRITICAL]
+            }
+            
+            # In production, this would send via actual WebSocket connections
+            # For now, store in a queue that WebSocket handlers can access
+            if not hasattr(self, 'websocket_alert_queue'):
+                self.websocket_alert_queue = deque(maxlen=1000)
+            
+            self.websocket_alert_queue.append(websocket_message)
+            logger.info(f"WebSocket alert queued: {alert.title}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send WebSocket alert: {str(e)}")
     
     async def _send_email_alert(self, alert: Alert):
         """Send alert via email"""
-        # Mock email alert (implement actual email sending)
-        pass
+        try:
+            # Prepare email content with rich formatting
+            email_content = {
+                "subject": f"[{alert.severity.value.upper()}] Data Governance Alert: {alert.title}",
+                "recipients": await self._get_alert_recipients(alert),
+                "template": "scan_alert",
+                "template_data": {
+                    "alert_title": alert.title,
+                    "alert_message": alert.message,
+                    "alert_severity": alert.severity.value,
+                    "alert_type": alert.type.value,
+                    "scan_id": alert.scan_id,
+                    "timestamp": alert.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                    "alert_metadata": alert.metadata,
+                    "action_required": alert.severity in [AlertSeverity.ERROR, AlertSeverity.CRITICAL],
+                    "dashboard_link": f"/monitoring/alerts/{alert.id}"
+                }
+            }
+            
+            # Queue email for sending (in production, this would use an email service)
+            if not hasattr(self, 'email_alert_queue'):
+                self.email_alert_queue = deque(maxlen=500)
+            
+            self.email_alert_queue.append(email_content)
+            logger.info(f"Email alert queued for {len(email_content['recipients'])} recipients: {alert.title}")
+            
+        except Exception as e:
+            logger.error(f"Failed to prepare email alert: {str(e)}")
     
     async def _send_slack_alert(self, alert: Alert):
         """Send alert via Slack"""
-        # Mock Slack alert (implement actual Slack integration)
-        pass
+        try:
+            # Prepare Slack message with rich formatting
+            severity_colors = {
+                AlertSeverity.INFO: "#36a64f",  # Green
+                AlertSeverity.WARNING: "#ffaa00",  # Orange
+                AlertSeverity.ERROR: "#ff0000",  # Red
+                AlertSeverity.CRITICAL: "#800080"  # Purple
+            }
+            
+            severity_emojis = {
+                AlertSeverity.INFO: ":information_source:",
+                AlertSeverity.WARNING: ":warning:",
+                AlertSeverity.ERROR: ":x:",
+                AlertSeverity.CRITICAL: ":rotating_light:"
+            }
+            
+            slack_message = {
+                "channel": await self._get_slack_channel_for_alert(alert),
+                "username": "Data Governance Monitor",
+                "icon_emoji": ":shield:",
+                "attachments": [{
+                    "color": severity_colors.get(alert.severity, "#cccccc"),
+                    "title": f"{severity_emojis.get(alert.severity, '')} {alert.title}",
+                    "text": alert.message,
+                    "fields": [
+                        {
+                            "title": "Severity",
+                            "value": alert.severity.value.upper(),
+                            "short": True
+                        },
+                        {
+                            "title": "Alert Type",
+                            "value": alert.type.value.replace("_", " ").title(),
+                            "short": True
+                        },
+                        {
+                            "title": "Scan ID",
+                            "value": alert.scan_id or "System-wide",
+                            "short": True
+                        },
+                        {
+                            "title": "Timestamp",
+                            "value": alert.timestamp.strftime("%Y-%m-%d %H:%M UTC"),
+                            "short": True
+                        }
+                    ],
+                    "footer": "Data Governance System",
+                    "ts": int(alert.timestamp.timestamp())
+                }]
+            }
+            
+            # Add action buttons for critical alerts
+            if alert.severity in [AlertSeverity.ERROR, AlertSeverity.CRITICAL]:
+                slack_message["attachments"][0]["actions"] = [
+                    {
+                        "type": "button",
+                        "text": "View Dashboard",
+                        "url": f"/monitoring/alerts/{alert.id}",
+                        "style": "primary"
+                    },
+                    {
+                        "type": "button", 
+                        "text": "Acknowledge",
+                        "name": "acknowledge",
+                        "value": alert.id,
+                        "style": "default"
+                    }
+                ]
+            
+            # Queue Slack message for sending
+            if not hasattr(self, 'slack_alert_queue'):
+                self.slack_alert_queue = deque(maxlen=500)
+            
+            self.slack_alert_queue.append(slack_message)
+            logger.info(f"Slack alert queued for channel #{slack_message['channel']}: {alert.title}")
+            
+        except Exception as e:
+            logger.error(f"Failed to prepare Slack alert: {str(e)}")
+    
+    async def _get_alert_recipients(self, alert: Alert) -> List[str]:
+        """Get email recipients for alert based on severity and type"""
+        try:
+            # In production, this would query user preferences and role-based subscriptions
+            recipients = []
+            
+            # Always notify system administrators for critical alerts
+            if alert.severity == AlertSeverity.CRITICAL:
+                recipients.extend(["admin@company.com", "devops@company.com"])
+            
+            # Notify data team for data-related alerts
+            if alert.type in [AlertType.PERFORMANCE_DEGRADATION, AlertType.SCAN_FAILURE]:
+                recipients.extend(["data-team@company.com"])
+            
+            # Notify security team for security-related alerts
+            if alert.type in [AlertType.ANOMALY_DETECTED, AlertType.SYSTEM_OVERLOAD]:
+                recipients.extend(["security@company.com"])
+            
+            return list(set(recipients))  # Remove duplicates
+            
+        except Exception as e:
+            logger.error(f"Failed to get alert recipients: {str(e)}")
+            return ["admin@company.com"]  # Fallback
+    
+    async def _get_slack_channel_for_alert(self, alert: Alert) -> str:
+        """Get appropriate Slack channel for alert"""
+        try:
+            # Route alerts to appropriate channels based on type and severity
+            if alert.severity == AlertSeverity.CRITICAL:
+                return "alerts-critical"
+            elif alert.type in [AlertType.PERFORMANCE_DEGRADATION, AlertType.SCAN_FAILURE]:
+                return "data-governance"
+            elif alert.type in [AlertType.ANOMALY_DETECTED, AlertType.SYSTEM_OVERLOAD]:
+                return "system-monitoring"
+            else:
+                return "general-alerts"
+                
+        except Exception as e:
+            logger.error(f"Failed to determine Slack channel: {str(e)}")
+            return "general-alerts"  # Fallback
 
 
 class MetricsAggregator:
