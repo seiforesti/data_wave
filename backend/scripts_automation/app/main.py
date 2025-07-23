@@ -45,6 +45,11 @@ from app.api.routes.compliance_audit_routes import router as compliance_audit_ro
 from app.api.routes.classification_routes import router as classification_routes
 from app.api.routes.ml_routes import router as ml_routes
 from app.api.routes.ai_routes import router as ai_routes
+# Import missing enterprise routes for complete interconnection
+from app.api.routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_router
+from app.api.routes.enterprise_catalog_routes import router as enterprise_catalog_router
+from app.api.routes.enterprise_scan_orchestration_routes import router as enterprise_scan_orchestration_router
+from app.api.routes.enterprise_integration_routes import router as enterprise_integration_router
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -126,6 +131,16 @@ app.include_router(compliance_audit_routes)
 app.include_router(classification_routes)  # Add enterprise classification routes
 app.include_router(ml_routes)  # Add ML classification routes (Version 2)
 app.include_router(ai_routes)  # Add AI classification routes (Version 3)
+
+# ===================== ENTERPRISE ROUTES FOR COMPLETE INTERCONNECTION =====================
+# These routes provide advanced enterprise capabilities for the three remaining groups
+app.include_router(enterprise_scan_rules_router)  # Advanced Scan-Rule-Sets with AI optimization
+app.include_router(enterprise_catalog_router)  # Intelligent Data Catalog with discovery
+app.include_router(enterprise_scan_orchestration_router)  # Unified Scan Logic orchestration
+
+# ===================== MASTER INTEGRATION ORCHESTRATION =====================
+# This router provides complete system orchestration across all six groups
+app.include_router(enterprise_integration_router)  # Master integration & orchestration
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
