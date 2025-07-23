@@ -1,919 +1,840 @@
 """
-Advanced Scan Rule Models for Enterprise Data Governance System
-========================================================
+🔍 ADVANCED SCAN RULE MODELS
+Enterprise-grade models for intelligent scan rule engine with AI-powered pattern recognition,
+adaptive optimization, and seamless integration with all data governance groups.
 
-This module contains sophisticated models for intelligent scan rule management,
-AI-powered pattern recognition, and enterprise-grade rule optimization.
-
-Features:
-- Intelligent rule engine with AI/ML capabilities
-- Advanced pattern recognition and matching
-- Real-time performance optimization
-- Enterprise audit trails and compliance integration
-- Interconnection with all data governance groups
+This module provides the foundation for:
+- Intelligent Rule Engine with ML-powered pattern detection
+- Adaptive Rule Optimization with self-improving algorithms  
+- Context-Aware Rules that adapt to data source characteristics
+- Real-Time Rule Performance Analytics and Monitoring
+- Cross-Group Integration with Data Sources, Compliance, Classifications, Catalog, and Scan Logic
 """
 
-from sqlmodel import SQLModel, Field, Relationship, Column, JSON, String, Text, ARRAY, Integer, Float, Boolean, DateTime
+from sqlmodel import SQLModel, Field, Relationship, Column, JSON, String, Text, Integer, Float, Boolean, DateTime
 from typing import List, Optional, Dict, Any, Union, Set, Tuple
 from datetime import datetime, timedelta
 from enum import Enum
 import uuid
 import json
-import re
 from pydantic import BaseModel, validator
-from sqlalchemy import Index, UniqueConstraint, CheckConstraint
+from sqlalchemy import Index, UniqueConstraint, CheckConstraint, ForeignKey
+from decimal import Decimal
+
+# Import interconnection models
+from .scan_models import DataSource, ScanJob, ScanResult
+from .policy_models import ComplianceRule
+from .asset_models import DataAsset
+from .classification_models import ClassificationResult
 
 
-# ===================== ENUMS AND CONSTANTS =====================
+class IntelligentRuleType(str, Enum):
+    """Types of intelligent scan rules"""
+    PATTERN_RECOGNITION = "pattern_recognition"     # AI-powered pattern detection
+    CONTENT_ANALYSIS = "content_analysis"           # Deep content analysis
+    SCHEMA_VALIDATION = "schema_validation"         # Schema structure validation
+    DATA_QUALITY = "data_quality"                   # Data quality assessment
+    COMPLIANCE_CHECK = "compliance_check"           # Compliance validation
+    CLASSIFICATION_TRIGGER = "classification_trigger"  # Auto-classification rules
+    LINEAGE_DISCOVERY = "lineage_discovery"         # Data lineage detection
+    ANOMALY_DETECTION = "anomaly_detection"         # Statistical anomaly detection
+    BUSINESS_RULE = "business_rule"                 # Custom business logic
+    SECURITY_SCAN = "security_scan"                 # Security vulnerability detection
+    PERFORMANCE_OPTIMIZATION = "performance_optimization"  # Performance enhancement
+    METADATA_ENRICHMENT = "metadata_enrichment"     # Automatic metadata enhancement
+
 
 class RuleComplexityLevel(str, Enum):
-    """Rule complexity classification for AI optimization"""
-    SIMPLE = "simple"              # Basic regex, single condition
-    INTERMEDIATE = "intermediate"   # Multiple conditions, basic logic
-    ADVANCED = "advanced"          # Complex logic, nested conditions
-    EXPERT = "expert"              # AI/ML patterns, dynamic rules
-    ENTERPRISE = "enterprise"      # Multi-system integration rules
+    """Complexity levels for scan rules"""
+    SIMPLE = "simple"           # Basic pattern matching
+    MODERATE = "moderate"       # Multi-condition rules
+    COMPLEX = "complex"         # Advanced logic with ML
+    VERY_COMPLEX = "very_complex"  # AI-powered with deep learning
+    EXPERT = "expert"           # Custom algorithms and advanced AI
 
-class PatternRecognitionType(str, Enum):
-    """Types of pattern recognition algorithms"""
-    REGEX = "regex"                    # Traditional regex patterns
-    ML_PATTERN = "ml_pattern"          # Machine learning patterns
-    AI_SEMANTIC = "ai_semantic"        # NLP/semantic analysis
-    STATISTICAL = "statistical"       # Statistical pattern detection
-    GRAPH_BASED = "graph_based"       # Graph-based relationship patterns
-    BEHAVIORAL = "behavioral"          # User behavior patterns
-    TEMPORAL = "temporal"              # Time-series patterns
-    ANOMALY = "anomaly"               # Anomaly detection patterns
+
+class RuleExecutionMode(str, Enum):
+    """Execution modes for scan rules"""
+    SYNCHRONOUS = "synchronous"     # Execute immediately
+    ASYNCHRONOUS = "asynchronous"   # Execute in background
+    STREAMING = "streaming"         # Real-time streaming execution
+    BATCH = "batch"                # Batch processing
+    SCHEDULED = "scheduled"         # Scheduled execution
+    EVENT_DRIVEN = "event_driven"   # Triggered by events
+    ADAPTIVE = "adaptive"           # AI-determined optimal mode
+
 
 class RuleOptimizationStrategy(str, Enum):
-    """Optimization strategies for rule execution"""
-    PERFORMANCE = "performance"        # Optimize for speed
-    ACCURACY = "accuracy"             # Optimize for precision
-    COST = "cost"                     # Optimize for resource usage
-    BALANCED = "balanced"             # Balance all factors
-    CUSTOM = "custom"                 # Custom optimization parameters
-    ADAPTIVE = "adaptive"             # AI-driven adaptive optimization
+    """Optimization strategies for rule performance"""
+    PERFORMANCE_FIRST = "performance_first"    # Optimize for speed
+    ACCURACY_FIRST = "accuracy_first"          # Optimize for precision
+    RESOURCE_EFFICIENT = "resource_efficient"  # Minimize resource usage
+    BALANCED = "balanced"                      # Balance all factors
+    COST_OPTIMIZED = "cost_optimized"         # Minimize operational costs
+    ADAPTIVE_LEARNING = "adaptive_learning"    # AI-driven optimization
+    PREDICTIVE = "predictive"                  # Predictive optimization
 
-class RuleExecutionStrategy(str, Enum):
-    """Execution strategies for rule processing"""
-    PARALLEL = "parallel"             # Parallel execution
-    SEQUENTIAL = "sequential"         # Sequential execution
-    ADAPTIVE = "adaptive"             # AI-determined execution
-    PIPELINE = "pipeline"             # Pipeline processing
-    BATCH = "batch"                   # Batch processing
-    STREAMING = "streaming"           # Real-time streaming
 
 class RuleValidationStatus(str, Enum):
-    """Rule validation states"""
-    DRAFT = "draft"                   # Under development
-    VALIDATING = "validating"         # Being validated
-    VALIDATED = "validated"           # Passed validation
-    FAILED = "failed"                 # Failed validation
-    DEPRECATED = "deprecated"         # No longer used
-    ARCHIVED = "archived"             # Archived for reference
-
-class RuleBusinessImpact(str, Enum):
-    """Business impact classification"""
-    CRITICAL = "critical"             # Mission-critical systems
-    HIGH = "high"                     # High business value
-    MEDIUM = "medium"                 # Standard business operations
-    LOW = "low"                       # Support functions
-    EXPERIMENTAL = "experimental"     # Experimental/testing
+    """Validation status for scan rules"""
+    DRAFT = "draft"                 # Under development
+    VALIDATING = "validating"       # Currently being validated
+    VALIDATED = "validated"         # Successfully validated
+    VALIDATION_FAILED = "validation_failed"  # Validation failed
+    DEPRECATED = "deprecated"       # No longer recommended
+    RETIRED = "retired"            # Permanently disabled
+    ARCHIVED = "archived"          # Archived for reference
 
 
-# ===================== CORE MODELS =====================
+class PatternMatchingAlgorithm(str, Enum):
+    """Algorithms for pattern matching"""
+    REGEX = "regex"                 # Regular expressions
+    FUZZY_MATCHING = "fuzzy_matching"  # Fuzzy string matching
+    MACHINE_LEARNING = "machine_learning"  # ML-based pattern detection
+    DEEP_LEARNING = "deep_learning"  # Deep neural networks
+    NATURAL_LANGUAGE = "natural_language"  # NLP-based analysis
+    STATISTICAL = "statistical"     # Statistical pattern analysis
+    GRAPH_ANALYSIS = "graph_analysis"  # Graph-based pattern detection
+    ENSEMBLE = "ensemble"           # Combination of multiple algorithms
+
+
+class RuleImpactLevel(str, Enum):
+    """Impact levels for rule execution"""
+    LOW = "low"                     # Minimal system impact
+    MEDIUM = "medium"               # Moderate system impact
+    HIGH = "high"                   # Significant system impact
+    CRITICAL = "critical"           # Mission-critical impact
+    SYSTEM_WIDE = "system_wide"     # Affects entire system
+
+
+class RuleTriggerEvent(str, Enum):
+    """Events that can trigger rule execution"""
+    DATA_SOURCE_SCAN = "data_source_scan"      # New data source scan
+    SCHEMA_CHANGE = "schema_change"            # Schema modification detected
+    DATA_INGESTION = "data_ingestion"          # New data ingested
+    COMPLIANCE_UPDATE = "compliance_update"    # Compliance rules updated
+    CLASSIFICATION_CHANGE = "classification_change"  # Classification updated
+    QUALITY_THRESHOLD = "quality_threshold"   # Quality threshold breached
+    ANOMALY_DETECTED = "anomaly_detected"     # Anomaly detection triggered
+    SCHEDULED_TIME = "scheduled_time"         # Time-based trigger
+    MANUAL_TRIGGER = "manual_trigger"         # Manually triggered
+    API_CALL = "api_call"                     # API-triggered execution
+
 
 class IntelligentScanRule(SQLModel, table=True):
     """
-    Advanced AI-powered scan rules with comprehensive metadata,
-    performance tracking, and enterprise integration capabilities.
-    
-    This model represents the next generation of scan rules that incorporate:
-    - AI/ML pattern recognition
-    - Real-time performance optimization
-    - Business context awareness
-    - Compliance integration
-    - Multi-system coordination
+    Enterprise-grade intelligent scan rule with AI capabilities, adaptive optimization,
+    and seamless integration across all data governance groups.
     """
     __tablename__ = "intelligent_scan_rules"
     
-    # Primary identification
+    # Primary Identification
     id: Optional[int] = Field(default=None, primary_key=True)
-    rule_id: str = Field(index=True, unique=True, description="Unique rule identifier")
-    name: str = Field(index=True, max_length=255, description="Human-readable rule name")
-    display_name: Optional[str] = Field(max_length=255, description="UI display name")
-    description: Optional[str] = Field(sa_column=Column(Text), description="Detailed rule description")
+    rule_uuid: str = Field(index=True, unique=True, description="Unique identifier for the rule")
+    name: str = Field(max_length=255, index=True)
+    display_name: Optional[str] = Field(max_length=255)
+    description: Optional[str] = Field(sa_column=Column(Text))
+    version: str = Field(default="1.0.0", max_length=20)
     
     # Rule Classification
-    complexity_level: RuleComplexityLevel = Field(default=RuleComplexityLevel.INTERMEDIATE, index=True)
-    pattern_type: PatternRecognitionType = Field(default=PatternRecognitionType.REGEX, index=True)
+    rule_type: IntelligentRuleType = Field(index=True)
+    complexity_level: RuleComplexityLevel = Field(default=RuleComplexityLevel.MODERATE)
+    execution_mode: RuleExecutionMode = Field(default=RuleExecutionMode.ASYNCHRONOUS)
+    impact_level: RuleImpactLevel = Field(default=RuleImpactLevel.MEDIUM)
+    
+    # Rule Logic and Configuration
+    rule_logic: str = Field(sa_column=Column(Text), description="Core rule logic/algorithm")
+    pattern_definition: Optional[str] = Field(sa_column=Column(Text))
+    matching_algorithm: PatternMatchingAlgorithm = Field(default=PatternMatchingAlgorithm.REGEX)
+    confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    
+    # Advanced Configuration
+    ai_model_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    ml_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    optimization_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    validation_rules: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Execution Control
+    is_active: bool = Field(default=True, index=True)
+    auto_optimization_enabled: bool = Field(default=True)
+    adaptive_learning_enabled: bool = Field(default=False)
+    real_time_monitoring: bool = Field(default=True)
+    
+    # Performance and Resource Management
+    max_execution_time_seconds: int = Field(default=3600, ge=1, le=86400)
+    resource_limit_cpu_percent: float = Field(default=25.0, ge=1.0, le=100.0)
+    resource_limit_memory_mb: int = Field(default=1024, ge=128, le=8192)
+    max_concurrent_executions: int = Field(default=5, ge=1, le=50)
+    
+    # Optimization and Analytics
     optimization_strategy: RuleOptimizationStrategy = Field(default=RuleOptimizationStrategy.BALANCED)
-    execution_strategy: RuleExecutionStrategy = Field(default=RuleExecutionStrategy.ADAPTIVE)
+    performance_weight: float = Field(default=0.4, ge=0.0, le=1.0)
+    accuracy_weight: float = Field(default=0.6, ge=0.0, le=1.0)
+    cost_weight: float = Field(default=0.2, ge=0.0, le=1.0)
     
-    # Rule Logic Core
-    rule_expression: str = Field(sa_column=Column(Text), description="Core rule logic expression")
-    conditions: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    actions: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Trigger Configuration
+    trigger_events: List[RuleTriggerEvent] = Field(default_factory=list, sa_column=Column(JSON))
+    trigger_conditions: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    schedule_expression: Optional[str] = Field(max_length=255)  # Cron expression
     
-    # Advanced Pattern Configuration
-    pattern_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON), description="Pattern-specific configuration")
-    regex_patterns: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    ml_model_references: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    semantic_keywords: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # AI/ML Configuration
-    ml_model_config: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    ai_context_awareness: bool = Field(default=False, description="Enable AI context analysis")
-    learning_enabled: bool = Field(default=True, description="Enable continuous learning")
-    confidence_threshold: float = Field(default=0.85, ge=0.0, le=1.0, description="Minimum confidence for rule execution")
-    adaptive_learning_rate: float = Field(default=0.01, ge=0.001, le=0.1)
-    
-    # Performance Configuration
-    parallel_execution: bool = Field(default=True, description="Enable parallel processing")
-    max_parallel_threads: int = Field(default=4, ge=1, le=32)
-    resource_requirements: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    timeout_seconds: int = Field(default=300, ge=1, le=3600)
-    memory_limit_mb: Optional[int] = Field(default=None, ge=128, le=8192)
-    cpu_limit_percent: Optional[float] = Field(default=None, ge=10.0, le=100.0)
-    
-    # Execution Context
-    target_data_types: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    supported_databases: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    cloud_compatibility: Dict[str, bool] = Field(default_factory=dict, sa_column=Column(JSON))
-    data_source_filters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Validation and Quality
+    validation_status: RuleValidationStatus = Field(default=RuleValidationStatus.DRAFT, index=True)
+    validation_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    test_cases: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    quality_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
     # Business Context
-    business_impact_level: RuleBusinessImpact = Field(default=RuleBusinessImpact.MEDIUM)
-    business_domain: Optional[str] = Field(max_length=100, index=True)
-    cost_per_execution: Optional[float] = Field(default=None, ge=0.0)
-    roi_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    sla_requirements: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    business_category: Optional[str] = Field(max_length=100, index=True)
+    business_priority: int = Field(default=5, ge=1, le=10)
+    business_value_score: float = Field(default=0.0, ge=0.0, le=10.0)
+    compliance_requirements: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Quality and Performance Metrics
-    accuracy_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Rule accuracy score")
+    # Performance Tracking
+    execution_count: int = Field(default=0, ge=0)
+    success_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
+    average_execution_time: float = Field(default=0.0, ge=0.0)
+    total_data_processed: int = Field(default=0, ge=0)
+    
+    # Quality and Accuracy Metrics
+    true_positive_count: int = Field(default=0, ge=0)
+    false_positive_count: int = Field(default=0, ge=0)
+    true_negative_count: int = Field(default=0, ge=0)
+    false_negative_count: int = Field(default=0, ge=0)
     precision_score: float = Field(default=0.0, ge=0.0, le=1.0)
     recall_score: float = Field(default=0.0, ge=0.0, le=1.0)
     f1_score: float = Field(default=0.0, ge=0.0, le=1.0)
-    execution_success_rate: float = Field(default=0.0, ge=0.0, le=1.0)
-    average_execution_time_ms: float = Field(default=0.0, ge=0.0)
     
-    # Usage Statistics
-    total_executions: int = Field(default=0, ge=0, description="Total number of executions")
-    successful_executions: int = Field(default=0, ge=0)
-    failed_executions: int = Field(default=0, ge=0)
-    last_execution_time: Optional[datetime] = None
-    total_data_processed_gb: float = Field(default=0.0, ge=0.0)
+    # Advanced Analytics
+    pattern_effectiveness: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    learning_progress: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    optimization_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    performance_trends: Dict[str, List[float]] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Audit and Compliance
-    compliance_requirements: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    audit_trail: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    compliance_score: float = Field(default=1.0, ge=0.0, le=1.0)
-    last_compliance_check: Optional[datetime] = None
+    # Integration and Interconnection
+    data_source_scope: List[int] = Field(default_factory=list, sa_column=Column(JSON))
+    asset_type_scope: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    classification_integration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    compliance_integration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    catalog_integration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Validation and Testing
-    validation_status: RuleValidationStatus = Field(default=RuleValidationStatus.DRAFT, index=True)
-    test_cases: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    validation_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    benchmark_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Advanced Features
-    auto_optimization_enabled: bool = Field(default=True)
-    anomaly_detection_enabled: bool = Field(default=False)
-    real_time_monitoring: bool = Field(default=True)
-    alert_configuration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Integration Points
-    data_source_integrations: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    classification_mappings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    compliance_mappings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    catalog_enrichments: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Lifecycle Management
-    version: str = Field(default="1.0.0", max_length=20)
-    previous_versions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    deprecation_date: Optional[datetime] = None
-    replacement_rule_id: Optional[str] = None
-    is_active: bool = Field(default=True, index=True)
-    
-    # Temporal Fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    last_optimized_at: Optional[datetime] = None
-    created_by: Optional[str] = Field(max_length=255)
-    updated_by: Optional[str] = Field(max_length=255)
-    
-    # Relationships
-    executions: List["RuleExecutionHistory"] = Relationship(back_populates="rule")
-    optimizations: List["RuleOptimizationJob"] = Relationship(back_populates="rule")
-    pattern_associations: List["RulePatternAssociation"] = Relationship(back_populates="rule")
-    performance_baselines: List["RulePerformanceBaseline"] = Relationship(back_populates="rule")
-    
-    # Model Configuration
-    class Config:
-        schema_extra = {
-            "example": {
-                "rule_id": "rule_pii_detection_v2",
-                "name": "Advanced PII Detection Rule",
-                "description": "AI-powered rule for detecting personally identifiable information",
-                "complexity_level": "advanced",
-                "pattern_type": "ai_semantic",
-                "rule_expression": "DETECT_PII_PATTERNS(column_content) WITH confidence > 0.9",
-                "conditions": [
-                    {
-                        "type": "semantic_analysis",
-                        "parameters": {"context_window": 50, "entity_types": ["PERSON", "EMAIL", "PHONE"]}
-                    }
-                ],
-                "ml_model_config": {
-                    "model_type": "transformer",
-                    "model_path": "/models/pii_detection_v2.pkl",
-                    "preprocessing": {"tokenization": "bert", "normalization": True}
-                }
-            }
-        }
-    
-    # Table Constraints
-    __table_args__ = (
-        Index('ix_rule_performance', 'accuracy_score', 'execution_success_rate'),
-        Index('ix_rule_business', 'business_impact_level', 'business_domain'),
-        Index('ix_rule_complexity_pattern', 'complexity_level', 'pattern_type'),
-        UniqueConstraint('rule_id', 'version', name='uq_rule_version'),
-        CheckConstraint('confidence_threshold >= 0.0 AND confidence_threshold <= 1.0', name='ck_confidence_threshold'),
-        CheckConstraint('timeout_seconds > 0', name='ck_timeout_positive'),
-    )
-
-
-class RulePatternLibrary(SQLModel, table=True):
-    """
-    Comprehensive library of reusable patterns for intelligent rule creation.
-    
-    This library serves as a knowledge base of proven patterns that can be:
-    - Reused across multiple rules
-    - Evolved through machine learning
-    - Optimized for performance
-    - Shared across the organization
-    """
-    __tablename__ = "rule_pattern_library"
-    
-    # Core Identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    pattern_id: str = Field(index=True, unique=True)
-    name: str = Field(index=True, max_length=255)
-    display_name: Optional[str] = Field(max_length=255)
-    category: str = Field(index=True, max_length=100)
-    subcategory: Optional[str] = Field(max_length=100, index=True)
-    
-    # Pattern Definition
-    pattern_expression: str = Field(sa_column=Column(Text), description="Core pattern expression")
-    pattern_type: PatternRecognitionType = Field(index=True)
-    complexity_score: float = Field(ge=0.0, le=10.0, description="Pattern complexity rating")
-    difficulty_level: RuleComplexityLevel = Field(default=RuleComplexityLevel.INTERMEDIATE)
-    
-    # Pattern Variants
-    variants: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    alternatives: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    optimized_versions: Dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # ML/AI Enhancement
-    ml_enhanced: bool = Field(default=False)
-    ai_training_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    model_references: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    embedding_vectors: Optional[List[float]] = Field(default=None, sa_column=Column(JSON))
-    
-    # Usage Statistics
-    usage_count: int = Field(default=0, ge=0, index=True)
-    success_rate: float = Field(default=0.0, ge=0.0, le=1.0, index=True)
-    average_accuracy: float = Field(default=0.0, ge=0.0, le=1.0)
-    performance_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    adoption_rate: float = Field(default=0.0, ge=0.0, le=1.0)
-    
-    # Business Metrics
-    business_value_score: float = Field(default=0.0, ge=0.0, le=10.0)
-    cost_effectiveness: float = Field(default=0.0, ge=0.0, le=10.0)
-    roi_calculation: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Pattern Metadata
+    # Metadata and Documentation
     tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    keywords: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    data_types: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    source_systems: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    target_domains: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # Technical Specifications
-    required_libraries: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    dependencies: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    performance_requirements: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    resource_constraints: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Quality Assurance
-    test_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
-    validation_rules: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    quality_metrics: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Documentation
     documentation: Optional[str] = Field(sa_column=Column(Text))
     examples: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    tutorials: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    best_practices: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    troubleshooting_guide: Optional[str] = Field(sa_column=Column(Text))
     
     # Lifecycle Management
-    version: str = Field(default="1.0.0", max_length=20)
-    version_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    is_public: bool = Field(default=True, index=True)
-    is_deprecated: bool = Field(default=False, index=True)
-    deprecation_reason: Optional[str] = None
-    replacement_pattern_id: Optional[str] = None
-    
-    # Access Control
-    visibility_level: str = Field(default="organization", max_length=50)  # public, organization, team, private
-    access_permissions: Dict[str, List[str]] = Field(default_factory=dict, sa_column=Column(JSON))
-    owner_team: Optional[str] = Field(max_length=100)
-    contributors: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # Analytics and Insights
-    trend_analysis: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    usage_patterns: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    effectiveness_trends: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # Integration Mappings
-    classification_integration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    compliance_mappings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    data_source_compatibility: Dict[str, bool] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_by: Optional[str] = Field(max_length=255)
+    updated_by: Optional[str] = Field(max_length=255)
+    approved_by: Optional[str] = Field(max_length=255)
+    approval_date: Optional[datetime] = None
+    deprecation_date: Optional[datetime] = None
+    retirement_date: Optional[datetime] = None
     
     # Temporal Fields
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    last_used: Optional[datetime] = Field(index=True)
+    last_executed: Optional[datetime] = Field(index=True)
     last_optimized: Optional[datetime] = None
-    created_by: Optional[str] = Field(max_length=255)
+    next_optimization: Optional[datetime] = None
     
-    # Relationships
-    rule_associations: List["RulePatternAssociation"] = Relationship(back_populates="pattern")
+    # Relationships - Cross-Group Integration
+    execution_history: List["RuleExecutionHistory"] = Relationship(back_populates="rule")
+    optimization_sessions: List["RuleOptimizationSession"] = Relationship(back_populates="rule")
+    validation_tests: List["RuleValidationTest"] = Relationship(back_populates="rule")
+    performance_analytics: List["RulePerformanceAnalytics"] = Relationship(back_populates="rule")
     
-    # Table Constraints
+    # Database Constraints
     __table_args__ = (
-        Index('ix_pattern_usage_success', 'usage_count', 'success_rate'),
-        Index('ix_pattern_category_type', 'category', 'pattern_type'),
-        Index('ix_pattern_performance', 'average_accuracy', 'business_value_score'),
+        Index('ix_rule_performance', 'execution_count', 'average_execution_time'),
+        Index('ix_rule_quality', 'precision_score', 'recall_score', 'f1_score'),
+        Index('ix_rule_business', 'business_category', 'business_priority'),
+        Index('ix_rule_lifecycle', 'validation_status', 'is_active'),
+        CheckConstraint('confidence_threshold >= 0.0 AND confidence_threshold <= 1.0'),
+        CheckConstraint('business_priority >= 1 AND business_priority <= 10'),
+        CheckConstraint('performance_weight + accuracy_weight + cost_weight <= 1.0'),
+        UniqueConstraint('rule_uuid'),
     )
 
 
 class RuleExecutionHistory(SQLModel, table=True):
     """
-    Comprehensive historical execution data for rules with detailed
-    performance metrics, error analysis, and optimization insights.
+    Comprehensive execution history for intelligent scan rules with detailed
+    performance metrics, results analysis, and cross-system integration tracking.
     """
     __tablename__ = "rule_execution_history"
     
-    # Primary Keys
+    # Primary Identification
     id: Optional[int] = Field(default=None, primary_key=True)
     execution_id: str = Field(index=True, unique=True)
     rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
     
     # Execution Context
-    data_source_id: int = Field(foreign_key="datasource.id", index=True)
-    scan_job_id: Optional[str] = Field(index=True, max_length=255)
-    orchestration_id: Optional[str] = Field(index=True, max_length=255)
-    triggered_by: str = Field(max_length=255)  # user_id, system, schedule, api, etc.
-    trigger_context: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    trigger_event: RuleTriggerEvent = Field(index=True)
+    execution_mode: RuleExecutionMode
+    triggered_by: Optional[str] = Field(max_length=255)
+    scan_job_id: Optional[int] = Field(foreign_key="scanjob.id")
+    data_source_id: Optional[int] = Field(foreign_key="datasource.id")
     
-    # Execution Configuration
-    execution_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    runtime_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    optimization_settings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Execution Results
-    execution_status: str = Field(index=True, max_length=50)  # success, failed, partial, timeout, cancelled
-    exit_code: Optional[int] = None
-    status_message: Optional[str] = Field(max_length=500)
-    error_category: Optional[str] = Field(max_length=100, index=True)
-    
-    # Timing Metrics
-    start_time: datetime = Field(index=True)
-    end_time: Optional[datetime] = Field(index=True)
+    # Execution Details
+    started_at: datetime = Field(index=True)
+    completed_at: Optional[datetime] = None
     duration_seconds: Optional[float] = Field(ge=0.0)
-    queue_time_seconds: Optional[float] = Field(ge=0.0)
-    initialization_time_seconds: Optional[float] = Field(ge=0.0)
-    processing_time_seconds: Optional[float] = Field(ge=0.0)
-    cleanup_time_seconds: Optional[float] = Field(ge=0.0)
+    status: str = Field(max_length=50, index=True)  # running, completed, failed, timeout
     
-    # Data Processing Metrics
-    records_processed: Optional[int] = Field(ge=0)
-    records_matched: Optional[int] = Field(ge=0)
-    records_flagged: Optional[int] = Field(ge=0)
-    false_positives: Optional[int] = Field(ge=0)
-    false_negatives: Optional[int] = Field(ge=0)
-    true_positives: Optional[int] = Field(ge=0)
-    true_negatives: Optional[int] = Field(ge=0)
+    # Input and Configuration
+    input_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    rule_configuration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    data_sample_size: int = Field(default=0, ge=0)
+    processing_scope: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Results and Output
+    matches_found: int = Field(default=0, ge=0)
+    false_positives: int = Field(default=0, ge=0)
+    confidence_scores: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    pattern_matches: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    generated_insights: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Performance Metrics
+    cpu_usage_percent: Optional[float] = Field(ge=0.0, le=100.0)
+    memory_usage_mb: Optional[float] = Field(ge=0.0)
+    network_io_mb: Optional[float] = Field(ge=0.0)
+    disk_io_mb: Optional[float] = Field(ge=0.0)
+    throughput_records_per_second: Optional[float] = Field(ge=0.0)
     
     # Quality Metrics
+    accuracy_score: Optional[float] = Field(ge=0.0, le=1.0)
     precision: Optional[float] = Field(ge=0.0, le=1.0)
     recall: Optional[float] = Field(ge=0.0, le=1.0)
     f1_score: Optional[float] = Field(ge=0.0, le=1.0)
-    accuracy: Optional[float] = Field(ge=0.0, le=1.0)
-    confidence_score: Optional[float] = Field(ge=0.0, le=1.0)
-    
-    # Resource Usage Metrics
-    cpu_usage_percent: Optional[float] = Field(ge=0.0, le=100.0)
-    memory_usage_mb: Optional[float] = Field(ge=0.0)
-    peak_memory_mb: Optional[float] = Field(ge=0.0)
-    network_io_mb: Optional[float] = Field(ge=0.0)
-    storage_io_mb: Optional[float] = Field(ge=0.0)
-    temp_storage_used_mb: Optional[float] = Field(ge=0.0)
-    
-    # Performance Analysis
-    throughput_records_per_second: Optional[float] = Field(ge=0.0)
-    latency_percentiles: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    performance_baseline_comparison: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    bottleneck_analysis: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Results and Outputs
-    execution_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    output_artifacts: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    generated_reports: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    data_samples: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Error and Warning Analysis
-    error_details: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    warning_messages: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    exception_stack_trace: Optional[str] = Field(sa_column=Column(Text))
-    error_recovery_actions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # Optimization and Learning
-    optimization_suggestions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    learning_insights: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    pattern_adaptations: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    feedback_score: Optional[float] = Field(ge=0.0, le=10.0)
+    error_rate: Optional[float] = Field(ge=0.0, le=1.0)
     
     # Business Impact
-    business_value_generated: Optional[float] = None
-    cost_savings: Optional[float] = None
-    risk_mitigation_score: Optional[float] = Field(ge=0.0, le=10.0)
-    compliance_contribution: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    business_value_generated: Optional[float] = Field(ge=0.0)
+    compliance_violations_found: int = Field(default=0, ge=0)
+    data_quality_issues_identified: int = Field(default=0, ge=0)
+    security_risks_detected: int = Field(default=0, ge=0)
+    
+    # Error and Exception Handling
+    error_message: Optional[str] = Field(max_length=2000)
+    exception_details: Optional[Dict[str, Any]] = Field(sa_column=Column(JSON))
+    warnings: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    retry_count: int = Field(default=0, ge=0)
     
     # Integration Results
-    classification_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    compliance_validations: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    catalog_enrichments: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    data_source_insights: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    classification_results: List[int] = Field(default_factory=list, sa_column=Column(JSON))
+    compliance_validations: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    catalog_updates: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    lineage_discoveries: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Environment and Context
-    execution_environment: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    system_state: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    concurrent_executions: int = Field(default=1, ge=1)
-    resource_contention_level: Optional[str] = Field(max_length=50)
+    # Learning and Optimization Data
+    learning_feedback: Optional[Dict[str, Any]] = Field(sa_column=Column(JSON))
+    optimization_suggestions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    pattern_effectiveness: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    adaptation_actions: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
     # Audit and Compliance
     audit_trail: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    compliance_checks: Dict[str, bool] = Field(default_factory=dict, sa_column=Column(JSON))
-    security_validations: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    compliance_checkpoints: Dict[str, bool] = Field(default_factory=dict, sa_column=Column(JSON))
+    data_lineage_impact: Optional[Dict[str, Any]] = Field(sa_column=Column(JSON))
     
     # Relationships
-    rule: Optional[IntelligentScanRule] = Relationship(back_populates="executions")
-    data_source: Optional["DataSource"] = Relationship()
+    rule: Optional[IntelligentScanRule] = Relationship(back_populates="execution_history")
+    scan_job: Optional[ScanJob] = Relationship()
     
-    # Table Constraints
+    # Database Constraints
     __table_args__ = (
         Index('ix_execution_performance', 'duration_seconds', 'throughput_records_per_second'),
-        Index('ix_execution_quality', 'precision', 'recall', 'f1_score'),
-        Index('ix_execution_status_time', 'execution_status', 'start_time'),
-        Index('ix_execution_resource_usage', 'cpu_usage_percent', 'memory_usage_mb'),
+        Index('ix_execution_results', 'matches_found', 'accuracy_score'),
+        Index('ix_execution_timing', 'started_at', 'completed_at'),
+        Index('ix_execution_business', 'business_value_generated', 'compliance_violations_found'),
     )
 
 
-class RuleOptimizationJob(SQLModel, table=True):
+class RuleOptimizationSession(SQLModel, table=True):
     """
-    Advanced rule optimization jobs with AI/ML-driven improvements,
-    performance tuning, and continuous learning capabilities.
+    AI-powered optimization sessions for intelligent scan rules with machine learning
+    algorithms, performance tuning, and adaptive improvements.
     """
-    __tablename__ = "rule_optimization_jobs"
+    __tablename__ = "rule_optimization_sessions"
     
     # Primary Identification
     id: Optional[int] = Field(default=None, primary_key=True)
-    optimization_id: str = Field(index=True, unique=True)
+    session_id: str = Field(index=True, unique=True)
     rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
     
     # Optimization Configuration
-    optimization_type: str = Field(max_length=100, index=True)  # performance, accuracy, cost, pattern, ml_tuning
-    optimization_strategy: RuleOptimizationStrategy = Field(index=True)
-    target_metrics: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    optimization_strategy: RuleOptimizationStrategy
+    optimization_algorithm: str = Field(max_length=100)
+    target_metrics: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     constraints: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # AI/ML Configuration
-    ml_optimization_enabled: bool = Field(default=True)
-    algorithm_type: str = Field(default="genetic_algorithm", max_length=100)
-    hyperparameter_tuning: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    training_data_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Session Details
+    started_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    completed_at: Optional[datetime] = None
+    duration_minutes: Optional[float] = Field(ge=0.0)
+    status: str = Field(max_length=50, index=True)
     
-    # Job Status and Progress
-    job_status: str = Field(index=True, max_length=50, default="pending")  # pending, running, completed, failed, cancelled
-    progress_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-    current_phase: str = Field(default="initialization", max_length=100)
-    estimated_completion: Optional[datetime] = None
-    
-    # Baseline Metrics (Before Optimization)
-    baseline_performance: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    baseline_accuracy: Optional[float] = Field(ge=0.0, le=1.0)
-    baseline_execution_time: Optional[float] = Field(ge=0.0)
+    # Baseline Performance
+    baseline_metrics: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    baseline_accuracy: float = Field(default=0.0, ge=0.0, le=1.0)
+    baseline_performance: float = Field(default=0.0, ge=0.0)
     baseline_resource_usage: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Optimization Results
-    optimized_performance: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    optimized_accuracy: Optional[float] = Field(ge=0.0, le=1.0)
-    optimized_execution_time: Optional[float] = Field(ge=0.0)
-    optimized_resource_usage: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Improvement Metrics
-    performance_improvement: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    accuracy_improvement: Optional[float] = None
-    speed_improvement_percent: Optional[float] = None
-    resource_efficiency_gain: Optional[float] = None
-    
-    # Optimization Process Details
-    iterations_performed: int = Field(default=0, ge=0)
-    max_iterations: int = Field(default=100, ge=1)
+    # Optimization Process
+    iterations_completed: int = Field(default=0, ge=0)
+    parameter_space_explored: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    optimization_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     convergence_criteria: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    early_stopping: bool = Field(default=True)
     
-    # Generated Optimizations
-    rule_modifications: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    parameter_adjustments: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    pattern_improvements: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # Results and Improvements
+    optimized_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    performance_improvement: float = Field(default=0.0)
+    accuracy_improvement: float = Field(default=0.0)
+    resource_efficiency_gain: float = Field(default=0.0)
     
-    # Validation and Testing
+    # Final Metrics
+    final_accuracy: float = Field(default=0.0, ge=0.0, le=1.0)
+    final_performance: float = Field(default=0.0, ge=0.0)
+    final_resource_usage: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    overall_improvement_score: float = Field(default=0.0)
+    
+    # Machine Learning Details
+    ml_model_type: Optional[str] = Field(max_length=100)
+    training_data_size: int = Field(default=0, ge=0)
+    validation_data_size: int = Field(default=0, ge=0)
+    feature_importance: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    model_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Recommendations and Actions
+    optimization_recommendations: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    applied_changes: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    rejected_changes: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    next_optimization_suggestions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Quality and Validation
     validation_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    test_case_results: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    cross_validation_scores: List[float] = Field(default_factory=list, sa_column=Column(JSON))
-    statistical_significance: Optional[float] = Field(ge=0.0, le=1.0)
+    cross_validation_score: Optional[float] = Field(ge=0.0, le=1.0)
+    robustness_testing: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    stability_metrics: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Business Impact Analysis
-    cost_benefit_analysis: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    roi_projection: Optional[float] = None
-    business_value_improvement: Optional[float] = None
+    # Business Impact
+    estimated_cost_savings: Optional[float] = Field(ge=0.0)
+    estimated_time_savings: Optional[float] = Field(ge=0.0)
+    business_value_impact: Optional[float] = Field(ge=0.0)
     risk_assessment: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Implementation Status
-    is_applied: bool = Field(default=False, index=True)
-    applied_at: Optional[datetime] = None
-    rollback_available: bool = Field(default=True)
-    rollback_plan: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Relationships
+    rule: Optional[IntelligentScanRule] = Relationship(back_populates="optimization_sessions")
     
-    # Monitoring and Feedback
-    post_optimization_monitoring: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    feedback_collection: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    user_satisfaction_score: Optional[float] = Field(ge=0.0, le=10.0)
+    # Database Constraints
+    __table_args__ = (
+        Index('ix_optimization_improvements', 'performance_improvement', 'accuracy_improvement'),
+        Index('ix_optimization_results', 'overall_improvement_score', 'model_confidence'),
+        Index('ix_optimization_timing', 'started_at', 'duration_minutes'),
+    )
+
+
+class RuleValidationTest(SQLModel, table=True):
+    """
+    Comprehensive validation testing framework for intelligent scan rules with
+    automated test generation, continuous validation, and quality assurance.
+    """
+    __tablename__ = "rule_validation_tests"
     
-    # Error Handling
-    error_messages: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    warnings: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    failure_analysis: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    # Primary Identification
+    id: Optional[int] = Field(default=None, primary_key=True)
+    test_id: str = Field(index=True, unique=True)
+    rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
     
-    # Resource Usage
-    computational_cost: Optional[float] = Field(ge=0.0)
-    optimization_duration: Optional[float] = Field(ge=0.0)
-    resources_consumed: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Test Configuration
+    test_name: str = Field(max_length=255, index=True)
+    test_category: str = Field(max_length=100, index=True)
+    test_type: str = Field(max_length=50)  # unit, integration, performance, security
+    test_priority: int = Field(default=5, ge=1, le=10)
+    
+    # Test Definition
+    test_description: Optional[str] = Field(sa_column=Column(Text))
+    test_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    expected_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    test_criteria: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Execution Details
+    is_automated: bool = Field(default=True)
+    execution_frequency: str = Field(max_length=50)  # on_demand, continuous, scheduled
+    last_executed: Optional[datetime] = Field(index=True)
+    next_execution: Optional[datetime] = None
+    execution_count: int = Field(default=0, ge=0)
+    
+    # Results and Status
+    current_status: str = Field(max_length=50, index=True)  # pending, running, passed, failed
+    success_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
+    success_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Latest Execution Results
+    latest_execution_time: Optional[datetime] = None
+    latest_duration_seconds: Optional[float] = Field(ge=0.0)
+    latest_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    latest_score: Optional[float] = Field(ge=0.0, le=1.0)
+    
+    # Performance Metrics
+    average_execution_time: float = Field(default=0.0, ge=0.0)
+    min_execution_time: Optional[float] = Field(ge=0.0)
+    max_execution_time: Optional[float] = Field(ge=0.0)
+    performance_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Quality Metrics
+    accuracy_scores: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    precision_scores: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    recall_scores: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    consistency_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Error Analysis
+    error_patterns: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
+    failure_reasons: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    error_resolution_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Test Environment
+    environment_config: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    data_dependencies: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    resource_requirements: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Continuous Integration
+    ci_integration: bool = Field(default=False)
+    automated_regression: bool = Field(default=False)
+    performance_benchmarking: bool = Field(default=False)
+    quality_gates: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Relationships
+    rule: Optional[IntelligentScanRule] = Relationship(back_populates="validation_tests")
+    
+    # Database Constraints
+    __table_args__ = (
+        Index('ix_test_performance', 'success_rate', 'average_execution_time'),
+        Index('ix_test_quality', 'consistency_score', 'latest_score'),
+        Index('ix_test_execution', 'last_executed', 'execution_count'),
+    )
+
+
+class RulePerformanceAnalytics(SQLModel, table=True):
+    """
+    Advanced performance analytics for intelligent scan rules with real-time monitoring,
+    trend analysis, and predictive performance modeling.
+    """
+    __tablename__ = "rule_performance_analytics"
+    
+    # Primary Identification
+    id: Optional[int] = Field(default=None, primary_key=True)
+    analytics_id: str = Field(index=True, unique=True)
+    rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
+    
+    # Time Series Data
+    measurement_timestamp: datetime = Field(index=True)
+    time_window_start: datetime
+    time_window_end: datetime
+    data_points_collected: int = Field(default=0, ge=0)
+    
+    # Execution Performance
+    total_executions: int = Field(default=0, ge=0)
+    successful_executions: int = Field(default=0, ge=0)
+    failed_executions: int = Field(default=0, ge=0)
+    average_execution_time: float = Field(default=0.0, ge=0.0)
+    median_execution_time: float = Field(default=0.0, ge=0.0)
+    p95_execution_time: float = Field(default=0.0, ge=0.0)
+    p99_execution_time: float = Field(default=0.0, ge=0.0)
+    
+    # Throughput Metrics
+    records_processed_per_hour: float = Field(default=0.0, ge=0.0)
+    data_volume_processed_gb: float = Field(default=0.0, ge=0.0)
+    processing_velocity_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    throughput_efficiency: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Resource Utilization
+    cpu_utilization_avg: float = Field(default=0.0, ge=0.0, le=100.0)
+    cpu_utilization_peak: float = Field(default=0.0, ge=0.0, le=100.0)
+    memory_utilization_avg: float = Field(default=0.0, ge=0.0)
+    memory_utilization_peak: float = Field(default=0.0, ge=0.0)
+    network_io_avg_mbps: float = Field(default=0.0, ge=0.0)
+    disk_io_avg_mbps: float = Field(default=0.0, ge=0.0)
+    
+    # Quality and Accuracy Metrics
+    accuracy_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    precision_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    recall_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    f1_score_trend: List[float] = Field(default_factory=list, sa_column=Column(JSON))
+    false_positive_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    false_negative_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    
+    # Business Impact Metrics  
+    business_value_generated: float = Field(default=0.0, ge=0.0)
+    cost_savings_realized: float = Field(default=0.0, ge=0.0)
+    compliance_violations_prevented: int = Field(default=0, ge=0)
+    data_quality_improvements: int = Field(default=0, ge=0)
+    security_risks_mitigated: int = Field(default=0, ge=0)
+    
+    # Trend Analysis
+    performance_trend_direction: str = Field(max_length=20)  # improving, degrading, stable
+    trend_slope: float = Field(default=0.0)
+    trend_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    seasonal_patterns: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    anomaly_indicators: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Predictive Analytics
+    predicted_performance_next_week: Optional[float] = None
+    predicted_resource_needs: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    capacity_forecasting: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    optimization_opportunities: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Comparative Analysis
+    benchmark_comparison: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    peer_rule_comparison: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    historical_comparison: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    industry_benchmarks: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Alert and Monitoring
+    performance_alerts: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    threshold_breaches: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    sla_compliance_status: bool = Field(default=True)
+    monitoring_health_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    
+    # Relationships
+    rule: Optional[IntelligentScanRule] = Relationship(back_populates="performance_analytics")
+    
+    # Database Constraints
+    __table_args__ = (
+        Index('ix_analytics_time_series', 'measurement_timestamp', 'rule_id'),
+        Index('ix_analytics_performance', 'average_execution_time', 'throughput_efficiency'),
+        Index('ix_analytics_business', 'business_value_generated', 'cost_savings_realized'),
+        Index('ix_analytics_quality', 'false_positive_rate', 'false_negative_rate'),
+    )
+
+
+# ===================== ENTERPRISE INTEGRATION MODELS =====================
+
+class RuleDataSourceIntegration(SQLModel, table=True):
+    """Integration model linking intelligent scan rules with data sources"""
+    __tablename__ = "rule_data_source_integrations"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
+    data_source_id: int = Field(foreign_key="datasource.id", index=True)
+    
+    # Integration Configuration
+    integration_type: str = Field(max_length=100)  # automatic, manual, scheduled
+    scope_definition: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    execution_priority: int = Field(default=5, ge=1, le=10)
+    resource_allocation: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Performance Tracking
+    total_executions: int = Field(default=0, ge=0)
+    success_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_processing_time: float = Field(default=0.0, ge=0.0)
+    data_coverage_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
+    
+    # Status and Health
+    integration_status: str = Field(max_length=50, index=True)
+    last_execution: Optional[datetime] = None
+    next_scheduled_execution: Optional[datetime] = None
+    health_score: float = Field(default=1.0, ge=0.0, le=1.0)
     
     # Temporal Management
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    created_by: str = Field(max_length=255)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     
-    # Relationships
-    rule: Optional[IntelligentScanRule] = Relationship(back_populates="optimizations")
-    
-    # Table Constraints
+    # Constraints
     __table_args__ = (
-        Index('ix_optimization_status_progress', 'job_status', 'progress_percentage'),
-        Index('ix_optimization_improvement', 'speed_improvement_percent', 'accuracy_improvement'),
-        Index('ix_optimization_roi', 'roi_projection', 'business_value_improvement'),
+        UniqueConstraint('rule_id', 'data_source_id'),
+        Index('ix_integration_performance', 'success_rate', 'average_processing_time'),
     )
 
 
-class RulePatternAssociation(SQLModel, table=True):
-    """
-    Association model linking rules with patterns from the pattern library.
-    Tracks usage, effectiveness, and optimization opportunities.
-    """
-    __tablename__ = "rule_pattern_associations"
+class RuleComplianceIntegration(SQLModel, table=True):
+    """Integration model linking intelligent scan rules with compliance requirements"""
+    __tablename__ = "rule_compliance_integrations"
     
-    # Primary Keys
     id: Optional[int] = Field(default=None, primary_key=True)
     rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
-    pattern_id: int = Field(foreign_key="rule_pattern_library.id", index=True)
+    compliance_rule_id: int = Field(index=True)  # Reference to compliance system
     
-    # Association Details
-    association_type: str = Field(max_length=100)  # primary, secondary, fallback, enhancement
-    usage_context: str = Field(max_length=200)
-    weight: float = Field(default=1.0, ge=0.0, le=1.0)
-    priority: int = Field(default=1, ge=1, le=10)
+    # Integration Details
+    compliance_framework: str = Field(max_length=100, index=True)  # GDPR, HIPAA, SOX, etc.
+    compliance_requirement: str = Field(max_length=255)
+    validation_frequency: str = Field(max_length=50)  # continuous, daily, weekly, monthly
     
-    # Performance Metrics
-    effectiveness_score: float = Field(default=0.0, ge=0.0, le=1.0)
-    usage_frequency: int = Field(default=0, ge=0)
-    success_rate: float = Field(default=0.0, ge=0.0, le=1.0)
-    contribution_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Compliance Validation
+    compliance_status: str = Field(max_length=50, index=True)  # compliant, non_compliant, partial
+    last_validation: Optional[datetime] = None
+    validation_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    violation_count: int = Field(default=0, ge=0)
     
-    # Optimization Data
-    optimization_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    performance_trends: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    adaptation_log: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # Risk Assessment
+    risk_level: str = Field(max_length=20)  # low, medium, high, critical
+    risk_score: float = Field(default=0.0, ge=0.0, le=10.0)
+    mitigation_actions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Status and Lifecycle
-    is_active: bool = Field(default=True, index=True)
+    # Temporal Management
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    last_used: Optional[datetime] = None
-    
-    # Relationships
-    rule: Optional[IntelligentScanRule] = Relationship(back_populates="pattern_associations")
-    pattern: Optional[RulePatternLibrary] = Relationship(back_populates="rule_associations")
-    
-    # Table Constraints
-    __table_args__ = (
-        UniqueConstraint('rule_id', 'pattern_id', name='uq_rule_pattern'),
-        Index('ix_association_effectiveness', 'effectiveness_score', 'success_rate'),
-    )
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
-class RulePerformanceBaseline(SQLModel, table=True):
-    """
-    Performance baselines for rules to track improvements and regressions.
-    Enables continuous performance monitoring and optimization.
-    """
-    __tablename__ = "rule_performance_baselines"
+class RuleClassificationIntegration(SQLModel, table=True):
+    """Integration model linking intelligent scan rules with classification systems"""
+    __tablename__ = "rule_classification_integrations"
     
-    # Primary Keys
     id: Optional[int] = Field(default=None, primary_key=True)
-    baseline_id: str = Field(index=True, unique=True)
     rule_id: int = Field(foreign_key="intelligent_scan_rules.id", index=True)
+    classification_id: int = Field(index=True)  # Reference to classification system
     
-    # Baseline Configuration
-    baseline_name: str = Field(max_length=255)
-    baseline_type: str = Field(max_length=100)  # initial, quarterly, post_optimization, manual
-    measurement_period_days: int = Field(default=30, ge=1)
-    sample_size: int = Field(ge=1)
+    # Classification Configuration
+    classification_trigger: bool = Field(default=False)  # Whether rule triggers classification
+    classification_confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    auto_classification_enabled: bool = Field(default=False)
     
-    # Performance Metrics
-    average_execution_time_ms: float = Field(ge=0.0)
-    percentile_95_time_ms: float = Field(ge=0.0)
-    throughput_records_per_second: float = Field(ge=0.0)
-    error_rate: float = Field(ge=0.0, le=1.0)
-    accuracy_score: float = Field(ge=0.0, le=1.0)
+    # Integration Results
+    classifications_triggered: int = Field(default=0, ge=0)
+    successful_classifications: int = Field(default=0, ge=0)
+    classification_accuracy: float = Field(default=0.0, ge=0.0, le=1.0)
     
-    # Resource Usage Baselines
-    average_cpu_usage: float = Field(ge=0.0, le=100.0)
-    average_memory_usage_mb: float = Field(ge=0.0)
-    network_io_baseline: float = Field(ge=0.0)
-    storage_io_baseline: float = Field(ge=0.0)
-    
-    # Quality Baselines
-    precision_baseline: float = Field(ge=0.0, le=1.0)
-    recall_baseline: float = Field(ge=0.0, le=1.0)
-    f1_score_baseline: float = Field(ge=0.0, le=1.0)
-    false_positive_rate: float = Field(ge=0.0, le=1.0)
-    
-    # Statistical Measures
-    standard_deviation: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    confidence_intervals: Dict[str, Tuple[float, float]] = Field(default_factory=dict, sa_column=Column(JSON))
-    statistical_significance: float = Field(ge=0.0, le=1.0)
-    
-    # Business Metrics
-    business_value_baseline: Optional[float] = None
-    cost_per_execution: Optional[float] = Field(ge=0.0)
-    roi_baseline: Optional[float] = None
-    
-    # Data Collection Details
-    measurement_start: datetime = Field(index=True)
-    measurement_end: datetime = Field(index=True)
-    data_points_collected: int = Field(ge=1)
-    collection_methodology: str = Field(max_length=200)
-    
-    # Validation and Quality
-    is_validated: bool = Field(default=False)
-    validation_method: Optional[str] = Field(max_length=100)
-    quality_score: float = Field(default=0.0, ge=0.0, le=1.0)
-    outliers_removed: int = Field(default=0, ge=0)
-    
-    # Comparison Data
-    previous_baseline_id: Optional[str] = None
-    improvement_percentage: Optional[float] = None
-    regression_indicators: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    
-    # Status and Lifecycle
-    is_current: bool = Field(default=True, index=True)
+    # Temporal Management
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    created_by: str = Field(max_length=255)
-    
-    # Relationships
-    rule: Optional[IntelligentScanRule] = Relationship(back_populates="performance_baselines")
-    
-    # Table Constraints
-    __table_args__ = (
-        Index('ix_baseline_performance', 'average_execution_time_ms', 'accuracy_score'),
-        Index('ix_baseline_period', 'measurement_start', 'measurement_end'),
-    )
+    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 # ===================== RESPONSE AND REQUEST MODELS =====================
 
-class IntelligentRuleResponse(BaseModel):
-    """Response model for intelligent scan rules with comprehensive metadata."""
+class IntelligentScanRuleResponse(BaseModel):
+    """Response model for intelligent scan rules"""
     id: int
-    rule_id: str
+    rule_uuid: str
     name: str
     display_name: Optional[str]
     description: Optional[str]
+    rule_type: IntelligentRuleType
     complexity_level: RuleComplexityLevel
-    pattern_type: PatternRecognitionType
-    optimization_strategy: RuleOptimizationStrategy
-    execution_strategy: RuleExecutionStrategy
-    validation_status: RuleValidationStatus
-    business_impact_level: RuleBusinessImpact
-    
-    # Performance Metrics
-    accuracy_score: float
-    execution_success_rate: float
-    average_execution_time_ms: float
-    total_executions: int
-    
-    # Configuration Summary
-    ai_context_awareness: bool
-    learning_enabled: bool
-    parallel_execution: bool
-    auto_optimization_enabled: bool
-    
-    # Status Information
+    execution_mode: RuleExecutionMode
+    confidence_threshold: float
     is_active: bool
-    version: str
+    validation_status: RuleValidationStatus
+    execution_count: int
+    success_count: int
+    average_execution_time: float
+    precision_score: float
+    recall_score: float
+    f1_score: float
+    business_priority: int
     created_at: datetime
     updated_at: datetime
-    last_execution_time: Optional[datetime]
     
     class Config:
         from_attributes = True
 
 
-class RuleCreateRequest(BaseModel):
-    """Request model for creating new intelligent scan rules."""
+class IntelligentScanRuleCreate(BaseModel):
+    """Request model for creating intelligent scan rules"""
     name: str = Field(min_length=1, max_length=255)
     display_name: Optional[str] = Field(max_length=255)
     description: Optional[str] = None
-    rule_expression: str = Field(min_length=1)
-    
-    # Optional Configuration
-    complexity_level: Optional[RuleComplexityLevel] = RuleComplexityLevel.INTERMEDIATE
-    pattern_type: Optional[PatternRecognitionType] = PatternRecognitionType.REGEX
-    optimization_strategy: Optional[RuleOptimizationStrategy] = RuleOptimizationStrategy.BALANCED
-    business_impact_level: Optional[RuleBusinessImpact] = RuleBusinessImpact.MEDIUM
-    
-    # Advanced Options
-    conditions: Optional[List[Dict[str, Any]]] = []
-    actions: Optional[List[Dict[str, Any]]] = []
-    parameters: Optional[Dict[str, Any]] = {}
-    ml_model_config: Optional[Dict[str, Any]] = None
-    
-    # Performance Settings
-    timeout_seconds: Optional[int] = Field(default=300, ge=1, le=3600)
-    parallel_execution: Optional[bool] = True
-    ai_context_awareness: Optional[bool] = False
-    learning_enabled: Optional[bool] = True
-    
-    @validator('name')
-    def validate_name(cls, v):
-        if not v.strip():
-            raise ValueError('Name cannot be empty')
-        return v.strip()
-    
-    @validator('rule_expression')
-    def validate_rule_expression(cls, v):
-        if not v.strip():
-            raise ValueError('Rule expression cannot be empty')
-        # Additional validation logic could be added here
-        return v.strip()
-
-
-class RuleUpdateRequest(BaseModel):
-    """Request model for updating existing intelligent scan rules."""
-    name: Optional[str] = Field(min_length=1, max_length=255)
-    display_name: Optional[str] = Field(max_length=255)
-    description: Optional[str] = None
-    rule_expression: Optional[str] = Field(min_length=1)
-    
-    # Configuration Updates
-    optimization_strategy: Optional[RuleOptimizationStrategy] = None
-    business_impact_level: Optional[RuleBusinessImpact] = None
-    timeout_seconds: Optional[int] = Field(ge=1, le=3600)
-    
-    # Feature Toggles
-    ai_context_awareness: Optional[bool] = None
-    learning_enabled: Optional[bool] = None
-    parallel_execution: Optional[bool] = None
-    auto_optimization_enabled: Optional[bool] = None
-    is_active: Optional[bool] = None
+    rule_type: IntelligentRuleType
+    complexity_level: RuleComplexityLevel = RuleComplexityLevel.MODERATE
+    execution_mode: RuleExecutionMode = RuleExecutionMode.ASYNCHRONOUS
+    rule_logic: str = Field(min_length=1)
+    pattern_definition: Optional[str] = None
+    matching_algorithm: PatternMatchingAlgorithm = PatternMatchingAlgorithm.REGEX
+    confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    ai_model_config: Optional[Dict[str, Any]] = {}
+    optimization_strategy: RuleOptimizationStrategy = RuleOptimizationStrategy.BALANCED
+    trigger_events: Optional[List[RuleTriggerEvent]] = []
+    business_category: Optional[str] = Field(max_length=100)
+    business_priority: int = Field(default=5, ge=1, le=10)
+    data_source_scope: Optional[List[int]] = []
+    tags: Optional[List[str]] = []
 
 
 class RuleExecutionRequest(BaseModel):
-    """Request model for executing scan rules."""
+    """Request model for executing intelligent scan rules"""
     rule_ids: List[int] = Field(min_items=1)
-    data_source_ids: List[int] = Field(min_items=1)
-    
-    # Execution Configuration
-    execution_mode: Optional[str] = "parallel"  # parallel, sequential, adaptive
-    priority: Optional[int] = Field(default=5, ge=1, le=10)
-    timeout_override: Optional[int] = Field(ge=1, le=7200)
-    
-    # Advanced Options
-    optimization_enabled: Optional[bool] = True
-    monitoring_enabled: Optional[bool] = True
-    classification_aware: Optional[bool] = True
-    compliance_mode: Optional[bool] = True
-    
-    # Context Information
-    triggered_by: Optional[str] = "user"
-    execution_context: Optional[Dict[str, Any]] = {}
+    data_source_ids: Optional[List[int]] = []
+    execution_mode: Optional[RuleExecutionMode] = None
+    trigger_event: RuleTriggerEvent = RuleTriggerEvent.MANUAL_TRIGGER
+    parameters: Optional[Dict[str, Any]] = {}
+    priority_override: Optional[int] = Field(ge=1, le=10)
 
 
-class PatternLibraryResponse(BaseModel):
-    """Response model for pattern library entries."""
-    id: int
-    pattern_id: str
-    name: str
-    category: str
-    subcategory: Optional[str]
-    pattern_type: PatternRecognitionType
-    complexity_score: float
-    
-    # Usage Statistics
-    usage_count: int
+class RuleOptimizationRequest(BaseModel):
+    """Request model for rule optimization"""
+    rule_id: int
+    optimization_strategy: RuleOptimizationStrategy = RuleOptimizationStrategy.BALANCED
+    target_metrics: List[str] = ["performance", "accuracy"]
+    constraints: Optional[Dict[str, Any]] = {}
+    max_iterations: int = Field(default=100, ge=1, le=1000)
+
+
+class RulePerformanceReport(BaseModel):
+    """Performance report model for intelligent scan rules"""
+    rule_id: int
+    rule_name: str
+    time_period: str
+    total_executions: int
     success_rate: float
-    average_accuracy: float
-    business_value_score: float
+    average_execution_time: float
+    throughput_metrics: Dict[str, float]
+    quality_metrics: Dict[str, float]
+    business_impact: Dict[str, float]
+    optimization_recommendations: List[str]
+    trend_analysis: Dict[str, Any]
+
+
+# ===================== UTILITY FUNCTIONS AND EXPORTS =====================
+
+def generate_rule_uuid() -> str:
+    """Generate a unique UUID for scan rules"""
+    return f"rule_{uuid.uuid4().hex[:12]}"
+
+
+def calculate_rule_effectiveness(
+    true_positives: int,
+    false_positives: int,
+    true_negatives: int,
+    false_negatives: int
+) -> Dict[str, float]:
+    """Calculate comprehensive effectiveness metrics for a rule"""
+    total = true_positives + false_positives + true_negatives + false_negatives
     
-    # Metadata
-    tags: List[str]
-    data_types: List[str]
-    is_public: bool
-    version: str
-    created_at: datetime
+    if total == 0:
+        return {"precision": 0.0, "recall": 0.0, "f1_score": 0.0, "accuracy": 0.0}
     
-    class Config:
-        from_attributes = True
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
+    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    accuracy = (true_positives + true_negatives) / total
+    
+    return {
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1_score,
+        "accuracy": accuracy
+    }
 
 
-# ===================== UTILITY MODELS =====================
-
-class RuleValidationResult(BaseModel):
-    """Model for rule validation results."""
-    is_valid: bool
-    validation_score: float
-    issues: List[Dict[str, Any]]
-    recommendations: List[str]
-    performance_estimate: Dict[str, float]
-
-
-class RuleOptimizationResult(BaseModel):
-    """Model for rule optimization results."""
-    optimization_id: str
-    improvements: Dict[str, float]
-    applied_changes: List[Dict[str, Any]]
-    performance_gain: float
-    confidence_score: float
-
-
-class RuleBenchmarkResult(BaseModel):
-    """Model for rule benchmarking results."""
-    rule_id: str
-    benchmark_type: str
-    performance_metrics: Dict[str, float]
-    comparison_baseline: Dict[str, float]
-    improvement_percentage: Dict[str, float]
-    statistical_significance: float
-
-
-# ===================== MODEL REGISTRATION =====================
-
-# Register all models for SQLModel metadata
+# Export all models and types
 __all__ = [
-    "IntelligentScanRule",
-    "RulePatternLibrary", 
-    "RuleExecutionHistory",
-    "RuleOptimizationJob",
-    "RulePatternAssociation",
-    "RulePerformanceBaseline",
-    "IntelligentRuleResponse",
-    "RuleCreateRequest",
-    "RuleUpdateRequest", 
-    "RuleExecutionRequest",
-    "PatternLibraryResponse",
-    "RuleValidationResult",
-    "RuleOptimizationResult",
-    "RuleBenchmarkResult",
     # Enums
-    "RuleComplexityLevel",
-    "PatternRecognitionType",
-    "RuleOptimizationStrategy",
-    "RuleExecutionStrategy",
-    "RuleValidationStatus",
-    "RuleBusinessImpact",
+    "IntelligentRuleType", "RuleComplexityLevel", "RuleExecutionMode", "RuleOptimizationStrategy",
+    "RuleValidationStatus", "PatternMatchingAlgorithm", "RuleImpactLevel", "RuleTriggerEvent",
+    
+    # Core Models
+    "IntelligentScanRule", "RuleExecutionHistory", "RuleOptimizationSession", 
+    "RuleValidationTest", "RulePerformanceAnalytics",
+    
+    # Integration Models
+    "RuleDataSourceIntegration", "RuleComplianceIntegration", "RuleClassificationIntegration",
+    
+    # Request/Response Models
+    "IntelligentScanRuleResponse", "IntelligentScanRuleCreate", "RuleExecutionRequest",
+    "RuleOptimizationRequest", "RulePerformanceReport",
+    
+    # Utilities
+    "generate_rule_uuid", "calculate_rule_effectiveness"
 ]
