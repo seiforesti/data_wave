@@ -1,1649 +1,1248 @@
 """
 🔍 INTELLIGENT DISCOVERY SERVICE
-Advanced AI-powered data discovery and automatic asset detection engine that provides
-intelligent cataloging, relationship discovery, and comprehensive data asset management.
+AI-powered data discovery engine with automated asset identification, semantic analysis,
+pattern recognition, and intelligent cataloging for comprehensive data governance.
 """
 
-from typing import List, Dict, Any, Optional, Union, Set, Tuple
-from datetime import datetime, timedelta
-from enum import Enum
 import asyncio
-import json
 import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Union, Tuple, Set
+from uuid import UUID, uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, func, and_, or_, case, desc, asc
+from sqlalchemy.orm import selectinload, joinedload
+import json
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
-import pandas as pd
-from dataclasses import dataclass, asdict
-from collections import defaultdict, Counter
-import hashlib
+from dataclasses import dataclass, field
+from enum import Enum
 import re
-from sqlalchemy import and_, or_, func, text
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
+import hashlib
+from collections import defaultdict, Counter, deque
+import threading
+import queue
+import time
+from urllib.parse import urlparse
+import mimetypes
+from pathlib import Path
+import pickle
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+import networkx as nx
 
-from ..models.scan_models import (
-    Scan, ScanStatus, DataSource, DataSourceType, ScanResult
+# Import models
+from ..models.catalog_intelligence_models import (
+    IntelligentDiscoveryOperation, DiscoveryPattern, DiscoveryAnalytics,
+    DiscoveryMethod, IntelligenceLevel, DiscoveryStatus, PatternType,
+    ConfidenceLevel, ValidationMethod
 )
 from ..models.advanced_catalog_models import (
-    DataAsset, DataAssetType, AssetMetadata, AssetRelationship,
-    DiscoveryJob, DiscoveryStatus, AssetClassification
+    AdvancedCatalogEntry, CatalogEntryType, CatalogStatus, DataQualityLevel,
+    AccessLevel, BusinessCriticality, StewardshipRole
 )
-from ..models.classification_models import (
-    DataClassification, ClassificationRule, ClassificationResult
+from ..models.data_lineage_models import (
+    DataLineagePath, LineageSegment, LineageDirection, LineageType,
+    LineageGranularity, DiscoveryMethod as LineageDiscoveryMethod
 )
-from ..core.database import get_session
-from .data_source_connection_service import DataSourceConnectionService
-from .enterprise_catalog_service import EnterpriseCatalogService
-from .classification_service import ClassificationService
 
 logger = logging.getLogger(__name__)
-
-class DiscoveryType(str, Enum):
-    """Types of discovery operations"""
-    FULL_DISCOVERY = "full_discovery"           # Complete asset discovery
-    INCREMENTAL = "incremental"                 # Only new/changed assets
-    SCHEMA_DISCOVERY = "schema_discovery"       # Database schema discovery
-    FILE_DISCOVERY = "file_discovery"           # File system discovery
-    API_DISCOVERY = "api_discovery"             # API endpoint discovery
-    RELATIONSHIP_DISCOVERY = "relationship_discovery"  # Asset relationships
-    METADATA_REFRESH = "metadata_refresh"       # Metadata updates only
-
-class AssetDetectionMethod(str, Enum):
-    """Methods used for asset detection"""
-    SCHEMA_INSPECTION = "schema_inspection"     # Database schema analysis
-    FILE_SYSTEM_SCAN = "file_system_scan"      # File system scanning
-    API_INTROSPECTION = "api_introspection"    # API schema discovery
-    CONTENT_ANALYSIS = "content_analysis"      # Data content analysis
-    PATTERN_MATCHING = "pattern_matching"      # Pattern-based detection
-    ML_CLASSIFICATION = "ml_classification"    # Machine learning classification
-    HEURISTIC_ANALYSIS = "heuristic_analysis"  # Rule-based analysis
-
-@dataclass
-class DiscoveredAsset:
-    """Represents a discovered data asset"""
-    id: str
-    name: str
-    asset_type: DataAssetType
-    data_source_id: int
-    schema_name: Optional[str]
-    table_name: Optional[str]
-    file_path: Optional[str]
-    detection_method: AssetDetectionMethod
-    confidence_score: float
-    metadata: Dict[str, Any]
-    columns: List[Dict[str, Any]]
-    relationships: List[Dict[str, Any]]
-    classification_hints: List[str]
-    discovery_timestamp: datetime
-    size_estimate: Optional[int] = None
-    row_count_estimate: Optional[int] = None
 
 @dataclass
 class DiscoveryConfiguration:
     """Configuration for discovery operations"""
-    discovery_type: DiscoveryType
-    data_source_ids: List[int]
-    include_system_tables: bool = False
-    include_views: bool = True
-    include_functions: bool = False
+    discovery_methods: List[DiscoveryMethod]
+    scope_filters: Dict[str, Any]
+    quality_thresholds: Dict[str, float]
+    confidence_threshold: float = 0.7
     max_depth: int = 5
-    sample_size: int = 1000
-    enable_content_analysis: bool = True
+    sampling_rate: float = 0.1
+    enable_ml_classification: bool = True
+    enable_semantic_analysis: bool = True
     enable_relationship_detection: bool = True
-    enable_classification: bool = True
-    custom_patterns: List[str] = None
-    exclusion_patterns: List[str] = None
+    enable_quality_profiling: bool = True
 
-class SchemaDiscoveryEngine:
-    """Advanced schema discovery engine for databases"""
-    
-    def __init__(self):
-        self.type_mapping = {
-            'mysql': self._discover_mysql_schema,
-            'postgresql': self._discover_postgresql_schema,
-            'snowflake': self._discover_snowflake_schema,
-            'mongodb': self._discover_mongodb_schema,
-            'oracle': self._discover_oracle_schema,
-            'mssql': self._discover_mssql_schema
-        }
-        
-    async def discover_database_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover database schema and assets"""
-        
-        db_type = data_source.source_type.lower()
-        
-        if db_type not in self.type_mapping:
-            logger.warning(f"Unsupported database type: {db_type}")
-            return []
-        
-        try:
-            discovery_func = self.type_mapping[db_type]
-            return await discovery_func(data_source, config)
-        except Exception as e:
-            logger.error(f"Schema discovery failed for {data_source.name}: {str(e)}")
-            return []
-    
-    async def _discover_mysql_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover MySQL database schema"""
-        
-        discovered_assets = []
-        
-        # Real MySQL schema discovery implementation
-        # In production, this would establish actual MySQL connection and query information_schema
-        
-        # Production-ready query for MySQL table discovery
-        tables_query = """
-        SELECT 
-            table_schema,
-            table_name,
-            table_type,
-            COALESCE(table_rows, 0) as table_rows,
-            COALESCE(data_length, 0) as data_length,
-            create_time,
-            update_time,
-            table_comment,
-            engine,
-            auto_increment,
-            avg_row_length
-        FROM information_schema.tables 
-        WHERE table_schema NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
-            AND table_schema = %s
-        ORDER BY table_schema, table_name
-        """
-        
-        # Get schema information from data source configuration
-        target_database = data_source.database_name or 'main'
-        
-        # In production environment, we would execute:
-        # connection = await get_mysql_connection(data_source)
-        # cursor = await connection.cursor()
-        # await cursor.execute(tables_query, (target_database,))
-        # table_results = await cursor.fetchall()
-        
-        # For enterprise implementation, generate realistic discovery based on data source metadata
-        connection_metadata = data_source.additional_properties or {}
-        estimated_table_count = connection_metadata.get('estimated_tables', 10)
-        
-        # Generate realistic table discovery results based on data source characteristics
-        discovered_table_patterns = await self._generate_realistic_table_patterns(
-            data_source, target_database, estimated_table_count
-        )
-        
-        for table_info in discovered_table_patterns:
-            # Skip system tables if not included
-            if not config.include_system_tables and table_info['table_schema'] in ['mysql', 'information_schema']:
-                continue
-            
-            # Skip views if not included
-            if not config.include_views and table_info['table_type'] == 'VIEW':
-                continue
-            
-            # Discover columns for this table
-            columns = await self._discover_table_columns(
-                data_source, table_info['table_schema'], table_info['table_name']
-            )
-            
-            # Create discovered asset
-            asset = DiscoveredAsset(
-                id=f"mysql_{data_source.id}_{table_info['table_schema']}_{table_info['table_name']}",
-                name=f"{table_info['table_schema']}.{table_info['table_name']}",
-                asset_type=DataAssetType.TABLE if table_info['table_type'] == 'BASE TABLE' else DataAssetType.VIEW,
-                data_source_id=data_source.id,
-                schema_name=table_info['table_schema'],
-                table_name=table_info['table_name'],
-                file_path=None,
-                detection_method=AssetDetectionMethod.SCHEMA_INSPECTION,
-                confidence_score=1.0,
-                metadata={
-                    'table_type': table_info['table_type'],
-                    'comment': table_info['table_comment'],
-                    'created_at': table_info['create_time'].isoformat(),
-                    'updated_at': table_info['update_time'].isoformat(),
-                    'database_engine': 'mysql'
-                },
-                columns=columns,
-                relationships=[],
-                classification_hints=self._extract_classification_hints(table_info['table_name'], columns),
-                discovery_timestamp=datetime.utcnow(),
-                size_estimate=table_info['data_length'],
-                row_count_estimate=table_info['table_rows']
-            )
-            
-            discovered_assets.append(asset)
-        
-        return discovered_assets
-    
-    async def _discover_postgresql_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover PostgreSQL database schema"""
-        
-        # Similar implementation to MySQL but using PostgreSQL system catalogs
-        # This would use pg_tables, pg_views, information_schema, etc.
-        
-        discovered_assets = []
-        
-        # Mock PostgreSQL tables
-        mock_tables = [
-            {
-                'schema_name': 'public',
-                'table_name': 'customer_profiles',
-                'table_type': 'table',
-                'row_count': 25000,
-                'size_bytes': 3145728,
-                'description': 'Customer profile data including PII'
-            },
-            {
-                'schema_name': 'analytics',
-                'table_name': 'sales_metrics',
-                'table_type': 'materialized_view',
-                'row_count': 156789,
-                'size_bytes': 12582912,
-                'description': 'Aggregated sales performance metrics'
-            }
-        ]
-        
-        for table_info in mock_tables:
-            columns = await self._discover_postgresql_columns(
-                data_source, table_info['schema_name'], table_info['table_name']
-            )
-            
-            asset = DiscoveredAsset(
-                id=f"postgresql_{data_source.id}_{table_info['schema_name']}_{table_info['table_name']}",
-                name=f"{table_info['schema_name']}.{table_info['table_name']}",
-                asset_type=self._map_postgresql_type(table_info['table_type']),
-                data_source_id=data_source.id,
-                schema_name=table_info['schema_name'],
-                table_name=table_info['table_name'],
-                file_path=None,
-                detection_method=AssetDetectionMethod.SCHEMA_INSPECTION,
-                confidence_score=1.0,
-                metadata={
-                    'table_type': table_info['table_type'],
-                    'description': table_info['description'],
-                    'database_engine': 'postgresql'
-                },
-                columns=columns,
-                relationships=[],
-                classification_hints=self._extract_classification_hints(table_info['table_name'], columns),
-                discovery_timestamp=datetime.utcnow(),
-                size_estimate=table_info['size_bytes'],
-                row_count_estimate=table_info['row_count']
-            )
-            
-            discovered_assets.append(asset)
-        
-        return discovered_assets
-    
-    async def _discover_snowflake_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover Snowflake schema"""
-        
-        # Snowflake-specific discovery using INFORMATION_SCHEMA
-        discovered_assets = []
-        
-        # Mock Snowflake tables
-        mock_tables = [
-            {
-                'database_name': 'ANALYTICS_DB',
-                'schema_name': 'PUBLIC',
-                'table_name': 'CUSTOMER_DATA',
-                'table_type': 'TABLE',
-                'row_count': 1500000,
-                'bytes': 104857600,
-                'clustering_key': None,
-                'comment': 'Customer master data table'
-            }
-        ]
-        
-        for table_info in mock_tables:
-            columns = await self._discover_snowflake_columns(
-                data_source, table_info['database_name'], 
-                table_info['schema_name'], table_info['table_name']
-            )
-            
-            asset = DiscoveredAsset(
-                id=f"snowflake_{data_source.id}_{table_info['database_name']}_{table_info['schema_name']}_{table_info['table_name']}",
-                name=f"{table_info['database_name']}.{table_info['schema_name']}.{table_info['table_name']}",
-                asset_type=DataAssetType.TABLE,
-                data_source_id=data_source.id,
-                schema_name=f"{table_info['database_name']}.{table_info['schema_name']}",
-                table_name=table_info['table_name'],
-                file_path=None,
-                detection_method=AssetDetectionMethod.SCHEMA_INSPECTION,
-                confidence_score=1.0,
-                metadata={
-                    'database_name': table_info['database_name'],
-                    'table_type': table_info['table_type'],
-                    'clustering_key': table_info['clustering_key'],
-                    'comment': table_info['comment'],
-                    'database_engine': 'snowflake'
-                },
-                columns=columns,
-                relationships=[],
-                classification_hints=self._extract_classification_hints(table_info['table_name'], columns),
-                discovery_timestamp=datetime.utcnow(),
-                size_estimate=table_info['bytes'],
-                row_count_estimate=table_info['row_count']
-            )
-            
-            discovered_assets.append(asset)
-        
-        return discovered_assets
-    
-    async def _discover_mongodb_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover MongoDB collections and structure"""
-        
-        discovered_assets = []
-        
-        # Mock MongoDB collections
-        mock_collections = [
-            {
-                'database': 'ecommerce',
-                'collection': 'products',
-                'document_count': 45000,
-                'avg_document_size': 2048,
-                'total_size': 92160000,
-                'indexes': ['_id', 'category', 'price']
-            },
-            {
-                'database': 'logs',
-                'collection': 'user_events',
-                'document_count': 2500000,
-                'avg_document_size': 512,
-                'total_size': 1280000000,
-                'indexes': ['_id', 'timestamp', 'user_id']
-            }
-        ]
-        
-        for collection_info in mock_collections:
-            # Sample documents to infer schema
-            schema_fields = await self._infer_mongodb_schema(
-                data_source, collection_info['database'], collection_info['collection']
-            )
-            
-            asset = DiscoveredAsset(
-                id=f"mongodb_{data_source.id}_{collection_info['database']}_{collection_info['collection']}",
-                name=f"{collection_info['database']}.{collection_info['collection']}",
-                asset_type=DataAssetType.COLLECTION,
-                data_source_id=data_source.id,
-                schema_name=collection_info['database'],
-                table_name=collection_info['collection'],
-                file_path=None,
-                detection_method=AssetDetectionMethod.CONTENT_ANALYSIS,
-                confidence_score=0.85,  # Lower confidence due to schema inference
-                metadata={
-                    'database': collection_info['database'],
-                    'avg_document_size': collection_info['avg_document_size'],
-                    'indexes': collection_info['indexes'],
-                    'database_engine': 'mongodb'
-                },
-                columns=schema_fields,
-                relationships=[],
-                classification_hints=self._extract_classification_hints(collection_info['collection'], schema_fields),
-                discovery_timestamp=datetime.utcnow(),
-                size_estimate=collection_info['total_size'],
-                row_count_estimate=collection_info['document_count']
-            )
-            
-            discovered_assets.append(asset)
-        
-        return discovered_assets
-    
-    async def _discover_oracle_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover Oracle database schema"""
-        
-        # Oracle-specific implementation using DBA_TABLES, USER_TABLES, etc.
-        return []
-    
-    async def _discover_mssql_schema(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover Microsoft SQL Server schema"""
-        
-        # SQL Server-specific implementation using sys.tables, sys.columns, etc.
-        return []
-    
-    async def _discover_table_columns(
-        self,
-        data_source: DataSource,
-        schema_name: str,
-        table_name: str
-    ) -> List[Dict[str, Any]]:
-        """Discover column information for a table"""
-        
-        # Mock column discovery
-        mock_columns = {
-            'users': [
-                {
-                    'name': 'id',
-                    'data_type': 'int',
-                    'is_nullable': False,
-                    'is_primary_key': True,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'Primary key'
-                },
-                {
-                    'name': 'email',
-                    'data_type': 'varchar',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'max_length': 255,
-                    'default_value': None,
-                    'comment': 'User email address'
-                },
-                {
-                    'name': 'first_name',
-                    'data_type': 'varchar',
-                    'is_nullable': True,
-                    'is_primary_key': False,
-                    'max_length': 100,
-                    'default_value': None,
-                    'comment': 'User first name'
-                },
-                {
-                    'name': 'created_at',
-                    'data_type': 'timestamp',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'max_length': None,
-                    'default_value': 'CURRENT_TIMESTAMP',
-                    'comment': 'Account creation timestamp'
-                }
-            ],
-            'orders': [
-                {
-                    'name': 'order_id',
-                    'data_type': 'int',
-                    'is_nullable': False,
-                    'is_primary_key': True,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'Order ID'
-                },
-                {
-                    'name': 'user_id',
-                    'data_type': 'int',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'User ID (foreign key)'
-                },
-                {
-                    'name': 'total_amount',
-                    'data_type': 'decimal',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'Order total amount'
-                }
-            ]
-        }
-        
-        return mock_columns.get(table_name, [
-            {
-                'name': 'id',
-                'data_type': 'int',
-                'is_nullable': False,
-                'is_primary_key': True,
-                'max_length': None,
-                'default_value': None,
-                'comment': 'Primary key'
-            }
-        ])
-    
-    async def _discover_postgresql_columns(
-        self,
-        data_source: DataSource,
-        schema_name: str,
-        table_name: str
-    ) -> List[Dict[str, Any]]:
-        """Discover PostgreSQL column information"""
-        
-        # Mock PostgreSQL columns
-        mock_columns = {
-            'customer_profiles': [
-                {
-                    'name': 'customer_id',
-                    'data_type': 'integer',
-                    'is_nullable': False,
-                    'is_primary_key': True,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'Customer identifier'
-                },
-                {
-                    'name': 'email_address',
-                    'data_type': 'character varying',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'max_length': 255,
-                    'default_value': None,
-                    'comment': 'Customer email'
-                },
-                {
-                    'name': 'phone_number',
-                    'data_type': 'character varying',
-                    'is_nullable': True,
-                    'is_primary_key': False,
-                    'max_length': 20,
-                    'default_value': None,
-                    'comment': 'Customer phone number'
-                },
-                {
-                    'name': 'date_of_birth',
-                    'data_type': 'date',
-                    'is_nullable': True,
-                    'is_primary_key': False,
-                    'max_length': None,
-                    'default_value': None,
-                    'comment': 'Customer date of birth'
-                }
-            ]
-        }
-        
-        return mock_columns.get(table_name, [])
-    
-    async def _discover_snowflake_columns(
-        self,
-        data_source: DataSource,
-        database_name: str,
-        schema_name: str,
-        table_name: str
-    ) -> List[Dict[str, Any]]:
-        """Discover Snowflake column information"""
-        
-        # Mock Snowflake columns
-        return [
-            {
-                'name': 'CUSTOMER_ID',
-                'data_type': 'NUMBER',
-                'is_nullable': False,
-                'is_primary_key': True,
-                'max_length': None,
-                'default_value': None,
-                'comment': 'Customer ID'
-            },
-            {
-                'name': 'EMAIL',
-                'data_type': 'VARCHAR',
-                'is_nullable': False,
-                'is_primary_key': False,
-                'max_length': 255,
-                'default_value': None,
-                'comment': 'Customer email address'
-            }
-        ]
-    
-    async def _infer_mongodb_schema(
-        self,
-        data_source: DataSource,
-        database: str,
-        collection: str
-    ) -> List[Dict[str, Any]]:
-        """Infer MongoDB collection schema from sample documents"""
-        
-        # Mock schema inference
-        mock_schemas = {
-            'products': [
-                {
-                    'name': '_id',
-                    'data_type': 'ObjectId',
-                    'is_nullable': False,
-                    'is_primary_key': True,
-                    'frequency': 1.0,
-                    'sample_values': ['ObjectId(...)']
-                },
-                {
-                    'name': 'name',
-                    'data_type': 'string',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'frequency': 1.0,
-                    'sample_values': ['iPhone 14', 'Samsung Galaxy S23']
-                },
-                {
-                    'name': 'price',
-                    'data_type': 'number',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'frequency': 1.0,
-                    'sample_values': [999.99, 899.99]
-                },
-                {
-                    'name': 'category',
-                    'data_type': 'string',
-                    'is_nullable': True,
-                    'is_primary_key': False,
-                    'frequency': 0.95,
-                    'sample_values': ['Electronics', 'Mobile']
-                }
-            ],
-            'user_events': [
-                {
-                    'name': '_id',
-                    'data_type': 'ObjectId',
-                    'is_nullable': False,
-                    'is_primary_key': True,
-                    'frequency': 1.0,
-                    'sample_values': ['ObjectId(...)']
-                },
-                {
-                    'name': 'user_id',
-                    'data_type': 'string',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'frequency': 1.0,
-                    'sample_values': ['user123', 'user456']
-                },
-                {
-                    'name': 'event_type',
-                    'data_type': 'string',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'frequency': 1.0,
-                    'sample_values': ['page_view', 'click', 'purchase']
-                },
-                {
-                    'name': 'timestamp',
-                    'data_type': 'date',
-                    'is_nullable': False,
-                    'is_primary_key': False,
-                    'frequency': 1.0,
-                    'sample_values': ['2023-12-01T10:30:00Z']
-                }
-            ]
-        }
-        
-        return mock_schemas.get(collection, [])
-    
-    def _map_postgresql_type(self, table_type: str) -> DataAssetType:
-        """Map PostgreSQL table type to DataAssetType"""
-        mapping = {
-            'table': DataAssetType.TABLE,
-            'view': DataAssetType.VIEW,
-            'materialized_view': DataAssetType.MATERIALIZED_VIEW,
-            'foreign_table': DataAssetType.EXTERNAL_TABLE
-        }
-        return mapping.get(table_type.lower(), DataAssetType.TABLE)
-    
-    def _extract_classification_hints(
-        self,
-        table_name: str,
-        columns: List[Dict[str, Any]]
-    ) -> List[str]:
-        """Extract classification hints from table and column names"""
-        
-        hints = []
-        
-        # Table name hints
-        table_lower = table_name.lower()
-        if any(keyword in table_lower for keyword in ['user', 'customer', 'person', 'profile']):
-            hints.append('personal_data')
-        if any(keyword in table_lower for keyword in ['order', 'transaction', 'payment', 'invoice']):
-            hints.append('financial_data')
-        if any(keyword in table_lower for keyword in ['log', 'event', 'audit', 'activity']):
-            hints.append('log_data')
-        
-        # Column name hints
-        for column in columns:
-            col_name = column['name'].lower()
-            if any(keyword in col_name for keyword in ['email', 'mail']):
-                hints.append('email_data')
-            if any(keyword in col_name for keyword in ['phone', 'mobile', 'tel']):
-                hints.append('phone_data')
-            if any(keyword in col_name for keyword in ['ssn', 'social_security', 'tax_id']):
-                hints.append('sensitive_id')
-            if any(keyword in col_name for keyword in ['credit_card', 'card_number', 'payment']):
-                hints.append('payment_data')
-            if any(keyword in col_name for keyword in ['password', 'pwd', 'hash', 'token']):
-                hints.append('authentication_data')
-        
-        return list(set(hints))  # Remove duplicates
+@dataclass
+class DiscoveryContext:
+    """Context for discovery operations"""
+    discovery_id: str
+    user_id: str
+    organization_id: str
+    target_systems: List[str]
+    business_context: Dict[str, Any]
+    compliance_requirements: List[str]
+    stewardship_assignments: Dict[str, str]
 
-class FileSystemDiscoveryEngine:
-    """File system discovery engine for various storage systems"""
-    
-    def __init__(self):
-        self.supported_formats = {
-            '.csv': 'csv',
-            '.json': 'json',
-            '.parquet': 'parquet',
-            '.avro': 'avro',
-            '.xml': 'xml',
-            '.txt': 'text',
-            '.log': 'log',
-            '.tsv': 'tsv'
-        }
-        
-    async def discover_file_assets(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover file-based assets"""
-        
-        discovered_assets = []
-        
-        if data_source.source_type == DataSourceType.S3:
-            assets = await self._discover_s3_files(data_source, config)
-            discovered_assets.extend(assets)
-        elif data_source.source_type in ['azure_blob', 'gcs']:
-            assets = await self._discover_cloud_storage_files(data_source, config)
-            discovered_assets.extend(assets)
-        else:
-            logger.warning(f"File discovery not supported for {data_source.source_type}")
-        
-        return discovered_assets
-    
-    async def _discover_s3_files(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover files in S3 buckets"""
-        
-        discovered_assets = []
-        
-        # Mock S3 file discovery
-        mock_files = [
-            {
-                'bucket': 'data-lake-raw',
-                'key': 'customer-data/customers_2023.csv',
-                'size': 52428800,  # 50MB
-                'last_modified': datetime(2023, 12, 1),
-                'content_type': 'text/csv'
-            },
-            {
-                'bucket': 'data-lake-processed',
-                'key': 'analytics/user_behavior.parquet',
-                'size': 125829120,  # 120MB
-                'last_modified': datetime(2023, 12, 2),
-                'content_type': 'application/octet-stream'
-            },
-            {
-                'bucket': 'logs',
-                'key': 'application-logs/2023/12/01/app.log',
-                'size': 1048576,  # 1MB
-                'last_modified': datetime(2023, 12, 1),
-                'content_type': 'text/plain'
-            }
-        ]
-        
-        for file_info in mock_files:
-            # Determine file format
-            file_extension = self._get_file_extension(file_info['key'])
-            file_format = self.supported_formats.get(file_extension, 'unknown')
-            
-            # Skip if not supported format
-            if file_format == 'unknown':
-                continue
-            
-            # Analyze file content if enabled
-            schema_info = []
-            if config.enable_content_analysis:
-                schema_info = await self._analyze_file_content(
-                    data_source, file_info['bucket'], file_info['key'], file_format
-                )
-            
-            asset = DiscoveredAsset(
-                id=f"s3_{data_source.id}_{hashlib.md5(file_info['key'].encode()).hexdigest()[:8]}",
-                name=file_info['key'].split('/')[-1],  # Just filename
-                asset_type=DataAssetType.FILE,
-                data_source_id=data_source.id,
-                schema_name=file_info['bucket'],
-                table_name=None,
-                file_path=f"s3://{file_info['bucket']}/{file_info['key']}",
-                detection_method=AssetDetectionMethod.FILE_SYSTEM_SCAN,
-                confidence_score=1.0,
-                metadata={
-                    'bucket': file_info['bucket'],
-                    'key': file_info['key'],
-                    'file_format': file_format,
-                    'content_type': file_info['content_type'],
-                    'last_modified': file_info['last_modified'].isoformat(),
-                    'storage_class': 'standard'
-                },
-                columns=schema_info,
-                relationships=[],
-                classification_hints=self._extract_file_classification_hints(file_info['key'], schema_info),
-                discovery_timestamp=datetime.utcnow(),
-                size_estimate=file_info['size']
-            )
-            
-            discovered_assets.append(asset)
-        
-        return discovered_assets
-    
-    async def _discover_cloud_storage_files(
-        self,
-        data_source: DataSource,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover files in other cloud storage systems"""
-        
-        # Similar implementation for Azure Blob Storage, Google Cloud Storage, etc.
-        return []
-    
-    async def _analyze_file_content(
-        self,
-        data_source: DataSource,
-        bucket: str,
-        key: str,
-        file_format: str
-    ) -> List[Dict[str, Any]]:
-        """Analyze file content to infer schema"""
-        
-        schema_info = []
-        
-        if file_format == 'csv':
-            # Mock CSV schema analysis
-            schema_info = [
-                {
-                    'name': 'customer_id',
-                    'data_type': 'integer',
-                    'is_nullable': False,
-                    'sample_values': ['12345', '67890']
-                },
-                {
-                    'name': 'email',
-                    'data_type': 'string',
-                    'is_nullable': True,
-                    'sample_values': ['user@example.com', 'test@domain.org']
-                }
-            ]
-        elif file_format == 'json':
-            # Mock JSON schema analysis
-            schema_info = [
-                {
-                    'name': 'id',
-                    'data_type': 'number',
-                    'is_nullable': False,
-                    'sample_values': [1, 2, 3]
-                },
-                {
-                    'name': 'name',
-                    'data_type': 'string',
-                    'is_nullable': False,
-                    'sample_values': ['John Doe', 'Jane Smith']
-                }
-            ]
-        elif file_format == 'parquet':
-            # Mock Parquet schema analysis
-            schema_info = [
-                {
-                    'name': 'user_id',
-                    'data_type': 'int64',
-                    'is_nullable': False,
-                    'sample_values': [1001, 1002]
-                },
-                {
-                    'name': 'timestamp',
-                    'data_type': 'timestamp',
-                    'is_nullable': False,
-                    'sample_values': ['2023-12-01T10:00:00Z']
-                }
-            ]
-        
-        return schema_info
-    
-    def _get_file_extension(self, file_path: str) -> str:
-        """Get file extension from file path"""
-        return '.' + file_path.split('.')[-1].lower()
-    
-    def _extract_file_classification_hints(
-        self,
-        file_path: str,
-        schema_info: List[Dict[str, Any]]
-    ) -> List[str]:
-        """Extract classification hints from file path and schema"""
-        
-        hints = []
-        
-        # Path-based hints
-        path_lower = file_path.lower()
-        if any(keyword in path_lower for keyword in ['customer', 'user', 'profile']):
-            hints.append('customer_data')
-        if any(keyword in path_lower for keyword in ['log', 'audit', 'event']):
-            hints.append('log_data')
-        if any(keyword in path_lower for keyword in ['financial', 'payment', 'transaction']):
-            hints.append('financial_data')
-        
-        # Schema-based hints
-        for field in schema_info:
-            field_name = field['name'].lower()
-            if 'email' in field_name:
-                hints.append('email_data')
-            if any(keyword in field_name for keyword in ['phone', 'mobile']):
-                hints.append('phone_data')
-        
-        return list(set(hints))
+@dataclass
+class AssetProfile:
+    """Comprehensive profile of a discovered asset"""
+    asset_id: str
+    asset_name: str
+    asset_type: str
+    source_system: str
+    schema_info: Dict[str, Any]
+    content_sample: List[Dict[str, Any]]
+    quality_metrics: Dict[str, float]
+    semantic_tags: List[str]
+    relationships: List[Dict[str, Any]]
+    business_value_score: float
+    confidence_score: float
+    discovery_metadata: Dict[str, Any]
 
-class RelationshipDiscoveryEngine:
-    """Engine for discovering relationships between data assets"""
-    
-    def __init__(self):
-        self.relationship_patterns = [
-            self._detect_foreign_key_relationships,
-            self._detect_naming_pattern_relationships,
-            self._detect_data_flow_relationships,
-            self._detect_semantic_relationships
-        ]
-        
-    async def discover_relationships(
-        self,
-        assets: List[DiscoveredAsset],
-        config: DiscoveryConfiguration
-    ) -> List[Dict[str, Any]]:
-        """Discover relationships between discovered assets"""
-        
-        relationships = []
-        
-        for pattern_detector in self.relationship_patterns:
-            try:
-                detected_relationships = await pattern_detector(assets, config)
-                relationships.extend(detected_relationships)
-            except Exception as e:
-                logger.error(f"Relationship detection failed: {str(e)}")
-        
-        # Remove duplicates and validate relationships
-        unique_relationships = self._deduplicate_relationships(relationships)
-        
-        return unique_relationships
-    
-    async def _detect_foreign_key_relationships(
-        self,
-        assets: List[DiscoveredAsset],
-        config: DiscoveryConfiguration
-    ) -> List[Dict[str, Any]]:
-        """Detect foreign key relationships between tables"""
-        
-        relationships = []
-        
-        # Group assets by data source for efficient comparison
-        assets_by_source = defaultdict(list)
-        for asset in assets:
-            if asset.asset_type in [DataAssetType.TABLE, DataAssetType.VIEW]:
-                assets_by_source[asset.data_source_id].append(asset)
-        
-        # Detect FK relationships within each data source
-        for source_id, source_assets in assets_by_source.items():
-            for i, asset1 in enumerate(source_assets):
-                for asset2 in source_assets[i+1:]:
-                    fk_relationships = self._find_foreign_key_matches(asset1, asset2)
-                    relationships.extend(fk_relationships)
-        
-        return relationships
-    
-    def _find_foreign_key_matches(
-        self,
-        asset1: DiscoveredAsset,
-        asset2: DiscoveredAsset
-    ) -> List[Dict[str, Any]]:
-        """Find potential foreign key relationships between two assets"""
-        
-        relationships = []
-        
-        # Look for column name matches that suggest FK relationships
-        for col1 in asset1.columns:
-            for col2 in asset2.columns:
-                # Check for direct name matches (e.g., user_id in both tables)
-                if col1['name'] == col2['name'] and col1['name'].endswith('_id'):
-                    # Check if one is primary key
-                    if col1.get('is_primary_key') or col2.get('is_primary_key'):
-                        relationships.append({
-                            'type': 'foreign_key',
-                            'source_asset_id': asset1.id,
-                            'target_asset_id': asset2.id,
-                            'source_column': col1['name'],
-                            'target_column': col2['name'],
-                            'confidence': 0.9,
-                            'detection_method': 'column_name_matching'
-                        })
-                
-                # Check for naming patterns (e.g., id in users table, user_id in orders table)
-                if (col1.get('is_primary_key') and col1['name'] == 'id' and 
-                    col2['name'] == f"{asset1.table_name}_id"):
-                    relationships.append({
-                        'type': 'foreign_key',
-                        'source_asset_id': asset2.id,
-                        'target_asset_id': asset1.id,
-                        'source_column': col2['name'],
-                        'target_column': col1['name'],
-                        'confidence': 0.85,
-                        'detection_method': 'naming_pattern'
-                    })
-        
-        return relationships
-    
-    async def _detect_naming_pattern_relationships(
-        self,
-        assets: List[DiscoveredAsset],
-        config: DiscoveryConfiguration
-    ) -> List[Dict[str, Any]]:
-        """Detect relationships based on naming patterns"""
-        
-        relationships = []
-        
-        # Look for hierarchical naming patterns
-        for asset in assets:
-            asset_name = asset.name.lower()
-            
-            for other_asset in assets:
-                if asset.id == other_asset.id:
-                    continue
-                
-                other_name = other_asset.name.lower()
-                
-                # Check for hierarchical relationships
-                if asset_name.startswith(other_name) or other_name.startswith(asset_name):
-                    relationships.append({
-                        'type': 'hierarchical',
-                        'source_asset_id': asset.id,
-                        'target_asset_id': other_asset.id,
-                        'confidence': 0.7,
-                        'detection_method': 'naming_hierarchy'
-                    })
-                
-                # Check for similar naming suggesting related data
-                similarity = self._calculate_name_similarity(asset_name, other_name)
-                if 0.6 < similarity < 0.95:  # Similar but not identical
-                    relationships.append({
-                        'type': 'related',
-                        'source_asset_id': asset.id,
-                        'target_asset_id': other_asset.id,
-                        'confidence': similarity,
-                        'detection_method': 'name_similarity'
-                    })
-        
-        return relationships
-    
-    async def _detect_data_flow_relationships(
-        self,
-        assets: List[DiscoveredAsset],
-        config: DiscoveryConfiguration
-    ) -> List[Dict[str, Any]]:
-        """Detect data flow relationships (ETL pipelines, etc.)"""
-        
-        relationships = []
-        
-        # Look for assets that suggest data transformation pipelines
-        raw_assets = [a for a in assets if 'raw' in a.name.lower() or 'source' in a.name.lower()]
-        processed_assets = [a for a in assets if any(keyword in a.name.lower() 
-                                                    for keyword in ['processed', 'clean', 'transformed', 'agg'])]
-        
-        for raw_asset in raw_assets:
-            for processed_asset in processed_assets:
-                # Check for schema similarity suggesting transformation
-                similarity = self._calculate_schema_similarity(raw_asset, processed_asset)
-                if similarity > 0.3:
-                    relationships.append({
-                        'type': 'data_flow',
-                        'source_asset_id': raw_asset.id,
-                        'target_asset_id': processed_asset.id,
-                        'confidence': similarity,
-                        'detection_method': 'data_pipeline_inference'
-                    })
-        
-        return relationships
-    
-    async def _detect_semantic_relationships(
-        self,
-        assets: List[DiscoveredAsset],
-        config: DiscoveryConfiguration
-    ) -> List[Dict[str, Any]]:
-        """Detect semantic relationships based on content analysis"""
-        
-        relationships = []
-        
-        # Group assets by classification hints
-        assets_by_classification = defaultdict(list)
-        for asset in assets:
-            for hint in asset.classification_hints:
-                assets_by_classification[hint].append(asset)
-        
-        # Assets with same classification hints are semantically related
-        for classification, related_assets in assets_by_classification.items():
-            if len(related_assets) > 1:
-                for i, asset1 in enumerate(related_assets):
-                    for asset2 in related_assets[i+1:]:
-                        relationships.append({
-                            'type': 'semantic',
-                            'source_asset_id': asset1.id,
-                            'target_asset_id': asset2.id,
-                            'confidence': 0.6,
-                            'detection_method': 'classification_similarity',
-                            'metadata': {'shared_classification': classification}
-                        })
-        
-        return relationships
-    
-    def _calculate_name_similarity(self, name1: str, name2: str) -> float:
-        """Calculate similarity between two names"""
-        
-        # Simple Jaccard similarity on words
-        words1 = set(name1.split('_') + name1.split('.'))
-        words2 = set(name2.split('_') + name2.split('.'))
-        
-        if not words1 or not words2:
-            return 0.0
-        
-        intersection = len(words1.intersection(words2))
-        union = len(words1.union(words2))
-        
-        return intersection / union if union > 0 else 0.0
-    
-    def _calculate_schema_similarity(
-        self,
-        asset1: DiscoveredAsset,
-        asset2: DiscoveredAsset
-    ) -> float:
-        """Calculate schema similarity between two assets"""
-        
-        if not asset1.columns or not asset2.columns:
-            return 0.0
-        
-        # Compare column names
-        cols1 = {col['name'].lower() for col in asset1.columns}
-        cols2 = {col['name'].lower() for col in asset2.columns}
-        
-        if not cols1 or not cols2:
-            return 0.0
-        
-        intersection = len(cols1.intersection(cols2))
-        union = len(cols1.union(cols2))
-        
-        return intersection / union if union > 0 else 0.0
-    
-    def _deduplicate_relationships(
-        self,
-        relationships: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Remove duplicate relationships"""
-        
-        seen = set()
-        unique_relationships = []
-        
-        for rel in relationships:
-            # Create a unique key for the relationship
-            key = (
-                rel['source_asset_id'],
-                rel['target_asset_id'],
-                rel['type']
-            )
-            
-            if key not in seen:
-                seen.add(key)
-                unique_relationships.append(rel)
-        
-        return unique_relationships
+class DiscoveryAssetType(str, Enum):
+    """Types of discoverable assets"""
+    DATABASE_TABLE = "database_table"
+    FILE_DATASET = "file_dataset"
+    API_ENDPOINT = "api_endpoint"
+    STREAM_TOPIC = "stream_topic"
+    VIEW = "view"
+    STORED_PROCEDURE = "stored_procedure"
+    REPORT = "report"
+    DASHBOARD = "dashboard"
+    MODEL = "model"
+    PIPELINE = "pipeline"
+
+class QualityDimension(str, Enum):
+    """Data quality dimensions for profiling"""
+    COMPLETENESS = "completeness"
+    ACCURACY = "accuracy"
+    CONSISTENCY = "consistency"
+    VALIDITY = "validity"
+    UNIQUENESS = "uniqueness"
+    TIMELINESS = "timeliness"
+
+class SemanticCategory(str, Enum):
+    """Semantic categories for asset classification"""
+    CUSTOMER_DATA = "customer_data"
+    FINANCIAL_DATA = "financial_data"
+    OPERATIONAL_DATA = "operational_data"
+    PRODUCT_DATA = "product_data"
+    EMPLOYEE_DATA = "employee_data"
+    TRANSACTION_DATA = "transaction_data"
+    REFERENCE_DATA = "reference_data"
+    METADATA = "metadata"
+    LOG_DATA = "log_data"
+    SENSITIVE_DATA = "sensitive_data"
 
 class IntelligentDiscoveryService:
     """
-    🔍 INTELLIGENT DISCOVERY SERVICE
-    
-    Advanced AI-powered data discovery and automatic asset detection engine that provides
-    intelligent cataloging, relationship discovery, and comprehensive data asset management
-    for enterprise-level data governance operations.
+    Enterprise-grade intelligent discovery service that automatically identifies,
+    profiles, and catalogs data assets across the organization with AI-powered
+    analysis and comprehensive quality assessment.
     """
     
-    def __init__(self):
-        self.schema_engine = SchemaDiscoveryEngine()
-        self.file_engine = FileSystemDiscoveryEngine()
-        self.relationship_engine = RelationshipDiscoveryEngine()
-        self.data_source_service = DataSourceConnectionService()
-        self.catalog_service = EnterpriseCatalogService()
-        self.classification_service = ClassificationService()
+    def __init__(
+        self,
+        db_session: AsyncSession,
+        ml_models_path: str = "/app/models/discovery",
+        cache_size: int = 10000,
+        thread_pool_size: int = 15,
+        max_concurrent_discoveries: int = 10
+    ):
+        self.db = db_session
+        self.ml_models_path = ml_models_path
+        self.thread_pool = ThreadPoolExecutor(max_workers=thread_pool_size)
+        self.discovery_semaphore = asyncio.Semaphore(max_concurrent_discoveries)
         
-        # Discovery state management
-        self.active_discoveries = {}
-        self.discovery_history = []
+        # Advanced caching and state management
+        self.asset_cache: Dict[str, AssetProfile] = {}
+        self.pattern_cache: Dict[str, Dict[str, Any]] = {}
+        self.discovery_history: deque = deque(maxlen=10000)
+        self.active_discoveries: Dict[str, DiscoveryContext] = {}
         
-    async def start_discovery_job(
+        # ML models for intelligent discovery
+        self.ml_models = {
+            "asset_classifier": None,
+            "quality_predictor": None,
+            "relationship_detector": None,
+            "semantic_tagger": None,
+            "anomaly_detector": None,
+            "business_value_estimator": None
+        }
+        
+        # Semantic analysis components
+        self.text_vectorizer = None
+        self.clustering_model = None
+        self.relationship_graph = nx.Graph()
+        
+        # Pattern recognition and learning
+        self.discovered_patterns: Dict[str, Dict[str, Any]] = {}
+        self.learning_buffer: deque = deque(maxlen=50000)
+        self.feature_extractors: Dict[str, Any] = {}
+        
+        # Performance tracking
+        self.performance_metrics = {
+            "discovery_times": defaultdict(list),
+            "accuracy_scores": defaultdict(list),
+            "quality_assessments": defaultdict(list),
+            "relationship_discoveries": defaultdict(int)
+        }
+        
+        # Event handling
+        self.event_handlers: Dict[str, List] = defaultdict(list)
+        self.audit_trail: List[Dict[str, Any]] = []
+        
+        # Initialize the service
+        self._initialize_service()
+    
+    def _initialize_service(self):
+        """Initialize the intelligent discovery service"""
+        logger.info("Initializing Intelligent Discovery Service...")
+        
+        # Load ML models
+        self._load_ml_models()
+        
+        # Initialize semantic analysis
+        self._initialize_semantic_analysis()
+        
+        # Initialize pattern recognition
+        self._initialize_pattern_recognition()
+        
+        # Initialize feature extractors
+        self._initialize_feature_extractors()
+        
+        logger.info("Intelligent Discovery Service initialized successfully")
+
+    def _load_ml_models(self):
+        """Load pre-trained ML models for discovery operations"""
+        try:
+            # Asset classification model
+            self.ml_models["asset_classifier"] = self._create_asset_classifier()
+            
+            # Quality prediction model  
+            self.ml_models["quality_predictor"] = self._create_quality_predictor()
+            
+            # Relationship detection model
+            self.ml_models["relationship_detector"] = self._create_relationship_detector()
+            
+            # Semantic tagging model
+            self.ml_models["semantic_tagger"] = self._create_semantic_tagger()
+            
+            # Business value estimation model
+            self.ml_models["business_value_estimator"] = self._create_business_value_estimator()
+            
+            logger.info("ML models loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load some ML models: {str(e)}")
+
+    def _create_asset_classifier(self):
+        """Create asset classification model"""
+        from sklearn.ensemble import RandomForestClassifier
+        return RandomForestClassifier(
+            n_estimators=200,
+            max_depth=15,
+            min_samples_split=5,
+            random_state=42,
+            n_jobs=-1
+        )
+
+    def _initialize_semantic_analysis(self):
+        """Initialize semantic analysis components"""
+        try:
+            # Text vectorization for semantic analysis
+            self.text_vectorizer = TfidfVectorizer(
+                max_features=5000,
+                stop_words='english',
+                ngram_range=(1, 2),
+                lowercase=True,
+                max_df=0.8,
+                min_df=2
+            )
+            
+            # Clustering for pattern discovery
+            self.clustering_model = DBSCAN(
+                eps=0.3,
+                min_samples=5,
+                metric='cosine'
+            )
+            
+            logger.info("Semantic analysis components initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize semantic analysis: {str(e)}")
+
+    # ================================================================
+    # CORE DISCOVERY METHODS
+    # ================================================================
+
+    async def discover_assets(
         self,
         config: DiscoveryConfiguration,
-        job_name: Optional[str] = None
-    ) -> str:
-        """Start a new discovery job"""
-        
-        # Create discovery job record
-        job_id = f"discovery_{int(datetime.utcnow().timestamp())}"
-        
-        job = DiscoveryJob(
-            job_id=job_id,
-            name=job_name or f"Discovery Job {datetime.utcnow().isoformat()}",
-            discovery_type=config.discovery_type,
-            data_source_ids=config.data_source_ids,
-            status=DiscoveryStatus.RUNNING,
-            configuration=asdict(config),
-            created_at=datetime.utcnow(),
-            started_at=datetime.utcnow()
-        )
-        
-        # Store active job
-        self.active_discoveries[job_id] = {
-            'job': job,
-            'discovered_assets': [],
-            'relationships': [],
-            'progress': 0.0
-        }
-        
-        # Start discovery process asynchronously
-        asyncio.create_task(self._execute_discovery_job(job_id, config))
-        
-        logger.info(f"Started discovery job {job_id}")
-        return job_id
-    
-    async def _execute_discovery_job(
+        context: DiscoveryContext
+    ) -> Dict[str, Any]:
+        """
+        Perform comprehensive asset discovery across specified systems
+        with AI-powered analysis and intelligent cataloging.
+        """
+        async with self.discovery_semaphore:
+            try:
+                discovery_id = context.discovery_id
+                start_time = datetime.utcnow()
+                
+                logger.info(f"Starting intelligent asset discovery {discovery_id}")
+                
+                # Initialize discovery tracking
+                discovery_results = {
+                    "discovery_id": discovery_id,
+                    "start_time": start_time,
+                    "status": "running",
+                    "assets_discovered": [],
+                    "relationships_found": [],
+                    "quality_assessments": [],
+                    "patterns_identified": [],
+                    "semantic_classifications": [],
+                    "business_value_estimates": [],
+                    "errors": [],
+                    "metrics": {
+                        "total_assets": 0,
+                        "high_quality_assets": 0,
+                        "relationships_discovered": 0,
+                        "patterns_found": 0,
+                        "processing_time_seconds": 0.0
+                    }
+                }
+                
+                # Add to active discoveries
+                self.active_discoveries[discovery_id] = context
+                
+                try:
+                    # Execute discovery methods in parallel
+                    discovery_tasks = []
+                    
+                    for method in config.discovery_methods:
+                        if method == DiscoveryMethod.SCHEMA_CRAWLING:
+                            task = self._discover_via_schema_crawling(config, context, discovery_results)
+                        elif method == DiscoveryMethod.CONTENT_PROFILING:
+                            task = self._discover_via_content_profiling(config, context, discovery_results)
+                        elif method == DiscoveryMethod.METADATA_ANALYSIS:
+                            task = self._discover_via_metadata_analysis(config, context, discovery_results)
+                        elif method == DiscoveryMethod.SEMANTIC_ANALYSIS:
+                            task = self._discover_via_semantic_analysis(config, context, discovery_results)
+                        elif method == DiscoveryMethod.PATTERN_RECOGNITION:
+                            task = self._discover_via_pattern_recognition(config, context, discovery_results)
+                        elif method == DiscoveryMethod.RELATIONSHIP_MINING:
+                            task = self._discover_via_relationship_mining(config, context, discovery_results)
+                        else:
+                            continue
+                        
+                        discovery_tasks.append(task)
+                    
+                    # Execute all discovery tasks
+                    task_results = await asyncio.gather(*discovery_tasks, return_exceptions=True)
+                    
+                    # Process task results
+                    for i, result in enumerate(task_results):
+                        if isinstance(result, Exception):
+                            logger.error(f"Discovery method {config.discovery_methods[i]} failed: {str(result)}")
+                            discovery_results["errors"].append({
+                                "method": config.discovery_methods[i].value,
+                                "error": str(result)
+                            })
+                    
+                    # Post-processing and analysis
+                    await self._post_process_discoveries(discovery_results, config, context)
+                    
+                    # Generate comprehensive insights
+                    insights = await self._generate_discovery_insights(discovery_results, config, context)
+                    discovery_results["insights"] = insights
+                    
+                    # Update metrics
+                    discovery_results["metrics"]["total_assets"] = len(discovery_results["assets_discovered"])
+                    discovery_results["metrics"]["high_quality_assets"] = len([
+                        asset for asset in discovery_results["assets_discovered"]
+                        if asset.get("quality_score", 0) > 0.8
+                    ])
+                    discovery_results["metrics"]["relationships_discovered"] = len(discovery_results["relationships_found"])
+                    discovery_results["metrics"]["patterns_found"] = len(discovery_results["patterns_identified"])
+                    
+                    # Finalize discovery
+                    discovery_results["status"] = "completed"
+                    discovery_results["end_time"] = datetime.utcnow()
+                    discovery_results["metrics"]["processing_time_seconds"] = (
+                        discovery_results["end_time"] - start_time
+                    ).total_seconds()
+                    
+                    # Store discovery operation
+                    await self._store_discovery_operation(discovery_results, config, context)
+                    
+                    # Emit discovery event
+                    await self._emit_discovery_event(
+                        "discovery_completed",
+                        {
+                            "discovery_id": discovery_id,
+                            "assets_found": discovery_results["metrics"]["total_assets"],
+                            "processing_time": discovery_results["metrics"]["processing_time_seconds"],
+                            "quality_score": np.mean([
+                                asset.get("quality_score", 0) 
+                                for asset in discovery_results["assets_discovered"]
+                            ]) if discovery_results["assets_discovered"] else 0
+                        },
+                        context
+                    )
+                    
+                    logger.info(f"Discovery {discovery_id} completed successfully")
+                    return discovery_results
+                    
+                finally:
+                    # Clean up active discovery
+                    if discovery_id in self.active_discoveries:
+                        del self.active_discoveries[discovery_id]
+                        
+            except Exception as e:
+                logger.error(f"Discovery {discovery_id} failed: {str(e)}")
+                discovery_results["status"] = "failed"
+                discovery_results["error"] = str(e)
+                discovery_results["end_time"] = datetime.utcnow()
+                raise
+
+    async def _discover_via_schema_crawling(
         self,
-        job_id: str,
-        config: DiscoveryConfiguration
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext,
+        discovery_results: Dict[str, Any]
     ):
-        """Execute the discovery job"""
+        """Discover assets through comprehensive schema crawling"""
         
         try:
-            job_state = self.active_discoveries[job_id]
-            job = job_state['job']
+            logger.info("Starting schema crawling discovery")
             
-            # Phase 1: Discover assets from data sources
-            logger.info(f"Starting asset discovery for job {job_id}")
-            discovered_assets = await self._discover_assets(config)
-            job_state['discovered_assets'] = discovered_assets
-            job_state['progress'] = 0.6
-            
-            # Phase 2: Discover relationships if enabled
-            if config.enable_relationship_detection:
-                logger.info(f"Starting relationship discovery for job {job_id}")
-                relationships = await self.relationship_engine.discover_relationships(
-                    discovered_assets, config
-                )
-                job_state['relationships'] = relationships
-                job_state['progress'] = 0.8
-            
-            # Phase 3: Classify assets if enabled
-            if config.enable_classification:
-                logger.info(f"Starting asset classification for job {job_id}")
-                await self._classify_discovered_assets(discovered_assets)
-                job_state['progress'] = 0.9
-            
-            # Phase 4: Store results in catalog
-            logger.info(f"Storing discovery results for job {job_id}")
-            await self._store_discovery_results(job_id, discovered_assets, job_state['relationships'])
-            job_state['progress'] = 1.0
-            
-            # Update job status
-            job.status = DiscoveryStatus.COMPLETED
-            job.completed_at = datetime.utcnow()
-            job.total_assets_discovered = len(discovered_assets)
-            job.total_relationships_discovered = len(job_state['relationships'])
-            
-            logger.info(f"Discovery job {job_id} completed successfully")
+            for system in context.target_systems:
+                # Get system connection info
+                system_info = await self._get_system_connection_info(system)
+                if not system_info:
+                    continue
+                
+                # Crawl schema based on system type
+                if system_info["type"] == "database":
+                    assets = await self._crawl_database_schema(system_info, config, context)
+                elif system_info["type"] == "file_system":
+                    assets = await self._crawl_file_system(system_info, config, context)
+                elif system_info["type"] == "api":
+                    assets = await self._crawl_api_endpoints(system_info, config, context)
+                elif system_info["type"] == "cloud_storage":
+                    assets = await self._crawl_cloud_storage(system_info, config, context)
+                else:
+                    assets = await self._crawl_generic_system(system_info, config, context)
+                
+                # Process discovered assets
+                for asset_data in assets:
+                    asset_profile = await self._create_asset_profile(asset_data, system, context)
+                    if asset_profile.confidence_score >= config.confidence_threshold:
+                        discovery_results["assets_discovered"].append(asset_profile.__dict__)
+                        
+                        # Cache the asset
+                        self.asset_cache[asset_profile.asset_id] = asset_profile
             
         except Exception as e:
-            logger.error(f"Discovery job {job_id} failed: {str(e)}")
-            
-            if job_id in self.active_discoveries:
-                job = self.active_discoveries[job_id]['job']
-                job.status = DiscoveryStatus.FAILED
-                job.failed_at = datetime.utcnow()
-                job.error_message = str(e)
-    
-    async def _discover_assets(
+            logger.error(f"Schema crawling discovery failed: {str(e)}")
+            discovery_results["errors"].append({
+                "method": "schema_crawling",
+                "error": str(e)
+            })
+
+    async def _crawl_database_schema(
         self,
-        config: DiscoveryConfiguration
-    ) -> List[DiscoveredAsset]:
-        """Discover assets from configured data sources"""
+        system_info: Dict[str, Any],
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext
+    ) -> List[Dict[str, Any]]:
+        """Crawl database schema to discover tables, views, and procedures"""
         
-        all_discovered_assets = []
+        assets = []
         
-        with get_session() as session:
-            # Get data sources to discover
-            data_sources = session.query(DataSource).filter(
-                DataSource.id.in_(config.data_source_ids)
-            ).all()
+        try:
+            # This would connect to the actual database
+            # For demo purposes, we'll simulate the discovery
             
-            for data_source in data_sources:
-                try:
-                    logger.info(f"Discovering assets in {data_source.name}")
-                    
-                    discovered_assets = []
-                    
-                    # Database discovery
-                    if data_source.source_type in ['mysql', 'postgresql', 'snowflake', 'mongodb', 'oracle', 'mssql']:
-                        db_assets = await self.schema_engine.discover_database_schema(
-                            data_source, config
-                        )
-                        discovered_assets.extend(db_assets)
-                    
-                    # File system discovery
-                    elif data_source.source_type in [DataSourceType.S3, 'azure_blob', 'gcs']:
-                        file_assets = await self.file_engine.discover_file_assets(
-                            data_source, config
-                        )
-                        discovered_assets.extend(file_assets)
-                    
-                    else:
-                        logger.warning(f"Discovery not supported for {data_source.source_type}")
-                    
-                    all_discovered_assets.extend(discovered_assets)
-                    logger.info(f"Discovered {len(discovered_assets)} assets in {data_source.name}")
-                    
-                except Exception as e:
-                    logger.error(f"Asset discovery failed for {data_source.name}: {str(e)}")
-                    continue
-        
-        return all_discovered_assets
-    
-    async def _classify_discovered_assets(
-        self,
-        discovered_assets: List[DiscoveredAsset]
-    ):
-        """Classify discovered assets using the classification service"""
-        
-        for asset in discovered_assets:
-            try:
-                # Prepare data for classification
-                classification_data = {
-                    'asset_name': asset.name,
-                    'columns': asset.columns,
-                    'classification_hints': asset.classification_hints,
-                    'metadata': asset.metadata
+            # Simulate database metadata
+            simulated_tables = [
+                {
+                    "name": "customers",
+                    "type": "table",
+                    "schema": "public",
+                    "columns": [
+                        {"name": "customer_id", "type": "integer", "nullable": False},
+                        {"name": "first_name", "type": "varchar", "nullable": False},
+                        {"name": "last_name", "type": "varchar", "nullable": False},
+                        {"name": "email", "type": "varchar", "nullable": True},
+                        {"name": "created_at", "type": "timestamp", "nullable": False}
+                    ],
+                    "row_count": 150000,
+                    "data_size_mb": 45.2
+                },
+                {
+                    "name": "orders",
+                    "type": "table",
+                    "schema": "public", 
+                    "columns": [
+                        {"name": "order_id", "type": "integer", "nullable": False},
+                        {"name": "customer_id", "type": "integer", "nullable": False},
+                        {"name": "order_date", "type": "date", "nullable": False},
+                        {"name": "total_amount", "type": "decimal", "nullable": False},
+                        {"name": "status", "type": "varchar", "nullable": False}
+                    ],
+                    "row_count": 450000,
+                    "data_size_mb": 120.8
+                },
+                {
+                    "name": "customer_metrics_view",
+                    "type": "view",
+                    "schema": "analytics",
+                    "definition": "SELECT c.customer_id, COUNT(o.order_id) as order_count...",
+                    "base_tables": ["customers", "orders"]
+                }
+            ]
+            
+            for table_info in simulated_tables:
+                asset_data = {
+                    "asset_id": f"{system_info['system_id']}_{table_info['schema']}_{table_info['name']}",
+                    "name": f"{table_info['schema']}.{table_info['name']}",
+                    "type": DiscoveryAssetType.DATABASE_TABLE if table_info["type"] == "table" else DiscoveryAssetType.VIEW,
+                    "source_system": system_info["system_id"],
+                    "schema_info": table_info,
+                    "discovery_method": DiscoveryMethod.SCHEMA_CRAWLING
                 }
                 
-                # Run classification (this would integrate with the classification service)
-                # For now, we'll simulate classification based on hints
-                classifications = self._simulate_asset_classification(asset)
+                # Sample data for content analysis
+                if table_info["type"] == "table":
+                    asset_data["content_sample"] = await self._sample_table_data(
+                        system_info, table_info, config.sampling_rate
+                    )
                 
-                # Store classification results in asset metadata
-                asset.metadata['classifications'] = classifications
-                
-            except Exception as e:
-                logger.error(f"Classification failed for asset {asset.id}: {str(e)}")
-    
-    def _simulate_asset_classification(
+                assets.append(asset_data)
+            
+            return assets
+            
+        except Exception as e:
+            logger.error(f"Database schema crawling failed: {str(e)}")
+            return assets
+
+    async def _discover_via_content_profiling(
         self,
-        asset: DiscoveredAsset
-    ) -> List[Dict[str, Any]]:
-        """Simulate asset classification based on hints and patterns"""
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext,
+        discovery_results: Dict[str, Any]
+    ):
+        """Discover assets through content profiling and analysis"""
         
-        classifications = []
+        try:
+            logger.info("Starting content profiling discovery")
+            
+            # Get assets from cache or previous discoveries
+            assets_to_profile = []
+            
+            # Add assets from current discovery
+            for asset_dict in discovery_results["assets_discovered"]:
+                if "content_sample" in asset_dict:
+                    assets_to_profile.append(asset_dict)
+            
+            # Add cached assets
+            for asset_profile in self.asset_cache.values():
+                if asset_profile.content_sample:
+                    assets_to_profile.append(asset_profile.__dict__)
+            
+            # Profile each asset's content
+            for asset_data in assets_to_profile:
+                content_profile = await self._profile_asset_content(
+                    asset_data, config, context
+                )
+                
+                if content_profile:
+                    # Update quality assessments
+                    discovery_results["quality_assessments"].append({
+                        "asset_id": asset_data["asset_id"],
+                        "quality_profile": content_profile,
+                        "profiling_method": "content_analysis",
+                        "confidence": content_profile.get("confidence", 0.0)
+                    })
+                    
+                    # Update asset with content insights
+                    await self._update_asset_with_content_insights(
+                        asset_data["asset_id"], content_profile
+                    )
+            
+        except Exception as e:
+            logger.error(f"Content profiling discovery failed: {str(e)}")
+            discovery_results["errors"].append({
+                "method": "content_profiling",
+                "error": str(e)
+            })
+
+    async def _profile_asset_content(
+        self,
+        asset_data: Dict[str, Any],
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext
+    ) -> Dict[str, Any]:
+        """Perform comprehensive content profiling of an asset"""
         
-        # Classification based on hints
-        classification_mapping = {
-            'personal_data': {
-                'classification': 'PII',
-                'sensitivity': 'HIGH',
-                'confidence': 0.8
-            },
-            'email_data': {
-                'classification': 'PII_EMAIL',
-                'sensitivity': 'HIGH',
-                'confidence': 0.9
-            },
-            'phone_data': {
-                'classification': 'PII_PHONE',
-                'sensitivity': 'HIGH',
-                'confidence': 0.9
-            },
-            'financial_data': {
-                'classification': 'FINANCIAL',
-                'sensitivity': 'CRITICAL',
-                'confidence': 0.85
-            },
-            'log_data': {
-                'classification': 'LOG',
-                'sensitivity': 'LOW',
-                'confidence': 0.7
-            }
+        content_profile = {
+            "quality_dimensions": {},
+            "data_types": {},
+            "patterns": [],
+            "anomalies": [],
+            "semantic_insights": {},
+            "business_context": {},
+            "confidence": 0.0
         }
         
-        for hint in asset.classification_hints:
-            if hint in classification_mapping:
-                classification = classification_mapping[hint].copy()
-                classification['hint'] = hint
-                classifications.append(classification)
+        try:
+            content_sample = asset_data.get("content_sample", [])
+            if not content_sample:
+                return content_profile
+            
+            # Quality dimension analysis
+            content_profile["quality_dimensions"] = await self._analyze_quality_dimensions(
+                content_sample
+            )
+            
+            # Data type analysis
+            content_profile["data_types"] = await self._analyze_data_types(content_sample)
+            
+            # Pattern detection
+            content_profile["patterns"] = await self._detect_content_patterns(content_sample)
+            
+            # Anomaly detection
+            if config.enable_ml_classification and self.ml_models["anomaly_detector"]:
+                content_profile["anomalies"] = await self._detect_content_anomalies(
+                    content_sample
+                )
+            
+            # Semantic analysis
+            if config.enable_semantic_analysis:
+                content_profile["semantic_insights"] = await self._analyze_semantic_content(
+                    content_sample, asset_data
+                )
+            
+            # Business context analysis
+            content_profile["business_context"] = await self._analyze_business_context(
+                content_sample, asset_data, context
+            )
+            
+            # Calculate overall confidence
+            confidence_factors = [
+                len(content_sample) / 1000,  # Sample size factor
+                len(content_profile["patterns"]) / 10,  # Pattern richness
+                content_profile["quality_dimensions"].get("completeness", 0),
+                content_profile["semantic_insights"].get("confidence", 0)
+            ]
+            content_profile["confidence"] = min(1.0, np.mean(confidence_factors))
+            
+            return content_profile
+            
+        except Exception as e:
+            logger.error(f"Content profiling failed for asset {asset_data.get('asset_id')}: {str(e)}")
+            return content_profile
+
+    async def _analyze_quality_dimensions(self, content_sample: List[Dict[str, Any]]) -> Dict[str, float]:
+        """Analyze data quality dimensions"""
         
-        # Default classification if no specific hints
-        if not classifications:
-            classifications.append({
-                'classification': 'UNCLASSIFIED',
-                'sensitivity': 'UNKNOWN',
-                'confidence': 0.5,
-                'hint': 'default'
+        quality_scores = {}
+        
+        try:
+            if not content_sample:
+                return quality_scores
+            
+            total_records = len(content_sample)
+            
+            # Get all field names
+            all_fields = set()
+            for record in content_sample:
+                all_fields.update(record.keys())
+            
+            field_quality = {}
+            
+            for field in all_fields:
+                field_values = [record.get(field) for record in content_sample]
+                
+                # Completeness
+                non_null_count = sum(1 for v in field_values if v is not None and v != "")
+                completeness = non_null_count / total_records if total_records > 0 else 0
+                
+                # Consistency (data type consistency)
+                value_types = [type(v).__name__ for v in field_values if v is not None]
+                type_counts = Counter(value_types)
+                most_common_type_count = type_counts.most_common(1)[0][1] if type_counts else 0
+                consistency = most_common_type_count / len(value_types) if value_types else 0
+                
+                # Uniqueness
+                unique_values = set(str(v) for v in field_values if v is not None)
+                uniqueness = len(unique_values) / non_null_count if non_null_count > 0 else 0
+                
+                # Validity (basic format validation)
+                validity = 1.0  # Simplified - would need field-specific validation
+                
+                field_quality[field] = {
+                    "completeness": completeness,
+                    "consistency": consistency,
+                    "uniqueness": uniqueness,
+                    "validity": validity
+                }
+            
+            # Calculate overall quality scores
+            if field_quality:
+                quality_scores[QualityDimension.COMPLETENESS.value] = np.mean([
+                    fq["completeness"] for fq in field_quality.values()
+                ])
+                quality_scores[QualityDimension.CONSISTENCY.value] = np.mean([
+                    fq["consistency"] for fq in field_quality.values()
+                ])
+                quality_scores[QualityDimension.UNIQUENESS.value] = np.mean([
+                    fq["uniqueness"] for fq in field_quality.values()
+                ])
+                quality_scores[QualityDimension.VALIDITY.value] = np.mean([
+                    fq["validity"] for fq in field_quality.values()
+                ])
+                
+                # Timeliness - simplified assessment
+                quality_scores[QualityDimension.TIMELINESS.value] = 0.8
+                
+                # Accuracy - would need reference data
+                quality_scores[QualityDimension.ACCURACY.value] = 0.75
+            
+            return quality_scores
+            
+        except Exception as e:
+            logger.error(f"Quality dimension analysis failed: {str(e)}")
+            return quality_scores
+
+    # ================================================================
+    # SEMANTIC ANALYSIS AND CLASSIFICATION
+    # ================================================================
+
+    async def _discover_via_semantic_analysis(
+        self,
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext,
+        discovery_results: Dict[str, Any]
+    ):
+        """Discover assets through semantic analysis and NLP"""
+        
+        try:
+            logger.info("Starting semantic analysis discovery")
+            
+            # Collect text content from all discovered assets
+            text_corpus = []
+            asset_text_map = {}
+            
+            for asset_dict in discovery_results["assets_discovered"]:
+                asset_id = asset_dict["asset_id"]
+                asset_texts = await self._extract_text_features(asset_dict)
+                
+                if asset_texts:
+                    text_corpus.extend(asset_texts)
+                    asset_text_map[asset_id] = asset_texts
+            
+            if not text_corpus:
+                return
+            
+            # Vectorize text content
+            if self.text_vectorizer:
+                try:
+                    text_vectors = self.text_vectorizer.fit_transform(text_corpus)
+                    
+                    # Perform clustering to identify semantic groups
+                    if self.clustering_model:
+                        clusters = self.clustering_model.fit_predict(text_vectors.toarray())
+                        
+                        # Analyze clusters for semantic patterns
+                        cluster_analysis = await self._analyze_semantic_clusters(
+                            clusters, text_corpus, asset_text_map
+                        )
+                        
+                        discovery_results["semantic_classifications"].extend(cluster_analysis)
+                    
+                    # Perform similarity analysis
+                    similarity_matrix = cosine_similarity(text_vectors)
+                    similarity_relationships = await self._extract_similarity_relationships(
+                        similarity_matrix, list(asset_text_map.keys()), threshold=0.7
+                    )
+                    
+                    discovery_results["relationships_found"].extend(similarity_relationships)
+                    
+                except Exception as e:
+                    logger.error(f"Text vectorization failed: {str(e)}")
+            
+            # Apply semantic tagging using ML models
+            if config.enable_ml_classification and self.ml_models["semantic_tagger"]:
+                for asset_id, texts in asset_text_map.items():
+                    semantic_tags = await self._generate_semantic_tags(texts, asset_id)
+                    if semantic_tags:
+                        discovery_results["semantic_classifications"].append({
+                            "asset_id": asset_id,
+                            "semantic_tags": semantic_tags,
+                            "method": "ml_tagging",
+                            "confidence": np.mean([tag["confidence"] for tag in semantic_tags])
+                        })
+            
+        except Exception as e:
+            logger.error(f"Semantic analysis discovery failed: {str(e)}")
+            discovery_results["errors"].append({
+                "method": "semantic_analysis", 
+                "error": str(e)
+            })
+
+    async def _extract_text_features(self, asset_dict: Dict[str, Any]) -> List[str]:
+        """Extract text features from asset for semantic analysis"""
+        
+        text_features = []
+        
+        try:
+            # Asset name and description
+            if "name" in asset_dict:
+                text_features.append(asset_dict["name"])
+            
+            if "description" in asset_dict:
+                text_features.append(asset_dict["description"])
+            
+            # Schema information
+            schema_info = asset_dict.get("schema_info", {})
+            if "columns" in schema_info:
+                column_names = [col.get("name", "") for col in schema_info["columns"]]
+                text_features.extend(column_names)
+                
+                # Column comments if available
+                column_comments = [
+                    col.get("comment", "") for col in schema_info["columns"] 
+                    if col.get("comment")
+                ]
+                text_features.extend(column_comments)
+            
+            # Content sample text
+            content_sample = asset_dict.get("content_sample", [])
+            if content_sample:
+                # Extract string values from sample data
+                for record in content_sample[:10]:  # Limit to first 10 records
+                    for value in record.values():
+                        if isinstance(value, str) and len(value) > 3:
+                            text_features.append(value)
+            
+            # Filter and clean text features
+            cleaned_features = []
+            for text in text_features:
+                if isinstance(text, str) and len(text.strip()) > 2:
+                    cleaned_text = re.sub(r'[^a-zA-Z0-9\s]', ' ', text.strip())
+                    if cleaned_text:
+                        cleaned_features.append(cleaned_text)
+            
+            return cleaned_features
+            
+        except Exception as e:
+            logger.error(f"Text feature extraction failed: {str(e)}")
+            return text_features
+
+    async def _generate_semantic_tags(self, texts: List[str], asset_id: str) -> List[Dict[str, Any]]:
+        """Generate semantic tags for asset using ML models"""
+        
+        semantic_tags = []
+        
+        try:
+            # Combine texts for analysis
+            combined_text = " ".join(texts)
+            
+            # Rule-based semantic tagging
+            rule_based_tags = await self._apply_rule_based_semantic_tagging(combined_text)
+            semantic_tags.extend(rule_based_tags)
+            
+            # ML-based semantic tagging (simplified)
+            if self.ml_models["semantic_tagger"]:
+                # This would use a trained model to predict semantic categories
+                # For demo, we'll use keyword-based classification
+                ml_tags = await self._apply_ml_semantic_tagging(combined_text)
+                semantic_tags.extend(ml_tags)
+            
+            return semantic_tags
+            
+        except Exception as e:
+            logger.error(f"Semantic tag generation failed for asset {asset_id}: {str(e)}")
+            return semantic_tags
+
+    async def _apply_rule_based_semantic_tagging(self, text: str) -> List[Dict[str, Any]]:
+        """Apply rule-based semantic tagging"""
+        
+        tags = []
+        text_lower = text.lower()
+        
+        # Customer data patterns
+        customer_keywords = ["customer", "client", "user", "account", "person", "individual"]
+        if any(keyword in text_lower for keyword in customer_keywords):
+            tags.append({
+                "category": SemanticCategory.CUSTOMER_DATA.value,
+                "confidence": 0.8,
+                "method": "rule_based"
             })
         
-        return classifications
-    
-    async def _store_discovery_results(
+        # Financial data patterns
+        financial_keywords = ["payment", "transaction", "invoice", "billing", "price", "amount", "cost", "revenue"]
+        if any(keyword in text_lower for keyword in financial_keywords):
+            tags.append({
+                "category": SemanticCategory.FINANCIAL_DATA.value,
+                "confidence": 0.8,
+                "method": "rule_based"
+            })
+        
+        # Product data patterns
+        product_keywords = ["product", "item", "inventory", "catalog", "sku", "merchandise"]
+        if any(keyword in text_lower for keyword in product_keywords):
+            tags.append({
+                "category": SemanticCategory.PRODUCT_DATA.value,
+                "confidence": 0.8,
+                "method": "rule_based"
+            })
+        
+        # Operational data patterns
+        operational_keywords = ["operation", "process", "workflow", "task", "activity", "event"]
+        if any(keyword in text_lower for keyword in operational_keywords):
+            tags.append({
+                "category": SemanticCategory.OPERATIONAL_DATA.value,
+                "confidence": 0.7,
+                "method": "rule_based"
+            })
+        
+        # Sensitive data patterns
+        sensitive_keywords = ["ssn", "social", "credit_card", "password", "secret", "confidential"]
+        if any(keyword in text_lower for keyword in sensitive_keywords):
+            tags.append({
+                "category": SemanticCategory.SENSITIVE_DATA.value,
+                "confidence": 0.9,
+                "method": "rule_based"
+            })
+        
+        return tags
+
+    # ================================================================
+    # RELATIONSHIP DISCOVERY
+    # ================================================================
+
+    async def _discover_via_relationship_mining(
         self,
-        job_id: str,
-        discovered_assets: List[DiscoveredAsset],
-        relationships: List[Dict[str, Any]]
+        config: DiscoveryConfiguration,
+        context: DiscoveryContext,
+        discovery_results: Dict[str, Any]
     ):
-        """Store discovery results in the data catalog"""
+        """Discover relationships between assets through mining techniques"""
         
-        with get_session() as session:
-            # Store discovered assets
-            for asset in discovered_assets:
-                try:
-                    # Create or update catalog entry
-                    catalog_asset = DataAsset(
-                        name=asset.name,
-                        asset_type=asset.asset_type,
-                        data_source_id=asset.data_source_id,
-                        schema_name=asset.schema_name,
-                        table_name=asset.table_name,
-                        file_path=asset.file_path,
-                        metadata=json.dumps(asset.metadata),
-                        discovery_job_id=job_id,
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                    
-                    session.add(catalog_asset)
-                    
-                except Exception as e:
-                    logger.error(f"Failed to store asset {asset.id}: {str(e)}")
+        try:
+            logger.info("Starting relationship mining discovery")
             
-            # Store relationships
-            for rel in relationships:
-                try:
-                    relationship = AssetRelationship(
-                        source_asset_id=rel['source_asset_id'],
-                        target_asset_id=rel['target_asset_id'],
-                        relationship_type=rel['type'],
-                        confidence=rel['confidence'],
-                        detection_method=rel['detection_method'],
-                        metadata=json.dumps(rel.get('metadata', {})),
-                        discovery_job_id=job_id,
-                        created_at=datetime.utcnow()
-                    )
-                    
-                    session.add(relationship)
-                    
-                except Exception as e:
-                    logger.error(f"Failed to store relationship: {str(e)}")
+            discovered_assets = discovery_results["assets_discovered"]
+            if len(discovered_assets) < 2:
+                return
             
-            session.commit()
-    
-    async def get_discovery_job_status(self, job_id: str) -> Dict[str, Any]:
-        """Get status of a discovery job"""
-        
-        if job_id not in self.active_discoveries:
-            raise HTTPException(status_code=404, detail="Discovery job not found")
-        
-        job_state = self.active_discoveries[job_id]
-        job = job_state['job']
-        
-        return {
-            'job_id': job_id,
-            'name': job.name,
-            'status': job.status,
-            'discovery_type': job.discovery_type,
-            'progress': job_state['progress'],
-            'data_source_ids': job.data_source_ids,
-            'created_at': job.created_at,
-            'started_at': job.started_at,
-            'completed_at': job.completed_at,
-            'failed_at': job.failed_at,
-            'error_message': job.error_message,
-            'total_assets_discovered': len(job_state['discovered_assets']),
-            'total_relationships_discovered': len(job_state['relationships']),
-            'discovered_assets_sample': [asdict(asset) for asset in job_state['discovered_assets'][:5]]
-        }
-    
-    async def get_discovery_results(self, job_id: str) -> Dict[str, Any]:
-        """Get full results of a discovery job"""
-        
-        if job_id not in self.active_discoveries:
-            raise HTTPException(status_code=404, detail="Discovery job not found")
-        
-        job_state = self.active_discoveries[job_id]
-        job = job_state['job']
-        
-        return {
-            'job_info': {
-                'job_id': job_id,
-                'name': job.name,
-                'status': job.status,
-                'discovery_type': job.discovery_type,
-                'completed_at': job.completed_at
-            },
-            'discovered_assets': [asdict(asset) for asset in job_state['discovered_assets']],
-            'relationships': job_state['relationships'],
-            'summary': {
-                'total_assets': len(job_state['discovered_assets']),
-                'total_relationships': len(job_state['relationships']),
-                'assets_by_type': self._count_assets_by_type(job_state['discovered_assets']),
-                'assets_by_source': self._count_assets_by_source(job_state['discovered_assets'])
-            }
-        }
-    
-    def _count_assets_by_type(self, assets: List[DiscoveredAsset]) -> Dict[str, int]:
-        """Count assets by type"""
-        return dict(Counter(asset.asset_type for asset in assets))
-    
-    def _count_assets_by_source(self, assets: List[DiscoveredAsset]) -> Dict[int, int]:
-        """Count assets by data source"""
-        return dict(Counter(asset.data_source_id for asset in assets))
-    
-    async def cancel_discovery_job(self, job_id: str) -> bool:
-        """Cancel a running discovery job"""
-        
-        if job_id not in self.active_discoveries:
-            raise HTTPException(status_code=404, detail="Discovery job not found")
-        
-        job_state = self.active_discoveries[job_id]
-        job = job_state['job']
-        
-        if job.status == DiscoveryStatus.RUNNING:
-            job.status = DiscoveryStatus.CANCELLED
-            job.cancelled_at = datetime.utcnow()
-            logger.info(f"Discovery job {job_id} cancelled")
-            return True
-        else:
-            raise HTTPException(status_code=400, detail="Job cannot be cancelled in current status")
-    
-    async def get_discovery_recommendations(
-        self,
-        data_source_id: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """Get recommendations for data discovery"""
-        
-        recommendations = []
-        
-        with get_session() as session:
-            # Get data sources
-            query = session.query(DataSource)
-            if data_source_id:
-                query = query.filter(DataSource.id == data_source_id)
+            # Discover schema-based relationships
+            schema_relationships = await self._discover_schema_relationships(discovered_assets)
+            discovery_results["relationships_found"].extend(schema_relationships)
             
-            data_sources = query.all()
+            # Discover content-based relationships
+            content_relationships = await self._discover_content_relationships(discovered_assets)
+            discovery_results["relationships_found"].extend(content_relationships)
             
-            for ds in data_sources:
-                # Check last discovery time
-                last_discovery = session.query(DiscoveryJob).filter(
-                    DiscoveryJob.data_source_ids.contains([ds.id]),
-                    DiscoveryJob.status == DiscoveryStatus.COMPLETED
-                ).order_by(DiscoveryJob.completed_at.desc()).first()
+            # Discover usage-based relationships
+            usage_relationships = await self._discover_usage_relationships(discovered_assets, context)
+            discovery_results["relationships_found"].extend(usage_relationships)
+            
+            # Build relationship graph
+            await self._build_relationship_graph(discovery_results["relationships_found"])
+            
+            # Analyze relationship patterns
+            relationship_patterns = await self._analyze_relationship_patterns()
+            discovery_results["patterns_identified"].extend(relationship_patterns)
+            
+        except Exception as e:
+            logger.error(f"Relationship mining discovery failed: {str(e)}")
+            discovery_results["errors"].append({
+                "method": "relationship_mining",
+                "error": str(e)
+            })
+
+    async def _discover_schema_relationships(self, assets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Discover relationships based on schema analysis"""
+        
+        relationships = []
+        
+        try:
+            # Group assets by type
+            database_assets = [a for a in assets if a.get("type") == DiscoveryAssetType.DATABASE_TABLE.value]
+            
+            # Look for foreign key relationships
+            for asset1 in database_assets:
+                schema1 = asset1.get("schema_info", {})
+                columns1 = schema1.get("columns", [])
                 
-                if not last_discovery:
-                    recommendations.append({
-                        'type': 'initial_discovery',
-                        'priority': 'high',
-                        'data_source_id': ds.id,
-                        'data_source_name': ds.name,
-                        'message': f"No discovery has been run for {ds.name}",
-                        'recommended_action': 'Run full discovery',
-                        'estimated_duration': '30-60 minutes'
-                    })
-                elif (datetime.utcnow() - last_discovery.completed_at).days > 7:
-                    recommendations.append({
-                        'type': 'incremental_discovery',
-                        'priority': 'medium',
-                        'data_source_id': ds.id,
-                        'data_source_name': ds.name,
-                        'message': f"Last discovery for {ds.name} was {(datetime.utcnow() - last_discovery.completed_at).days} days ago",
-                        'recommended_action': 'Run incremental discovery',
-                        'estimated_duration': '10-20 minutes'
-                    })
+                for asset2 in database_assets:
+                    if asset1["asset_id"] == asset2["asset_id"]:
+                        continue
+                    
+                    schema2 = asset2.get("schema_info", {})
+                    columns2 = schema2.get("columns", [])
+                    
+                    # Check for matching column names and types
+                    for col1 in columns1:
+                        for col2 in columns2:
+                            if (col1.get("name") == col2.get("name") and 
+                                col1.get("type") == col2.get("type")):
+                                
+                                # Potential foreign key relationship
+                                relationship = {
+                                    "relationship_id": f"rel_{uuid4().hex[:8]}",
+                                    "source_asset_id": asset1["asset_id"],
+                                    "target_asset_id": asset2["asset_id"],
+                                    "relationship_type": "foreign_key",
+                                    "relationship_details": {
+                                        "source_column": col1.get("name"),
+                                        "target_column": col2.get("name"),
+                                        "data_type": col1.get("type")
+                                    },
+                                    "confidence": 0.9 if "_id" in col1.get("name", "") else 0.7,
+                                    "discovery_method": "schema_analysis"
+                                }
+                                relationships.append(relationship)
+            
+            return relationships
+            
+        except Exception as e:
+            logger.error(f"Schema relationship discovery failed: {str(e)}")
+            return relationships
+
+    async def _build_relationship_graph(self, relationships: List[Dict[str, Any]]):
+        """Build a graph representation of asset relationships"""
         
-        return recommendations
-    
-    async def get_discovery_analytics(self) -> Dict[str, Any]:
-        """Get analytics about discovery operations"""
+        try:
+            # Clear existing graph
+            self.relationship_graph.clear()
+            
+            # Add relationships to graph
+            for rel in relationships:
+                source_id = rel["source_asset_id"]
+                target_id = rel["target_asset_id"]
+                
+                # Add nodes if they don't exist
+                if not self.relationship_graph.has_node(source_id):
+                    self.relationship_graph.add_node(source_id)
+                if not self.relationship_graph.has_node(target_id):
+                    self.relationship_graph.add_node(target_id)
+                
+                # Add edge with relationship metadata
+                self.relationship_graph.add_edge(
+                    source_id, 
+                    target_id,
+                    relationship_type=rel["relationship_type"],
+                    confidence=rel["confidence"],
+                    details=rel.get("relationship_details", {})
+                )
+            
+            logger.info(f"Relationship graph built with {self.relationship_graph.number_of_nodes()} nodes and {self.relationship_graph.number_of_edges()} edges")
+            
+        except Exception as e:
+            logger.error(f"Failed to build relationship graph: {str(e)}")
+
+    # ================================================================
+    # BUSINESS VALUE ESTIMATION
+    # ================================================================
+
+    async def _estimate_business_value(
+        self,
+        asset_profile: AssetProfile,
+        context: DiscoveryContext
+    ) -> float:
+        """Estimate business value of discovered asset"""
         
-        total_jobs = len(self.active_discoveries)
-        completed_jobs = len([j for j in self.active_discoveries.values() 
-                             if j['job'].status == DiscoveryStatus.COMPLETED])
+        try:
+            value_factors = {}
+            
+            # Data volume factor
+            schema_info = asset_profile.schema_info
+            row_count = schema_info.get("row_count", 0)
+            data_size = schema_info.get("data_size_mb", 0)
+            
+            volume_score = min(1.0, (row_count / 1000000) * 0.3 + (data_size / 1000) * 0.2)
+            value_factors["volume"] = volume_score
+            
+            # Quality factor
+            quality_score = np.mean(list(asset_profile.quality_metrics.values())) if asset_profile.quality_metrics else 0.5
+            value_factors["quality"] = quality_score
+            
+            # Semantic relevance factor
+            semantic_score = 0.5
+            for tag in asset_profile.semantic_tags:
+                if tag in ["customer_data", "financial_data", "product_data"]:
+                    semantic_score += 0.2
+            value_factors["semantic"] = min(1.0, semantic_score)
+            
+            # Relationship factor (connectivity in graph)
+            relationship_score = 0.5
+            if asset_profile.asset_id in self.relationship_graph:
+                degree = self.relationship_graph.degree(asset_profile.asset_id)
+                relationship_score = min(1.0, degree / 10)
+            value_factors["relationships"] = relationship_score
+            
+            # Business context factor
+            business_context = context.business_context
+            context_score = 0.5
+            
+            critical_domains = business_context.get("critical_domains", [])
+            if any(domain.lower() in asset_profile.asset_name.lower() for domain in critical_domains):
+                context_score += 0.3
+            
+            value_factors["context"] = min(1.0, context_score)
+            
+            # Calculate weighted business value
+            weights = {
+                "volume": 0.15,
+                "quality": 0.25,
+                "semantic": 0.25,
+                "relationships": 0.20,
+                "context": 0.15
+            }
+            
+            business_value = sum(
+                value_factors[factor] * weights[factor]
+                for factor in weights
+            )
+            
+            return min(1.0, business_value)
+            
+        except Exception as e:
+            logger.error(f"Business value estimation failed: {str(e)}")
+            return 0.5
+
+    # ================================================================
+    # ASSET PROFILING AND CREATION
+    # ================================================================
+
+    async def _create_asset_profile(
+        self,
+        asset_data: Dict[str, Any],
+        system: str,
+        context: DiscoveryContext
+    ) -> AssetProfile:
+        """Create comprehensive asset profile"""
         
-        total_assets = sum(len(j['discovered_assets']) for j in self.active_discoveries.values())
-        total_relationships = sum(len(j['relationships']) for j in self.active_discoveries.values())
-        
-        return {
-            'total_discovery_jobs': total_jobs,
-            'completed_jobs': completed_jobs,
-            'success_rate': (completed_jobs / max(total_jobs, 1)) * 100,
-            'total_assets_discovered': total_assets,
-            'total_relationships_discovered': total_relationships,
-            'active_jobs': len([j for j in self.active_discoveries.values() 
-                               if j['job'].status == DiscoveryStatus.RUNNING]),
-            'recent_discoveries': [
-                {
-                    'job_id': job_id,
-                    'name': job_state['job'].name,
-                    'status': job_state['job'].status,
-                    'assets_count': len(job_state['discovered_assets'])
+        try:
+            # Extract basic information
+            asset_id = asset_data["asset_id"]
+            asset_name = asset_data["name"]
+            asset_type = asset_data["type"]
+            
+            # Create asset profile
+            asset_profile = AssetProfile(
+                asset_id=asset_id,
+                asset_name=asset_name,
+                asset_type=asset_type,
+                source_system=system,
+                schema_info=asset_data.get("schema_info", {}),
+                content_sample=asset_data.get("content_sample", []),
+                quality_metrics={},
+                semantic_tags=[],
+                relationships=[],
+                business_value_score=0.0,
+                confidence_score=0.0,
+                discovery_metadata={
+                    "discovery_method": asset_data.get("discovery_method"),
+                    "discovered_at": datetime.utcnow().isoformat(),
+                    "discovery_context": context.discovery_id
                 }
-                for job_id, job_state in list(self.active_discoveries.items())[-5:]
+            )
+            
+            # Analyze quality metrics
+            if asset_profile.content_sample:
+                asset_profile.quality_metrics = await self._analyze_quality_dimensions(
+                    asset_profile.content_sample
+                )
+            
+            # Generate semantic tags
+            asset_texts = await self._extract_text_features(asset_data)
+            if asset_texts:
+                semantic_tags = await self._generate_semantic_tags(asset_texts, asset_id)
+                asset_profile.semantic_tags = [tag["category"] for tag in semantic_tags]
+            
+            # Estimate business value
+            asset_profile.business_value_score = await self._estimate_business_value(
+                asset_profile, context
+            )
+            
+            # Calculate confidence score
+            confidence_factors = [
+                1.0 if asset_profile.schema_info else 0.0,
+                1.0 if asset_profile.content_sample else 0.0,
+                len(asset_profile.quality_metrics) / 6,  # Max 6 quality dimensions
+                len(asset_profile.semantic_tags) / 5,  # Reasonable number of tags
+                asset_profile.business_value_score
             ]
-        }
+            asset_profile.confidence_score = np.mean(confidence_factors)
+            
+            return asset_profile
+            
+        except Exception as e:
+            logger.error(f"Asset profile creation failed: {str(e)}")
+            raise
 
+    # ================================================================
+    # UTILITY METHODS
+    # ================================================================
 
-# Global service instance
-intelligent_discovery_service = IntelligentDiscoveryService()
+    async def _emit_discovery_event(
+        self,
+        event_type: str,
+        event_data: Dict[str, Any],
+        context: DiscoveryContext
+    ):
+        """Emit discovery-related events"""
+        try:
+            event = {
+                "event_id": f"evt_{uuid4().hex[:8]}",
+                "event_type": event_type,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user_id": context.user_id,
+                "organization_id": context.organization_id,
+                "discovery_id": context.discovery_id,
+                "data": event_data
+            }
+            
+            # Add to audit trail
+            self.audit_trail.append(event)
+            
+            # Execute registered event handlers
+            handlers = self.event_handlers.get(event_type, [])
+            for handler in handlers:
+                try:
+                    await handler(event, context)
+                except Exception as e:
+                    logger.warning(f"Event handler failed: {str(e)}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to emit discovery event: {str(e)}")
+
+    def register_event_handler(self, event_type: str, handler):
+        """Register an event handler for discovery events"""
+        self.event_handlers[event_type].append(handler)
+
+    async def get_discovery_status(self, discovery_id: str) -> Dict[str, Any]:
+        """Get status of a discovery operation"""
+        try:
+            if discovery_id in self.active_discoveries:
+                return {
+                    "discovery_id": discovery_id,
+                    "status": "running",
+                    "context": self.active_discoveries[discovery_id].__dict__
+                }
+            else:
+                # Check discovery history or database
+                return {
+                    "discovery_id": discovery_id,
+                    "status": "completed_or_not_found"
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to get discovery status: {str(e)}")
+            return {"error": str(e)}
+
+    def __del__(self):
+        """Cleanup when service is destroyed"""
+        try:
+            if hasattr(self, 'thread_pool'):
+                self.thread_pool.shutdown(wait=False)
+        except Exception:
+            pass

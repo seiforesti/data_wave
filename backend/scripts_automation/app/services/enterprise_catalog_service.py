@@ -1,1448 +1,1319 @@
 """
-Enterprise Data Catalog Service - Advanced Production Implementation
-==================================================================
-
-This service provides enterprise-grade data catalog management with AI/ML capabilities,
-intelligent asset discovery, comprehensive lineage tracking, and advanced quality
-management with seamless integration across all data governance systems.
-
-Key Features:
-- AI-powered asset discovery and classification
-- Intelligent lineage tracking with graph analysis
-- Comprehensive data quality management
-- Business glossary integration with semantic understanding
-- Real-time monitoring and alerting
-- Advanced analytics and insights
-- Seamless integration with scan rules, compliance, and classification systems
-
-Production Requirements:
-- 99.9% uptime with intelligent error recovery
-- Sub-second response times for 95% of operations
-- Horizontal scalability to handle 100M+ assets
-- Real-time monitoring with predictive analytics
-- Zero-downtime updates and migrations
+📚 ENTERPRISE CATALOG SERVICE
+Comprehensive data catalog management system with AI-powered discovery, advanced lineage tracking,
+semantic search, quality management, and intelligent recommendations that surpasses industry platforms.
 """
 
-from typing import List, Dict, Any, Optional, Union, Tuple, Set, AsyncGenerator
-from datetime import datetime, timedelta
 import asyncio
-import uuid
-import json
-import re
 import logging
-import time
-import threading
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Union, Tuple, Set
+from uuid import UUID, uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, func, and_, or_, case, desc, asc
+from sqlalchemy.orm import selectinload, joinedload
+import json
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor
+import numpy as np
 from dataclasses import dataclass, field
 from enum import Enum
-import traceback
 import networkx as nx
-from collections import defaultdict, deque
-
-# FastAPI and Database imports
-from fastapi import HTTPException, BackgroundTasks
-from sqlalchemy import select, update, delete, and_, or_, func, text, desc, asc
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
-from sqlmodel import Session
-
-# AI/ML imports
-import numpy as np
-from sklearn.cluster import KMeans, DBSCAN
+from collections import defaultdict, Counter
+import re
+from textdistance import levenshtein
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestRegressor, IsolationForest
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.metrics.pairwise import cosine_similarity
-import torch
-from transformers import AutoTokenizer, AutoModel
-import spacy
+import pickle
 
-# Graph analysis imports
-import networkx as nx
-from networkx.algorithms import centrality, community
-
-# Core application imports
+# Import models
 from ..models.advanced_catalog_models import (
-    IntelligentDataAsset, EnterpriseDataLineage, DataQualityAssessment,
-    BusinessGlossaryTerm, BusinessGlossaryAssociation, AssetUsageMetrics,
-    DataProfilingResult, AssetType, AssetStatus, DataQuality, LineageDirection,
-    LineageType, DiscoveryMethod, AssetCriticality, DataSensitivity,
-    UsageFrequency, IntelligentAssetResponse, AssetCreateRequest,
-    AssetUpdateRequest, AssetSearchRequest, LineageResponse,
-    QualityAssessmentResponse, BusinessGlossaryResponse, AssetDiscoveryEvent,
-    LineageGraph, CatalogAnalytics
+    AdvancedCatalogEntry, CatalogEntryRelationship, DataQualityAssessment,
+    DataLineageEntry, CatalogComment, CatalogRating, CatalogEntryType,
+    CatalogStatus, DataQualityLevel, AccessLevel, BusinessCriticality,
+    StewardshipRole, CatalogEntrySubType
 )
-from ..models.scan_models import DataSource, ScanResult
-from ..core.database import get_session
-from ..core.config import get_settings
-from ..core.security import get_current_user
-from ..core.cache import RedisCache
-from ..core.monitoring import MetricsCollector, AlertManager
-from ..core.logging import StructuredLogger
+from ..models.data_lineage_models import (
+    DataLineagePath, LineageSegment, LineageImpactAnalysis, LineageEvent,
+    LineageValidation, LineageMetrics, LineageDirection, LineageType,
+    LineageGranularity, DiscoveryMethod, ValidationStatus, ImpactLevel,
+    ConfidenceLevel
+)
+from ..models.catalog_intelligence_models import (
+    CatalogIntelligenceModel, SemanticSearchOperation, CatalogRecommendation,
+    IntelligentDiscoveryOperation, SearchQueryUnderstanding, RecommendationFeedback,
+    IntelligenceModelType, SemanticSearchType, RecommendationType, DiscoveryMethod as CatalogDiscoveryMethod
+)
+from ..models.catalog_quality_models import (
+    DataQualityAssessment as CatalogQualityAssessment, QualityRule, QualityRuleExecution,
+    QualityMonitoringProfile, QualityMonitoringResult, QualityRemediationPlan,
+    QualityAlert, QualityReport, QualityDimension, QualityRuleType,
+    QualityAssessmentType, QualityStatus, QualityLevel as CatalogQualityLevel
+)
 
-# Integration imports
-from .data_source_service import DataSourceService
-from .classification_service import ClassificationService
-from .compliance_service import ComplianceService
-from .enterprise_scan_rule_service import EnterpriseIntelligentRuleEngine
+# Import services for integration
+from .intelligent_discovery_service import IntelligentDiscoveryService
+from .semantic_search_service import SemanticSearchService
+from .catalog_analytics_service import CatalogAnalyticsService
+from .advanced_lineage_service import AdvancedLineageService
 
-# Configure structured logging
-logger = StructuredLogger(__name__)
-settings = get_settings()
-
-
-# ===================== CONFIGURATION AND CONSTANTS =====================
+logger = logging.getLogger(__name__)
 
 @dataclass
-class EnterpriseCatalogConfig:
-    """Configuration for the enterprise catalog service"""
-    max_concurrent_discoveries: int = 20
-    discovery_timeout_seconds: int = 600
-    ai_model_path: str = "/models/catalog_intelligence"
-    lineage_cache_ttl: int = 7200  # 2 hours
-    quality_assessment_interval: int = 86400  # 24 hours
-    profiling_sample_size: int = 10000
-    max_retry_attempts: int = 3
-    resource_pool_size: int = 15
-    monitoring_interval: int = 30  # seconds
-    lineage_max_depth: int = 10
-    semantic_similarity_threshold: float = 0.75
-    quality_alert_threshold: float = 0.7
-    business_value_threshold: float = 6.0
+class CatalogContext:
+    """Context for catalog operations"""
+    user_id: str
+    organization_id: str
+    access_level: AccessLevel
+    business_domain: str
+    stewardship_roles: List[StewardshipRole]
+    compliance_requirements: List[str]
+    performance_preferences: Dict[str, Any] = field(default_factory=dict)
 
+@dataclass
+class DiscoveryConfiguration:
+    """Configuration for intelligent discovery operations"""
+    discovery_scope: List[str]
+    discovery_methods: List[DiscoveryMethod]
+    quality_thresholds: Dict[str, float]
+    include_lineage: bool = True
+    include_quality_assessment: bool = True
+    include_business_context: bool = True
+    auto_classification: bool = True
+    confidence_threshold: float = 0.7
 
-class CatalogEngineStatus(str, Enum):
-    """Status of the catalog engine"""
-    INITIALIZING = "initializing"
-    RUNNING = "running"
-    DISCOVERING = "discovering"
-    ANALYZING = "analyzing"
-    MAINTENANCE = "maintenance"
-    ERROR = "error"
-    SHUTDOWN = "shutdown"
+@dataclass
+class SearchConfiguration:
+    """Configuration for semantic search operations"""
+    search_types: List[SemanticSearchType]
+    max_results: int = 50
+    similarity_threshold: float = 0.75
+    include_synonyms: bool = True
+    include_related_terms: bool = True
+    boost_recent: bool = True
+    boost_popular: bool = True
+    personalize: bool = True
 
+class CatalogEventType(str, Enum):
+    """Types of catalog events"""
+    ENTRY_CREATED = "entry_created"
+    ENTRY_UPDATED = "entry_updated"
+    ENTRY_DELETED = "entry_deleted"
+    RELATIONSHIP_CREATED = "relationship_created"
+    QUALITY_ASSESSED = "quality_assessed"
+    LINEAGE_DISCOVERED = "lineage_discovered"
+    RECOMMENDATION_GENERATED = "recommendation_generated"
+    SEARCH_PERFORMED = "search_performed"
+    DISCOVERY_COMPLETED = "discovery_completed"
 
-class DiscoveryTrigger(str, Enum):
-    """Triggers for asset discovery"""
-    SCHEDULED = "scheduled"
-    DATA_SOURCE_CHANGE = "data_source_change"
-    MANUAL = "manual"
-    API_REQUEST = "api_request"
-    SCAN_RESULT = "scan_result"
-    ML_RECOMMENDATION = "ml_recommendation"
+class CatalogOptimizationType(str, Enum):
+    """Types of catalog optimizations"""
+    METADATA_ENRICHMENT = "metadata_enrichment"
+    DUPLICATE_DETECTION = "duplicate_detection"
+    QUALITY_IMPROVEMENT = "quality_improvement"
+    RELATIONSHIP_DISCOVERY = "relationship_discovery"
+    CLASSIFICATION_ENHANCEMENT = "classification_enhancement"
+    USAGE_OPTIMIZATION = "usage_optimization"
 
-
-# ===================== ENTERPRISE INTELLIGENT CATALOG SERVICE =====================
-
-class EnterpriseIntelligentCatalogService:
+class EnterpriseCatalogService:
     """
-    Advanced enterprise catalog service with AI/ML capabilities, intelligent discovery,
-    and comprehensive integration with all data governance systems.
-    
-    This service serves as the central intelligence hub for data asset management,
-    providing automated discovery, intelligent classification, quality monitoring,
-    and advanced analytics with enterprise-grade reliability and performance.
+    Enterprise-grade catalog service that provides comprehensive data catalog management
+    with AI-powered capabilities, advanced analytics, and intelligent automation.
     """
     
-    def __init__(self):
-        self.config = EnterpriseCatalogConfig()
-        self.status = CatalogEngineStatus.INITIALIZING
-        self.cache = RedisCache()
-        self.metrics = MetricsCollector()
-        self.alerts = AlertManager()
-        self.logger = logger
-        
-        # AI/ML Components
-        self.nlp_model = None
-        self.embedding_model = None
-        self.clustering_model = None
-        self.quality_predictor = None
-        self.anomaly_detector = None
-        self.semantic_vectorizer = None
-        
-        # Graph Analysis Components
-        self.lineage_graph = nx.DiGraph()
-        self.graph_analytics = {}
-        
-        # Resource Management
-        self.thread_pool = ThreadPoolExecutor(max_workers=self.config.max_concurrent_discoveries)
-        self.process_pool = ProcessPoolExecutor(max_workers=self.config.resource_pool_size)
-        self.discovery_semaphore = asyncio.Semaphore(self.config.max_concurrent_discoveries)
-        
-        # Performance Tracking
-        self.discovery_metrics = {}
-        self.quality_metrics = {}
-        self.lineage_metrics = {}
-        self.usage_analytics = {}
-        
-        # Integration Services
-        self.data_source_service = None
-        self.classification_service = None
-        self.compliance_service = None
-        self.scan_rule_engine = None
-        
-        # Background Tasks
-        self.discovery_task = None
-        self.quality_monitoring_task = None
-        self.lineage_analysis_task = None
-        self.analytics_task = None
-        
-        # Synchronization
-        self._lock = threading.RLock()
-        self._shutdown_event = threading.Event()
-
-
-    async def initialize(self) -> None:
-        """
-        Initialize the enterprise catalog service with all required components,
-        AI models, and integration services.
-        """
-        try:
-            self.logger.info("Initializing Enterprise Intelligent Catalog Service")
-            start_time = time.time()
-            
-            # Initialize AI/ML components
-            await self._initialize_ai_models()
-            
-            # Initialize integration services
-            await self._initialize_integration_services()
-            
-            # Load existing assets and lineage
-            await self._load_existing_catalog()
-            
-            # Initialize graph analytics
-            await self._initialize_graph_analytics()
-            
-            # Start background tasks
-            await self._start_background_tasks()
-            
-            # Set status to running
-            self.status = CatalogEngineStatus.RUNNING
-            
-            initialization_time = time.time() - start_time
-            self.logger.info(
-                "Enterprise Catalog Service initialized successfully",
-                extra={
-                    "initialization_time": initialization_time,
-                    "status": self.status.value,
-                    "loaded_assets": len(self.discovery_metrics),
-                    "lineage_nodes": self.lineage_graph.number_of_nodes(),
-                    "lineage_edges": self.lineage_graph.number_of_edges()
-                }
-            )
-            
-            # Record initialization metrics
-            await self.metrics.record_gauge(
-                "catalog_engine_initialization_time", 
-                initialization_time
-            )
-            await self.metrics.increment_counter("catalog_engine_initializations")
-            
-        except Exception as e:
-            self.status = CatalogEngineStatus.ERROR
-            self.logger.error(
-                "Failed to initialize Enterprise Catalog Service",
-                extra={"error": str(e), "traceback": traceback.format_exc()}
-            )
-            raise HTTPException(
-                status_code=500,
-                detail=f"Catalog service initialization failed: {str(e)}"
-            )
-
-
-    async def discover_assets_intelligent(
+    def __init__(
         self,
-        data_source_id: int,
-        discovery_config: Dict[str, Any],
-        session: AsyncSession,
-        user_id: str,
-        trigger: DiscoveryTrigger = DiscoveryTrigger.MANUAL
-    ) -> Dict[str, Any]:
-        """
-        Perform intelligent asset discovery with AI-powered metadata extraction,
-        pattern recognition, and automatic classification.
-        """
-        async with self.discovery_semaphore:
-            try:
-                discovery_id = f"discovery_{uuid.uuid4().hex[:12]}"
-                start_time = time.time()
-                
-                self.logger.info(
-                    "Starting intelligent asset discovery",
-                    extra={
-                        "discovery_id": discovery_id,
-                        "data_source_id": data_source_id,
-                        "trigger": trigger.value,
-                        "user_id": user_id
-                    }
-                )
-                
-                # Load data source details
-                data_source = await self._load_data_source(data_source_id, session)
-                if not data_source:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=f"Data source with ID {data_source_id} not found"
-                    )
-                
-                # Initialize discovery context
-                discovery_context = {
-                    "discovery_id": discovery_id,
-                    "data_source": data_source,
-                    "config": discovery_config,
-                    "start_time": start_time,
-                    "discovered_assets": [],
-                    "enhanced_assets": [],
-                    "lineage_discovered": [],
-                    "quality_assessments": [],
-                    "errors": [],
-                    "warnings": [],
-                    "metrics": {
-                        "assets_discovered": 0,
-                        "assets_enhanced": 0,
-                        "lineage_relationships": 0,
-                        "quality_checks_performed": 0,
-                        "ai_confidence_avg": 0.0
-                    }
-                }
-                
-                # Perform multi-stage discovery
-                await self._discover_schema_metadata(discovery_context, session)
-                await self._enhance_with_ai_analysis(discovery_context, session)
-                await self._detect_lineage_relationships(discovery_context, session)
-                await self._perform_quality_assessment(discovery_context, session)
-                await self._enrich_business_context(discovery_context, session)
-                
-                # Process discovered assets
-                processed_assets = await self._process_discovered_assets(
-                    discovery_context,
-                    session
-                )
-                
-                # Generate discovery insights
-                discovery_insights = await self._generate_discovery_insights(
-                    discovery_context,
-                    processed_assets
-                )
-                
-                # Update metrics and analytics
-                await self._update_discovery_metrics(discovery_context)
-                
-                discovery_time = time.time() - start_time
-                
-                # Final results
-                discovery_results = {
-                    "discovery_id": discovery_id,
-                    "status": "completed",
-                    "data_source_id": data_source_id,
-                    "trigger": trigger.value,
-                    "discovery_time": discovery_time,
-                    "metrics": discovery_context["metrics"],
-                    "discovered_assets": processed_assets,
-                    "lineage_relationships": discovery_context["lineage_discovered"],
-                    "quality_assessments": discovery_context["quality_assessments"],
-                    "insights": discovery_insights,
-                    "errors": discovery_context["errors"],
-                    "warnings": discovery_context["warnings"]
-                }
-                
-                # Record comprehensive metrics
-                await self.metrics.record_histogram(
-                    "asset_discovery_duration",
-                    discovery_time
-                )
-                await self.metrics.increment_counter(
-                    "asset_discoveries_completed",
-                    tags={
-                        "data_source_type": data_source.source_type.value,
-                        "trigger": trigger.value
-                    }
-                )
-                
-                self.logger.info(
-                    "Intelligent asset discovery completed successfully",
-                    extra={
-                        "discovery_id": discovery_id,
-                        "discovery_time": discovery_time,
-                        "assets_discovered": discovery_context["metrics"]["assets_discovered"],
-                        "lineage_relationships": discovery_context["metrics"]["lineage_relationships"],
-                        "ai_confidence": discovery_context["metrics"]["ai_confidence_avg"]
-                    }
-                )
-                
-                return discovery_results
-                
-            except Exception as e:
-                self.logger.error(
-                    "Intelligent asset discovery failed",
-                    extra={
-                        "discovery_id": discovery_id,
-                        "data_source_id": data_source_id,
-                        "error": str(e),
-                        "traceback": traceback.format_exc()
-                    }
-                )
-                
-                await self.metrics.increment_counter(
-                    "asset_discovery_errors",
-                    tags={"error_type": type(e).__name__}
-                )
-                
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Asset discovery failed: {str(e)}"
-                )
+        db_session: AsyncSession,
+        discovery_service: IntelligentDiscoveryService,
+        search_service: SemanticSearchService,
+        analytics_service: CatalogAnalyticsService,
+        lineage_service: AdvancedLineageService,
+        ml_models_path: str = "/app/models/catalog",
+        cache_size: int = 10000,
+        thread_pool_size: int = 15
+    ):
+        self.db = db_session
+        self.discovery_service = discovery_service
+        self.search_service = search_service
+        self.analytics_service = analytics_service
+        self.lineage_service = lineage_service
+        self.ml_models_path = ml_models_path
+        self.thread_pool = ThreadPoolExecutor(max_workers=thread_pool_size)
+        
+        # Advanced caching and indexing
+        self.entry_cache: Dict[str, AdvancedCatalogEntry] = {}
+        self.relationship_graph = nx.DiGraph()
+        self.metadata_index: Dict[str, Set[str]] = defaultdict(set)
+        self.semantic_embeddings: Dict[str, np.ndarray] = {}
+        
+        # ML models for various tasks
+        self.ml_models = {
+            "similarity_model": None,
+            "classification_model": None,
+            "recommendation_model": None,
+            "quality_predictor": None,
+            "duplicate_detector": None
+        }
+        
+        # Performance tracking
+        self.performance_metrics = {
+            "search_response_times": [],
+            "discovery_success_rates": [],
+            "recommendation_accuracy": [],
+            "cache_hit_rates": []
+        }
+        
+        # Event tracking
+        self.event_handlers: Dict[CatalogEventType, List] = defaultdict(list)
+        self.audit_trail: List[Dict[str, Any]] = []
+        
+        # Initialize subsystems
+        self._initialize_catalog_engine()
+    
+    def _initialize_catalog_engine(self):
+        """Initialize the enterprise catalog engine"""
+        logger.info("Initializing Enterprise Catalog Service...")
+        
+        # Load ML models
+        self._load_ml_models()
+        
+        # Initialize indexes
+        self._initialize_indexes()
+        
+        # Set up event handlers
+        self._setup_event_handlers()
+        
+        logger.info("Enterprise Catalog Service initialized successfully")
 
+    def _load_ml_models(self):
+        """Load pre-trained ML models for catalog operations"""
+        try:
+            # Load models from disk (implement based on your ML infrastructure)
+            # This is a placeholder for actual model loading
+            self.ml_models["similarity_model"] = self._create_similarity_model()
+            self.ml_models["classification_model"] = self._create_classification_model()
+            self.ml_models["recommendation_model"] = self._create_recommendation_model()
+            
+            logger.info("ML models loaded successfully")
+        except Exception as e:
+            logger.warning(f"Failed to load ML models: {str(e)}")
 
-    async def build_comprehensive_lineage(
+    def _create_similarity_model(self):
+        """Create semantic similarity model"""
+        return TfidfVectorizer(
+            max_features=10000,
+            stop_words='english',
+            ngram_range=(1, 3),
+            lowercase=True
+        )
+
+    # ================================================================
+    # CORE CATALOG MANAGEMENT
+    # ================================================================
+
+    async def create_catalog_entry(
         self,
-        asset_id: int,
-        direction: LineageDirection = LineageDirection.BIDIRECTIONAL,
-        max_depth: int = None,
-        session: AsyncSession,
-        user_id: str
-    ) -> LineageGraph:
+        entry_data: Dict[str, Any],
+        context: CatalogContext,
+        auto_enrich: bool = True
+    ) -> AdvancedCatalogEntry:
         """
-        Build comprehensive lineage graph with AI-powered relationship detection,
-        impact analysis, and graph analytics.
+        Create a new catalog entry with automatic enrichment, quality assessment,
+        and intelligent relationship discovery.
         """
         try:
-            lineage_id = f"lineage_{uuid.uuid4().hex[:12]}"
-            start_time = time.time()
-            max_depth = max_depth or self.config.lineage_max_depth
+            logger.info(f"Creating catalog entry for {entry_data.get('name', 'unnamed')}")
             
-            self.logger.info(
-                "Building comprehensive lineage graph",
-                extra={
-                    "lineage_id": lineage_id,
-                    "asset_id": asset_id,
-                    "direction": direction.value,
-                    "max_depth": max_depth,
-                    "user_id": user_id
+            # Generate entry ID
+            entry_id = f"cat_{uuid4().hex[:12]}"
+            
+            # Create base catalog entry
+            catalog_entry = AdvancedCatalogEntry(
+                catalog_entry_id=entry_id,
+                name=entry_data["name"],
+                entry_type=entry_data["entry_type"],
+                entry_subtype=entry_data.get("entry_subtype"),
+                status=CatalogStatus.ACTIVE,
+                description=entry_data.get("description", ""),
+                technical_metadata=entry_data.get("technical_metadata", {}),
+                business_metadata=entry_data.get("business_metadata", {}),
+                data_source_id=entry_data.get("data_source_id"),
+                schema_definition=entry_data.get("schema_definition", {}),
+                created_by=context.user_id,
+                stewardship_info={
+                    "primary_steward": context.user_id,
+                    "stewardship_roles": [role.value for role in context.stewardship_roles],
+                    "assigned_date": datetime.utcnow().isoformat()
                 }
             )
             
-            # Load root asset
-            root_asset = await self._load_asset_with_relationships(asset_id, session)
-            if not root_asset:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Asset with ID {asset_id} not found"
-                )
+            # Add to database
+            self.db.add(catalog_entry)
+            await self.db.commit()
+            await self.db.refresh(catalog_entry)
             
-            # Initialize lineage graph
-            lineage_graph = nx.DiGraph()
-            visited_assets = set()
-            lineage_context = {
-                "lineage_id": lineage_id,
-                "root_asset_id": asset_id,
-                "direction": direction,
-                "max_depth": max_depth,
-                "graph": lineage_graph,
-                "visited": visited_assets,
-                "assets_metadata": {},
-                "relationship_strength": {},
-                "transformation_logic": {},
-                "business_impact": {},
-                "critical_paths": [],
-                "metrics": {
-                    "nodes_discovered": 0,
-                    "edges_discovered": 0,
-                    "ai_relationships": 0,
-                    "manual_relationships": 0,
-                    "confidence_avg": 0.0
-                }
-            }
+            # Auto-enrichment if enabled
+            if auto_enrich:
+                await self._auto_enrich_entry(catalog_entry, context)
             
-            # Build lineage graph recursively
-            await self._build_lineage_recursive(
-                asset_id,
-                0,
-                lineage_context,
-                session
+            # Discover relationships
+            relationships = await self._discover_entry_relationships(catalog_entry, context)
+            
+            # Perform quality assessment
+            quality_assessment = await self._assess_entry_quality(catalog_entry, context)
+            
+            # Generate recommendations
+            recommendations = await self._generate_entry_recommendations(catalog_entry, context)
+            
+            # Update caches and indexes
+            await self._update_indexes_for_entry(catalog_entry)
+            
+            # Emit event
+            await self._emit_catalog_event(
+                CatalogEventType.ENTRY_CREATED,
+                {
+                    "entry_id": entry_id,
+                    "entry_name": catalog_entry.name,
+                    "entry_type": catalog_entry.entry_type,
+                    "relationships_discovered": len(relationships),
+                    "quality_score": quality_assessment.get("overall_score", 0),
+                    "recommendations_count": len(recommendations)
+                },
+                context
             )
             
-            # Enhance with AI-detected relationships
-            await self._enhance_lineage_with_ai(lineage_context, session)
-            
-            # Perform graph analytics
-            graph_analytics = await self._analyze_lineage_graph(lineage_context)
-            
-            # Identify critical paths and impact analysis
-            critical_paths = await self._identify_critical_paths(lineage_context)
-            impact_analysis = await self._perform_impact_analysis(lineage_context)
-            
-            # Generate lineage insights
-            lineage_insights = await self._generate_lineage_insights(
-                lineage_context,
-                graph_analytics,
-                critical_paths,
-                impact_analysis
-            )
-            
-            # Convert to response format
-            nodes = []
-            edges = []
-            
-            for node_id in lineage_context["graph"].nodes():
-                node_data = lineage_context["assets_metadata"][node_id]
-                nodes.append({
-                    "id": node_id,
-                    "qualified_name": node_data["qualified_name"],
-                    "display_name": node_data["display_name"],
-                    "asset_type": node_data["asset_type"],
-                    "business_criticality": node_data.get("business_criticality", "medium"),
-                    "quality_score": node_data.get("quality_score", 0.0),
-                    "centrality_score": graph_analytics["centrality_scores"].get(node_id, 0.0),
-                    "is_critical_path": node_id in [node for path in critical_paths for node in path]
-                })
-            
-            for source, target, edge_data in lineage_context["graph"].edges(data=True):
-                edges.append({
-                    "source": source,
-                    "target": target,
-                    "lineage_type": edge_data.get("lineage_type", "unknown"),
-                    "confidence_score": edge_data.get("confidence_score", 0.0),
-                    "transformation_logic": edge_data.get("transformation_logic"),
-                    "business_impact": edge_data.get("business_impact", "medium")
-                })
-            
-            lineage_time = time.time() - start_time
-            
-            # Create LineageGraph response
-            lineage_result = LineageGraph(
-                graph_id=lineage_id,
-                root_asset_id=asset_id,
-                direction=direction,
-                max_depth=max_depth,
-                nodes=nodes,
-                edges=edges,
-                graph_metrics=graph_analytics["graph_metrics"],
-                critical_paths=critical_paths,
-                bottlenecks=graph_analytics["bottlenecks"],
-                impact_analysis=impact_analysis,
-                complexity_score=graph_analytics["complexity_score"]
-            )
-            
-            # Record lineage metrics
-            await self.metrics.record_histogram(
-                "lineage_build_duration",
-                lineage_time
-            )
-            await self.metrics.increment_counter(
-                "lineage_graphs_built",
-                tags={
-                    "direction": direction.value,
-                    "depth": str(max_depth)
-                }
-            )
-            
-            self.logger.info(
-                "Comprehensive lineage graph built successfully",
-                extra={
-                    "lineage_id": lineage_id,
-                    "asset_id": asset_id,
-                    "lineage_time": lineage_time,
-                    "nodes": len(nodes),
-                    "edges": len(edges),
-                    "critical_paths": len(critical_paths),
-                    "complexity_score": graph_analytics["complexity_score"]
-                }
-            )
-            
-            return lineage_result
+            logger.info(f"Catalog entry {entry_id} created successfully")
+            return catalog_entry
             
         except Exception as e:
-            self.logger.error(
-                "Failed to build comprehensive lineage",
-                extra={
-                    "asset_id": asset_id,
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
-            
-            await self.metrics.increment_counter(
-                "lineage_build_errors",
-                tags={"error_type": type(e).__name__}
-            )
-            
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to build lineage graph: {str(e)}"
-            )
-
-
-    async def semantic_search(
-        self,
-        search_request: AssetSearchRequest,
-        session: AsyncSession,
-        user_id: str,
-        enable_ai_ranking: bool = True
-    ) -> List[IntelligentAssetResponse]:
-        """
-        Perform semantic search across data assets with AI-powered ranking,
-        contextual understanding, and personalized recommendations.
-        """
-        try:
-            search_id = f"search_{uuid.uuid4().hex[:12]}"
-            start_time = time.time()
-            
-            self.logger.info(
-                "Performing semantic search",
-                extra={
-                    "search_id": search_id,
-                    "query": search_request.query,
-                    "user_id": user_id,
-                    "ai_ranking": enable_ai_ranking
-                }
-            )
-            
-            # Build base query
-            query = select(IntelligentDataAsset).options(
-                selectinload(IntelligentDataAsset.quality_assessments),
-                selectinload(IntelligentDataAsset.usage_metrics),
-                selectinload(IntelligentDataAsset.business_glossary_terms)
-            )
-            
-            # Apply filters
-            query = await self._apply_search_filters(query, search_request)
-            
-            # Execute base query
-            result = await session.execute(query)
-            assets = result.scalars().all()
-            
-            # Perform semantic ranking if query provided and AI enabled
-            if search_request.query and enable_ai_ranking and self.semantic_vectorizer:
-                assets = await self._perform_semantic_ranking(
-                    assets,
-                    search_request.query,
-                    user_id
-                )
-            
-            # Apply personalized recommendations
-            if enable_ai_ranking:
-                assets = await self._apply_personalized_recommendations(
-                    assets,
-                    user_id,
-                    session
-                )
-            
-            # Convert to response models
-            response_assets = []
-            for asset in assets:
-                response_assets.append(IntelligentAssetResponse.from_orm(asset))
-            
-            search_time = time.time() - start_time
-            
-            # Record search metrics
-            await self.metrics.record_histogram(
-                "semantic_search_duration",
-                search_time
-            )
-            await self.metrics.increment_counter(
-                "semantic_searches",
-                tags={
-                    "has_query": str(bool(search_request.query)),
-                    "ai_ranking": str(enable_ai_ranking)
-                }
-            )
-            
-            self.logger.info(
-                "Semantic search completed successfully",
-                extra={
-                    "search_id": search_id,
-                    "search_time": search_time,
-                    "results_count": len(response_assets),
-                    "query_length": len(search_request.query) if search_request.query else 0
-                }
-            )
-            
-            return response_assets
-            
-        except Exception as e:
-            self.logger.error(
-                "Semantic search failed",
-                extra={
-                    "search_request": search_request.dict(),
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
-            
-            await self.metrics.increment_counter(
-                "semantic_search_errors",
-                tags={"error_type": type(e).__name__}
-            )
-            
-            raise HTTPException(
-                status_code=500,
-                detail=f"Semantic search failed: {str(e)}"
-            )
-
-
-    # ===================== AI/ML ANALYSIS METHODS =====================
-
-    async def _initialize_ai_models(self) -> None:
-        """Initialize AI/ML models for catalog intelligence."""
-        try:
-            self.logger.info("Initializing AI/ML models for catalog intelligence")
-            
-            # Load NLP model for semantic understanding
-            self.nlp_model = spacy.load("en_core_web_sm")
-            
-            # Initialize text vectorizer for semantic search
-            self.semantic_vectorizer = TfidfVectorizer(
-                max_features=10000,
-                ngram_range=(1, 3),
-                stop_words='english'
-            )
-            
-            # Initialize clustering model for asset grouping
-            self.clustering_model = KMeans(n_clusters=20, random_state=42)
-            
-            # Initialize quality predictor
-            self.quality_predictor = RandomForestRegressor(
-                n_estimators=100,
-                random_state=42
-            )
-            
-            # Initialize anomaly detector for data profiling
-            self.anomaly_detector = IsolationForest(
-                contamination=0.1,
-                random_state=42
-            )
-            
-            # Initialize transformer model for embeddings
-            try:
-                self.embedding_model = AutoModel.from_pretrained(
-                    "sentence-transformers/all-MiniLM-L6-v2"
-                )
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    "sentence-transformers/all-MiniLM-L6-v2"
-                )
-            except Exception as e:
-                self.logger.warning(
-                    "Could not load transformer model, using fallback",
-                    extra={"error": str(e)}
-                )
-                self.embedding_model = None
-                self.tokenizer = None
-            
-            self.logger.info("AI/ML models initialized successfully")
-            
-        except Exception as e:
-            self.logger.error(
-                "Failed to initialize AI/ML models",
-                extra={"error": str(e)}
-            )
+            logger.error(f"Failed to create catalog entry: {str(e)}")
+            await self.db.rollback()
             raise
 
-
-    async def _enhance_with_ai_analysis(
+    async def update_catalog_entry(
         self,
-        discovery_context: Dict[str, Any],
-        session: AsyncSession
-    ) -> None:
-        """Enhance discovered assets with AI-powered analysis and classification."""
+        entry_id: str,
+        updates: Dict[str, Any],
+        context: CatalogContext,
+        auto_validate: bool = True
+    ) -> AdvancedCatalogEntry:
+        """Update catalog entry with validation, impact analysis, and automatic propagation"""
+        
         try:
-            for asset_data in discovery_context["discovered_assets"]:
-                # Generate AI description
-                ai_description = await self._generate_ai_description(asset_data)
-                asset_data["ai_generated_description"] = ai_description
-                
-                # Extract semantic tags
-                semantic_tags = await self._extract_semantic_tags(asset_data)
-                asset_data["semantic_tags"] = semantic_tags
-                
-                # Calculate AI confidence score
-                confidence_score = await self._calculate_ai_confidence(asset_data)
-                asset_data["ai_confidence_score"] = confidence_score
-                
-                # Generate semantic embedding
-                embedding = await self._generate_semantic_embedding(asset_data)
-                asset_data["semantic_embedding"] = embedding
-                
-                # Predict business value
-                business_value = await self._predict_business_value(asset_data)
-                asset_data["business_value_score"] = business_value
-                
-                # Detect PII and sensitivity
-                pii_results = await self._detect_pii_and_sensitivity(asset_data)
-                asset_data.update(pii_results)
-                
-                discovery_context["metrics"]["assets_enhanced"] += 1
-                
-            # Update average AI confidence
-            if discovery_context["discovered_assets"]:
-                avg_confidence = sum(
-                    asset["ai_confidence_score"] 
-                    for asset in discovery_context["discovered_assets"]
-                ) / len(discovery_context["discovered_assets"])
-                discovery_context["metrics"]["ai_confidence_avg"] = avg_confidence
-                
-        except Exception as e:
-            self.logger.error(
-                "AI enhancement failed",
-                extra={"error": str(e)}
-            )
-            discovery_context["errors"].append(f"AI enhancement error: {str(e)}")
-
-
-    async def _generate_ai_description(self, asset_data: Dict[str, Any]) -> str:
-        """Generate AI-powered description for the asset."""
-        try:
-            # Extract relevant information
-            name = asset_data.get("display_name", "")
-            columns = asset_data.get("columns_info", [])
-            data_types = asset_data.get("data_types", [])
+            # Get existing entry
+            entry = await self.get_catalog_entry(entry_id, context)
+            if not entry:
+                raise ValueError(f"Catalog entry {entry_id} not found")
             
-            # Build context
-            context_parts = [name]
-            if columns:
-                column_names = [col.get("name", "") for col in columns[:10]]  # Limit to 10
-                context_parts.append(f"Contains columns: {', '.join(column_names)}")
+            # Validate update permissions
+            if not await self._validate_update_permissions(entry, context):
+                raise PermissionError("Insufficient permissions to update this catalog entry")
             
-            if data_types:
-                unique_types = list(set(data_types[:10]))  # Limit to 10 unique types
-                context_parts.append(f"Data types: {', '.join(unique_types)}")
+            # Perform impact analysis
+            impact_analysis = await self._analyze_update_impact(entry, updates, context)
             
-            context = ". ".join(context_parts)
-            
-            # Use NLP model for analysis
-            if self.nlp_model:
-                doc = self.nlp_model(context)
-                entities = [ent.text for ent in doc.ents]
-                
-                # Generate description based on analysis
-                if entities:
-                    description = f"Data asset containing information related to {', '.join(entities[:3])}"
-                else:
-                    description = f"Data asset with {len(columns)} columns containing {', '.join(unique_types[:3]) if data_types else 'various'} data"
-            else:
-                # Fallback description
-                description = f"Data asset containing {len(columns)} columns with various data types"
-            
-            return description
-            
-        except Exception as e:
-            self.logger.error(f"Error generating AI description: {str(e)}")
-            return "Data asset with automated discovery"
-
-
-    async def _extract_semantic_tags(self, asset_data: Dict[str, Any]) -> List[str]:
-        """Extract semantic tags using NLP analysis."""
-        try:
-            tags = []
-            
-            # Analyze name and description
-            text_content = " ".join([
-                asset_data.get("display_name", ""),
-                asset_data.get("description", ""),
-                asset_data.get("ai_generated_description", "")
-            ])
-            
-            if self.nlp_model and text_content.strip():
-                doc = self.nlp_model(text_content)
-                
-                # Extract entities as tags
-                for ent in doc.ents:
-                    if ent.label_ in ["ORG", "PERSON", "GPE", "PRODUCT", "EVENT"]:
-                        tags.append(ent.text.lower())
-                
-                # Extract key nouns
-                for token in doc:
-                    if token.pos_ == "NOUN" and len(token.text) > 3:
-                        tags.append(token.text.lower())
-            
-            # Analyze column names for domain-specific tags
-            columns = asset_data.get("columns_info", [])
-            for column in columns:
-                column_name = column.get("name", "").lower()
-                
-                # Common business domain patterns
-                if any(pattern in column_name for pattern in ["customer", "client", "user"]):
-                    tags.append("customer_data")
-                elif any(pattern in column_name for pattern in ["order", "purchase", "transaction"]):
-                    tags.append("transaction_data")
-                elif any(pattern in column_name for pattern in ["product", "item", "inventory"]):
-                    tags.append("product_data")
-                elif any(pattern in column_name for pattern in ["employee", "staff", "hr"]):
-                    tags.append("employee_data")
-                elif any(pattern in column_name for pattern in ["financial", "revenue", "cost", "price"]):
-                    tags.append("financial_data")
-            
-            # Remove duplicates and limit
-            return list(set(tags))[:10]
-            
-        except Exception as e:
-            self.logger.error(f"Error extracting semantic tags: {str(e)}")
-            return []
-
-
-    # ===================== INTEGRATION METHODS =====================
-
-    async def integrate_with_scan_results(
-        self,
-        scan_results: List[Dict[str, Any]],
-        session: AsyncSession,
-        user_id: str
-    ) -> Dict[str, Any]:
-        """
-        Integrate scan results with catalog assets for enrichment and discovery.
-        """
-        try:
-            integration_id = f"scan_integration_{uuid.uuid4().hex[:12]}"
-            start_time = time.time()
-            
-            self.logger.info(
-                "Integrating scan results with catalog",
-                extra={
-                    "integration_id": integration_id,
-                    "scan_results_count": len(scan_results),
-                    "user_id": user_id
-                }
-            )
-            
-            integration_results = {
-                "integration_id": integration_id,
-                "assets_discovered": 0,
-                "assets_updated": 0,
-                "assets_enriched": 0,
-                "lineage_detected": 0,
-                "quality_insights": [],
-                "compliance_mappings": [],
-                "errors": []
+            # Store previous state for audit
+            previous_state = {
+                "name": entry.name,
+                "description": entry.description,
+                "technical_metadata": entry.technical_metadata.copy(),
+                "business_metadata": entry.business_metadata.copy(),
+                "tags": entry.tags.copy() if entry.tags else []
             }
             
-            for scan_result in scan_results:
-                try:
-                    # Find or create corresponding asset
-                    asset = await self._find_or_create_asset_from_scan(
-                        scan_result,
-                        session,
-                        user_id
-                    )
-                    
-                    if asset:
-                        # Enrich asset with scan insights
-                        await self._enrich_asset_with_scan_data(
-                            asset,
-                            scan_result,
-                            session
-                        )
-                        
-                        # Update classification results
-                        if scan_result.get("classification_labels"):
-                            asset.classification_results.update({
-                                "scan_classification": scan_result["classification_labels"],
-                                "confidence": scan_result.get("confidence", 0.0),
-                                "updated_at": datetime.utcnow().isoformat()
-                            })
-                        
-                        # Update compliance information
-                        if scan_result.get("compliance_issues"):
-                            compliance_mapping = {
-                                "scan_compliance": scan_result["compliance_issues"],
-                                "severity": scan_result.get("severity", "medium"),
-                                "updated_at": datetime.utcnow().isoformat()
-                            }
-                            integration_results["compliance_mappings"].append(compliance_mapping)
-                        
-                        # Track quality insights
-                        if scan_result.get("quality_metrics"):
-                            quality_insight = {
-                                "asset_id": asset.id,
-                                "quality_metrics": scan_result["quality_metrics"],
-                                "recommendations": scan_result.get("recommendations", [])
-                            }
-                            integration_results["quality_insights"].append(quality_insight)
-                        
-                        integration_results["assets_enriched"] += 1
-                        await session.commit()
-                        
-                except Exception as e:
-                    integration_results["errors"].append({
-                        "scan_result": scan_result.get("id", "unknown"),
-                        "error": str(e)
-                    })
-                    self.logger.error(
-                        "Error processing scan result",
-                        extra={"scan_result": scan_result, "error": str(e)}
-                    )
+            # Apply updates
+            for field, value in updates.items():
+                if hasattr(entry, field):
+                    setattr(entry, field, value)
             
-            integration_time = time.time() - start_time
-            integration_results["integration_time"] = integration_time
-            
-            # Record integration metrics
-            await self.metrics.record_histogram(
-                "scan_integration_duration",
-                integration_time
-            )
-            await self.metrics.increment_counter(
-                "scan_integrations_completed",
-                tags={"user_id": user_id}
-            )
-            
-            self.logger.info(
-                "Scan results integration completed",
-                extra={
-                    "integration_id": integration_id,
-                    "integration_time": integration_time,
-                    "assets_enriched": integration_results["assets_enriched"],
-                    "errors_count": len(integration_results["errors"])
-                }
-            )
-            
-            return integration_results
-            
-        except Exception as e:
-            self.logger.error(
-                "Scan results integration failed",
-                extra={
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
-            raise
-
-
-    async def integrate_with_compliance_requirements(
-        self,
-        asset_id: int,
-        compliance_frameworks: List[str],
-        session: AsyncSession,
-        user_id: str
-    ) -> Dict[str, Any]:
-        """
-        Integrate asset with compliance framework requirements for automated
-        compliance monitoring and reporting.
-        """
-        try:
-            if not self.compliance_service:
-                self.compliance_service = ComplianceService()
-            
-            integration_results = {
-                "compliance_mappings": {},
-                "requirements_mapped": 0,
-                "monitoring_rules": [],
-                "reporting_config": {},
-                "risk_assessment": {}
-            }
-            
-            # Load asset
-            asset = await self._load_asset_with_relationships(asset_id, session)
-            if not asset:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Asset with ID {asset_id} not found"
-                )
-            
-            for framework in compliance_frameworks:
-                try:
-                    # Get framework requirements
-                    framework_details = await self.compliance_service.get_compliance_framework(
-                        framework,
-                        session
-                    )
-                    
-                    if framework_details:
-                        # Map asset to compliance requirements
-                        compliance_mapping = await self._map_asset_to_compliance(
-                            asset,
-                            framework_details
-                        )
-                        
-                        integration_results["compliance_mappings"][framework] = compliance_mapping
-                        integration_results["requirements_mapped"] += len(
-                            compliance_mapping.get("requirements", [])
-                        )
-                        
-                        # Generate monitoring rules
-                        monitoring_rules = await self._generate_compliance_monitoring_rules(
-                            asset,
-                            framework_details
-                        )
-                        
-                        integration_results["monitoring_rules"].extend(monitoring_rules)
-                        
-                except Exception as e:
-                    self.logger.error(
-                        f"Error integrating with compliance framework {framework}",
-                        extra={"error": str(e)}
-                    )
-            
-            # Update asset compliance information
-            asset.compliance_requirements.extend(compliance_frameworks)
-            asset.compliance_score = await self._calculate_asset_compliance_score(
-                integration_results
-            )
-            
-            await session.commit()
-            
-            self.logger.info(
-                "Compliance integration completed",
-                extra={
-                    "asset_id": asset_id,
-                    "compliance_frameworks": compliance_frameworks,
-                    "requirements_mapped": integration_results["requirements_mapped"]
-                }
-            )
-            
-            return integration_results
-            
-        except Exception as e:
-            self.logger.error(
-                "Compliance integration failed",
-                extra={
-                    "asset_id": asset_id,
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
-            raise
-
-
-    async def integrate_with_classification_intelligence(
-        self,
-        asset_id: int,
-        classification_config: Dict[str, Any],
-        session: AsyncSession,
-        user_id: str
-    ) -> Dict[str, Any]:
-        """
-        Integrate asset with the advanced classification system to enhance
-        automatic tagging and semantic understanding.
-        """
-        try:
-            if not self.classification_service:
-                self.classification_service = ClassificationService()
-            
-            integration_results = {
-                "classification_mappings": {},
-                "ai_enhancements": [],
-                "semantic_enrichments": {},
-                "confidence_scores": {}
-            }
-            
-            # Load asset
-            asset = await self._load_asset_with_relationships(asset_id, session)
-            if not asset:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Asset with ID {asset_id} not found"
-                )
-            
-            # Get available classification models
-            classification_models = await self.classification_service.get_available_models(
-                session
-            )
-            
-            # Apply classification models to asset
-            for model in classification_models:
-                try:
-                    # Apply classification model
-                    classification_result = await self._apply_classification_model(
-                        asset,
-                        model,
-                        classification_config
-                    )
-                    
-                    if classification_result["confidence"] > classification_config.get(
-                        "confidence_threshold", 0.85
-                    ):
-                        integration_results["classification_mappings"][model["id"]] = classification_result
-                        integration_results["confidence_scores"][model["id"]] = classification_result["confidence"]
-                        
-                        # Apply AI enhancements
-                        ai_enhancement = await self._generate_classification_enhancement(
-                            asset,
-                            classification_result
-                        )
-                        integration_results["ai_enhancements"].append(ai_enhancement)
-                        
-                except Exception as e:
-                    self.logger.error(
-                        f"Error applying classification model {model['id']}",
-                        extra={"error": str(e)}
-                    )
-            
-            # Update asset classification information
-            asset.classification_results.update({
-                "models": integration_results["classification_mappings"],
-                "ai_enhancements": integration_results["ai_enhancements"],
-                "last_updated": datetime.utcnow().isoformat()
+            # Update modification tracking
+            entry.updated_at = datetime.utcnow()
+            entry.updated_by = context.user_id
+            entry.modification_history.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "updated_by": context.user_id,
+                "changes": updates,
+                "impact_analysis": impact_analysis
             })
             
-            # Update auto-classification confidence
-            if integration_results["confidence_scores"]:
-                asset.auto_classification_confidence = sum(
-                    integration_results["confidence_scores"].values()
-                ) / len(integration_results["confidence_scores"])
+            # Auto-validation if enabled
+            if auto_validate:
+                validation_results = await self._validate_entry_updates(entry, updates, context)
+                entry.validation_status = validation_results.get("status", "pending")
+                entry.validation_notes = validation_results.get("notes", [])
             
-            await session.commit()
+            # Commit changes
+            await self.db.commit()
+            await self.db.refresh(entry)
             
-            self.logger.info(
-                "Classification intelligence integration completed",
-                extra={
-                    "asset_id": asset_id,
-                    "models_applied": len(integration_results["classification_mappings"]),
-                    "avg_confidence": asset.auto_classification_confidence
-                }
+            # Propagate changes to related entries
+            await self._propagate_entry_changes(entry, updates, impact_analysis, context)
+            
+            # Update indexes
+            await self._update_indexes_for_entry(entry)
+            
+            # Emit event
+            await self._emit_catalog_event(
+                CatalogEventType.ENTRY_UPDATED,
+                {
+                    "entry_id": entry_id,
+                    "updates": updates,
+                    "impact_score": impact_analysis.get("impact_score", 0),
+                    "affected_entries": len(impact_analysis.get("affected_entries", [])),
+                    "previous_state": previous_state
+                },
+                context
             )
             
-            return integration_results
+            return entry
             
         except Exception as e:
-            self.logger.error(
-                "Classification intelligence integration failed",
-                extra={
-                    "asset_id": asset_id,
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
+            logger.error(f"Failed to update catalog entry {entry_id}: {str(e)}")
+            await self.db.rollback()
             raise
 
-
-    # ===================== ANALYTICS AND INSIGHTS METHODS =====================
-
-    async def generate_catalog_analytics(
+    async def get_catalog_entry(
         self,
-        analytics_config: Dict[str, Any],
-        session: AsyncSession,
-        user_id: str
-    ) -> CatalogAnalytics:
+        entry_id: str,
+        context: CatalogContext,
+        include_relationships: bool = True,
+        include_lineage: bool = False,
+        include_quality: bool = False
+    ) -> Optional[AdvancedCatalogEntry]:
+        """Get catalog entry with comprehensive information and access control"""
+        
+        try:
+            # Check cache first
+            cache_key = f"{entry_id}_{context.user_id}"
+            if cache_key in self.entry_cache:
+                cached_entry = self.entry_cache[cache_key]
+                # Check if cache is still valid (within 5 minutes)
+                if (datetime.utcnow() - cached_entry.updated_at).seconds < 300:
+                    return cached_entry
+            
+            # Query database
+            stmt = select(AdvancedCatalogEntry).where(
+                AdvancedCatalogEntry.catalog_entry_id == entry_id
+            )
+            
+            if include_relationships:
+                stmt = stmt.options(selectinload(AdvancedCatalogEntry.relationships))
+            
+            result = await self.db.execute(stmt)
+            entry = result.scalar_one_or_none()
+            
+            if not entry:
+                return None
+            
+            # Apply access control
+            if not await self._check_entry_access(entry, context):
+                return None
+            
+            # Enrich with additional data if requested
+            if include_lineage:
+                entry.lineage_info = await self.lineage_service.get_entry_lineage(
+                    entry_id, context.user_id
+                )
+            
+            if include_quality:
+                entry.quality_info = await self._get_entry_quality_info(entry_id)
+            
+            # Update cache
+            self.entry_cache[cache_key] = entry
+            
+            # Track access for analytics
+            await self._track_entry_access(entry, context)
+            
+            return entry
+            
+        except Exception as e:
+            logger.error(f"Failed to get catalog entry {entry_id}: {str(e)}")
+            return None
+
+    async def search_catalog(
+        self,
+        query: str,
+        context: CatalogContext,
+        config: SearchConfiguration = None,
+        filters: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """
-        Generate comprehensive catalog analytics with business insights,
-        trends analysis, and recommendations.
+        Perform intelligent catalog search with semantic understanding,
+        personalization, and advanced ranking.
         """
         try:
-            analytics_id = f"analytics_{uuid.uuid4().hex[:12]}"
-            start_time = time.time()
+            if not config:
+                config = SearchConfiguration()
             
-            self.logger.info(
-                "Generating catalog analytics",
-                extra={
-                    "analytics_id": analytics_id,
-                    "user_id": user_id,
-                    "config": analytics_config
+            search_id = f"search_{uuid4().hex[:8]}"
+            start_time = datetime.utcnow()
+            
+            logger.info(f"Performing catalog search: '{query}' for user {context.user_id}")
+            
+            # Parse and understand query
+            query_understanding = await self._understand_search_query(query, context)
+            
+            # Expand query with synonyms and related terms
+            expanded_query = await self._expand_search_query(
+                query, query_understanding, config, context
+            )
+            
+            # Perform multi-modal search
+            search_results = []
+            
+            # 1. Semantic search
+            if SemanticSearchType.NATURAL_LANGUAGE in config.search_types:
+                semantic_results = await self._perform_semantic_search(
+                    expanded_query, context, config
+                )
+                search_results.extend(semantic_results)
+            
+            # 2. Metadata search
+            if SemanticSearchType.KEYWORD_EXPANSION in config.search_types:
+                metadata_results = await self._perform_metadata_search(
+                    expanded_query, filters, context, config
+                )
+                search_results.extend(metadata_results)
+            
+            # 3. Content-based search
+            if SemanticSearchType.CONTEXTUAL_SEARCH in config.search_types:
+                content_results = await self._perform_content_search(
+                    expanded_query, context, config
+                )
+                search_results.extend(content_results)
+            
+            # 4. AI-powered similarity search
+            if SemanticSearchType.SIMILARITY_SEARCH in config.search_types:
+                similarity_results = await self._perform_similarity_search(
+                    expanded_query, context, config
+                )
+                search_results.extend(similarity_results)
+            
+            # Remove duplicates and merge results
+            unique_results = await self._merge_and_deduplicate_results(search_results, context)
+            
+            # Apply advanced ranking
+            ranked_results = await self._rank_search_results(
+                unique_results, query, query_understanding, context, config
+            )
+            
+            # Apply filters and pagination
+            filtered_results = await self._apply_search_filters(
+                ranked_results, filters, context
+            )
+            
+            # Personalize results
+            if config.personalize:
+                personalized_results = await self._personalize_search_results(
+                    filtered_results, context
+                )
+            else:
+                personalized_results = filtered_results
+            
+            # Limit results
+            final_results = personalized_results[:config.max_results]
+            
+            # Calculate search metrics
+            execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            
+            # Generate search insights
+            search_insights = await self._generate_search_insights(
+                query, final_results, query_understanding, context
+            )
+            
+            # Create search response
+            search_response = {
+                "search_id": search_id,
+                "query": query,
+                "expanded_query": expanded_query["expanded_text"],
+                "results_count": len(final_results),
+                "execution_time_ms": execution_time,
+                "results": final_results[:config.max_results],
+                "query_understanding": query_understanding,
+                "search_insights": search_insights,
+                "suggestions": await self._generate_search_suggestions(query, context),
+                "related_searches": await self._get_related_searches(query, context)
+            }
+            
+            # Store search operation
+            await self._store_search_operation(search_response, context)
+            
+            # Emit event
+            await self._emit_catalog_event(
+                CatalogEventType.SEARCH_PERFORMED,
+                {
+                    "search_id": search_id,
+                    "query": query,
+                    "results_count": len(final_results),
+                    "execution_time_ms": execution_time
+                },
+                context
+            )
+            
+            return search_response
+            
+        except Exception as e:
+            logger.error(f"Failed to perform catalog search: {str(e)}")
+            return {
+                "error": str(e),
+                "search_id": search_id,
+                "results_count": 0,
+                "results": []
+            }
+
+    # ================================================================
+    # INTELLIGENT DISCOVERY AND ENRICHMENT
+    # ================================================================
+
+    async def discover_catalog_entries(
+        self,
+        config: DiscoveryConfiguration,
+        context: CatalogContext
+    ) -> Dict[str, Any]:
+        """Perform intelligent discovery of catalog entries across data sources"""
+        
+        try:
+            discovery_id = f"disc_{uuid4().hex[:8]}"
+            start_time = datetime.utcnow()
+            
+            logger.info(f"Starting intelligent catalog discovery {discovery_id}")
+            
+            discovery_results = {
+                "discovery_id": discovery_id,
+                "new_entries": [],
+                "updated_entries": [],
+                "relationships_discovered": [],
+                "quality_assessments": [],
+                "lineage_paths": [],
+                "recommendations": []
+            }
+            
+            # Execute discovery methods in parallel
+            discovery_tasks = []
+            
+            for method in config.discovery_methods:
+                if method == DiscoveryMethod.SCHEMA_ANALYSIS:
+                    task = self._discover_via_schema_analysis(config, context)
+                elif method == DiscoveryMethod.CONTENT_PROFILING:
+                    task = self._discover_via_content_profiling(config, context)
+                elif method == DiscoveryMethod.PATTERN_MATCHING:
+                    task = self._discover_via_pattern_matching(config, context)
+                elif method == DiscoveryMethod.SEMANTIC_ANALYSIS:
+                    task = self._discover_via_semantic_analysis(config, context)
+                elif method == DiscoveryMethod.RELATIONSHIP_MINING:
+                    task = self._discover_via_relationship_mining(config, context)
+                else:
+                    continue
+                    
+                discovery_tasks.append(task)
+            
+            # Execute all discovery tasks
+            task_results = await asyncio.gather(*discovery_tasks, return_exceptions=True)
+            
+            # Process results from each discovery method
+            for i, result in enumerate(task_results):
+                if isinstance(result, Exception):
+                    logger.error(f"Discovery method {config.discovery_methods[i]} failed: {str(result)}")
+                    continue
+                
+                # Merge results
+                discovery_results["new_entries"].extend(result.get("new_entries", []))
+                discovery_results["updated_entries"].extend(result.get("updated_entries", []))
+                discovery_results["relationships_discovered"].extend(result.get("relationships", []))
+                discovery_results["quality_assessments"].extend(result.get("quality_assessments", []))
+                discovery_results["lineage_paths"].extend(result.get("lineage_paths", []))
+            
+            # Post-discovery processing
+            await self._post_process_discovery_results(discovery_results, config, context)
+            
+            # Generate comprehensive recommendations
+            discovery_results["recommendations"] = await self._generate_discovery_recommendations(
+                discovery_results, context
+            )
+            
+            # Calculate discovery metrics
+            execution_time = (datetime.utcnow() - start_time).total_seconds()
+            discovery_results["execution_time_seconds"] = execution_time
+            discovery_results["discovery_quality_score"] = await self._calculate_discovery_quality_score(
+                discovery_results
+            )
+            
+            # Store discovery operation
+            await self._store_discovery_operation(discovery_results, config, context)
+            
+            # Emit event
+            await self._emit_catalog_event(
+                CatalogEventType.DISCOVERY_COMPLETED,
+                {
+                    "discovery_id": discovery_id,
+                    "new_entries_count": len(discovery_results["new_entries"]),
+                    "relationships_count": len(discovery_results["relationships_discovered"]),
+                    "execution_time": execution_time
+                },
+                context
+            )
+            
+            logger.info(f"Discovery {discovery_id} completed successfully")
+            return discovery_results
+            
+        except Exception as e:
+            logger.error(f"Failed to perform catalog discovery: {str(e)}")
+            raise
+
+    async def _discover_via_schema_analysis(
+        self,
+        config: DiscoveryConfiguration,
+        context: CatalogContext
+    ) -> Dict[str, Any]:
+        """Discover catalog entries through schema analysis"""
+        
+        results = {
+            "new_entries": [],
+            "updated_entries": [],
+            "relationships": [],
+            "quality_assessments": []
+        }
+        
+        try:
+            # Analyze schemas from configured data sources
+            for source_id in config.discovery_scope:
+                # Get schema information
+                schema_info = await self._get_data_source_schema(source_id)
+                
+                if not schema_info:
+                    continue
+                
+                # Analyze each table/collection
+                for table_info in schema_info.get("tables", []):
+                    # Check if entry already exists
+                    existing_entry = await self._find_existing_entry_by_signature(
+                        table_info, source_id
+                    )
+                    
+                    if existing_entry:
+                        # Update existing entry
+                        updates = await self._generate_schema_updates(existing_entry, table_info)
+                        if updates:
+                            updated_entry = await self.update_catalog_entry(
+                                existing_entry.catalog_entry_id, updates, context, auto_validate=False
+                            )
+                            results["updated_entries"].append(updated_entry)
+                    else:
+                        # Create new entry
+                        entry_data = await self._generate_entry_from_schema(table_info, source_id)
+                        new_entry = await self.create_catalog_entry(entry_data, context, auto_enrich=False)
+                        results["new_entries"].append(new_entry)
+                    
+                    # Discover column-level relationships
+                    column_relationships = await self._discover_column_relationships(
+                        table_info, source_id, context
+                    )
+                    results["relationships"].extend(column_relationships)
+                
+                # Analyze foreign key relationships
+                fk_relationships = await self._discover_foreign_key_relationships(
+                    schema_info, source_id, context
+                )
+                results["relationships"].extend(fk_relationships)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Schema analysis discovery failed: {str(e)}")
+            return results
+
+    async def _discover_via_semantic_analysis(
+        self,
+        config: DiscoveryConfiguration,
+        context: CatalogContext
+    ) -> Dict[str, Any]:
+        """Discover catalog entries through semantic analysis of content"""
+        
+        results = {
+            "new_entries": [],
+            "updated_entries": [],
+            "relationships": [],
+            "quality_assessments": []
+        }
+        
+        try:
+            # Use NLP and ML models to analyze data content
+            for source_id in config.discovery_scope:
+                # Sample data from source
+                data_samples = await self._sample_data_source(source_id, sample_size=1000)
+                
+                if not data_samples:
+                    continue
+                
+                # Perform semantic analysis
+                semantic_analysis = await self._perform_semantic_content_analysis(
+                    data_samples, source_id
+                )
+                
+                # Identify potential data entities
+                entities = semantic_analysis.get("entities", [])
+                
+                for entity in entities:
+                    # Check semantic similarity with existing entries
+                    similar_entries = await self._find_semantically_similar_entries(
+                        entity, config.confidence_threshold
+                    )
+                    
+                    if similar_entries:
+                        # Update existing entries with semantic insights
+                        for similar_entry in similar_entries:
+                            semantic_updates = await self._generate_semantic_updates(
+                                similar_entry, entity
+                            )
+                            if semantic_updates:
+                                updated_entry = await self.update_catalog_entry(
+                                    similar_entry.catalog_entry_id, semantic_updates, context
+                                )
+                                results["updated_entries"].append(updated_entry)
+                    else:
+                        # Create new entry from semantic analysis
+                        if entity.get("confidence", 0) >= config.confidence_threshold:
+                            entry_data = await self._generate_entry_from_semantic_analysis(
+                                entity, source_id
+                            )
+                            new_entry = await self.create_catalog_entry(entry_data, context)
+                            results["new_entries"].append(new_entry)
+                
+                # Discover semantic relationships
+                semantic_relationships = await self._discover_semantic_relationships(
+                    semantic_analysis, context
+                )
+                results["relationships"].extend(semantic_relationships)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Semantic analysis discovery failed: {str(e)}")
+            return results
+
+    # ================================================================
+    # ADVANCED SEARCH CAPABILITIES
+    # ================================================================
+
+    async def _perform_semantic_search(
+        self,
+        query: Dict[str, Any],
+        context: CatalogContext,
+        config: SearchConfiguration
+    ) -> List[Dict[str, Any]]:
+        """Perform semantic search using NLP and embeddings"""
+        
+        try:
+            results = []
+            
+            # Generate query embeddings
+            query_text = query.get("expanded_text", "")
+            query_embedding = await self._generate_text_embedding(query_text)
+            
+            # Search through catalog entries using semantic similarity
+            stmt = select(AdvancedCatalogEntry).where(
+                AdvancedCatalogEntry.status == CatalogStatus.ACTIVE
+            )
+            
+            db_result = await self.db.execute(stmt)
+            entries = db_result.scalars().all()
+            
+            for entry in entries:
+                # Check access permissions
+                if not await self._check_entry_access(entry, context):
+                    continue
+                
+                # Generate entry embedding
+                entry_text = await self._generate_entry_text_representation(entry)
+                entry_embedding = await self._generate_text_embedding(entry_text)
+                
+                # Calculate semantic similarity
+                similarity = await self._calculate_semantic_similarity(
+                    query_embedding, entry_embedding
+                )
+                
+                if similarity >= config.similarity_threshold:
+                    result = {
+                        "entry_id": entry.catalog_entry_id,
+                        "entry": entry,
+                        "similarity_score": similarity,
+                        "match_type": "semantic",
+                        "matched_fields": await self._identify_matched_fields(entry, query_text),
+                        "relevance_factors": {
+                            "semantic_similarity": similarity,
+                            "business_relevance": await self._calculate_business_relevance(entry, context),
+                            "usage_popularity": entry.usage_statistics.get("access_count", 0),
+                            "data_quality": entry.quality_score or 0
+                        }
+                    }
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Semantic search failed: {str(e)}")
+            return []
+
+    async def _rank_search_results(
+        self,
+        results: List[Dict[str, Any]],
+        original_query: str,
+        query_understanding: Dict[str, Any],
+        context: CatalogContext,
+        config: SearchConfiguration
+    ) -> List[Dict[str, Any]]:
+        """Apply advanced ranking algorithm to search results"""
+        
+        try:
+            # Multi-factor ranking algorithm
+            for result in results:
+                entry = result["entry"]
+                relevance_factors = result.get("relevance_factors", {})
+                
+                # Base similarity score
+                base_score = relevance_factors.get("semantic_similarity", 0) * 0.3
+                
+                # Business relevance boost
+                business_boost = relevance_factors.get("business_relevance", 0) * 0.2
+                
+                # Usage popularity boost
+                if config.boost_popular:
+                    popularity_boost = min(1.0, 
+                        relevance_factors.get("usage_popularity", 0) / 1000
+                    ) * 0.15
+                else:
+                    popularity_boost = 0
+                
+                # Data quality boost
+                quality_boost = (relevance_factors.get("data_quality", 0) / 100) * 0.1
+                
+                # Recency boost
+                if config.boost_recent:
+                    days_since_update = (datetime.utcnow() - entry.updated_at).days
+                    recency_boost = max(0, (30 - days_since_update) / 30) * 0.1
+                else:
+                    recency_boost = 0
+                
+                # Access level penalty/boost
+                access_penalty = 0
+                if entry.access_level == AccessLevel.RESTRICTED and context.access_level != AccessLevel.ADMIN:
+                    access_penalty = -0.2
+                
+                # Intent matching boost
+                intent_boost = await self._calculate_intent_matching_boost(
+                    entry, query_understanding, context
+                ) * 0.15
+                
+                # Calculate final score
+                final_score = (
+                    base_score + business_boost + popularity_boost + 
+                    quality_boost + recency_boost + access_penalty + intent_boost
+                )
+                
+                result["final_ranking_score"] = max(0, min(1, final_score))
+                result["ranking_factors"] = {
+                    "base_score": base_score,
+                    "business_boost": business_boost,
+                    "popularity_boost": popularity_boost,
+                    "quality_boost": quality_boost,
+                    "recency_boost": recency_boost,
+                    "access_penalty": access_penalty,
+                    "intent_boost": intent_boost
+                }
+            
+            # Sort by final ranking score
+            ranked_results = sorted(
+                results,
+                key=lambda x: x["final_ranking_score"],
+                reverse=True
+            )
+            
+            return ranked_results
+            
+        except Exception as e:
+            logger.error(f"Result ranking failed: {str(e)}")
+            return results
+
+    # ================================================================
+    # QUALITY MANAGEMENT INTEGRATION
+    # ================================================================
+
+    async def assess_catalog_quality(
+        self,
+        entry_id: str = None,
+        context: CatalogContext = None,
+        assessment_type: QualityAssessmentType = QualityAssessmentType.COMPREHENSIVE_ASSESSMENT
+    ) -> Dict[str, Any]:
+        """Perform comprehensive quality assessment on catalog entries"""
+        
+        try:
+            assessment_id = f"qual_{uuid4().hex[:8]}"
+            
+            if entry_id:
+                # Assess single entry
+                entry = await self.get_catalog_entry(entry_id, context)
+                if not entry:
+                    raise ValueError(f"Catalog entry {entry_id} not found")
+                
+                entries_to_assess = [entry]
+            else:
+                # Assess all accessible entries
+                entries_to_assess = await self._get_assessable_entries(context)
+            
+            assessment_results = {
+                "assessment_id": assessment_id,
+                "assessment_type": assessment_type,
+                "total_entries": len(entries_to_assess),
+                "entry_assessments": [],
+                "overall_quality_score": 0.0,
+                "quality_distribution": {},
+                "improvement_recommendations": []
+            }
+            
+            total_quality_score = 0
+            quality_levels = Counter()
+            
+            # Assess each entry
+            for entry in entries_to_assess:
+                entry_assessment = await self._assess_single_entry_quality(
+                    entry, assessment_type, context
+                )
+                
+                assessment_results["entry_assessments"].append(entry_assessment)
+                total_quality_score += entry_assessment["overall_score"]
+                quality_levels[entry_assessment["quality_level"]] += 1
+            
+            # Calculate overall metrics
+            if entries_to_assess:
+                assessment_results["overall_quality_score"] = total_quality_score / len(entries_to_assess)
+                assessment_results["quality_distribution"] = dict(quality_levels)
+            
+            # Generate improvement recommendations
+            assessment_results["improvement_recommendations"] = await self._generate_quality_improvements(
+                assessment_results["entry_assessments"], context
+            )
+            
+            # Store assessment results
+            await self._store_quality_assessment(assessment_results, context)
+            
+            return assessment_results
+            
+        except Exception as e:
+            logger.error(f"Quality assessment failed: {str(e)}")
+            raise
+
+    async def _assess_single_entry_quality(
+        self,
+        entry: AdvancedCatalogEntry,
+        assessment_type: QualityAssessmentType,
+        context: CatalogContext
+    ) -> Dict[str, Any]:
+        """Assess quality of a single catalog entry"""
+        
+        quality_assessment = {
+            "entry_id": entry.catalog_entry_id,
+            "entry_name": entry.name,
+            "dimension_scores": {},
+            "overall_score": 0.0,
+            "quality_level": "unknown",
+            "issues_identified": [],
+            "recommendations": []
+        }
+        
+        try:
+            # Completeness assessment
+            completeness_score = await self._assess_completeness(entry)
+            quality_assessment["dimension_scores"]["completeness"] = completeness_score
+            
+            # Accuracy assessment
+            accuracy_score = await self._assess_accuracy(entry, context)
+            quality_assessment["dimension_scores"]["accuracy"] = accuracy_score
+            
+            # Consistency assessment
+            consistency_score = await self._assess_consistency(entry)
+            quality_assessment["dimension_scores"]["consistency"] = consistency_score
+            
+            # Timeliness assessment
+            timeliness_score = await self._assess_timeliness(entry)
+            quality_assessment["dimension_scores"]["timeliness"] = timeliness_score
+            
+            # Validity assessment
+            validity_score = await self._assess_validity(entry)
+            quality_assessment["dimension_scores"]["validity"] = validity_score
+            
+            # Uniqueness assessment
+            uniqueness_score = await self._assess_uniqueness(entry)
+            quality_assessment["dimension_scores"]["uniqueness"] = uniqueness_score
+            
+            # Calculate overall score (weighted average)
+            weights = {
+                "completeness": 0.25,
+                "accuracy": 0.20,
+                "consistency": 0.15,
+                "timeliness": 0.15,
+                "validity": 0.15,
+                "uniqueness": 0.10
+            }
+            
+            overall_score = sum(
+                quality_assessment["dimension_scores"][dim] * weight
+                for dim, weight in weights.items()
+            )
+            
+            quality_assessment["overall_score"] = overall_score
+            quality_assessment["quality_level"] = self._determine_quality_level(overall_score)
+            
+            # Identify issues and generate recommendations
+            quality_assessment["issues_identified"] = await self._identify_quality_issues(
+                entry, quality_assessment["dimension_scores"]
+            )
+            
+            quality_assessment["recommendations"] = await self._generate_quality_recommendations(
+                entry, quality_assessment
+            )
+            
+            return quality_assessment
+            
+        except Exception as e:
+            logger.error(f"Failed to assess entry quality: {str(e)}")
+            return quality_assessment
+
+    def _determine_quality_level(self, score: float) -> str:
+        """Determine quality level based on score"""
+        if score >= 90:
+            return "excellent"
+        elif score >= 80:
+            return "good"
+        elif score >= 70:
+            return "acceptable"
+        elif score >= 60:
+            return "poor"
+        else:
+            return "critical"
+
+    # ================================================================
+    # RECOMMENDATIONS AND INTELLIGENCE
+    # ================================================================
+
+    async def generate_catalog_recommendations(
+        self,
+        context: CatalogContext,
+        recommendation_types: List[RecommendationType] = None,
+        max_recommendations: int = 20
+    ) -> Dict[str, Any]:
+        """Generate intelligent recommendations for catalog improvement"""
+        
+        try:
+            if not recommendation_types:
+                recommendation_types = [
+                    RecommendationType.CONTENT_BASED,
+                    RecommendationType.COLLABORATIVE,
+                    RecommendationType.CONTEXTUAL
+                ]
+            
+            recommendations_result = {
+                "recommendations": [],
+                "total_count": 0,
+                "recommendation_categories": {},
+                "user_personalization": await self._get_user_personalization_data(context)
+            }
+            
+            # Generate different types of recommendations
+            for rec_type in recommendation_types:
+                type_recommendations = await self._generate_recommendations_by_type(
+                    rec_type, context, max_recommendations // len(recommendation_types)
+                )
+                recommendations_result["recommendations"].extend(type_recommendations)
+            
+            # Remove duplicates and rank
+            unique_recommendations = await self._deduplicate_recommendations(
+                recommendations_result["recommendations"]
+            )
+            
+            ranked_recommendations = await self._rank_recommendations(
+                unique_recommendations, context
+            )
+            
+            # Limit to max recommendations
+            final_recommendations = ranked_recommendations[:max_recommendations]
+            
+            # Categorize recommendations
+            categories = defaultdict(list)
+            for rec in final_recommendations:
+                categories[rec["category"]].append(rec)
+            
+            recommendations_result["recommendations"] = final_recommendations
+            recommendations_result["total_count"] = len(final_recommendations)
+            recommendations_result["recommendation_categories"] = dict(categories)
+            
+            # Store recommendations for tracking
+            await self._store_generated_recommendations(recommendations_result, context)
+            
+            return recommendations_result
+            
+        except Exception as e:
+            logger.error(f"Failed to generate recommendations: {str(e)}")
+            return {"recommendations": [], "total_count": 0, "error": str(e)}
+
+    # ================================================================
+    # ANALYTICS AND INSIGHTS
+    # ================================================================
+
+    async def get_catalog_analytics(
+        self,
+        context: CatalogContext,
+        time_range: Tuple[datetime, datetime] = None,
+        include_predictions: bool = True
+    ) -> Dict[str, Any]:
+        """Get comprehensive catalog analytics and insights"""
+        
+        try:
+            if not time_range:
+                end_time = datetime.utcnow()
+                start_time = end_time - timedelta(days=30)
+                time_range = (start_time, end_time)
+            
+            analytics_result = await self.analytics_service.generate_comprehensive_analytics(
+                context.user_id,
+                time_range,
+                {
+                    "include_usage_patterns": True,
+                    "include_quality_trends": True,
+                    "include_discovery_metrics": True,
+                    "include_search_analytics": True,
+                    "include_user_behavior": True,
+                    "include_business_impact": True
                 }
             )
             
-            # Collect basic metrics
-            total_assets = await self._count_total_assets(session)
-            assets_by_type = await self._count_assets_by_type(session)
-            coverage_by_source = await self._calculate_coverage_by_source(session)
-            quality_distribution = await self._analyze_quality_distribution(session)
+            # Add catalog-specific insights
+            catalog_insights = await self._generate_catalog_insights(analytics_result, context)
+            analytics_result["catalog_insights"] = catalog_insights
             
-            # Business value analysis
-            business_metrics = await self._analyze_business_value(session)
-            
-            # Usage pattern analysis
-            usage_analytics = await self._analyze_usage_patterns(session)
-            
-            # Quality insights
-            quality_insights = await self._generate_quality_insights(session)
-            
-            # Compliance analysis
-            compliance_metrics = await self._analyze_compliance_status(session)
-            
-            # Generate analytics result
-            analytics_result = CatalogAnalytics(
-                analytics_id=analytics_id,
-                generated_at=datetime.utcnow(),
-                
-                # Coverage Metrics
-                total_assets=total_assets,
-                assets_by_type=assets_by_type,
-                coverage_by_source=coverage_by_source,
-                quality_distribution=quality_distribution,
-                
-                # Business Value
-                high_value_assets=business_metrics["high_value_assets"],
-                business_critical_assets=business_metrics["business_critical_assets"],
-                total_business_value=business_metrics["total_business_value"],
-                avg_business_value=business_metrics["avg_business_value"],
-                
-                # Usage Patterns
-                most_accessed_assets=usage_analytics["most_accessed_assets"],
-                usage_trends=usage_analytics["usage_trends"],
-                user_engagement_metrics=usage_analytics["user_engagement_metrics"],
-                
-                # Quality Insights
-                quality_trends=quality_insights["quality_trends"],
-                common_issues=quality_insights["common_issues"],
-                improvement_opportunities=quality_insights["improvement_opportunities"],
-                
-                # Compliance Status
-                pii_asset_count=compliance_metrics["pii_asset_count"],
-                compliance_coverage=compliance_metrics["compliance_coverage"],
-                risk_assessment=compliance_metrics["risk_assessment"]
-            )
-            
-            analytics_time = time.time() - start_time
-            
-            # Record analytics metrics
-            await self.metrics.record_histogram(
-                "catalog_analytics_generation_duration",
-                analytics_time
-            )
-            await self.metrics.increment_counter(
-                "catalog_analytics_generated",
-                tags={"user_id": user_id}
-            )
-            
-            self.logger.info(
-                "Catalog analytics generated successfully",
-                extra={
-                    "analytics_id": analytics_id,
-                    "analytics_time": analytics_time,
-                    "total_assets": total_assets,
-                    "high_value_assets": business_metrics["high_value_assets"]
-                }
-            )
+            # Add predictions if requested
+            if include_predictions:
+                predictions = await self._generate_catalog_predictions(analytics_result, context)
+                analytics_result["predictions"] = predictions
             
             return analytics_result
             
         except Exception as e:
-            self.logger.error(
-                "Catalog analytics generation failed",
-                extra={
-                    "error": str(e),
-                    "traceback": traceback.format_exc()
-                }
-            )
-            
-            await self.metrics.increment_counter(
-                "catalog_analytics_errors",
-                tags={"error_type": type(e).__name__}
-            )
-            
-            raise HTTPException(
-                status_code=500,
-                detail=f"Catalog analytics generation failed: {str(e)}"
-            )
+            logger.error(f"Failed to get catalog analytics: {str(e)}")
+            return {"error": str(e)}
 
+    # ================================================================
+    # UTILITY METHODS
+    # ================================================================
 
-    # ===================== BACKGROUND TASKS AND MONITORING =====================
-
-    async def _start_background_tasks(self) -> None:
-        """Start background monitoring and analytics tasks."""
+    async def _emit_catalog_event(
+        self,
+        event_type: CatalogEventType,
+        event_data: Dict[str, Any],
+        context: CatalogContext
+    ):
+        """Emit catalog event for tracking and integration"""
         try:
-            # Start asset discovery monitoring
-            self.discovery_task = asyncio.create_task(
-                self._discovery_monitoring_loop()
-            )
+            event = {
+                "event_id": f"evt_{uuid4().hex[:8]}",
+                "event_type": event_type,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user_id": context.user_id,
+                "organization_id": context.organization_id,
+                "data": event_data
+            }
             
-            # Start quality monitoring
-            self.quality_monitoring_task = asyncio.create_task(
-                self._quality_monitoring_loop()
-            )
+            # Add to audit trail
+            self.audit_trail.append(event)
             
-            # Start lineage analysis
-            self.lineage_analysis_task = asyncio.create_task(
-                self._lineage_analysis_loop()
-            )
-            
-            # Start analytics generation
-            self.analytics_task = asyncio.create_task(
-                self._analytics_generation_loop()
-            )
-            
-            self.logger.info("Background tasks started successfully")
+            # Execute registered event handlers
+            handlers = self.event_handlers.get(event_type, [])
+            for handler in handlers:
+                try:
+                    await handler(event, context)
+                except Exception as e:
+                    logger.warning(f"Event handler failed: {str(e)}")
             
         except Exception as e:
-            self.logger.error(
-                "Error starting background tasks",
-                extra={"error": str(e)}
-            )
-            raise
+            logger.error(f"Failed to emit catalog event: {str(e)}")
 
-
-    async def _discovery_monitoring_loop(self) -> None:
-        """Continuous monitoring for new assets and changes."""
-        while not self._shutdown_event.is_set():
-            try:
-                # Monitor for data source changes
-                await self._monitor_data_source_changes()
-                
-                # Check for automated discovery triggers
-                await self._check_discovery_triggers()
-                
-                # Update discovery metrics
-                await self._update_discovery_dashboards()
-                
-                # Wait for next monitoring cycle
-                await asyncio.sleep(self.config.monitoring_interval)
-                
-            except Exception as e:
-                self.logger.error(
-                    "Error in discovery monitoring loop",
-                    extra={"error": str(e)}
-                )
-                await asyncio.sleep(self.config.monitoring_interval)
-
-
-    async def shutdown(self) -> None:
-        """Gracefully shutdown the enterprise catalog service."""
+    async def _update_indexes_for_entry(self, entry: AdvancedCatalogEntry):
+        """Update search indexes and caches for catalog entry"""
         try:
-            self.logger.info("Shutting down Enterprise Intelligent Catalog Service")
-            self.status = CatalogEngineStatus.SHUTDOWN
+            # Update metadata index
+            entry_terms = await self._extract_searchable_terms(entry)
+            self.metadata_index[entry.catalog_entry_id] = set(entry_terms)
             
-            # Signal shutdown to background tasks
-            self._shutdown_event.set()
+            # Update relationship graph
+            await self._update_relationship_graph(entry)
             
-            # Cancel background tasks
-            if self.discovery_task:
-                self.discovery_task.cancel()
-            if self.quality_monitoring_task:
-                self.quality_monitoring_task.cancel()
-            if self.lineage_analysis_task:
-                self.lineage_analysis_task.cancel()
-            if self.analytics_task:
-                self.analytics_task.cancel()
-            
-            # Shutdown thread pools
-            self.thread_pool.shutdown(wait=True)
-            self.process_pool.shutdown(wait=True)
-            
-            # Final metrics collection
-            await self.metrics.flush()
-            
-            self.logger.info("Enterprise Catalog Service shutdown completed")
+            # Generate and store semantic embeddings
+            entry_text = await self._generate_entry_text_representation(entry)
+            embedding = await self._generate_text_embedding(entry_text)
+            self.semantic_embeddings[entry.catalog_entry_id] = embedding
             
         except Exception as e:
-            self.logger.error(
-                "Error during shutdown",
-                extra={"error": str(e)}
-            )
+            logger.error(f"Failed to update indexes for entry {entry.catalog_entry_id}: {str(e)}")
 
+    def register_event_handler(self, event_type: CatalogEventType, handler):
+        """Register an event handler for specific catalog events"""
+        self.event_handlers[event_type].append(handler)
 
-# ===================== GLOBAL CATALOG SERVICE INSTANCE =====================
+    async def get_catalog_health_status(self) -> Dict[str, Any]:
+        """Get overall health status of the catalog"""
+        try:
+            # Get basic statistics
+            total_entries = await self._count_total_entries()
+            active_entries = await self._count_active_entries()
+            quality_distribution = await self._get_quality_distribution()
+            
+            # Calculate health metrics
+            coverage_score = await self._calculate_coverage_score()
+            quality_score = await self._calculate_average_quality_score()
+            usage_score = await self._calculate_usage_health_score()
+            freshness_score = await self._calculate_freshness_score()
+            
+            # Overall health score
+            overall_health = (coverage_score + quality_score + usage_score + freshness_score) / 4
+            
+            return {
+                "overall_health_score": overall_health,
+                "health_level": self._determine_health_level(overall_health),
+                "statistics": {
+                    "total_entries": total_entries,
+                    "active_entries": active_entries,
+                    "quality_distribution": quality_distribution
+                },
+                "component_scores": {
+                    "coverage": coverage_score,
+                    "quality": quality_score,
+                    "usage": usage_score,
+                    "freshness": freshness_score
+                },
+                "recommendations": await self._generate_health_recommendations(overall_health),
+                "last_updated": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get catalog health status: {str(e)}")
+            return {"error": str(e)}
 
-# Global instance of the enterprise catalog service
-enterprise_catalog_service = None
+    def _determine_health_level(self, score: float) -> str:
+        """Determine health level based on score"""
+        if score >= 90:
+            return "excellent"
+        elif score >= 80:
+            return "good"
+        elif score >= 70:
+            return "fair"
+        elif score >= 60:
+            return "poor"
+        else:
+            return "critical"
 
-async def get_enterprise_catalog_service() -> EnterpriseIntelligentCatalogService:
-    """Get or create the global enterprise catalog service instance."""
-    global enterprise_catalog_service
-    
-    if enterprise_catalog_service is None:
-        enterprise_catalog_service = EnterpriseIntelligentCatalogService()
-        await enterprise_catalog_service.initialize()
-    
-    return enterprise_catalog_service
-
-
-# ===================== EXPORTS =====================
-
-__all__ = [
-    "EnterpriseIntelligentCatalogService",
-    "EnterpriseCatalogConfig",
-    "CatalogEngineStatus",
-    "DiscoveryTrigger",
-    "get_enterprise_catalog_service"
-]
+    def __del__(self):
+        """Cleanup when service is destroyed"""
+        try:
+            if hasattr(self, 'thread_pool'):
+                self.thread_pool.shutdown(wait=False)
+        except Exception:
+            pass

@@ -1,1936 +1,1163 @@
 """
-🔗 ADVANCED LINEAGE SERVICE
-===========================
-
-Enterprise-grade data lineage tracking service that provides:
-- Real-time lineage discovery and tracking
-- Impact analysis for downstream dependencies  
-- Advanced lineage visualization and mapping
-- Cross-system relationship detection
-- Automated lineage validation and quality assessment
-
-This service integrates with all data governance components to provide
-comprehensive data flow understanding across the enterprise.
+🌐 ADVANCED LINEAGE SERVICE
+Comprehensive data lineage tracking system with AI-powered relationship discovery,
+impact analysis, graph analytics, and real-time lineage monitoring for enterprise data governance.
 """
 
 import asyncio
-import json
 import logging
-import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Set, Union
-from collections import defaultdict, deque
+from typing import Dict, List, Optional, Any, Union, Tuple, Set
+from uuid import UUID, uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, func, and_, or_, case, desc, asc, text
+from sqlalchemy.orm import selectinload, joinedload
+import json
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import numpy as np
 from dataclasses import dataclass, field
 from enum import Enum
-
+import re
+import hashlib
+from collections import defaultdict, Counter, deque
 import networkx as nx
-import pandas as pd
-from sqlmodel import SQLModel, Field, select, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-from pydantic import BaseModel, validator
+from networkx.algorithms import shortest_path, centrality, community
+import threading
+import queue
+import time
+import pickle
+from sklearn.cluster import SpectralClustering
+from sklearn.preprocessing import StandardScaler
 
-from ..core.database import get_async_session
-from ..models.scan_models import (
-    DataSource, ScanResult, Scan, DiscoveryHistory,
-    DataSourceType, ScanStatus
+# Import models
+from ..models.data_lineage_models import (
+    DataLineagePath, LineageSegment, LineageImpactAnalysis, LineageEvent,
+    LineageValidation, LineageMetrics, LineageDirection, LineageType,
+    LineageGranularity, DiscoveryMethod, ValidationStatus, ImpactLevel,
+    ConfidenceLevel, LineageStatus, EventType
+)
+from ..models.advanced_catalog_models import (
+    AdvancedCatalogEntry, CatalogEntryType, CatalogStatus
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@dataclass
+class LineageConfiguration:
+    """Configuration for lineage operations"""
+    max_depth: int = 10
+    granularity: LineageGranularity = LineageGranularity.TABLE_LEVEL
+    include_transformations: bool = True
+    include_business_logic: bool = True
+    confidence_threshold: float = 0.7
+    enable_real_time_tracking: bool = True
+    enable_impact_analysis: bool = True
+    enable_change_propagation: bool = True
 
-class LineageRelationType(str, Enum):
-    """Types of data lineage relationships"""
-    DIRECT_COPY = "direct_copy"                    # Direct data copy/movement
-    TRANSFORMATION = "transformation"              # Data transformation
-    AGGREGATION = "aggregation"                   # Data aggregation
-    JOIN = "join"                                 # Data join operation
-    UNION = "union"                               # Data union operation
-    FILTER = "filter"                             # Data filtering
-    DERIVED = "derived"                           # Derived/calculated field
-    REFERENCE = "reference"                       # Reference relationship
-    DEPENDENCY = "dependency"                     # Functional dependency
-    COMPOSITION = "composition"                   # Part-whole relationship
-
-
-class LineageDirection(str, Enum):
-    """Direction of lineage tracking"""
-    UPSTREAM = "upstream"                         # Track sources/inputs
-    DOWNSTREAM = "downstream"                     # Track targets/outputs
-    BIDIRECTIONAL = "bidirectional"              # Track both directions
-
-
-class LineageConfidenceLevel(str, Enum):
-    """Confidence levels for lineage relationships"""
-    CONFIRMED = "confirmed"                       # Human confirmed
-    HIGH = "high"                                # High confidence (90%+)
-    MEDIUM = "medium"                            # Medium confidence (70-90%)
-    LOW = "low"                                  # Low confidence (50-70%)
-    SUSPECTED = "suspected"                      # Suspected relationship (<50%)
-
-
-class LineageValidationStatus(str, Enum):
-    """Status of lineage validation"""
-    VALIDATED = "validated"                      # Successfully validated
-    INVALID = "invalid"                          # Found to be invalid
-    PENDING = "pending"                          # Awaiting validation
-    EXPIRED = "expired"                          # Validation expired
-    CONFLICT = "conflict"                        # Conflicting evidence
-
+@dataclass
+class LineageContext:
+    """Context for lineage operations"""
+    user_id: str
+    organization_id: str
+    business_domain: str
+    analysis_purpose: str
+    include_sensitive: bool = False
+    access_level: str = "standard"
 
 @dataclass
 class LineageNode:
-    """Represents a node in the data lineage graph"""
+    """Represents a node in the lineage graph"""
     node_id: str
-    node_type: str  # table, column, view, file, api_endpoint
-    data_source_id: int
-    schema_name: Optional[str] = None
-    table_name: Optional[str] = None
-    column_name: Optional[str] = None
-    full_path: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    classification_labels: List[str] = field(default_factory=list)
-    quality_score: float = 0.0
-    last_updated: Optional[datetime] = None
-
+    node_name: str
+    node_type: str
+    system_id: str
+    metadata: Dict[str, Any]
+    business_criticality: str
+    data_classification: List[str]
+    quality_score: float
+    last_updated: datetime
 
 @dataclass
 class LineageEdge:
-    """Represents an edge (relationship) in the data lineage graph"""
+    """Represents an edge in the lineage graph"""
     edge_id: str
     source_node_id: str
     target_node_id: str
-    relation_type: LineageRelationType
-    confidence_level: LineageConfidenceLevel
-    validation_status: LineageValidationStatus
-    transformation_logic: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: Optional[datetime] = None
-    validated_at: Optional[datetime] = None
-    impact_score: float = 0.0
-
-
-@dataclass  
-class LineageGraph:
-    """Represents a complete data lineage graph"""
-    graph_id: str
-    nodes: Dict[str, LineageNode] = field(default_factory=dict)
-    edges: Dict[str, LineageEdge] = field(default_factory=dict)
-    nx_graph: Optional[nx.DiGraph] = None
-    created_at: Optional[datetime] = None
-    last_updated: Optional[datetime] = None
-
-
-class LineageImpactAnalysis(BaseModel):
-    """Results of impact analysis"""
-    analysis_id: str
-    root_node_id: str
-    direction: LineageDirection
-    impacted_nodes: List[Dict[str, Any]]
-    impact_levels: Dict[str, str]  # node_id -> impact_level
-    risk_assessment: Dict[str, Any]
-    recommendations: List[str]
-    analysis_timestamp: datetime
+    lineage_type: LineageType
+    transformation_logic: Optional[str]
     confidence_score: float
+    discovery_method: DiscoveryMethod
+    created_at: datetime
+    validated: bool
 
+@dataclass
+class ImpactAnalysisResult:
+    """Result of impact analysis"""
+    analysis_id: str
+    root_asset_id: str
+    impacted_assets: List[Dict[str, Any]]
+    impact_levels: Dict[str, int]
+    propagation_paths: List[List[str]]
+    risk_assessment: Dict[str, Any]
+    mitigation_recommendations: List[str]
 
-class LineageQualityMetrics(BaseModel):
-    """Quality metrics for lineage data"""
-    completeness_score: float        # Percentage of relationships discovered
-    accuracy_score: float           # Percentage of accurate relationships
-    freshness_score: float          # How up-to-date the lineage is
-    consistency_score: float        # Consistency across systems
-    validation_coverage: float      # Percentage of validated relationships
-    overall_quality_score: float    # Composite quality score
+class LineageChangeType(str, Enum):
+    """Types of lineage changes"""
+    ASSET_ADDED = "asset_added"
+    ASSET_REMOVED = "asset_removed"
+    RELATIONSHIP_ADDED = "relationship_added"
+    RELATIONSHIP_REMOVED = "relationship_removed"
+    TRANSFORMATION_CHANGED = "transformation_changed"
+    METADATA_UPDATED = "metadata_updated"
 
+class GraphAnalysisType(str, Enum):
+    """Types of graph analysis"""
+    CENTRALITY = "centrality"
+    CLUSTERING = "clustering"
+    PATH_ANALYSIS = "path_analysis"
+    BOTTLENECK_DETECTION = "bottleneck_detection"
+    CRITICAL_PATH = "critical_path"
+    COMMUNITY_DETECTION = "community_detection"
 
 class AdvancedLineageService:
     """
-    🔗 Advanced Data Lineage Service
-    
-    Provides comprehensive data lineage tracking, analysis, and visualization
-    capabilities for enterprise data governance.
+    Enterprise-grade lineage service that provides comprehensive data lineage tracking,
+    impact analysis, graph analytics, and real-time monitoring capabilities.
     """
     
-    def __init__(self):
-        self.logger = logger
-        self.lineage_graphs: Dict[str, LineageGraph] = {}
-        self.relationship_patterns: Dict[str, Any] = {}
-        self.validation_rules: List[Dict[str, Any]] = []
+    def __init__(
+        self,
+        db_session: AsyncSession,
+        cache_size: int = 50000,
+        thread_pool_size: int = 15,
+        enable_real_time: bool = True
+    ):
+        self.db = db_session
+        self.thread_pool = ThreadPoolExecutor(max_workers=thread_pool_size)
+        self.enable_real_time = enable_real_time
+        
+        # Advanced graph management
+        self.lineage_graph = nx.MultiDiGraph()
+        self.graph_cache: Dict[str, nx.Graph] = {}
+        self.node_cache: Dict[str, LineageNode] = {}
+        self.edge_cache: Dict[str, LineageEdge] = {}
+        
+        # Real-time tracking
+        self.change_stream: deque = deque(maxlen=10000)
+        self.active_tracking_sessions: Dict[str, Dict[str, Any]] = {}
+        self.impact_cache: Dict[str, ImpactAnalysisResult] = {}
+        
+        # Analytics and metrics
+        self.graph_metrics: Dict[str, Any] = {}
+        self.performance_metrics: Dict[str, List[float]] = defaultdict(list)
+        self.analysis_history: deque = deque(maxlen=5000)
+        
+        # Background processing
+        self.background_tasks: List[asyncio.Task] = []
+        self.monitoring_enabled = False
+        self.shutdown_event = asyncio.Event()
+        
+        # ML models for lineage intelligence
+        self.ml_models = {
+            "relationship_predictor": None,
+            "impact_estimator": None,
+            "anomaly_detector": None,
+            "clustering_model": None
+        }
+        
+        # Event handling
+        self.event_handlers: Dict[str, List] = defaultdict(list)
+        self.audit_trail: List[Dict[str, Any]] = []
+        
+        # Initialize the service
         self._initialize_service()
     
     def _initialize_service(self):
-        """Initialize the lineage service with default configurations"""
-        self.logger.info("🔗 Initializing Advanced Lineage Service")
+        """Initialize the advanced lineage service"""
+        logger.info("Initializing Advanced Lineage Service...")
         
-        # Initialize default relationship patterns
-        self.relationship_patterns = {
-            "table_to_table": {
-                "pattern": r"INSERT INTO (\w+).*SELECT.*FROM (\w+)",
-                "relation_type": LineageRelationType.TRANSFORMATION,
-                "confidence": LineageConfidenceLevel.HIGH
-            },
-            "column_derivation": {
-                "pattern": r"(\w+)\s*=\s*(\w+)\s*[\+\-\*\/]\s*(\w+)",
-                "relation_type": LineageRelationType.DERIVED,
-                "confidence": LineageConfidenceLevel.MEDIUM
-            },
-            "direct_copy": {
-                "pattern": r"INSERT INTO (\w+).*SELECT \* FROM (\w+)",
-                "relation_type": LineageRelationType.DIRECT_COPY,
-                "confidence": LineageConfidenceLevel.CONFIRMED
-            }
-        }
+        # Load existing lineage data
+        asyncio.create_task(self._load_existing_lineage())
         
-        # Initialize validation rules
-        self.validation_rules = [
-            {
-                "rule_id": "schema_consistency",
-                "description": "Validate schema consistency across lineage",
-                "validation_logic": self._validate_schema_consistency
-            },
-            {
-                "rule_id": "temporal_consistency",
-                "description": "Validate temporal consistency of relationships",
-                "validation_logic": self._validate_temporal_consistency
-            }
-        ]
+        # Initialize ML models
+        self._initialize_ml_models()
         
-        self.logger.info("✅ Advanced Lineage Service initialized successfully")
+        # Start background monitoring if enabled
+        if self.enable_real_time:
+            self._start_background_monitoring()
+        
+        logger.info("Advanced Lineage Service initialized successfully")
 
-    async def discover_lineage_relationships(
+    def _initialize_ml_models(self):
+        """Initialize ML models for lineage intelligence"""
+        try:
+            # Clustering model for relationship grouping
+            self.ml_models["clustering_model"] = SpectralClustering(
+                n_clusters=10,
+                random_state=42
+            )
+            
+            logger.info("ML models initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize some ML models: {str(e)}")
+
+    # ================================================================
+    # CORE LINEAGE TRACKING
+    # ================================================================
+
+    async def build_lineage_graph(
         self,
-        data_source_ids: List[int],
-        discovery_config: Optional[Dict[str, Any]] = None
+        root_asset_id: str,
+        direction: LineageDirection = LineageDirection.BOTH,
+        config: LineageConfiguration = None,
+        context: LineageContext = None
     ) -> Dict[str, Any]:
         """
-        🔍 Discover data lineage relationships across specified data sources
-        
-        Args:
-            data_source_ids: List of data source IDs to analyze
-            discovery_config: Optional configuration for discovery process
-            
-        Returns:
-            Dictionary containing discovered relationships and metadata
+        Build comprehensive lineage graph for an asset with advanced analytics
+        and intelligent relationship discovery.
         """
-        discovery_id = str(uuid.uuid4())
-        self.logger.info(f"🔍 Starting lineage discovery: {discovery_id}")
-        
         try:
-            config = discovery_config or {}
-            results = {
-                "discovery_id": discovery_id,
-                "data_source_ids": data_source_ids,
-                "discovered_relationships": [],
-                "quality_metrics": {},
-                "processing_stats": {},
-                "timestamp": datetime.utcnow()
+            if not config:
+                config = LineageConfiguration()
+            if not context:
+                context = LineageContext(
+                    user_id="system",
+                    organization_id="default",
+                    business_domain="general",
+                    analysis_purpose="lineage_exploration"
+                )
+            
+            lineage_id = f"lineage_{uuid4().hex[:12]}"
+            start_time = datetime.utcnow()
+            
+            logger.info(f"Building lineage graph {lineage_id} for asset {root_asset_id}")
+            
+            # Initialize lineage graph
+            lineage_result = {
+                "lineage_id": lineage_id,
+                "root_asset_id": root_asset_id,
+                "direction": direction.value,
+                "config": config.__dict__,
+                "nodes": [],
+                "edges": [],
+                "graph_metrics": {},
+                "critical_paths": [],
+                "bottlenecks": [],
+                "communities": [],
+                "impact_analysis": {},
+                "recommendations": []
             }
             
-            async with get_async_session() as session:
-                # Get data sources
-                data_sources = await self._get_data_sources(session, data_source_ids)
-                
-                # Discover relationships for each data source
-                for data_source in data_sources:
-                    self.logger.info(f"📊 Analyzing data source: {data_source.name}")
-                    
-                    # Get scan results for lineage analysis
-                    scan_results = await self._get_scan_results(session, data_source.id)
-                    
-                    # Analyze SQL patterns for relationships
-                    sql_relationships = await self._analyze_sql_patterns(
-                        data_source, scan_results, config
-                    )
-                    
-                    # Analyze schema relationships
-                    schema_relationships = await self._analyze_schema_relationships(
-                        data_source, scan_results, config
-                    )
-                    
-                    # Analyze data flow patterns
-                    flow_relationships = await self._analyze_data_flow_patterns(
-                        data_source, scan_results, config
-                    )
-                    
-                    # Combine discovered relationships
-                    source_relationships = (
-                        sql_relationships + 
-                        schema_relationships + 
-                        flow_relationships
-                    )
-                    
-                    results["discovered_relationships"].extend(source_relationships)
-                    
-                    # Calculate quality metrics for this source
-                    source_quality = await self._calculate_discovery_quality(
-                        data_source, source_relationships
-                    )
-                    results["quality_metrics"][str(data_source.id)] = source_quality
-                
-                # Build comprehensive lineage graph
-                lineage_graph = await self._build_lineage_graph(
-                    results["discovered_relationships"], config
-                )
-                
-                # Store lineage graph
-                self.lineage_graphs[discovery_id] = lineage_graph
-                
-                # Calculate overall quality metrics
-                overall_quality = await self._calculate_overall_quality(results)
-                results["overall_quality"] = overall_quality
-                
-                # Generate processing statistics
-                results["processing_stats"] = {
-                    "total_relationships_discovered": len(results["discovered_relationships"]),
-                    "data_sources_analyzed": len(data_source_ids),
-                    "processing_time_seconds": (datetime.utcnow() - results["timestamp"]).total_seconds(),
-                    "confidence_distribution": self._analyze_confidence_distribution(
-                        results["discovered_relationships"]
-                    )
-                }
-                
-                self.logger.info(f"✅ Lineage discovery completed: {discovery_id}")
-                return results
-                
-        except Exception as e:
-            self.logger.error(f"❌ Error in lineage discovery: {str(e)}")
-            raise
-
-    async def perform_impact_analysis(
-        self,
-        node_id: str,
-        direction: LineageDirection = LineageDirection.BIDIRECTIONAL,
-        max_depth: int = 10,
-        analysis_config: Optional[Dict[str, Any]] = None
-    ) -> LineageImpactAnalysis:
-        """
-        🎯 Perform comprehensive impact analysis for a given data node
-        
-        Args:
-            node_id: ID of the node to analyze
-            direction: Direction of impact analysis
-            max_depth: Maximum depth for analysis
-            analysis_config: Optional analysis configuration
+            # Build graph recursively
+            visited_nodes = set()
+            graph_builder = nx.MultiDiGraph()
             
-        Returns:
-            LineageImpactAnalysis object with complete impact assessment
-        """
-        analysis_id = str(uuid.uuid4())
-        self.logger.info(f"🎯 Starting impact analysis: {analysis_id} for node: {node_id}")
-        
-        try:
-            config = analysis_config or {}
-            
-            # Find the appropriate lineage graph
-            lineage_graph = await self._find_lineage_graph_for_node(node_id)
-            if not lineage_graph:
-                raise ValueError(f"Node {node_id} not found in any lineage graph")
-            
-            # Perform graph traversal based on direction
-            if direction == LineageDirection.UPSTREAM:
-                impacted_nodes = await self._traverse_upstream(
-                    lineage_graph, node_id, max_depth, config
-                )
-            elif direction == LineageDirection.DOWNSTREAM:
-                impacted_nodes = await self._traverse_downstream(
-                    lineage_graph, node_id, max_depth, config
-                )
-            else:  # BIDIRECTIONAL
-                upstream_nodes = await self._traverse_upstream(
-                    lineage_graph, node_id, max_depth, config
-                )
-                downstream_nodes = await self._traverse_downstream(
-                    lineage_graph, node_id, max_depth, config
-                )
-                impacted_nodes = upstream_nodes + downstream_nodes
-            
-            # Calculate impact levels for each node
-            impact_levels = await self._calculate_impact_levels(
-                lineage_graph, node_id, impacted_nodes, config
+            await self._build_lineage_recursive(
+                root_asset_id, 0, config.max_depth, direction,
+                visited_nodes, graph_builder, config, context
             )
             
-            # Perform risk assessment
-            risk_assessment = await self._perform_risk_assessment(
-                lineage_graph, node_id, impacted_nodes, impact_levels, config
+            # Convert graph to nodes and edges
+            lineage_result["nodes"] = await self._convert_nodes_to_dict(
+                graph_builder.nodes(data=True), context
             )
+            lineage_result["edges"] = await self._convert_edges_to_dict(
+                graph_builder.edges(data=True), context
+            )
+            
+            # Perform graph analytics
+            if len(graph_builder.nodes()) > 1:
+                lineage_result["graph_metrics"] = await self._calculate_graph_metrics(graph_builder)
+                lineage_result["critical_paths"] = await self._identify_critical_paths(
+                    graph_builder, root_asset_id
+                )
+                lineage_result["bottlenecks"] = await self._detect_bottlenecks(graph_builder)
+                lineage_result["communities"] = await self._detect_communities(graph_builder)
+            
+            # Perform impact analysis if enabled
+            if config.enable_impact_analysis:
+                lineage_result["impact_analysis"] = await self._perform_impact_analysis(
+                    graph_builder, root_asset_id, context
+                )
             
             # Generate recommendations
-            recommendations = await self._generate_impact_recommendations(
-                lineage_graph, node_id, impacted_nodes, risk_assessment, config
+            lineage_result["recommendations"] = await self._generate_lineage_recommendations(
+                graph_builder, lineage_result, context
             )
             
-            # Calculate confidence score
-            confidence_score = await self._calculate_analysis_confidence(
-                lineage_graph, impacted_nodes, config
+            # Store lineage path
+            await self._store_lineage_path(lineage_result, context)
+            
+            # Emit lineage event
+            await self._emit_lineage_event(
+                "lineage_built",
+                {
+                    "lineage_id": lineage_id,
+                    "root_asset_id": root_asset_id,
+                    "nodes_count": len(lineage_result["nodes"]),
+                    "edges_count": len(lineage_result["edges"]),
+                    "depth_reached": max([n.get("depth", 0) for n in lineage_result["nodes"]], default=0)
+                },
+                context
             )
             
-            # Create impact analysis result
-            impact_analysis = LineageImpactAnalysis(
-                analysis_id=analysis_id,
-                root_node_id=node_id,
-                direction=direction,
-                impacted_nodes=impacted_nodes,
-                impact_levels=impact_levels,
-                risk_assessment=risk_assessment,
-                recommendations=recommendations,
-                analysis_timestamp=datetime.utcnow(),
-                confidence_score=confidence_score
-            )
+            # Calculate processing time
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            lineage_result["processing_time_seconds"] = processing_time
             
-            self.logger.info(f"✅ Impact analysis completed: {analysis_id}")
-            return impact_analysis
+            logger.info(f"Lineage graph {lineage_id} built successfully in {processing_time:.2f}s")
+            return lineage_result
             
         except Exception as e:
-            self.logger.error(f"❌ Error in impact analysis: {str(e)}")
+            logger.error(f"Failed to build lineage graph for {root_asset_id}: {str(e)}")
             raise
 
-    async def validate_lineage_relationships(
+    async def _build_lineage_recursive(
         self,
-        validation_config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        ✅ Validate data lineage relationships for accuracy and consistency
-        
-        Args:
-            validation_config: Optional validation configuration
-            
-        Returns:
-            Dictionary containing validation results and recommendations
-        """
-        validation_id = str(uuid.uuid4())
-        self.logger.info(f"✅ Starting lineage validation: {validation_id}")
+        asset_id: str,
+        current_depth: int,
+        max_depth: int,
+        direction: LineageDirection,
+        visited_nodes: Set[str],
+        graph_builder: nx.MultiDiGraph,
+        config: LineageConfiguration,
+        context: LineageContext
+    ):
+        """Recursively build lineage graph"""
         
         try:
-            config = validation_config or {}
-            results = {
-                "validation_id": validation_id,
-                "validation_results": [],
-                "quality_metrics": {},
-                "recommendations": [],
-                "timestamp": datetime.utcnow()
-            }
+            # Check depth limit
+            if current_depth >= max_depth:
+                return
             
-            # Validate each lineage graph
-            for graph_id, lineage_graph in self.lineage_graphs.items():
-                self.logger.info(f"🔍 Validating lineage graph: {graph_id}")
-                
-                graph_validation = {
-                    "graph_id": graph_id,
-                    "node_validations": [],
-                    "edge_validations": [],
-                    "consistency_checks": [],
-                    "quality_score": 0.0
-                }
-                
-                # Validate nodes
-                for node_id, node in lineage_graph.nodes.items():
-                    node_validation = await self._validate_node(node, config)
-                    graph_validation["node_validations"].append(node_validation)
-                
-                # Validate edges (relationships)
-                for edge_id, edge in lineage_graph.edges.items():
-                    edge_validation = await self._validate_edge(
-                        edge, lineage_graph.nodes, config
-                    )
-                    graph_validation["edge_validations"].append(edge_validation)
-                
-                # Perform consistency checks
-                consistency_results = await self._perform_consistency_checks(
-                    lineage_graph, config
-                )
-                graph_validation["consistency_checks"] = consistency_results
-                
-                # Calculate graph quality score
-                graph_validation["quality_score"] = await self._calculate_graph_quality_score(
-                    graph_validation, config
-                )
-                
-                results["validation_results"].append(graph_validation)
+            # Avoid cycles
+            if asset_id in visited_nodes:
+                return
             
-            # Calculate overall quality metrics
-            overall_quality = await self._calculate_validation_quality_metrics(
-                results["validation_results"]
+            visited_nodes.add(asset_id)
+            
+            # Get asset information
+            asset_info = await self._get_asset_info(asset_id, context)
+            if not asset_info:
+                return
+            
+            # Add node to graph
+            graph_builder.add_node(
+                asset_id,
+                **asset_info,
+                depth=current_depth
             )
-            results["quality_metrics"] = overall_quality
             
-            # Generate improvement recommendations
-            recommendations = await self._generate_validation_recommendations(
-                results["validation_results"], config
-            )
-            results["recommendations"] = recommendations
+            # Get relationships based on direction
+            relationships = []
             
-            self.logger.info(f"✅ Lineage validation completed: {validation_id}")
-            return results
+            if direction in [LineageDirection.UPSTREAM, LineageDirection.BOTH]:
+                upstream_rels = await self._get_upstream_relationships(asset_id, config, context)
+                relationships.extend(upstream_rels)
             
-        except Exception as e:
-            self.logger.error(f"❌ Error in lineage validation: {str(e)}")
-            raise
-
-    async def get_lineage_visualization_data(
-        self,
-        node_ids: List[str],
-        visualization_config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        📊 Generate data for lineage visualization
-        
-        Args:
-            node_ids: List of node IDs to include in visualization
-            visualization_config: Optional visualization configuration
+            if direction in [LineageDirection.DOWNSTREAM, LineageDirection.BOTH]:
+                downstream_rels = await self._get_downstream_relationships(asset_id, config, context)
+                relationships.extend(downstream_rels)
             
-        Returns:
-            Dictionary containing visualization data and metadata
-        """
-        self.logger.info(f"📊 Generating lineage visualization for {len(node_ids)} nodes")
-        
-        try:
-            config = visualization_config or {}
-            
-            # Build visualization graph
-            viz_graph = await self._build_visualization_graph(node_ids, config)
-            
-            # Calculate layout positions
-            layout_data = await self._calculate_graph_layout(viz_graph, config)
-            
-            # Generate node styling
-            node_styles = await self._generate_node_styles(viz_graph, config)
-            
-            # Generate edge styling
-            edge_styles = await self._generate_edge_styles(viz_graph, config)
-            
-            # Calculate graph metrics
-            graph_metrics = await self._calculate_visualization_metrics(viz_graph)
-            
-            visualization_data = {
-                "nodes": [
-                    {
-                        "id": node_id,
-                        "label": node.table_name or node.node_id,
-                        "type": node.node_type,
-                        "data_source_id": node.data_source_id,
-                        "position": layout_data.get(node_id, {"x": 0, "y": 0}),
-                        "style": node_styles.get(node_id, {}),
-                        "metadata": node.metadata,
-                        "quality_score": node.quality_score
-                    }
-                    for node_id, node in viz_graph.nodes.items()
-                ],
-                "edges": [
-                    {
-                        "id": edge_id,
-                        "source": edge.source_node_id,
-                        "target": edge.target_node_id,
-                        "type": edge.relation_type.value,
-                        "confidence": edge.confidence_level.value,
-                        "style": edge_styles.get(edge_id, {}),
-                        "metadata": edge.metadata,
-                        "impact_score": edge.impact_score
-                    }
-                    for edge_id, edge in viz_graph.edges.items()
-                ],
-                "layout": layout_data,
-                "metrics": graph_metrics,
-                "legend": await self._generate_visualization_legend(config),
-                "timestamp": datetime.utcnow()
-            }
-            
-            return visualization_data
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error generating visualization data: {str(e)}")
-            raise
-
-    async def get_cross_system_lineage(
-        self,
-        data_source_ids: List[int],
-        analysis_config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        🌐 Analyze cross-system data lineage relationships
-        
-        Args:
-            data_source_ids: List of data source IDs to analyze
-            analysis_config: Optional analysis configuration
-            
-        Returns:
-            Dictionary containing cross-system lineage analysis
-        """
-        self.logger.info(f"🌐 Analyzing cross-system lineage for {len(data_source_ids)} systems")
-        
-        try:
-            config = analysis_config or {}
-            
-            async with get_async_session() as session:
-                # Get data sources
-                data_sources = await self._get_data_sources(session, data_source_ids)
+            # Process each relationship
+            for rel in relationships:
+                related_asset_id = rel["related_asset_id"]
+                relationship_type = rel["relationship_type"]
                 
-                # Find cross-system relationships
-                cross_system_relationships = await self._find_cross_system_relationships(
-                    data_sources, config
+                # Add edge to graph
+                graph_builder.add_edge(
+                    asset_id,
+                    related_asset_id,
+                    lineage_type=relationship_type,
+                    **rel
                 )
                 
-                # Analyze data flow patterns between systems
-                flow_patterns = await self._analyze_cross_system_flows(
-                    data_sources, cross_system_relationships, config
+                # Recursively process related asset
+                await self._build_lineage_recursive(
+                    related_asset_id,
+                    current_depth + 1,
+                    max_depth,
+                    direction,
+                    visited_nodes,
+                    graph_builder,
+                    config,
+                    context
                 )
-                
-                # Identify integration points
-                integration_points = await self._identify_integration_points(
-                    data_sources, cross_system_relationships, config
-                )
-                
-                # Calculate system dependency metrics
-                dependency_metrics = await self._calculate_system_dependencies(
-                    data_sources, cross_system_relationships, config
-                )
-                
-                # Generate cross-system recommendations
-                recommendations = await self._generate_cross_system_recommendations(
-                    data_sources, cross_system_relationships, dependency_metrics, config
-                )
-                
-                return {
-                    "analysis_id": str(uuid.uuid4()),
-                    "data_source_ids": data_source_ids,
-                    "cross_system_relationships": cross_system_relationships,
-                    "flow_patterns": flow_patterns,
-                    "integration_points": integration_points,
-                    "dependency_metrics": dependency_metrics,
-                    "recommendations": recommendations,
-                    "timestamp": datetime.utcnow()
-                }
                 
         except Exception as e:
-            self.logger.error(f"❌ Error in cross-system lineage analysis: {str(e)}")
-            raise
+            logger.error(f"Error in recursive lineage building for {asset_id}: {str(e)}")
 
-    # ===================== PRIVATE HELPER METHODS =====================
-
-    async def _get_data_sources(
-        self, 
-        session: AsyncSession, 
-        data_source_ids: List[int]
-    ) -> List[DataSource]:
-        """Get data sources by IDs"""
-        query = select(DataSource).where(DataSource.id.in_(data_source_ids))
-        result = await session.execute(query)
-        return result.scalars().all()
-
-    async def _get_scan_results(
-        self, 
-        session: AsyncSession, 
-        data_source_id: int
-    ) -> List[ScanResult]:
-        """Get scan results for a data source"""
-        query = (
-            select(ScanResult)
-            .join(Scan)
-            .where(Scan.data_source_id == data_source_id)
-            .options(selectinload(ScanResult.scan))
-        )
-        result = await session.execute(query)
-        return result.scalars().all()
-
-    async def _analyze_sql_patterns(
+    async def _get_upstream_relationships(
         self,
-        data_source: DataSource,
-        scan_results: List[ScanResult],
-        config: Dict[str, Any]
+        asset_id: str,
+        config: LineageConfiguration,
+        context: LineageContext
     ) -> List[Dict[str, Any]]:
-        """Analyze SQL patterns to discover relationships"""
-        relationships = []
-        
-        # Advanced SQL analysis using AST parsing and pattern recognition
-        for result in scan_results:
-            if result.scan_metadata:
-                # Analyze various SQL sources
-                sql_sources = []
-                
-                # Check for SQL queries in metadata
-                if 'sql_queries' in result.scan_metadata:
-                    sql_sources.extend(result.scan_metadata['sql_queries'])
-                
-                # Check for view definitions
-                if 'view_definition' in result.scan_metadata:
-                    sql_sources.append(result.scan_metadata['view_definition'])
-                
-                # Check for stored procedure definitions
-                if 'procedure_definition' in result.scan_metadata:
-                    sql_sources.append(result.scan_metadata['procedure_definition'])
-                
-                # Analyze each SQL source
-                for sql_query in sql_sources:
-                    if sql_query and isinstance(sql_query, str):
-                        analyzed_relationships = await self._parse_sql_relationships(
-                            sql_query, result, data_source, config
-                        )
-                        relationships.extend(analyzed_relationships)
-        
-        return relationships
-    
-    async def _parse_sql_relationships(
-        self,
-        sql_query: str,
-        result: ScanResult,
-        data_source: DataSource,
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Parse SQL query to extract relationships using advanced pattern analysis"""
-        relationships = []
+        """Get upstream relationships for an asset"""
         
         try:
-            # Normalize SQL query
-            normalized_query = sql_query.lower().strip()
+            # Query database for upstream relationships
+            stmt = select(LineageSegment).where(
+                LineageSegment.target_asset_id == asset_id
+            ).options(selectinload(LineageSegment.source_asset))
             
-            # Extract table references using regex patterns
-            table_patterns = [
-                r'from\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
-                r'join\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
-                r'into\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
-                r'update\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)',
-                r'insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)'
-            ]
+            result = await self.db.execute(stmt)
+            segments = result.scalars().all()
             
-            referenced_tables = set()
-            for pattern in table_patterns:
-                matches = re.findall(pattern, normalized_query)
-                referenced_tables.update(matches)
-            
-            # Determine relationship type based on SQL operation
-            relationship_type = await self._determine_sql_relationship_type(normalized_query)
-            
-            # Create relationships for each referenced table
-            for table_ref in referenced_tables:
-                if table_ref and table_ref != result.table_name:
-                    # Calculate confidence based on SQL complexity and pattern matching
-                    confidence = await self._calculate_sql_relationship_confidence(
-                        normalized_query, table_ref, result.table_name
-                    )
-                    
-                    relationships.append({
-                        "relationship_id": str(uuid.uuid4()),
-                        "source_table": table_ref,
-                        "target_table": result.table_name,
-                        "relation_type": relationship_type.value,
-                        "confidence_level": confidence.value,
-                        "discovery_method": "sql_ast_analysis",
-                        "evidence": {
-                            "sql_query": sql_query[:500],  # Truncate for storage
-                            "operation_type": await self._extract_sql_operation(normalized_query),
-                            "column_mappings": await self._extract_column_mappings(normalized_query)
-                        },
-                        "data_source_id": data_source.id,
-                        "metadata": {
-                            "transformation_logic": await self._extract_transformation_logic(normalized_query),
-                            "join_conditions": await self._extract_join_conditions(normalized_query),
-                            "filter_conditions": await self._extract_filter_conditions(normalized_query)
-                        }
-                    })
+            relationships = []
+            for segment in segments:
+                if segment.confidence_level.value >= config.confidence_threshold:
+                    rel_data = {
+                        "related_asset_id": segment.source_asset_id,
+                        "relationship_type": segment.lineage_type,
+                        "transformation_logic": segment.transformation_logic,
+                        "confidence_score": segment.confidence_level.value,
+                        "discovery_method": segment.discovery_method,
+                        "segment_id": segment.segment_id
+                    }
+                    relationships.append(rel_data)
             
             return relationships
             
         except Exception as e:
-            logger.error(f"Failed to parse SQL relationships: {str(e)}")
-            return []
-    
-    async def _determine_sql_relationship_type(self, sql_query: str) -> LineageRelationType:
-        """Determine the type of relationship based on SQL operation"""
-        try:
-            if 'create view' in sql_query or 'create or replace view' in sql_query:
-                return LineageRelationType.DERIVED
-            elif 'insert into' in sql_query:
-                if 'select' in sql_query:
-                    return LineageRelationType.TRANSFORMATION
-                else:
-                    return LineageRelationType.DIRECT_COPY
-            elif 'update' in sql_query:
-                return LineageRelationType.TRANSFORMATION
-            elif 'union' in sql_query or 'union all' in sql_query:
-                return LineageRelationType.UNION
-            elif any(join_type in sql_query for join_type in ['join', 'inner join', 'left join', 'right join', 'full join']):
-                return LineageRelationType.JOIN
-            elif 'group by' in sql_query or 'aggregate' in sql_query:
-                return LineageRelationType.AGGREGATION
-            elif 'where' in sql_query or 'having' in sql_query:
-                return LineageRelationType.FILTER
-            else:
-                return LineageRelationType.REFERENCE
-                
-        except Exception as e:
-            logger.error(f"Failed to determine SQL relationship type: {str(e)}")
-            return LineageRelationType.REFERENCE
-    
-    async def _calculate_sql_relationship_confidence(
-        self,
-        sql_query: str,
-        source_table: str,
-        target_table: str
-    ) -> LineageConfidenceLevel:
-        """Calculate confidence level for SQL-derived relationship"""
-        try:
-            confidence_score = 0.5  # Base confidence
-            
-            # Increase confidence for explicit table references
-            if source_table in sql_query:
-                confidence_score += 0.2
-                
-            # Increase confidence for complex operations
-            if any(op in sql_query for op in ['join', 'union', 'group by']):
-                confidence_score += 0.2
-                
-            # Increase confidence for explicit column mappings
-            if '=' in sql_query and '.' in sql_query:
-                confidence_score += 0.1
-                
-            # Determine confidence level
-            if confidence_score >= 0.9:
-                return LineageConfidenceLevel.HIGH
-            elif confidence_score >= 0.7:
-                return LineageConfidenceLevel.MEDIUM
-            elif confidence_score >= 0.5:
-                return LineageConfidenceLevel.LOW
-            else:
-                return LineageConfidenceLevel.SUSPECTED
-                
-        except Exception as e:
-            logger.error(f"Failed to calculate SQL relationship confidence: {str(e)}")
-            return LineageConfidenceLevel.LOW
-    
-    async def _extract_sql_operation(self, sql_query: str) -> str:
-        """Extract the primary SQL operation"""
-        try:
-            operations = ['select', 'insert', 'update', 'delete', 'create', 'alter', 'drop']
-            for op in operations:
-                if sql_query.startswith(op):
-                    return op.upper()
-            return "UNKNOWN"
-        except Exception:
-            return "UNKNOWN"
-    
-    async def _extract_column_mappings(self, sql_query: str) -> List[Dict[str, str]]:
-        """Extract column mappings from SQL query"""
-        try:
-            mappings = []
-            
-            # Look for explicit column assignments in SELECT statements
-            select_pattern = r'select\s+(.*?)\s+from'
-            select_match = re.search(select_pattern, sql_query, re.IGNORECASE | re.DOTALL)
-            
-            if select_match:
-                columns_part = select_match.group(1)
-                # Parse column expressions (simplified)
-                column_expressions = [col.strip() for col in columns_part.split(',')]
-                
-                for expr in column_expressions:
-                    if ' as ' in expr.lower():
-                        parts = expr.lower().split(' as ')
-                        if len(parts) == 2:
-                            mappings.append({
-                                "source_column": parts[0].strip(),
-                                "target_column": parts[1].strip()
-                            })
-                    elif '.' in expr:
-                        mappings.append({
-                            "source_column": expr.strip(),
-                            "target_column": expr.split('.')[-1].strip()
-                        })
-            
-            return mappings
-            
-        except Exception as e:
-            logger.error(f"Failed to extract column mappings: {str(e)}")
-            return []
-    
-    async def _extract_transformation_logic(self, sql_query: str) -> Dict[str, Any]:
-        """Extract transformation logic from SQL query"""
-        try:
-            transformations = {
-                "has_aggregation": bool(re.search(r'\b(sum|count|avg|max|min|group by)\b', sql_query)),
-                "has_joins": bool(re.search(r'\b(join|inner join|left join|right join|full join)\b', sql_query)),
-                "has_subqueries": bool(re.search(r'\([^)]*select[^)]*\)', sql_query)),
-                "has_window_functions": bool(re.search(r'\bover\s*\(', sql_query)),
-                "has_case_statements": bool(re.search(r'\bcase\s+when\b', sql_query)),
-                "has_unions": bool(re.search(r'\bunion\b', sql_query))
-            }
-            
-            return transformations
-            
-        except Exception as e:
-            logger.error(f"Failed to extract transformation logic: {str(e)}")
-            return {}
-    
-    async def _extract_join_conditions(self, sql_query: str) -> List[str]:
-        """Extract JOIN conditions from SQL query"""
-        try:
-            join_pattern = r'join\s+[a-zA-Z_][a-zA-Z0-9_.]*\s+on\s+([^join]+?)(?=\s+(?:join|where|group|order|limit|$))'
-            matches = re.findall(join_pattern, sql_query, re.IGNORECASE)
-            return [match.strip() for match in matches]
-            
-        except Exception as e:
-            logger.error(f"Failed to extract join conditions: {str(e)}")
-            return []
-    
-    async def _extract_filter_conditions(self, sql_query: str) -> List[str]:
-        """Extract WHERE conditions from SQL query"""
-        try:
-            where_pattern = r'where\s+([^group by|order by|limit]+?)(?=\s+(?:group|order|limit|$))'
-            match = re.search(where_pattern, sql_query, re.IGNORECASE)
-            
-            if match:
-                where_clause = match.group(1).strip()
-                # Split on AND/OR to get individual conditions
-                conditions = re.split(r'\s+(?:and|or)\s+', where_clause, flags=re.IGNORECASE)
-                return [cond.strip() for cond in conditions]
-            
-            return []
-            
-        except Exception as e:
-            logger.error(f"Failed to extract filter conditions: {str(e)}")
+            logger.error(f"Error getting upstream relationships for {asset_id}: {str(e)}")
             return []
 
-    async def _analyze_schema_relationships(
+    async def _get_downstream_relationships(
         self,
-        data_source: DataSource,
-        scan_results: List[ScanResult],
-        config: Dict[str, Any]
+        asset_id: str,
+        config: LineageConfiguration,
+        context: LineageContext
     ) -> List[Dict[str, Any]]:
-        """Analyze schema structures to discover relationships"""
-        relationships = []
+        """Get downstream relationships for an asset"""
         
-        # Group results by table
-        tables = defaultdict(list)
-        for result in scan_results:
-            tables[result.table_name].append(result)
-        
-        # Analyze foreign key relationships
-        for table_name, columns in tables.items():
-            for column in columns:
-                if column.column_name and 'id' in column.column_name.lower():
-                    # Look for potential foreign key relationships
-                    referenced_table = column.column_name.replace('_id', '').replace('id', '')
-                    if referenced_table in tables:
-                        relationships.append({
-                            "relationship_id": str(uuid.uuid4()),
-                            "source_table": referenced_table,
-                            "target_table": table_name,
-                            "source_column": "id",
-                            "target_column": column.column_name,
-                            "relation_type": LineageRelationType.REFERENCE.value,
-                            "confidence_level": LineageConfidenceLevel.MEDIUM.value,
-                            "discovery_method": "schema_analysis",
-                            "evidence": {"foreign_key_pattern": True},
-                            "data_source_id": data_source.id
-                        })
-        
-        return relationships
+        try:
+            # Query database for downstream relationships
+            stmt = select(LineageSegment).where(
+                LineageSegment.source_asset_id == asset_id
+            ).options(selectinload(LineageSegment.target_asset))
+            
+            result = await self.db.execute(stmt)
+            segments = result.scalars().all()
+            
+            relationships = []
+            for segment in segments:
+                if segment.confidence_level.value >= config.confidence_threshold:
+                    rel_data = {
+                        "related_asset_id": segment.target_asset_id,
+                        "relationship_type": segment.lineage_type,
+                        "transformation_logic": segment.transformation_logic,
+                        "confidence_score": segment.confidence_level.value,
+                        "discovery_method": segment.discovery_method,
+                        "segment_id": segment.segment_id
+                    }
+                    relationships.append(rel_data)
+            
+            return relationships
+            
+        except Exception as e:
+            logger.error(f"Error getting downstream relationships for {asset_id}: {str(e)}")
+            return []
 
-    async def _analyze_data_flow_patterns(
-        self,
-        data_source: DataSource,
-        scan_results: List[ScanResult],
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Analyze data flow patterns to discover relationships"""
-        relationships = []
-        
-        # Analyze naming patterns that suggest data flow
-        for result in scan_results:
-            table_name = result.table_name.lower()
-            
-            # Check for staging/raw/processed patterns
-            if 'staging' in table_name or 'stg' in table_name:
-                processed_table = table_name.replace('staging', 'processed').replace('stg', 'prod')
-                relationships.append({
-                    "relationship_id": str(uuid.uuid4()),
-                    "source_table": result.table_name,
-                    "target_table": processed_table,
-                    "relation_type": LineageRelationType.TRANSFORMATION.value,
-                    "confidence_level": LineageConfidenceLevel.LOW.value,
-                    "discovery_method": "naming_pattern_analysis",
-                    "evidence": {"naming_pattern": "staging_to_processed"},
-                    "data_source_id": data_source.id
-                })
-            
-            # Check for aggregation patterns
-            if 'summary' in table_name or 'agg' in table_name:
-                base_table = table_name.replace('_summary', '').replace('_agg', '')
-                relationships.append({
-                    "relationship_id": str(uuid.uuid4()),
-                    "source_table": base_table,
-                    "target_table": result.table_name,
-                    "relation_type": LineageRelationType.AGGREGATION.value,
-                    "confidence_level": LineageConfidenceLevel.MEDIUM.value,
-                    "discovery_method": "naming_pattern_analysis",
-                    "evidence": {"naming_pattern": "base_to_aggregate"},
-                    "data_source_id": data_source.id
-                })
-        
-        return relationships
+    # ================================================================
+    # IMPACT ANALYSIS
+    # ================================================================
 
-    async def _build_lineage_graph(
+    async def analyze_impact(
         self,
-        relationships: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> LineageGraph:
-        """Build a lineage graph from discovered relationships"""
-        graph_id = str(uuid.uuid4())
-        lineage_graph = LineageGraph(
-            graph_id=graph_id,
-            created_at=datetime.utcnow()
-        )
-        
-        # Create nodes from relationships
-        nodes_seen = set()
-        for relationship in relationships:
-            # Source node
-            source_id = f"{relationship['data_source_id']}_{relationship['source_table']}"
-            if source_id not in nodes_seen:
-                lineage_graph.nodes[source_id] = LineageNode(
-                    node_id=source_id,
-                    node_type="table",
-                    data_source_id=relationship['data_source_id'],
-                    table_name=relationship['source_table'],
-                    last_updated=datetime.utcnow()
+        asset_id: str,
+        change_type: str,
+        change_details: Dict[str, Any],
+        context: LineageContext = None
+    ) -> ImpactAnalysisResult:
+        """
+        Perform comprehensive impact analysis for potential changes to an asset.
+        """
+        try:
+            if not context:
+                context = LineageContext(
+                    user_id="system",
+                    organization_id="default",
+                    business_domain="general",
+                    analysis_purpose="impact_analysis"
                 )
-                nodes_seen.add(source_id)
             
-            # Target node
-            target_id = f"{relationship['data_source_id']}_{relationship['target_table']}"
-            if target_id not in nodes_seen:
-                lineage_graph.nodes[target_id] = LineageNode(
-                    node_id=target_id,
-                    node_type="table",
-                    data_source_id=relationship['data_source_id'],
-                    table_name=relationship['target_table'],
-                    last_updated=datetime.utcnow()
-                )
-                nodes_seen.add(target_id)
+            analysis_id = f"impact_{uuid4().hex[:12]}"
+            start_time = datetime.utcnow()
             
-            # Create edge
-            edge_id = relationship['relationship_id']
-            lineage_graph.edges[edge_id] = LineageEdge(
-                edge_id=edge_id,
-                source_node_id=source_id,
-                target_node_id=target_id,
-                relation_type=LineageRelationType(relationship['relation_type']),
-                confidence_level=LineageConfidenceLevel(relationship['confidence_level']),
-                validation_status=LineageValidationStatus.PENDING,
-                metadata=relationship.get('evidence', {}),
-                created_at=datetime.utcnow()
+            logger.info(f"Starting impact analysis {analysis_id} for asset {asset_id}")
+            
+            # Build downstream lineage for impact analysis
+            lineage_config = LineageConfiguration(
+                max_depth=15,  # Deeper analysis for impact
+                enable_impact_analysis=True
             )
-        
-        # Build NetworkX graph for analysis
-        lineage_graph.nx_graph = self._build_networkx_graph(lineage_graph)
-        lineage_graph.last_updated = datetime.utcnow()
-        
-        return lineage_graph
-
-    def _build_networkx_graph(self, lineage_graph: LineageGraph) -> nx.DiGraph:
-        """Build NetworkX directed graph from lineage graph"""
-        nx_graph = nx.DiGraph()
-        
-        # Add nodes
-        for node_id, node in lineage_graph.nodes.items():
-            nx_graph.add_node(node_id, **{
-                "node_type": node.node_type,
-                "table_name": node.table_name,
-                "data_source_id": node.data_source_id,
-                "quality_score": node.quality_score
-            })
-        
-        # Add edges
-        for edge_id, edge in lineage_graph.edges.items():
-            nx_graph.add_edge(
-                edge.source_node_id,
-                edge.target_node_id,
-                **{
-                    "edge_id": edge_id,
-                    "relation_type": edge.relation_type.value,
-                    "confidence_level": edge.confidence_level.value,
-                    "impact_score": edge.impact_score
+            
+            downstream_graph = await self._build_targeted_lineage(
+                asset_id, LineageDirection.DOWNSTREAM, lineage_config, context
+            )
+            
+            # Analyze impact levels
+            impacted_assets = []
+            impact_levels = {"high": 0, "medium": 0, "low": 0}
+            propagation_paths = []
+            
+            for node_id, node_data in downstream_graph.nodes(data=True):
+                if node_id == asset_id:
+                    continue
+                
+                # Calculate impact level
+                impact_level = await self._calculate_impact_level(
+                    asset_id, node_id, change_type, change_details, downstream_graph
+                )
+                
+                impacted_asset = {
+                    "asset_id": node_id,
+                    "asset_name": node_data.get("name", node_id),
+                    "asset_type": node_data.get("type", "unknown"),
+                    "impact_level": impact_level,
+                    "business_criticality": node_data.get("business_criticality", "medium"),
+                    "estimated_effort": await self._estimate_remediation_effort(
+                        node_id, impact_level, change_type
+                    ),
+                    "dependencies": list(downstream_graph.predecessors(node_id))
                 }
+                
+                impacted_assets.append(impacted_asset)
+                impact_levels[impact_level] += 1
+            
+            # Find propagation paths
+            propagation_paths = await self._find_propagation_paths(
+                downstream_graph, asset_id, impacted_assets
             )
-        
-        return nx_graph
-
-    async def _calculate_discovery_quality(
-        self,
-        data_source: DataSource,
-        relationships: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Calculate quality metrics for discovered relationships"""
-        total_relationships = len(relationships)
-        
-        if total_relationships == 0:
-            return {
-                "completeness_score": 0.0,
-                "confidence_distribution": {},
-                "discovery_methods": {},
-                "relationship_types": {}
-            }
-        
-        # Confidence distribution
-        confidence_counts = defaultdict(int)
-        for rel in relationships:
-            confidence_counts[rel['confidence_level']] += 1
-        
-        # Discovery methods
-        method_counts = defaultdict(int)
-        for rel in relationships:
-            method_counts[rel['discovery_method']] += 1
-        
-        # Relationship types
-        type_counts = defaultdict(int)
-        for rel in relationships:
-            type_counts[rel['relation_type']] += 1
-        
-        return {
-            "total_relationships": total_relationships,
-            "completeness_score": min(1.0, total_relationships / 100),  # Assume 100 is ideal
-            "confidence_distribution": dict(confidence_counts),
-            "discovery_methods": dict(method_counts),
-            "relationship_types": dict(type_counts)
-        }
-
-    async def _calculate_overall_quality(self, results: Dict[str, Any]) -> LineageQualityMetrics:
-        """Calculate overall quality metrics for lineage discovery"""
-        total_relationships = len(results["discovered_relationships"])
-        
-        if total_relationships == 0:
-            return LineageQualityMetrics(
-                completeness_score=0.0,
-                accuracy_score=0.0,
-                freshness_score=1.0,
-                consistency_score=0.0,
-                validation_coverage=0.0,
-                overall_quality_score=0.0
+            
+            # Perform risk assessment
+            risk_assessment = await self._assess_change_risks(
+                asset_id, impacted_assets, change_type, change_details
             )
-        
-        # Calculate confidence-based accuracy
-        high_confidence = sum(1 for rel in results["discovered_relationships"] 
-                            if rel['confidence_level'] in ['confirmed', 'high'])
-        accuracy_score = high_confidence / total_relationships
-        
-        # Calculate completeness based on data source coverage
-        data_sources_with_relationships = len(results["quality_metrics"])
-        completeness_score = min(1.0, data_sources_with_relationships / len(results["data_source_ids"]))
-        
-        # Freshness is high for newly discovered lineage
-        freshness_score = 1.0
-        
-        # Consistency based on relationship type distribution
-        type_counts = defaultdict(int)
-        for rel in results["discovered_relationships"]:
-            type_counts[rel['relation_type']] += 1
-        consistency_score = 1.0 - (len(type_counts) / 10)  # More variety = less consistency
-        
-        # Validation coverage (none yet since just discovered)
-        validation_coverage = 0.0
-        
-        # Overall quality score
-        overall_quality_score = (
-            completeness_score * 0.3 +
-            accuracy_score * 0.3 +
-            freshness_score * 0.2 +
-            consistency_score * 0.1 +
-            validation_coverage * 0.1
-        )
-        
-        return LineageQualityMetrics(
-            completeness_score=completeness_score,
-            accuracy_score=accuracy_score,
-            freshness_score=freshness_score,
-            consistency_score=consistency_score,
-            validation_coverage=validation_coverage,
-            overall_quality_score=overall_quality_score
-        )
-
-    def _analyze_confidence_distribution(self, relationships: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Analyze confidence level distribution"""
-        distribution = defaultdict(int)
-        for rel in relationships:
-            distribution[rel['confidence_level']] += 1
-        return dict(distribution)
-
-    async def _find_lineage_graph_for_node(self, node_id: str) -> Optional[LineageGraph]:
-        """Find the lineage graph containing a specific node"""
-        for graph in self.lineage_graphs.values():
-            if node_id in graph.nodes:
-                return graph
-        return None
-
-    async def _traverse_upstream(
-        self,
-        lineage_graph: LineageGraph,
-        node_id: str,
-        max_depth: int,
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Traverse upstream dependencies"""
-        if not lineage_graph.nx_graph:
-            return []
-        
-        upstream_nodes = []
-        visited = set()
-        queue = deque([(node_id, 0)])
-        
-        while queue:
-            current_node, depth = queue.popleft()
             
-            if depth >= max_depth or current_node in visited:
-                continue
-            
-            visited.add(current_node)
-            
-            # Get predecessors (upstream nodes)
-            for predecessor in lineage_graph.nx_graph.predecessors(current_node):
-                if predecessor not in visited:
-                    node_data = lineage_graph.nodes.get(predecessor)
-                    if node_data:
-                        upstream_nodes.append({
-                            "node_id": predecessor,
-                            "node_type": node_data.node_type,
-                            "table_name": node_data.table_name,
-                            "depth": depth + 1,
-                            "path_length": depth + 1
-                        })
-                    queue.append((predecessor, depth + 1))
-        
-        return upstream_nodes
-
-    async def _traverse_downstream(
-        self,
-        lineage_graph: LineageGraph,
-        node_id: str,
-        max_depth: int,
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Traverse downstream dependencies"""
-        if not lineage_graph.nx_graph:
-            return []
-        
-        downstream_nodes = []
-        visited = set()
-        queue = deque([(node_id, 0)])
-        
-        while queue:
-            current_node, depth = queue.popleft()
-            
-            if depth >= max_depth or current_node in visited:
-                continue
-            
-            visited.add(current_node)
-            
-            # Get successors (downstream nodes)
-            for successor in lineage_graph.nx_graph.successors(current_node):
-                if successor not in visited:
-                    node_data = lineage_graph.nodes.get(successor)
-                    if node_data:
-                        downstream_nodes.append({
-                            "node_id": successor,
-                            "node_type": node_data.node_type,
-                            "table_name": node_data.table_name,
-                            "depth": depth + 1,
-                            "path_length": depth + 1
-                        })
-                    queue.append((successor, depth + 1))
-        
-        return downstream_nodes
-
-    async def _calculate_impact_levels(
-        self,
-        lineage_graph: LineageGraph,
-        root_node_id: str,
-        impacted_nodes: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> Dict[str, str]:
-        """Calculate impact levels for affected nodes"""
-        impact_levels = {}
-        
-        for node in impacted_nodes:
-            node_id = node["node_id"]
-            depth = node["depth"]
-            
-            # Calculate impact based on depth and node characteristics
-            if depth == 1:
-                impact_level = "high"
-            elif depth <= 3:
-                impact_level = "medium"
-            else:
-                impact_level = "low"
-            
-            # Adjust based on node quality score
-            node_data = lineage_graph.nodes.get(node_id)
-            if node_data and node_data.quality_score > 0.8:
-                if impact_level == "medium":
-                    impact_level = "high"
-                elif impact_level == "low":
-                    impact_level = "medium"
-            
-            impact_levels[node_id] = impact_level
-        
-        return impact_levels
-
-    async def _perform_risk_assessment(
-        self,
-        lineage_graph: LineageGraph,
-        root_node_id: str,
-        impacted_nodes: List[Dict[str, Any]],
-        impact_levels: Dict[str, str],
-        config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Perform comprehensive risk assessment"""
-        high_impact_count = sum(1 for level in impact_levels.values() if level == "high")
-        medium_impact_count = sum(1 for level in impact_levels.values() if level == "medium")
-        total_impacted = len(impacted_nodes)
-        
-        # Calculate overall risk score
-        risk_score = (high_impact_count * 3 + medium_impact_count * 2) / max(total_impacted, 1)
-        
-        # Determine risk level
-        if risk_score >= 2.5:
-            risk_level = "critical"
-        elif risk_score >= 2.0:
-            risk_level = "high"
-        elif risk_score >= 1.0:
-            risk_level = "medium"
-        else:
-            risk_level = "low"
-        
-        return {
-            "overall_risk_score": risk_score,
-            "risk_level": risk_level,
-            "total_impacted_nodes": total_impacted,
-            "high_impact_nodes": high_impact_count,
-            "medium_impact_nodes": medium_impact_count,
-            "risk_factors": [
-                f"Total of {total_impacted} nodes potentially impacted",
-                f"{high_impact_count} nodes with high impact risk",
-                f"Risk propagation through {len(set(node['depth'] for node in impacted_nodes))} levels"
-            ]
-        }
-
-    async def _generate_impact_recommendations(
-        self,
-        lineage_graph: LineageGraph,
-        root_node_id: str,
-        impacted_nodes: List[Dict[str, Any]],
-        risk_assessment: Dict[str, Any],
-        config: Dict[str, Any]
-    ) -> List[str]:
-        """Generate recommendations based on impact analysis"""
-        recommendations = []
-        
-        risk_level = risk_assessment.get("risk_level", "low")
-        high_impact_count = risk_assessment.get("high_impact_nodes", 0)
-        
-        if risk_level in ["critical", "high"]:
-            recommendations.extend([
-                "Implement comprehensive testing before making changes to this node",
-                "Consider creating backup/rollback procedures for downstream systems",
-                "Notify stakeholders of all downstream systems before changes"
-            ])
-        
-        if high_impact_count > 5:
-            recommendations.append(
-                "Consider phased rollout approach due to high number of impacted systems"
+            # Generate mitigation recommendations
+            mitigation_recommendations = await self._generate_mitigation_recommendations(
+                asset_id, impacted_assets, risk_assessment, change_type
             )
-        
-        if risk_level == "critical":
-            recommendations.extend([
-                "Require change approval from data governance committee",
-                "Implement real-time monitoring during change deployment",
-                "Consider maintenance window for critical downstream systems"
-            ])
-        
-        # Add node-specific recommendations
-        for node in impacted_nodes:
-            node_data = lineage_graph.nodes.get(node["node_id"])
-            if node_data and node_data.node_type == "view":
-                recommendations.append(
-                    f"Review and update view definition for {node_data.table_name} if schema changes"
-                )
-        
-        return recommendations
-
-    async def _calculate_analysis_confidence(
-        self,
-        lineage_graph: LineageGraph,
-        impacted_nodes: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> float:
-        """Calculate confidence score for the impact analysis"""
-        if not impacted_nodes:
-            return 1.0
-        
-        # Calculate based on edge confidence levels
-        total_confidence = 0.0
-        edge_count = 0
-        
-        for edge in lineage_graph.edges.values():
-            confidence_map = {
-                LineageConfidenceLevel.CONFIRMED: 1.0,
-                LineageConfidenceLevel.HIGH: 0.9,
-                LineageConfidenceLevel.MEDIUM: 0.7,
-                LineageConfidenceLevel.LOW: 0.5,
-                LineageConfidenceLevel.SUSPECTED: 0.3
-            }
-            total_confidence += confidence_map.get(edge.confidence_level, 0.5)
-            edge_count += 1
-        
-        if edge_count == 0:
-            return 0.5
-        
-        return total_confidence / edge_count
-
-    async def _validate_node(self, node: LineageNode, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate a lineage node"""
-        validation_result = {
-            "node_id": node.node_id,
-            "validation_status": "valid",
-            "issues": [],
-            "quality_score": 1.0
-        }
-        
-        # Check if node has required metadata
-        if not node.table_name:
-            validation_result["issues"].append("Missing table name")
-            validation_result["quality_score"] *= 0.8
-        
-        if node.data_source_id <= 0:
-            validation_result["issues"].append("Invalid data source ID")
-            validation_result["quality_score"] *= 0.7
-        
-        if validation_result["issues"]:
-            validation_result["validation_status"] = "invalid"
-        
-        return validation_result
-
-    async def _validate_edge(
-        self,
-        edge: LineageEdge,
-        nodes: Dict[str, LineageNode],
-        config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Validate a lineage edge"""
-        validation_result = {
-            "edge_id": edge.edge_id,
-            "validation_status": "valid",
-            "issues": [],
-            "quality_score": 1.0
-        }
-        
-        # Check if source and target nodes exist
-        if edge.source_node_id not in nodes:
-            validation_result["issues"].append("Source node does not exist")
-            validation_result["quality_score"] *= 0.5
-        
-        if edge.target_node_id not in nodes:
-            validation_result["issues"].append("Target node does not exist")
-            validation_result["quality_score"] *= 0.5
-        
-        # Check confidence level consistency
-        if edge.confidence_level == LineageConfidenceLevel.SUSPECTED:
-            validation_result["issues"].append("Low confidence relationship needs verification")
-            validation_result["quality_score"] *= 0.9
-        
-        if validation_result["issues"]:
-            validation_result["validation_status"] = "needs_review"
-        
-        return validation_result
-
-    async def _perform_consistency_checks(
-        self,
-        lineage_graph: LineageGraph,
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Perform consistency checks on the lineage graph"""
-        consistency_results = []
-        
-        # Check for circular dependencies
-        if lineage_graph.nx_graph and not nx.is_directed_acyclic_graph(lineage_graph.nx_graph):
-            consistency_results.append({
-                "check_type": "circular_dependency",
-                "status": "failed",
-                "message": "Circular dependencies detected in lineage graph",
-                "severity": "high"
-            })
-        else:
-            consistency_results.append({
-                "check_type": "circular_dependency",
-                "status": "passed",
-                "message": "No circular dependencies found",
-                "severity": "info"
-            })
-        
-        # Check for orphaned nodes
-        orphaned_nodes = []
-        for node_id, node in lineage_graph.nodes.items():
-            has_incoming = any(edge.target_node_id == node_id for edge in lineage_graph.edges.values())
-            has_outgoing = any(edge.source_node_id == node_id for edge in lineage_graph.edges.values())
             
-            if not has_incoming and not has_outgoing:
-                orphaned_nodes.append(node_id)
-        
-        if orphaned_nodes:
-            consistency_results.append({
-                "check_type": "orphaned_nodes",
-                "status": "warning",
-                "message": f"Found {len(orphaned_nodes)} orphaned nodes",
-                "severity": "medium",
-                "details": orphaned_nodes
-            })
-        
-        return consistency_results
-
-    async def _calculate_graph_quality_score(
-        self,
-        graph_validation: Dict[str, Any],
-        config: Dict[str, Any]
-    ) -> float:
-        """Calculate overall quality score for a lineage graph"""
-        node_scores = [v["quality_score"] for v in graph_validation["node_validations"]]
-        edge_scores = [v["quality_score"] for v in graph_validation["edge_validations"]]
-        
-        avg_node_score = sum(node_scores) / len(node_scores) if node_scores else 0.0
-        avg_edge_score = sum(edge_scores) / len(edge_scores) if edge_scores else 0.0
-        
-        # Penalize for consistency issues
-        consistency_penalty = 0.0
-        for check in graph_validation["consistency_checks"]:
-            if check["status"] == "failed":
-                consistency_penalty += 0.2
-            elif check["status"] == "warning":
-                consistency_penalty += 0.1
-        
-        quality_score = (avg_node_score * 0.4 + avg_edge_score * 0.6) - consistency_penalty
-        return max(0.0, min(1.0, quality_score))
-
-    async def _calculate_validation_quality_metrics(
-        self,
-        validation_results: List[Dict[str, Any]]
-    ) -> LineageQualityMetrics:
-        """Calculate overall validation quality metrics"""
-        if not validation_results:
-            return LineageQualityMetrics(
-                completeness_score=0.0,
-                accuracy_score=0.0,
-                freshness_score=0.0,
-                consistency_score=0.0,
-                validation_coverage=1.0,
-                overall_quality_score=0.0
+            # Create impact analysis result
+            impact_result = ImpactAnalysisResult(
+                analysis_id=analysis_id,
+                root_asset_id=asset_id,
+                impacted_assets=impacted_assets,
+                impact_levels=impact_levels,
+                propagation_paths=propagation_paths,
+                risk_assessment=risk_assessment,
+                mitigation_recommendations=mitigation_recommendations
             )
-        
-        # Calculate average quality scores
-        quality_scores = [result["quality_score"] for result in validation_results]
-        overall_quality_score = sum(quality_scores) / len(quality_scores)
-        
-        return LineageQualityMetrics(
-            completeness_score=overall_quality_score,
-            accuracy_score=overall_quality_score,
-            freshness_score=0.9,  # Recently validated
-            consistency_score=overall_quality_score,
-            validation_coverage=1.0,  # All graphs validated
-            overall_quality_score=overall_quality_score
-        )
-
-    async def _generate_validation_recommendations(
-        self,
-        validation_results: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> List[str]:
-        """Generate recommendations based on validation results"""
-        recommendations = []
-        
-        total_issues = sum(
-            len(result.get("node_validations", [])) + 
-            len(result.get("edge_validations", [])) 
-            for result in validation_results
-        )
-        
-        if total_issues > 10:
-            recommendations.append(
-                "High number of validation issues detected. Consider comprehensive lineage cleanup."
+            
+            # Cache the result
+            self.impact_cache[analysis_id] = impact_result
+            
+            # Store impact analysis
+            await self._store_impact_analysis(impact_result, change_type, change_details, context)
+            
+            # Emit impact analysis event
+            await self._emit_lineage_event(
+                "impact_analyzed",
+                {
+                    "analysis_id": analysis_id,
+                    "root_asset_id": asset_id,
+                    "change_type": change_type,
+                    "total_impacted": len(impacted_assets),
+                    "high_impact_count": impact_levels["high"],
+                    "processing_time": (datetime.utcnow() - start_time).total_seconds()
+                },
+                context
             )
-        
-        # Check for specific issue patterns
-        low_confidence_edges = 0
-        for result in validation_results:
-            for edge_validation in result.get("edge_validations", []):
-                if "Low confidence" in str(edge_validation.get("issues", [])):
-                    low_confidence_edges += 1
-        
-        if low_confidence_edges > 5:
-            recommendations.append(
-                "Multiple low-confidence relationships found. Implement human validation process."
-            )
-        
-        recommendations.extend([
-            "Implement automated lineage validation as part of CI/CD pipeline",
-            "Set up monitoring alerts for lineage quality degradation",
-            "Establish regular lineage quality review process"
-        ])
-        
-        return recommendations
+            
+            logger.info(f"Impact analysis {analysis_id} completed successfully")
+            return impact_result
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze impact for {asset_id}: {str(e)}")
+            raise
 
-    async def _build_visualization_graph(
+    async def _calculate_impact_level(
         self,
-        node_ids: List[str],
-        config: Dict[str, Any]
-    ) -> LineageGraph:
-        """Build a subgraph for visualization"""
-        # For this implementation, return the first available graph
-        # In production, this would filter based on node_ids
-        if self.lineage_graphs:
-            return list(self.lineage_graphs.values())[0]
+        source_asset_id: str,
+        target_asset_id: str,
+        change_type: str,
+        change_details: Dict[str, Any],
+        graph: nx.MultiDiGraph
+    ) -> str:
+        """Calculate impact level between source and target assets"""
         
-        # Return empty graph if none available
-        return LineageGraph(
-            graph_id="empty",
-            created_at=datetime.utcnow()
-        )
-
-    async def _calculate_graph_layout(
-        self,
-        viz_graph: LineageGraph,
-        config: Dict[str, Any]
-    ) -> Dict[str, Dict[str, float]]:
-        """Calculate layout positions for visualization"""
-        if not viz_graph.nx_graph or not viz_graph.nodes:
-            return {}
-        
-        # Use spring layout for positioning
         try:
-            pos = nx.spring_layout(viz_graph.nx_graph, k=1, iterations=50)
+            # Get path between assets
+            try:
+                path = shortest_path(graph, source_asset_id, target_asset_id)
+                path_length = len(path) - 1
+            except nx.NetworkXNoPath:
+                return "low"
+            
+            # Base impact calculation
+            base_impact = 1.0
+            
+            # Factor 1: Path distance (closer = higher impact)
+            distance_factor = max(0.1, 1.0 - (path_length - 1) * 0.2)
+            
+            # Factor 2: Asset criticality
+            target_data = graph.nodes[target_asset_id]
+            criticality = target_data.get("business_criticality", "medium")
+            criticality_factor = {
+                "critical": 1.0,
+                "high": 0.8,
+                "medium": 0.6,
+                "low": 0.4
+            }.get(criticality, 0.6)
+            
+            # Factor 3: Change type severity
+            change_severity = {
+                "schema_change": 0.9,
+                "data_deletion": 1.0,
+                "system_migration": 0.8,
+                "access_change": 0.5,
+                "metadata_update": 0.3
+            }.get(change_type, 0.6)
+            
+            # Factor 4: Relationship strength
+            edge_data = graph.get_edge_data(source_asset_id, target_asset_id)
+            if edge_data:
+                # Get the first edge (in case of multi-edges)
+                first_edge = list(edge_data.values())[0]
+                confidence = first_edge.get("confidence_score", 0.7)
+            else:
+                # Find indirect connection strength
+                confidence = 0.5
+            
+            # Calculate final impact score
+            impact_score = (
+                base_impact * 
+                distance_factor * 
+                criticality_factor * 
+                change_severity * 
+                confidence
+            )
+            
+            # Classify impact level
+            if impact_score >= 0.7:
+                return "high"
+            elif impact_score >= 0.4:
+                return "medium"
+            else:
+                return "low"
+                
+        except Exception as e:
+            logger.error(f"Error calculating impact level: {str(e)}")
+            return "medium"  # Default to medium on error
+
+    # ================================================================
+    # GRAPH ANALYTICS
+    # ================================================================
+
+    async def perform_graph_analysis(
+        self,
+        analysis_types: List[GraphAnalysisType],
+        asset_filter: Dict[str, Any] = None,
+        context: LineageContext = None
+    ) -> Dict[str, Any]:
+        """Perform comprehensive graph analysis on the lineage graph"""
+        
+        try:
+            if not context:
+                context = LineageContext(
+                    user_id="system",
+                    organization_id="default",
+                    business_domain="general",
+                    analysis_purpose="graph_analysis"
+                )
+            
+            analysis_id = f"graph_analysis_{uuid4().hex[:12]}"
+            start_time = datetime.utcnow()
+            
+            logger.info(f"Starting graph analysis {analysis_id}")
+            
+            # Get working graph (filtered if specified)
+            working_graph = await self._get_filtered_graph(asset_filter, context)
+            
+            analysis_results = {
+                "analysis_id": analysis_id,
+                "analysis_types": [at.value for at in analysis_types],
+                "graph_summary": {
+                    "total_nodes": working_graph.number_of_nodes(),
+                    "total_edges": working_graph.number_of_edges(),
+                    "is_connected": nx.is_connected(working_graph.to_undirected())
+                },
+                "results": {}
+            }
+            
+            # Perform requested analyses
+            for analysis_type in analysis_types:
+                try:
+                    if analysis_type == GraphAnalysisType.CENTRALITY:
+                        analysis_results["results"]["centrality"] = await self._analyze_centrality(working_graph)
+                    
+                    elif analysis_type == GraphAnalysisType.CLUSTERING:
+                        analysis_results["results"]["clustering"] = await self._analyze_clustering(working_graph)
+                    
+                    elif analysis_type == GraphAnalysisType.PATH_ANALYSIS:
+                        analysis_results["results"]["path_analysis"] = await self._analyze_paths(working_graph)
+                    
+                    elif analysis_type == GraphAnalysisType.BOTTLENECK_DETECTION:
+                        analysis_results["results"]["bottlenecks"] = await self._detect_bottlenecks(working_graph)
+                    
+                    elif analysis_type == GraphAnalysisType.CRITICAL_PATH:
+                        analysis_results["results"]["critical_paths"] = await self._find_critical_paths(working_graph)
+                    
+                    elif analysis_type == GraphAnalysisType.COMMUNITY_DETECTION:
+                        analysis_results["results"]["communities"] = await self._detect_communities(working_graph)
+                
+                except Exception as e:
+                    logger.error(f"Error in {analysis_type.value} analysis: {str(e)}")
+                    analysis_results["results"][analysis_type.value] = {"error": str(e)}
+            
+            # Generate insights and recommendations
+            analysis_results["insights"] = await self._generate_graph_insights(
+                analysis_results["results"], working_graph
+            )
+            
+            # Calculate processing time
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            analysis_results["processing_time_seconds"] = processing_time
+            
+            # Store analysis results
+            await self._store_graph_analysis(analysis_results, context)
+            
+            logger.info(f"Graph analysis {analysis_id} completed in {processing_time:.2f}s")
+            return analysis_results
+            
+        except Exception as e:
+            logger.error(f"Failed to perform graph analysis: {str(e)}")
+            raise
+
+    async def _analyze_centrality(self, graph: nx.MultiDiGraph) -> Dict[str, Any]:
+        """Analyze centrality measures in the graph"""
+        
+        try:
+            # Convert to simple graph for centrality calculations
+            simple_graph = nx.Graph()
+            simple_graph.add_nodes_from(graph.nodes(data=True))
+            simple_graph.add_edges_from(graph.edges())
+            
+            centrality_results = {}
+            
+            # Degree centrality
+            degree_centrality = centrality.degree_centrality(simple_graph)
+            centrality_results["degree_centrality"] = {
+                "top_10": sorted(degree_centrality.items(), key=lambda x: x[1], reverse=True)[:10],
+                "average": np.mean(list(degree_centrality.values())),
+                "max": max(degree_centrality.values()) if degree_centrality else 0
+            }
+            
+            # Betweenness centrality (for connected components)
+            if nx.is_connected(simple_graph):
+                betweenness = centrality.betweenness_centrality(simple_graph)
+                centrality_results["betweenness_centrality"] = {
+                    "top_10": sorted(betweenness.items(), key=lambda x: x[1], reverse=True)[:10],
+                    "average": np.mean(list(betweenness.values())),
+                    "max": max(betweenness.values()) if betweenness else 0
+                }
+            
+            # Closeness centrality
+            if nx.is_connected(simple_graph):
+                closeness = centrality.closeness_centrality(simple_graph)
+                centrality_results["closeness_centrality"] = {
+                    "top_10": sorted(closeness.items(), key=lambda x: x[1], reverse=True)[:10],
+                    "average": np.mean(list(closeness.values())),
+                    "max": max(closeness.values()) if closeness else 0
+                }
+            
+            # PageRank (for directed graph)
+            if graph.number_of_nodes() > 0:
+                pagerank = nx.pagerank(graph)
+                centrality_results["pagerank"] = {
+                    "top_10": sorted(pagerank.items(), key=lambda x: x[1], reverse=True)[:10],
+                    "average": np.mean(list(pagerank.values())),
+                    "max": max(pagerank.values()) if pagerank else 0
+                }
+            
+            return centrality_results
+            
+        except Exception as e:
+            logger.error(f"Error in centrality analysis: {str(e)}")
+            return {"error": str(e)}
+
+    async def _detect_communities(self, graph: nx.MultiDiGraph) -> Dict[str, Any]:
+        """Detect communities in the graph"""
+        
+        try:
+            # Convert to undirected graph for community detection
+            undirected_graph = graph.to_undirected()
+            
+            if undirected_graph.number_of_nodes() < 2:
+                return {"communities": [], "modularity": 0.0}
+            
+            # Use Louvain method for community detection
+            communities_generator = community.greedy_modularity_communities(undirected_graph)
+            communities_list = list(communities_generator)
+            
+            # Calculate modularity
+            try:
+                modularity_score = community.modularity(undirected_graph, communities_list)
+            except:
+                modularity_score = 0.0
+            
+            # Format communities
+            formatted_communities = []
+            for i, comm in enumerate(communities_list):
+                community_data = {
+                    "community_id": i,
+                    "size": len(comm),
+                    "nodes": list(comm),
+                    "internal_edges": undirected_graph.subgraph(comm).number_of_edges(),
+                    "representative_nodes": await self._get_community_representatives(comm, undirected_graph)
+                }
+                formatted_communities.append(community_data)
+            
             return {
-                node_id: {"x": float(coords[0] * 100), "y": float(coords[1] * 100)}
-                for node_id, coords in pos.items()
+                "communities": formatted_communities,
+                "total_communities": len(communities_list),
+                "modularity": modularity_score,
+                "largest_community_size": max([len(c) for c in communities_list]) if communities_list else 0
             }
-        except:
-            # Fallback to simple positioning
-            positions = {}
-            for i, node_id in enumerate(viz_graph.nodes.keys()):
-                positions[node_id] = {"x": i * 100, "y": 0}
-            return positions
+            
+        except Exception as e:
+            logger.error(f"Error in community detection: {str(e)}")
+            return {"error": str(e)}
 
-    async def _generate_node_styles(
+    # ================================================================
+    # REAL-TIME MONITORING
+    # ================================================================
+
+    async def start_real_time_tracking(
         self,
-        viz_graph: LineageGraph,
+        asset_ids: List[str],
+        tracking_config: Dict[str, Any],
+        context: LineageContext
+    ) -> str:
+        """Start real-time lineage tracking for specified assets"""
+        
+        try:
+            tracking_id = f"track_{uuid4().hex[:12]}"
+            
+            tracking_session = {
+                "tracking_id": tracking_id,
+                "asset_ids": asset_ids,
+                "config": tracking_config,
+                "context": context,
+                "start_time": datetime.utcnow(),
+                "status": "active",
+                "events_captured": 0,
+                "last_activity": datetime.utcnow()
+            }
+            
+            self.active_tracking_sessions[tracking_id] = tracking_session
+            
+            # Start monitoring task
+            monitoring_task = asyncio.create_task(
+                self._monitor_assets_real_time(tracking_id, asset_ids, tracking_config)
+            )
+            self.background_tasks.append(monitoring_task)
+            
+            logger.info(f"Started real-time tracking {tracking_id} for {len(asset_ids)} assets")
+            return tracking_id
+            
+        except Exception as e:
+            logger.error(f"Failed to start real-time tracking: {str(e)}")
+            raise
+
+    async def _monitor_assets_real_time(
+        self,
+        tracking_id: str,
+        asset_ids: List[str],
         config: Dict[str, Any]
-    ) -> Dict[str, Dict[str, Any]]:
-        """Generate styling for nodes"""
-        styles = {}
+    ):
+        """Monitor assets for real-time lineage changes"""
         
-        for node_id, node in viz_graph.nodes.items():
-            # Color based on node type
-            color_map = {
-                "table": "#4CAF50",
-                "view": "#2196F3",
-                "file": "#FF9800",
-                "api_endpoint": "#9C27B0"
-            }
+        try:
+            monitoring_interval = config.get("monitoring_interval", 30)  # seconds
             
-            styles[node_id] = {
-                "backgroundColor": color_map.get(node.node_type, "#757575"),
-                "borderColor": "#000000",
-                "borderWidth": 2,
-                "fontSize": 12,
-                "shape": "rectangle" if node.node_type == "table" else "ellipse"
-            }
+            while tracking_id in self.active_tracking_sessions:
+                try:
+                    # Check for changes in each asset
+                    for asset_id in asset_ids:
+                        changes = await self._detect_asset_changes(asset_id, config)
+                        
+                        if changes:
+                            # Process detected changes
+                            await self._process_lineage_changes(tracking_id, asset_id, changes)
+                            
+                            # Update tracking session
+                            session = self.active_tracking_sessions[tracking_id]
+                            session["events_captured"] += len(changes)
+                            session["last_activity"] = datetime.utcnow()
+                    
+                    # Wait for next monitoring cycle
+                    await asyncio.sleep(monitoring_interval)
+                    
+                except Exception as e:
+                    logger.error(f"Error in real-time monitoring for {tracking_id}: {str(e)}")
+                    await asyncio.sleep(monitoring_interval)
         
-        return styles
+        except asyncio.CancelledError:
+            logger.info(f"Real-time monitoring for {tracking_id} cancelled")
+        except Exception as e:
+            logger.error(f"Real-time monitoring failed for {tracking_id}: {str(e)}")
 
-    async def _generate_edge_styles(
+    async def _detect_asset_changes(
         self,
-        viz_graph: LineageGraph,
-        config: Dict[str, Any]
-    ) -> Dict[str, Dict[str, Any]]:
-        """Generate styling for edges"""
-        styles = {}
-        
-        for edge_id, edge in viz_graph.edges.items():
-            # Color based on confidence level
-            confidence_colors = {
-                LineageConfidenceLevel.CONFIRMED: "#4CAF50",
-                LineageConfidenceLevel.HIGH: "#8BC34A",
-                LineageConfidenceLevel.MEDIUM: "#FFC107",
-                LineageConfidenceLevel.LOW: "#FF9800",
-                LineageConfidenceLevel.SUSPECTED: "#F44336"
-            }
-            
-            # Line style based on relationship type
-            line_styles = {
-                LineageRelationType.DIRECT_COPY: "solid",
-                LineageRelationType.TRANSFORMATION: "dashed",
-                LineageRelationType.AGGREGATION: "dotted",
-                LineageRelationType.REFERENCE: "solid"
-            }
-            
-            styles[edge_id] = {
-                "stroke": confidence_colors.get(edge.confidence_level, "#757575"),
-                "strokeWidth": 2,
-                "strokeDasharray": "5,5" if line_styles.get(edge.relation_type) == "dashed" else None,
-                "markerEnd": "arrow"
-            }
-        
-        return styles
-
-    async def _calculate_visualization_metrics(self, viz_graph: LineageGraph) -> Dict[str, Any]:
-        """Calculate metrics for the visualization"""
-        if not viz_graph.nx_graph:
-            return {
-                "node_count": len(viz_graph.nodes),
-                "edge_count": len(viz_graph.edges),
-                "complexity": "low"
-            }
-        
-        node_count = viz_graph.nx_graph.number_of_nodes()
-        edge_count = viz_graph.nx_graph.number_of_edges()
-        
-        # Calculate graph complexity
-        if node_count > 50 or edge_count > 100:
-            complexity = "high"
-        elif node_count > 20 or edge_count > 40:
-            complexity = "medium"
-        else:
-            complexity = "low"
-        
-        return {
-            "node_count": node_count,
-            "edge_count": edge_count,
-            "complexity": complexity,
-            "max_depth": 0,  # Would calculate actual depth in production
-            "branching_factor": edge_count / max(node_count, 1)
-        }
-
-    async def _generate_visualization_legend(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate legend for the visualization"""
-        return {
-            "node_types": {
-                "table": {"color": "#4CAF50", "shape": "rectangle"},
-                "view": {"color": "#2196F3", "shape": "ellipse"},
-                "file": {"color": "#FF9800", "shape": "rectangle"},
-                "api_endpoint": {"color": "#9C27B0", "shape": "ellipse"}
-            },
-            "confidence_levels": {
-                "confirmed": {"color": "#4CAF50"},
-                "high": {"color": "#8BC34A"}, 
-                "medium": {"color": "#FFC107"},
-                "low": {"color": "#FF9800"},
-                "suspected": {"color": "#F44336"}
-            },
-            "relationship_types": {
-                "direct_copy": {"style": "solid"},
-                "transformation": {"style": "dashed"},
-                "aggregation": {"style": "dotted"},
-                "reference": {"style": "solid"}
-            }
-        }
-
-    async def _find_cross_system_relationships(
-        self,
-        data_sources: List[DataSource],
+        asset_id: str,
         config: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Find relationships between different data systems"""
-        relationships = []
+        """Detect changes in an asset"""
         
-        # Mock cross-system relationship discovery
-        for i, source1 in enumerate(data_sources):
-            for source2 in data_sources[i+1:]:
-                # Look for naming patterns suggesting data movement
-                if source1.source_type != source2.source_type:
-                    relationships.append({
-                        "relationship_id": str(uuid.uuid4()),
-                        "source_system": source1.id,
-                        "target_system": source2.id,
-                        "source_type": source1.source_type.value,
-                        "target_type": source2.source_type.value,
-                        "relationship_type": "data_transfer",
-                        "confidence": "medium",
-                        "evidence": "Different system types suggest ETL process"
-                    })
+        changes = []
         
-        return relationships
-
-    async def _analyze_cross_system_flows(
-        self,
-        data_sources: List[DataSource],
-        relationships: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Analyze data flow patterns between systems"""
-        flow_patterns = {
-            "data_ingestion_flows": [],
-            "data_processing_flows": [],
-            "data_export_flows": [],
-            "flow_complexity": "medium"
-        }
-        
-        # Analyze flow directions based on system types
-        for relationship in relationships:
-            source_id = relationship["source_system"]
-            target_id = relationship["target_system"]
+        try:
+            # This would integrate with actual data systems to detect changes
+            # For demo purposes, we'll simulate change detection
             
-            source_system = next((ds for ds in data_sources if ds.id == source_id), None)
-            target_system = next((ds for ds in data_sources if ds.id == target_id), None)
+            # Check for schema changes
+            if config.get("detect_schema_changes", True):
+                schema_changes = await self._check_schema_changes(asset_id)
+                changes.extend(schema_changes)
             
-            if source_system and target_system:
-                # Classify flow type based on system characteristics
-                if source_system.source_type in [DataSourceType.S3, DataSourceType.MONGODB]:
-                    flow_patterns["data_ingestion_flows"].append({
-                        "source": source_system.name,
-                        "target": target_system.name,
-                        "flow_type": "ingestion"
-                    })
-                elif target_system.source_type == DataSourceType.SNOWFLAKE:
-                    flow_patterns["data_processing_flows"].append({
-                        "source": source_system.name,
-                        "target": target_system.name,
-                        "flow_type": "processing"
-                    })
-        
-        return flow_patterns
-
-    async def _identify_integration_points(
-        self,
-        data_sources: List[DataSource],
-        relationships: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Identify key integration points between systems"""
-        integration_points = []
-        
-        # Count connections per system
-        system_connections = defaultdict(int)
-        for relationship in relationships:
-            system_connections[relationship["source_system"]] += 1
-            system_connections[relationship["target_system"]] += 1
-        
-        # Identify highly connected systems as integration hubs
-        for data_source in data_sources:
-            connection_count = system_connections.get(data_source.id, 0)
-            if connection_count >= 2:  # Hub threshold
-                integration_points.append({
-                    "system_id": data_source.id,
-                    "system_name": data_source.name,
-                    "system_type": data_source.source_type.value,
-                    "connection_count": connection_count,
-                    "integration_level": "high" if connection_count >= 3 else "medium",
-                    "criticality": "high"  # Systems with many connections are critical
-                })
-        
-        return integration_points
-
-    async def _calculate_system_dependencies(
-        self,
-        data_sources: List[DataSource],
-        relationships: List[Dict[str, Any]],
-        config: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Calculate dependency metrics between systems"""
-        dependency_metrics = {
-            "system_criticality": {},
-            "dependency_chains": [],
-            "single_points_of_failure": [],
-            "overall_coupling": 0.0
-        }
-        
-        # Calculate system criticality based on connections
-        system_connections = defaultdict(int)
-        for relationship in relationships:
-            system_connections[relationship["source_system"]] += 1
-            system_connections[relationship["target_system"]] += 1
-        
-        for data_source in data_sources:
-            connection_count = system_connections.get(data_source.id, 0)
-            criticality_score = min(1.0, connection_count / 5.0)  # Normalize to 0-1
+            # Check for data changes
+            if config.get("detect_data_changes", True):
+                data_changes = await self._check_data_changes(asset_id)
+                changes.extend(data_changes)
             
-            dependency_metrics["system_criticality"][str(data_source.id)] = {
-                "system_name": data_source.name,
-                "criticality_score": criticality_score,
-                "connection_count": connection_count
+            # Check for relationship changes
+            if config.get("detect_relationship_changes", True):
+                relationship_changes = await self._check_relationship_changes(asset_id)
+                changes.extend(relationship_changes)
+            
+            return changes
+            
+        except Exception as e:
+            logger.error(f"Error detecting changes for asset {asset_id}: {str(e)}")
+            return changes
+
+    # ================================================================
+    # UTILITY AND HELPER METHODS
+    # ================================================================
+
+    async def _get_asset_info(self, asset_id: str, context: LineageContext) -> Dict[str, Any]:
+        """Get comprehensive asset information"""
+        
+        try:
+            # Query catalog for asset information
+            stmt = select(AdvancedCatalogEntry).where(
+                AdvancedCatalogEntry.catalog_entry_id == asset_id
+            )
+            
+            result = await self.db.execute(stmt)
+            catalog_entry = result.scalar_one_or_none()
+            
+            if catalog_entry:
+                return {
+                    "name": catalog_entry.name,
+                    "type": catalog_entry.entry_type.value,
+                    "status": catalog_entry.status.value,
+                    "business_criticality": catalog_entry.business_criticality.value if catalog_entry.business_criticality else "medium",
+                    "quality_score": catalog_entry.quality_score or 0.0,
+                    "last_updated": catalog_entry.updated_at or catalog_entry.created_at,
+                    "data_classification": catalog_entry.data_classification or [],
+                    "stewardship_info": catalog_entry.stewardship_info or {}
+                }
+            else:
+                # Return basic info if not in catalog
+                return {
+                    "name": asset_id,
+                    "type": "unknown",
+                    "status": "active",
+                    "business_criticality": "medium",
+                    "quality_score": 0.5,
+                    "last_updated": datetime.utcnow(),
+                    "data_classification": [],
+                    "stewardship_info": {}
+                }
+                
+        except Exception as e:
+            logger.error(f"Error getting asset info for {asset_id}: {str(e)}")
+            return {
+                "name": asset_id,
+                "type": "unknown",
+                "status": "active", 
+                "business_criticality": "medium",
+                "quality_score": 0.5,
+                "last_updated": datetime.utcnow(),
+                "data_classification": [],
+                "stewardship_info": {}
+            }
+
+    async def _emit_lineage_event(
+        self,
+        event_type: str,
+        event_data: Dict[str, Any],
+        context: LineageContext
+    ):
+        """Emit lineage-related events"""
+        try:
+            event = {
+                "event_id": f"evt_{uuid4().hex[:8]}",
+                "event_type": event_type,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user_id": context.user_id,
+                "organization_id": context.organization_id,
+                "business_domain": context.business_domain,
+                "data": event_data
             }
             
-            # Identify single points of failure
-            if connection_count >= 3:
-                dependency_metrics["single_points_of_failure"].append({
-                    "system_id": data_source.id,
-                    "system_name": data_source.name,
-                    "risk_level": "high"
-                })
-        
-        # Calculate overall coupling
-        total_systems = len(data_sources)
-        total_relationships = len(relationships)
-        max_possible_relationships = total_systems * (total_systems - 1) / 2
-        dependency_metrics["overall_coupling"] = total_relationships / max_possible_relationships if max_possible_relationships > 0 else 0.0
-        
-        return dependency_metrics
+            # Add to audit trail
+            self.audit_trail.append(event)
+            
+            # Execute registered event handlers
+            handlers = self.event_handlers.get(event_type, [])
+            for handler in handlers:
+                try:
+                    await handler(event, context)
+                except Exception as e:
+                    logger.warning(f"Event handler failed: {str(e)}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to emit lineage event: {str(e)}")
 
-    async def _generate_cross_system_recommendations(
-        self,
-        data_sources: List[DataSource],
-        relationships: List[Dict[str, Any]],
-        dependency_metrics: Dict[str, Any],
-        config: Dict[str, Any]
-    ) -> List[str]:
-        """Generate recommendations for cross-system lineage management"""
-        recommendations = []
-        
-        # Check overall coupling
-        coupling = dependency_metrics.get("overall_coupling", 0.0)
-        if coupling > 0.7:
-            recommendations.append(
-                "High system coupling detected. Consider implementing service mesh or API gateway for better decoupling."
+    def register_event_handler(self, event_type: str, handler):
+        """Register an event handler for lineage events"""
+        self.event_handlers[event_type].append(handler)
+
+    async def get_lineage_metrics(self, time_range: Tuple[datetime, datetime] = None) -> Dict[str, Any]:
+        """Get comprehensive lineage metrics"""
+        try:
+            if not time_range:
+                end_time = datetime.utcnow()
+                start_time = end_time - timedelta(days=7)
+                time_range = (start_time, end_time)
+            
+            # Query lineage segments within time range
+            stmt = select(LineageSegment).where(
+                and_(
+                    LineageSegment.created_at >= time_range[0],
+                    LineageSegment.created_at <= time_range[1]
+                )
             )
-        
-        # Check single points of failure
-        spofs = dependency_metrics.get("single_points_of_failure", [])
-        if spofs:
-            recommendations.append(
-                f"Identified {len(spofs)} single points of failure. Implement redundancy and failover mechanisms."
-            )
-        
-        # Check system diversity
-        system_types = set(ds.source_type for ds in data_sources)
-        if len(system_types) > 5:
-            recommendations.append(
-                "High system diversity detected. Consider standardizing on fewer technology stacks."
-            )
-        
-        recommendations.extend([
-            "Implement cross-system data quality monitoring",
-            "Establish SLAs for cross-system data transfers",
-            "Create disaster recovery plans for critical data flows",
-            "Implement automated lineage validation across system boundaries"
-        ])
-        
-        return recommendations
+            
+            result = await self.db.execute(stmt)
+            segments = result.scalars().all()
+            
+            # Calculate metrics
+            metrics = {
+                "time_range": {
+                    "start": time_range[0].isoformat(),
+                    "end": time_range[1].isoformat()
+                },
+                "lineage_segments": {
+                    "total": len(segments),
+                    "by_type": Counter([s.lineage_type.value for s in segments]),
+                    "by_discovery_method": Counter([s.discovery_method.value for s in segments]),
+                    "by_confidence": Counter([s.confidence_level.value for s in segments])
+                },
+                "graph_metrics": {
+                    "total_nodes": self.lineage_graph.number_of_nodes(),
+                    "total_edges": self.lineage_graph.number_of_edges(),
+                    "average_degree": (2 * self.lineage_graph.number_of_edges()) / max(1, self.lineage_graph.number_of_nodes())
+                },
+                "performance_metrics": {
+                    "average_analysis_time": np.mean(self.performance_metrics.get("analysis_times", [5.0])),
+                    "cache_hit_rate": len(self.graph_cache) / max(1, len(self.analysis_history)),
+                    "active_tracking_sessions": len(self.active_tracking_sessions)
+                }
+            }
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Failed to get lineage metrics: {str(e)}")
+            return {"error": str(e)}
 
-    # ===================== VALIDATION HELPER METHODS =====================
+    def _start_background_monitoring(self):
+        """Start background monitoring tasks"""
+        try:
+            self.monitoring_enabled = True
+            
+            # Start cache cleanup task
+            cleanup_task = asyncio.create_task(self._cache_cleanup_loop())
+            self.background_tasks.append(cleanup_task)
+            
+            # Start metrics collection task
+            metrics_task = asyncio.create_task(self._metrics_collection_loop())
+            self.background_tasks.append(metrics_task)
+            
+            logger.info("Background monitoring started")
+        except Exception as e:
+            logger.error(f"Failed to start background monitoring: {str(e)}")
 
-    async def _validate_schema_consistency(self, lineage_graph: LineageGraph) -> bool:
-        """Validate schema consistency across lineage relationships"""
-        # Implementation would check data types, column names, etc.
-        return True
+    async def _cache_cleanup_loop(self):
+        """Periodic cache cleanup"""
+        while self.monitoring_enabled:
+            try:
+                # Clean up old cache entries
+                current_time = datetime.utcnow()
+                
+                # Clean graph cache (keep last 100 entries)
+                if len(self.graph_cache) > 100:
+                    # Remove oldest entries
+                    sorted_keys = sorted(self.graph_cache.keys())
+                    for key in sorted_keys[:-100]:
+                        del self.graph_cache[key]
+                
+                # Clean impact cache (keep last 50 entries)
+                if len(self.impact_cache) > 50:
+                    sorted_keys = sorted(self.impact_cache.keys())
+                    for key in sorted_keys[:-50]:
+                        del self.impact_cache[key]
+                
+                # Wait for next cleanup cycle (1 hour)
+                await asyncio.sleep(3600)
+                
+            except Exception as e:
+                logger.error(f"Error in cache cleanup: {str(e)}")
+                await asyncio.sleep(3600)
 
-    async def _validate_temporal_consistency(self, lineage_graph: LineageGraph) -> bool:
-        """Validate temporal consistency of relationships"""
-        # Implementation would check timestamps, update frequencies, etc.
-        return True
+    async def shutdown(self):
+        """Gracefully shutdown the lineage service"""
+        try:
+            logger.info("Shutting down Advanced Lineage Service")
+            
+            # Stop monitoring
+            self.monitoring_enabled = False
+            self.shutdown_event.set()
+            
+            # Cancel background tasks
+            for task in self.background_tasks:
+                task.cancel()
+            
+            # Wait for tasks to complete
+            if self.background_tasks:
+                await asyncio.gather(*self.background_tasks, return_exceptions=True)
+            
+            # Shutdown thread pool
+            if hasattr(self, 'thread_pool'):
+                self.thread_pool.shutdown(wait=False)
+            
+            logger.info("Advanced Lineage Service shutdown completed")
+            
+        except Exception as e:
+            logger.error(f"Error during shutdown: {str(e)}")
 
-
-# ===================== SERVICE FACTORY =====================
-
-def create_advanced_lineage_service() -> AdvancedLineageService:
-    """
-    Factory function to create and configure an Advanced Lineage Service instance
-    
-    Returns:
-        Configured AdvancedLineageService instance
-    """
-    return AdvancedLineageService()
+    def __del__(self):
+        """Cleanup when service is destroyed"""
+        try:
+            if hasattr(self, 'thread_pool'):
+                self.thread_pool.shutdown(wait=False)
+        except Exception:
+            pass
