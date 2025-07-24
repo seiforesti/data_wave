@@ -167,6 +167,20 @@ app.include_router(ai_routes)  # Add AI classification routes (Version 3)
 # 1. SCAN-RULE-SETS GROUP - Enterprise Implementation (85KB+ Service)
 app.include_router(enterprise_scan_rules_router, tags=["Enterprise Scan Rules"])
 
+# ========================================
+# SCAN-RULE-SETS COMPLETED ROUTES - Full Implementation
+# ========================================
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_template_routes import router as rule_template_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_version_control_routes import router as rule_version_control_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.analytics_reporting_routes import router as analytics_reporting_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.enhanced_collaboration_routes import router as enhanced_collaboration_router
+
+# Include Scan-Rule-Sets completed routes
+app.include_router(rule_template_router, tags=["Rule Templates"])
+app.include_router(rule_version_control_router, tags=["Rule Version Control"])
+app.include_router(analytics_reporting_router, tags=["Analytics & Reporting"])
+app.include_router(enhanced_collaboration_router, tags=["Enhanced Collaboration"])
+
 # 2. DATA CATALOG GROUP - Enterprise Implementation (95KB+ Service)
 app.include_router(enterprise_catalog_router, tags=["Enterprise Data Catalog"])
 app.include_router(intelligent_discovery_router, tags=["Intelligent Discovery"])
