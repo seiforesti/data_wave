@@ -78,7 +78,7 @@ from ..core.logging import StructuredLogger
 from .data_source_service import DataSourceService
 from .classification_service import ClassificationService
 from .compliance_service import ComplianceService
-from .catalog_service import CatalogService
+from .catalog_service import EnhancedCatalogService
 
 # Configure structured logging
 logger = StructuredLogger(__name__)

@@ -67,7 +67,7 @@ from ..models.compliance_models import ComplianceRequirement
 from .classification_service import EnterpriseClassificationService
 from .scan_service import ScanService
 from .compliance_rule_service import ComplianceRuleService
-from .catalog_service import CatalogService
+from .catalog_service import EnhancedCatalogService
 from .data_profiling_service import DataProfilingService
 from .performance_service import PerformanceService
 from .security_service import SecurityService
