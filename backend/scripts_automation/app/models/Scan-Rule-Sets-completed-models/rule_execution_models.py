@@ -17,453 +17,437 @@ Key Features:
 - Anomaly detection results
 """
 
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Dict, List, Optional, Any, Union
+from sqlmodel import SQLModel, Field, Relationship, Column, JSON, String, Text, Integer, Float, Boolean, DateTime
+from typing import List, Optional, Dict, Any, Union, Set, Tuple
 from datetime import datetime, timedelta
 from enum import Enum
-from uuid import UUID, uuid4
-from pydantic import BaseModel, validator
+import uuid
 import json
+from pydantic import BaseModel, validator
+from sqlalchemy import Index, UniqueConstraint, CheckConstraint
 
+# ===================================
+# ENUMS AND CONSTANTS
+# ===================================
 
-# ===============================
-# EXECUTION STATUS ENUMS
-# ===============================
-
-class RuleExecutionStatus(str, Enum):
-    """Rule execution status enumeration"""
+class ExecutionStatus(str, Enum):
+    """Execution status for rule workflows."""
     PENDING = "pending"
-    RUNNING = "running" 
+    RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
-    TIMEOUT = "timeout"
-    RETRY = "retry"
     PAUSED = "paused"
-
-
-class ValidationStatus(str, Enum):
-    """Rule validation status enumeration"""
-    VALID = "valid"
-    INVALID = "invalid"
-    WARNING = "warning"
-    ERROR = "error"
-    PENDING = "pending"
+    RETRYING = "retrying"
+    TIMEOUT = "timeout"
     SKIPPED = "skipped"
 
-
 class ExecutionPriority(str, Enum):
-    """Execution priority levels"""
-    LOW = "low"
-    NORMAL = "normal"
-    HIGH = "high"
+    """Priority levels for rule execution."""
     CRITICAL = "critical"
-    EMERGENCY = "emergency"
-
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    BACKGROUND = "background"
 
 class ResourceType(str, Enum):
-    """Resource type enumeration"""
+    """Types of resources for execution."""
     CPU = "cpu"
     MEMORY = "memory"
     STORAGE = "storage"
     NETWORK = "network"
     GPU = "gpu"
-    DATABASE = "database"
+    DATABASE_CONNECTIONS = "database_connections"
 
+class WorkflowType(str, Enum):
+    """Types of workflow execution."""
+    BATCH = "batch"
+    STREAMING = "streaming"
+    REAL_TIME = "real_time"
+    SCHEDULED = "scheduled"
+    TRIGGER_BASED = "trigger_based"
+    HYBRID = "hybrid"
 
-# ===============================
+class FailureRecoveryStrategy(str, Enum):
+    """Failure recovery strategies."""
+    RETRY = "retry"
+    SKIP = "skip"
+    ROLLBACK = "rollback"
+    MANUAL_INTERVENTION = "manual_intervention"
+    ALTERNATIVE_PATH = "alternative_path"
+    GRACEFUL_DEGRADATION = "graceful_degradation"
+
+# ===================================
 # CORE EXECUTION MODELS
-# ===============================
+# ===================================
 
-class RuleExecutionHistoryBase(SQLModel):
-    """Base model for rule execution history"""
-    rule_id: int = Field(description="ID of the executed rule")
-    execution_start: datetime = Field(default_factory=datetime.now, description="Execution start timestamp")
-    execution_end: Optional[datetime] = Field(default=None, description="Execution end timestamp")
-    status: RuleExecutionStatus = Field(default=RuleExecutionStatus.PENDING, description="Execution status")
-    priority: ExecutionPriority = Field(default=ExecutionPriority.NORMAL, description="Execution priority")
+class RuleExecutionWorkflow(SQLModel, table=True):
+    """
+    Advanced workflow model for rule execution orchestration.
+    """
+    __tablename__ = "rule_execution_workflows"
+    
+    # Primary Fields
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workflow_id: str = Field(default_factory=lambda: str(uuid.uuid4()), unique=True, index=True)
+    name: str = Field(max_length=200, index=True)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    
+    # Workflow Configuration
+    workflow_type: WorkflowType
+    execution_strategy: str = Field(max_length=100)  # sequential, parallel, hybrid
+    max_parallel_executions: int = Field(default=5, ge=1, le=100)
+    timeout_minutes: int = Field(default=60, ge=1, le=1440)
+    retry_attempts: int = Field(default=3, ge=0, le=10)
+    failure_recovery_strategy: FailureRecoveryStrategy
+    
+    # Priority and Scheduling
+    priority: ExecutionPriority = Field(default=ExecutionPriority.MEDIUM)
+    schedule_expression: Optional[str] = Field(default=None, max_length=100)  # Cron expression
+    auto_retry_enabled: bool = Field(default=True)
+    
+    # Resource Configuration
+    resource_requirements: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    resource_limits: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    execution_environment: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Dependencies and Relationships
+    dependent_workflows: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    prerequisite_workflows: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    associated_rule_sets: List[int] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Execution Configuration
+    execution_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    notification_settings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Metadata and Tracking
+    created_by: str = Field(max_length=100)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_executed_at: Optional[datetime] = Field(default=None)
+    next_scheduled_at: Optional[datetime] = Field(default=None)
+    
+    # Status and Monitoring
+    is_active: bool = Field(default=True)
+    is_template: bool = Field(default=False)
+    execution_count: int = Field(default=0, ge=0)
+    success_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
     
     # Performance Metrics
-    duration_seconds: Optional[float] = Field(default=None, description="Execution duration in seconds")
-    cpu_usage_percent: Optional[float] = Field(default=None, description="CPU usage percentage")
-    memory_usage_mb: Optional[float] = Field(default=None, description="Memory usage in MB")
-    records_processed: Optional[int] = Field(default=None, description="Number of records processed")
-    records_failed: Optional[int] = Field(default=None, description="Number of records that failed")
-    
-    # Execution Context
-    execution_context: Dict[str, Any] = Field(default_factory=dict, description="Execution context and parameters")
-    error_message: Optional[str] = Field(default=None, description="Error message if execution failed")
-    error_stack_trace: Optional[str] = Field(default=None, description="Full error stack trace")
-    retry_count: int = Field(default=0, description="Number of retry attempts")
-    
-    # Environment Info
-    execution_node: Optional[str] = Field(default=None, description="Node where execution occurred")
-    execution_version: Optional[str] = Field(default=None, description="Rule version at execution time")
-    triggered_by: Optional[str] = Field(default=None, description="User or system that triggered execution")
-
-
-class RuleExecutionHistory(RuleExecutionHistoryBase, table=True):
-    """Rule execution history tracking"""
-    __tablename__ = "rule_execution_history"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    average_execution_time_seconds: Optional[float] = Field(default=None, ge=0)
+    total_execution_time_seconds: float = Field(default=0, ge=0)
     
     # Relationships
-    validation_results: List["RuleValidationResult"] = Relationship(back_populates="execution")
-    performance_metrics: List["ExecutionPerformanceMetric"] = Relationship(back_populates="execution")
-
-
-class RuleValidationResultBase(SQLModel):
-    """Base model for rule validation results"""
-    execution_id: int = Field(description="ID of the execution this validation belongs to")
-    validation_type: str = Field(description="Type of validation performed")
-    validation_status: ValidationStatus = Field(description="Validation result status")
+    executions: List["RuleExecutionInstance"] = Relationship(back_populates="workflow")
+    resource_allocations: List["ResourceAllocation"] = Relationship(back_populates="workflow")
     
-    validation_message: Optional[str] = Field(default=None, description="Validation message or error")
-    validation_details: Dict[str, Any] = Field(default_factory=dict, description="Detailed validation results")
-    validation_score: Optional[float] = Field(default=None, description="Validation score (0-100)")
-    
-    # Validation Timing
-    validation_start: datetime = Field(default_factory=datetime.now)
-    validation_end: Optional[datetime] = Field(default=None)
-    validation_duration_ms: Optional[float] = Field(default=None, description="Validation duration in milliseconds")
-    
-    # Rule Context
-    rule_section: Optional[str] = Field(default=None, description="Section of rule that was validated")
-    rule_line_number: Optional[int] = Field(default=None, description="Line number if applicable")
-    suggested_fix: Optional[str] = Field(default=None, description="Suggested fix for validation issues")
+    # Indexes and Constraints
+    __table_args__ = (
+        Index("idx_workflow_type_priority", "workflow_type", "priority"),
+        Index("idx_workflow_schedule", "next_scheduled_at"),
+        Index("idx_workflow_active", "is_active"),
+        CheckConstraint("max_parallel_executions > 0", name="check_max_parallel_positive"),
+        CheckConstraint("timeout_minutes > 0", name="check_timeout_positive"),
+    )
 
-
-class RuleValidationResult(RuleValidationResultBase, table=True):
-    """Rule validation results"""
-    __tablename__ = "rule_validation_results"
+class RuleExecutionInstance(SQLModel, table=True):
+    """
+    Individual execution instance of a rule workflow.
+    """
+    __tablename__ = "rule_execution_instances"
     
+    # Primary Fields
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
+    execution_id: str = Field(default_factory=lambda: str(uuid.uuid4()), unique=True, index=True)
+    workflow_id: str = Field(foreign_key="rule_execution_workflows.workflow_id", index=True)
     
-    # Relationships
-    execution_id: int = Field(foreign_key="rule_execution_history.id")
-    execution: Optional[RuleExecutionHistory] = Relationship(back_populates="validation_results")
-
-
-class ExecutionPerformanceMetricBase(SQLModel):
-    """Base model for execution performance metrics"""
-    execution_id: int = Field(description="ID of the execution")
-    metric_name: str = Field(description="Name of the performance metric")
-    metric_value: float = Field(description="Metric value")
-    metric_unit: str = Field(description="Unit of measurement")
+    # Execution Details
+    execution_number: int = Field(ge=1)  # Sequential number for this workflow
+    status: ExecutionStatus = Field(default=ExecutionStatus.PENDING, index=True)
+    priority: ExecutionPriority
     
-    measurement_time: datetime = Field(default_factory=datetime.now, description="When metric was measured")
-    metric_category: str = Field(description="Category of metric (performance, resource, quality)")
-    
-    # Threshold Information
-    warning_threshold: Optional[float] = Field(default=None, description="Warning threshold value")
-    critical_threshold: Optional[float] = Field(default=None, description="Critical threshold value")
-    is_within_threshold: bool = Field(default=True, description="Whether metric is within acceptable range")
-    
-    # Additional Context
-    metric_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metric metadata")
-
-
-class ExecutionPerformanceMetric(ExecutionPerformanceMetricBase, table=True):
-    """Execution performance metrics"""
-    __tablename__ = "execution_performance_metrics"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    
-    # Relationships
-    execution_id: int = Field(foreign_key="rule_execution_history.id")
-    execution: Optional[RuleExecutionHistory] = Relationship(back_populates="performance_metrics")
-
-
-# ===============================
-# ORCHESTRATION MODELS
-# ===============================
-
-class OrchestrationJobBase(SQLModel):
-    """Base model for orchestration jobs"""
-    job_name: str = Field(description="Name of the orchestration job")
-    job_description: Optional[str] = Field(default=None, description="Job description")
-    job_type: str = Field(description="Type of orchestration job")
-    
-    # Scheduling
-    schedule_expression: Optional[str] = Field(default=None, description="Cron-like schedule expression")
-    is_scheduled: bool = Field(default=False, description="Whether job is scheduled")
-    next_run_time: Optional[datetime] = Field(default=None, description="Next scheduled run time")
-    last_run_time: Optional[datetime] = Field(default=None, description="Last run time")
-    
-    # Configuration
-    job_configuration: Dict[str, Any] = Field(default_factory=dict, description="Job configuration parameters")
-    environment_variables: Dict[str, str] = Field(default_factory=dict, description="Environment variables")
-    resource_requirements: Dict[str, Any] = Field(default_factory=dict, description="Resource requirements")
-    
-    # Status and Control
-    is_active: bool = Field(default=True, description="Whether job is active")
-    is_paused: bool = Field(default=False, description="Whether job is paused")
-    max_retries: int = Field(default=3, description="Maximum number of retry attempts")
-    timeout_minutes: Optional[int] = Field(default=None, description="Job timeout in minutes")
-    
-    # Owner and Tags
-    created_by: str = Field(description="User who created the job")
-    job_tags: List[str] = Field(default_factory=list, description="Job tags for organization")
-
-
-class OrchestrationJob(OrchestrationJobBase, table=True):
-    """Orchestration job management"""
-    __tablename__ = "orchestration_jobs"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    
-    # Relationships
-    executions: List["JobExecution"] = Relationship(back_populates="job")
-    resource_allocations: List["ResourceAllocation"] = Relationship(back_populates="job")
-
-
-class JobExecutionBase(SQLModel):
-    """Base model for job executions"""
-    job_id: int = Field(description="ID of the orchestration job")
-    execution_uuid: UUID = Field(default_factory=uuid4, description="Unique execution identifier")
-    
-    # Execution Status
-    status: RuleExecutionStatus = Field(default=RuleExecutionStatus.PENDING)
-    priority: ExecutionPriority = Field(default=ExecutionPriority.NORMAL)
-    
-    # Timing
-    scheduled_start: Optional[datetime] = Field(default=None, description="Scheduled start time")
-    actual_start: Optional[datetime] = Field(default=None, description="Actual start time")
-    actual_end: Optional[datetime] = Field(default=None, description="Actual end time")
-    duration_seconds: Optional[float] = Field(default=None, description="Execution duration")
-    
-    # Results
-    exit_code: Optional[int] = Field(default=None, description="Job exit code")
-    output_summary: Optional[str] = Field(default=None, description="Summary of job output")
-    error_summary: Optional[str] = Field(default=None, description="Summary of errors")
+    # Timing Information
+    scheduled_at: datetime
+    started_at: Optional[datetime] = Field(default=None)
+    completed_at: Optional[datetime] = Field(default=None)
+    execution_time_seconds: Optional[float] = Field(default=None, ge=0)
     
     # Resource Usage
-    peak_cpu_usage: Optional[float] = Field(default=None, description="Peak CPU usage percentage")
-    peak_memory_usage: Optional[float] = Field(default=None, description="Peak memory usage in MB")
-    total_io_operations: Optional[int] = Field(default=None, description="Total I/O operations")
+    resources_allocated: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    resources_used: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    peak_resource_usage: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
     # Execution Context
-    execution_node: Optional[str] = Field(default=None, description="Node where job executed")
-    triggered_by: Optional[str] = Field(default=None, description="User or system that triggered execution")
-    trigger_type: Optional[str] = Field(default=None, description="Type of trigger (manual, scheduled, event)")
-
-
-class JobExecution(JobExecutionBase, table=True):
-    """Job execution tracking"""
-    __tablename__ = "job_executions"
+    execution_context: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    input_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    output_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    # Error Handling
+    error_message: Optional[str] = Field(default=None, max_length=2000)
+    error_details: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    retry_attempt: int = Field(default=0, ge=0)
+    recovery_action_taken: Optional[str] = Field(default=None, max_length=500)
+    
+    # Progress Tracking
+    progress_percentage: float = Field(default=0, ge=0, le=100)
+    steps_completed: int = Field(default=0, ge=0)
+    total_steps: int = Field(default=0, ge=0)
+    current_step: Optional[str] = Field(default=None, max_length=200)
+    
+    # Performance Metrics
+    throughput_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    quality_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    efficiency_score: Optional[float] = Field(default=None, ge=0, le=100)
+    
+    # Execution Environment
+    execution_node: Optional[str] = Field(default=None, max_length=100)
+    executor_version: Optional[str] = Field(default=None, max_length=50)
+    environment_variables: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Tracking and Audit
+    triggered_by: str = Field(max_length=100)  # user, system, schedule, webhook
+    trigger_details: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    parent_execution_id: Optional[str] = Field(default=None)
+    child_execution_ids: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     
     # Relationships
-    job_id: int = Field(foreign_key="orchestration_jobs.id")
-    job: Optional[OrchestrationJob] = Relationship(back_populates="executions")
-
-
-class ResourceAllocationBase(SQLModel):
-    """Base model for resource allocation"""
-    job_id: int = Field(description="ID of the orchestration job")
-    resource_type: ResourceType = Field(description="Type of allocated resource")
+    workflow: RuleExecutionWorkflow = Relationship(back_populates="executions")
+    execution_steps: List["ExecutionStep"] = Relationship(back_populates="execution_instance")
+    performance_metrics: List["ExecutionPerformanceMetric"] = Relationship(back_populates="execution_instance")
     
-    # Allocation Details
-    allocated_amount: float = Field(description="Amount of resource allocated")
-    allocated_unit: str = Field(description="Unit of allocation")
-    allocation_start: datetime = Field(default_factory=datetime.now)
-    allocation_end: Optional[datetime] = Field(default=None)
-    
-    # Usage Tracking
-    current_usage: Optional[float] = Field(default=None, description="Current resource usage")
-    peak_usage: Optional[float] = Field(default=None, description="Peak resource usage")
-    average_usage: Optional[float] = Field(default=None, description="Average resource usage")
-    
-    # Cost and Billing
-    cost_per_unit: Optional[float] = Field(default=None, description="Cost per unit of resource")
-    total_cost: Optional[float] = Field(default=None, description="Total cost of allocation")
-    
-    # Resource Metadata
-    resource_pool: Optional[str] = Field(default=None, description="Resource pool name")
-    resource_node: Optional[str] = Field(default=None, description="Specific node or instance")
-    allocation_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional allocation metadata")
+    # Indexes and Constraints
+    __table_args__ = (
+        Index("idx_execution_status_priority", "status", "priority"),
+        Index("idx_execution_timing", "scheduled_at", "started_at"),
+        Index("idx_execution_workflow", "workflow_id", "execution_number"),
+        UniqueConstraint("workflow_id", "execution_number", name="uq_workflow_execution_number"),
+        CheckConstraint("progress_percentage >= 0 AND progress_percentage <= 100", name="check_progress_range"),
+        CheckConstraint("steps_completed <= total_steps", name="check_steps_logical"),
+    )
 
+class ExecutionStep(SQLModel, table=True):
+    """
+    Individual steps within a rule execution instance.
+    """
+    __tablename__ = "execution_steps"
+    
+    # Primary Fields
+    id: Optional[int] = Field(default=None, primary_key=True)
+    step_id: str = Field(default_factory=lambda: str(uuid.uuid4()), unique=True, index=True)
+    execution_id: str = Field(foreign_key="rule_execution_instances.execution_id", index=True)
+    
+    # Step Configuration
+    step_name: str = Field(max_length=200)
+    step_type: str = Field(max_length=100)  # validation, transformation, analysis, etc.
+    step_order: int = Field(ge=1)
+    is_critical: bool = Field(default=False)
+    can_skip_on_failure: bool = Field(default=False)
+    
+    # Execution Details
+    status: ExecutionStatus = Field(default=ExecutionStatus.PENDING)
+    started_at: Optional[datetime] = Field(default=None)
+    completed_at: Optional[datetime] = Field(default=None)
+    execution_time_seconds: Optional[float] = Field(default=None, ge=0)
+    
+    # Step Implementation
+    step_configuration: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    input_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    output_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Error Handling
+    error_message: Optional[str] = Field(default=None, max_length=1000)
+    error_details: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    retry_attempts: int = Field(default=0, ge=0)
+    
+    # Dependencies
+    dependent_steps: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    prerequisite_steps: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Performance
+    resource_usage: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    performance_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Relationships
+    execution_instance: RuleExecutionInstance = Relationship(back_populates="execution_steps")
+    
+    # Indexes and Constraints
+    __table_args__ = (
+        Index("idx_step_execution_order", "execution_id", "step_order"),
+        Index("idx_step_status", "status"),
+        UniqueConstraint("execution_id", "step_order", name="uq_execution_step_order"),
+    )
 
-class ResourceAllocation(ResourceAllocationBase, table=True):
-    """Resource allocation tracking"""
+class ResourceAllocation(SQLModel, table=True):
+    """
+    Resource allocation and management for workflow executions.
+    """
     __tablename__ = "resource_allocations"
     
+    # Primary Fields
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    allocation_id: str = Field(default_factory=lambda: str(uuid.uuid4()), unique=True, index=True)
+    workflow_id: str = Field(foreign_key="rule_execution_workflows.workflow_id", index=True)
     
-    # Relationships  
-    job_id: int = Field(foreign_key="orchestration_jobs.id")
-    job: Optional[OrchestrationJob] = Relationship(back_populates="resource_allocations")
+    # Resource Details
+    resource_type: ResourceType
+    resource_name: str = Field(max_length=200)
+    allocated_amount: float = Field(ge=0)
+    allocated_unit: str = Field(max_length=50)  # GB, cores, connections, etc.
+    
+    # Allocation Timing
+    allocated_at: datetime = Field(default_factory=datetime.utcnow)
+    released_at: Optional[datetime] = Field(default=None)
+    allocation_duration_seconds: Optional[float] = Field(default=None, ge=0)
+    
+    # Resource Pool Information
+    resource_pool_id: Optional[str] = Field(default=None, max_length=100)
+    resource_node: Optional[str] = Field(default=None, max_length=100)
+    availability_zone: Optional[str] = Field(default=None, max_length=100)
+    
+    # Usage Metrics
+    peak_usage: float = Field(default=0, ge=0)
+    average_usage: float = Field(default=0, ge=0)
+    usage_efficiency: Optional[float] = Field(default=None, ge=0, le=100)
+    
+    # Cost Information
+    cost_per_unit: Optional[float] = Field(default=None, ge=0)
+    total_cost: Optional[float] = Field(default=None, ge=0)
+    billing_model: Optional[str] = Field(default=None, max_length=50)
+    
+    # Status and Management
+    allocation_status: str = Field(default="active", max_length=50)
+    is_shared: bool = Field(default=False)
+    priority: ExecutionPriority = Field(default=ExecutionPriority.MEDIUM)
+    
+    # Metadata
+    allocation_reason: str = Field(max_length=500)
+    allocated_by: str = Field(max_length=100)
+    allocation_metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Relationships
+    workflow: RuleExecutionWorkflow = Relationship(back_populates="resource_allocations")
+    
+    # Indexes and Constraints
+    __table_args__ = (
+        Index("idx_resource_type_status", "resource_type", "allocation_status"),
+        Index("idx_resource_timing", "allocated_at", "released_at"),
+        Index("idx_resource_workflow", "workflow_id", "resource_type"),
+    )
 
-
-# ===============================
-# PATTERN AND INTELLIGENCE MODELS
-# ===============================
-
-class PatternRecognitionResultBase(SQLModel):
-    """Base model for pattern recognition results"""
-    rule_id: int = Field(description="ID of the rule that generated this pattern")
-    pattern_type: str = Field(description="Type of pattern detected")
-    pattern_name: str = Field(description="Name of the detected pattern")
+class ExecutionPerformanceMetric(SQLModel, table=True):
+    """
+    Performance metrics for execution instances.
+    """
+    __tablename__ = "execution_performance_metrics"
     
-    # Pattern Details
-    pattern_confidence: float = Field(description="Confidence score (0-1)")
-    pattern_frequency: int = Field(default=1, description="How often this pattern occurs")
-    pattern_significance: Optional[str] = Field(default=None, description="Business significance of pattern")
-    
-    # Pattern Data
-    pattern_data: Dict[str, Any] = Field(default_factory=dict, description="Detailed pattern data")
-    sample_data: Optional[Dict[str, Any]] = Field(default=None, description="Sample data that exhibits this pattern")
-    pattern_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional pattern metadata")
-    
-    # Detection Context
-    detected_at: datetime = Field(default_factory=datetime.now)
-    detection_method: str = Field(description="Method used to detect pattern")
-    data_source: Optional[str] = Field(default=None, description="Source of data where pattern was found")
-    
-    # Business Impact
-    business_value: Optional[str] = Field(default=None, description="Business value of this pattern")
-    recommended_actions: List[str] = Field(default_factory=list, description="Recommended actions based on pattern")
-
-
-class PatternRecognitionResult(PatternRecognitionResultBase, table=True):
-    """Pattern recognition results"""
-    __tablename__ = "pattern_recognition_results"
-    
+    # Primary Fields
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-
-class AnomalyDetectionResultBase(SQLModel):
-    """Base model for anomaly detection results"""
-    rule_id: int = Field(description="ID of the rule that detected the anomaly")
-    anomaly_type: str = Field(description="Type of anomaly detected")
-    anomaly_severity: str = Field(description="Severity level of anomaly")
+    metric_id: str = Field(default_factory=lambda: str(uuid.uuid4()), unique=True, index=True)
+    execution_id: str = Field(foreign_key="rule_execution_instances.execution_id", index=True)
     
-    # Anomaly Details
-    anomaly_score: float = Field(description="Anomaly score (higher = more anomalous)")
-    anomaly_threshold: float = Field(description="Threshold used for detection")
-    anomaly_description: str = Field(description="Description of the anomaly")
+    # Metric Details
+    metric_name: str = Field(max_length=200, index=True)
+    metric_category: str = Field(max_length=100)  # performance, quality, efficiency, cost
+    metric_value: float
+    metric_unit: str = Field(max_length=50)
     
-    # Data Context
-    affected_data_source: Optional[str] = Field(default=None, description="Data source where anomaly was found")
-    affected_table: Optional[str] = Field(default=None, description="Table where anomaly was found")
-    affected_column: Optional[str] = Field(default=None, description="Column where anomaly was found")
-    affected_records: Optional[int] = Field(default=None, description="Number of affected records")
+    # Measurement Context
+    measured_at: datetime = Field(default_factory=datetime.utcnow)
+    measurement_duration_seconds: Optional[float] = Field(default=None, ge=0)
+    measurement_context: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Detection Details
-    detected_at: datetime = Field(default_factory=datetime.now)
-    detection_model: str = Field(description="Model used for anomaly detection")
-    detection_confidence: float = Field(description="Confidence in anomaly detection")
+    # Benchmarking
+    baseline_value: Optional[float] = Field(default=None)
+    target_value: Optional[float] = Field(default=None)
+    threshold_warning: Optional[float] = Field(default=None)
+    threshold_critical: Optional[float] = Field(default=None)
     
-    # Response Information
-    is_acknowledged: bool = Field(default=False, description="Whether anomaly has been acknowledged")
-    acknowledged_by: Optional[str] = Field(default=None, description="User who acknowledged anomaly")
-    acknowledged_at: Optional[datetime] = Field(default=None, description="When anomaly was acknowledged")
-    resolution_status: Optional[str] = Field(default=None, description="Status of anomaly resolution")
+    # Status and Analysis
+    is_within_target: Optional[bool] = Field(default=None)
+    deviation_percentage: Optional[float] = Field(default=None)
+    trend_direction: Optional[str] = Field(default=None, max_length=50)  # improving, degrading, stable
     
-    # Additional Context
-    anomaly_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional anomaly metadata")
-    suggested_investigation: Optional[str] = Field(default=None, description="Suggested investigation steps")
+    # Metadata
+    metric_source: str = Field(max_length=100)  # system, calculated, external
+    calculation_method: Optional[str] = Field(default=None, max_length=200)
+    metric_metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Relationships
+    execution_instance: RuleExecutionInstance = Relationship(back_populates="performance_metrics")
+    
+    # Indexes and Constraints
+    __table_args__ = (
+        Index("idx_metric_execution_category", "execution_id", "metric_category"),
+        Index("idx_metric_name_time", "metric_name", "measured_at"),
+    )
 
-
-class AnomalyDetectionResult(AnomalyDetectionResultBase, table=True):
-    """Anomaly detection results"""
-    __tablename__ = "anomaly_detection_results"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-
-
-# ===============================
+# ===================================
 # REQUEST/RESPONSE MODELS
-# ===============================
+# ===================================
 
-class ExecutionRequest(BaseModel):
-    """Request model for rule execution"""
-    rule_ids: List[int] = Field(description="List of rule IDs to execute")
-    priority: ExecutionPriority = Field(default=ExecutionPriority.NORMAL)
-    execution_context: Dict[str, Any] = Field(default_factory=dict)
-    schedule_for: Optional[datetime] = Field(default=None, description="Schedule execution for later")
-    
-    @validator('rule_ids')
-    def validate_rule_ids(cls, v):
-        if not v:
-            raise ValueError("At least one rule ID must be provided")
-        return v
+class WorkflowExecutionRequest(BaseModel):
+    """Request model for executing a workflow."""
+    workflow_id: str
+    execution_parameters: Optional[Dict[str, Any]] = None
+    priority: ExecutionPriority = ExecutionPriority.MEDIUM
+    scheduled_at: Optional[datetime] = None
+    triggered_by: str
+    trigger_details: Optional[Dict[str, Any]] = None
+    resource_overrides: Optional[Dict[str, Any]] = None
 
+class WorkflowExecutionResponse(BaseModel):
+    """Response model for workflow execution."""
+    execution_id: str
+    workflow_id: str
+    status: ExecutionStatus
+    scheduled_at: datetime
+    execution_number: int
+    estimated_completion_time: Optional[datetime] = None
+    resource_requirements: Dict[str, Any]
+    message: str
 
-class ExecutionStatusResponse(BaseModel):
-    """Response model for execution status"""
-    execution_id: int
-    status: RuleExecutionStatus
-    progress_percentage: Optional[float] = None
-    estimated_completion: Optional[datetime] = None
-    current_stage: Optional[str] = None
-    performance_metrics: Dict[str, Any] = Field(default_factory=dict)
+class ExecutionStatusUpdate(BaseModel):
+    """Model for execution status updates."""
+    execution_id: str
+    status: ExecutionStatus
+    progress_percentage: float
+    current_step: Optional[str] = None
+    steps_completed: int
+    total_steps: int
+    error_message: Optional[str] = None
+    performance_metrics: Optional[Dict[str, Any]] = None
 
+class ResourceAllocationRequest(BaseModel):
+    """Request model for resource allocation."""
+    workflow_id: str
+    resource_type: ResourceType
+    allocated_amount: float
+    allocated_unit: str
+    priority: ExecutionPriority = ExecutionPriority.MEDIUM
+    allocation_reason: str
+    duration_hours: Optional[int] = None
 
-class ValidationRequest(BaseModel):
-    """Request model for rule validation"""
-    rule_id: int
-    validation_types: List[str] = Field(default_factory=list, description="Types of validation to perform")
-    strict_mode: bool = Field(default=False, description="Whether to use strict validation")
+class PerformanceMetricRecord(BaseModel):
+    """Model for recording performance metrics."""
+    execution_id: str
+    metric_name: str
+    metric_category: str
+    metric_value: float
+    metric_unit: str
+    measurement_context: Optional[Dict[str, Any]] = None
+    baseline_value: Optional[float] = None
+    target_value: Optional[float] = None
 
-
-class ValidationResponse(BaseModel):
-    """Response model for validation results"""
-    overall_status: ValidationStatus
-    validation_score: float
-    validation_results: List[Dict[str, Any]]
-    suggestions: List[str] = Field(default_factory=list)
-
-
-class OrchestrationJobRequest(BaseModel):
-    """Request model for creating orchestration jobs"""
-    job_name: str
-    job_description: Optional[str] = None
-    job_type: str
-    schedule_expression: Optional[str] = None
-    job_configuration: Dict[str, Any] = Field(default_factory=dict)
-    resource_requirements: Dict[str, Any] = Field(default_factory=dict)
-
-
-class OrchestrationJobResponse(BaseModel):
-    """Response model for orchestration jobs"""
-    job_id: int
-    job_name: str
-    status: str
-    next_run_time: Optional[datetime] = None
-    last_execution: Optional[Dict[str, Any]] = None
-    resource_usage: Dict[str, Any] = Field(default_factory=dict)
-
-
-class PatternAnalysisRequest(BaseModel):
-    """Request model for pattern analysis"""
-    rule_ids: List[int] = Field(description="Rule IDs to analyze")
-    data_sources: List[str] = Field(default_factory=list, description="Data sources to analyze")
-    pattern_types: List[str] = Field(default_factory=list, description="Types of patterns to detect")
-    analysis_depth: str = Field(default="standard", description="Depth of analysis")
-
-
-class PatternAnalysisResponse(BaseModel):
-    """Response model for pattern analysis"""
-    analysis_id: str
-    patterns_detected: int
-    high_confidence_patterns: int
-    anomalies_detected: int
-    analysis_summary: Dict[str, Any]
-    recommended_actions: List[str] = Field(default_factory=list)
+class WorkflowExecutionSummary(BaseModel):
+    """Summary model for workflow execution analytics."""
+    workflow_id: str
+    total_executions: int
+    successful_executions: int
+    failed_executions: int
+    average_execution_time_seconds: float
+    success_rate_percentage: float
+    last_execution_at: Optional[datetime] = None
+    average_resource_efficiency: float
+    cost_metrics: Dict[str, Any]
+    performance_trends: Dict[str, Any]

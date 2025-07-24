@@ -54,6 +54,13 @@ from app.api.routes.ai_routes import router as ai_routes
 # 1. SCAN-RULE-SETS GROUP - Enterprise Routes
 from app.api.routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_router
 
+# 1. SCAN-RULE-SETS COMPLETED ROUTES - New Advanced Implementation
+from app.api.routes.Scan-Rule-Sets-completed-routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_completed_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_template_routes import router as rule_template_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_version_control_routes import router as rule_version_control_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.enhanced_collaboration_routes import router as enhanced_collaboration_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.analytics_reporting_routes import router as analytics_reporting_router
+
 # 2. DATA CATALOG GROUP - Enterprise Routes  
 from app.api.routes.enterprise_catalog_routes import router as enterprise_catalog_router
 from app.api.routes.intelligent_discovery_routes import router as intelligent_discovery_router
@@ -193,6 +200,13 @@ app.include_router(enterprise_scan_orchestration_router, tags=["Enterprise Scan 
 app.include_router(scan_intelligence_router, tags=["Scan Intelligence"])
 app.include_router(scan_workflow_router, tags=["Scan Workflows"])
 app.include_router(scan_performance_router, tags=["Scan Performance"])
+
+# SCAN-RULE-SETS COMPLETED ROUTES - New Advanced Implementation
+app.include_router(enterprise_scan_rules_completed_router, tags=["Enterprise Scan Rules - Advanced"])
+app.include_router(rule_template_router, tags=["Rule Templates"])
+app.include_router(rule_version_control_router, tags=["Rule Version Control"])
+app.include_router(enhanced_collaboration_router, tags=["Enhanced Collaboration"])
+app.include_router(analytics_reporting_router, tags=["Analytics & Reporting"])
 
 # UNIFIED ENTERPRISE INTEGRATION - Cross-System Real-time Coordination
 app.include_router(enterprise_integration_router, tags=["Enterprise Integration"])
