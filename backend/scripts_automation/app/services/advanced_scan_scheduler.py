@@ -45,7 +45,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 # Core framework imports
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 
 # Service imports

@@ -70,6 +70,14 @@ from app.api.routes.scan_performance_routes import router as scan_performance_ro
 # UNIFIED ENTERPRISE INTEGRATION - Cross-System Coordination
 from app.api.routes.enterprise_integration_routes import router as enterprise_integration_router
 
+# Additional missing routes for the three groups
+from app.api.routes.scan_orchestration_routes import router as scan_orchestration_router
+from app.api.routes.intelligent_scanning_routes import router as intelligent_scanning_router
+from app.api.routes.scan_optimization_routes import router as scan_optimization_router
+from app.api.routes.catalog_analytics_routes import router as catalog_analytics_router
+from app.api.routes.scan_coordination_routes import router as scan_coordination_router
+from app.api.routes.scan_analytics_routes import router as scan_analytics_router
+
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -174,6 +182,14 @@ app.include_router(scan_performance_router, tags=["Scan Performance"])
 
 # UNIFIED ENTERPRISE INTEGRATION - Cross-System Real-time Coordination
 app.include_router(enterprise_integration_router, tags=["Enterprise Integration"])
+
+# Additional missing routes for complete integration
+app.include_router(scan_orchestration_router, tags=["Scan Orchestration"])
+app.include_router(intelligent_scanning_router, tags=["Intelligent Scanning"])
+app.include_router(scan_optimization_router, tags=["Scan Optimization"])
+app.include_router(catalog_analytics_router, tags=["Catalog Analytics"])
+app.include_router(scan_coordination_router, tags=["Scan Coordination"])
+app.include_router(scan_analytics_router, tags=["Scan Analytics"])
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 

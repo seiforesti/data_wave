@@ -28,7 +28,7 @@ import asyncio
 import json
 
 # Internal imports
-from ...core.database import get_session
+from ...db_session import get_session
 from ...services.intelligent_discovery_service import (
     IntelligentDiscoveryService,
     DiscoveryContext,

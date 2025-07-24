@@ -67,8 +67,8 @@ from ..models.scan_models import (
     EnhancedScanRuleSet, ScanOrchestrationJob, ScanWorkflowExecution,
     ScanOrchestrationStrategy, ScanOrchestrationStatus, ScanPriority
 )
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..core.security import get_current_user
 from ..core.cache import RedisCache
 from ..core.monitoring import MetricsCollector, AlertManager

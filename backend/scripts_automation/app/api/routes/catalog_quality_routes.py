@@ -19,7 +19,7 @@ import logging
 from datetime import datetime, timedelta
 import uuid
 
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.auth import get_current_user
 from ...core.security import require_permissions
 from ...core.response_models import SuccessResponse, ErrorResponse

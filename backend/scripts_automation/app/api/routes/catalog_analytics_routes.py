@@ -27,7 +27,7 @@ from sqlalchemy import select, and_, or_, func, desc
 from pydantic import BaseModel, Field, validator
 
 # Core dependencies
-from ...database import get_session
+from ...db_session import get_session
 from ...models.catalog_models import CatalogAsset, AssetUsage, AssetTag
 from ...models.catalog_quality_models import QualityAssessment, QualityScorecard
 from ...models.catalog_intelligence_models import CatalogIntelligenceModel, UsagePatternAnalysis

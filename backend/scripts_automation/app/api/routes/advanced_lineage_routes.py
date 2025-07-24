@@ -48,11 +48,11 @@ from ...models.advanced_catalog_models import *
 from ...models.catalog_intelligence_models import *
 from ...services.advanced_lineage_service import AdvancedLineageService
 from ...services.intelligent_discovery_service import IntelligentDiscoveryService
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.auth import get_current_user, require_permissions
 from ...utils.response_models import *
 from ...utils.error_handler import handle_route_error
-from ...utils.rate_limiter import RateLimiter
+from ...utils.rate_limiter import check_rate_limit
 from ...utils.audit_logger import audit_log
 
 # Configure logging

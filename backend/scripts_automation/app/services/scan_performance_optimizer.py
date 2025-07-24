@@ -45,7 +45,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import pandas as pd
 
 # Core framework imports
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 
 # Service imports

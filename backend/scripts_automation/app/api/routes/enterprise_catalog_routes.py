@@ -67,7 +67,7 @@ from ...services.enterprise_catalog_service import (
     EnterpriseIntelligentCatalogService, get_enterprise_catalog_service,
     DiscoveryTrigger, CatalogEngineStatus
 )
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.security import get_current_user, check_permissions
 from ...core.monitoring import MetricsCollector, AlertManager
 from ...core.logging import StructuredLogger

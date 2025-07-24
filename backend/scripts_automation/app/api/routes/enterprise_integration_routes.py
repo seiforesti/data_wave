@@ -49,7 +49,7 @@ from ...services.enterprise_integration_service import (
     IntegrationStatus
 )
 from ...core.deps import get_current_user, get_session
-from ...core.config import get_settings
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 

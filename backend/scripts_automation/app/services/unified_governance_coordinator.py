@@ -27,7 +27,7 @@ from enum import Enum
 from sqlmodel import Session, select, func, and_, or_
 from sqlalchemy import text
 
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 from ..services.ai_service import AIService
 from ..services.scan_intelligence_service import ScanIntelligenceService

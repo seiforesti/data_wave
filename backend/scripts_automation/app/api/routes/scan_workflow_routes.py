@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.auth import get_current_user
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.rate_limiter import rate_limiter
 from ...core.audit_log import audit_log
 from ...models.scan_workflow_models import *

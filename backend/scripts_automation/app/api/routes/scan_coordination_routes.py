@@ -27,7 +27,7 @@ from sqlalchemy import select, and_, or_, func, desc
 from pydantic import BaseModel, Field
 
 # Core dependencies
-from ...database import get_session
+from ...db_session import get_session
 from ...models.scan_models import ScanRule, ScanExecution
 from ...models.scan_orchestration_models import ScanOrchestration, OrchestrationStep
 from ...models.scan_workflow_models import ScanWorkflow, WorkflowStage

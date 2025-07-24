@@ -39,7 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Core imports
 from ...core.auth import get_current_user, require_permissions
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.cache import CacheManager
 
 # Service imports

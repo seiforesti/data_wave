@@ -49,11 +49,11 @@ from ...models.scan_intelligence_models import *
 from ...services.enterprise_scan_orchestrator import EnterpriseScanOrchestrator
 from ...services.unified_scan_orchestrator import UnifiedScanOrchestrator
 from ...services.enterprise_scan_rule_service import EnterpriseScanRuleService
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.auth import get_current_user, require_permissions
 from ...utils.response_models import *
 from ...utils.error_handler import handle_route_error
-from ...utils.rate_limiter import RateLimiter
+from ...utils.rate_limiter import check_rate_limit
 from ...utils.audit_logger import audit_log
 
 # Configure logging

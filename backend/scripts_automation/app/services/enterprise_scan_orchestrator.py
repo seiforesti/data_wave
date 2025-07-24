@@ -59,8 +59,8 @@ from ..models.scan_models import *
 from ..models.advanced_scan_rule_models import *
 from ..models.scan_orchestration_models import *
 from ..models.scan_intelligence_models import *
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..services.ai_service import AIService
 from ..services.data_source_connection_service import DataSourceConnectionService
 from ..services.enterprise_scan_rule_service import EnterpriseScanRuleService

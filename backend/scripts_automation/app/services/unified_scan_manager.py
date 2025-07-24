@@ -40,7 +40,7 @@ from ..models.scan_orchestration_models import ScanOrchestration, OrchestrationS
 from ..models.scan_intelligence_models import ScanIntelligenceEngine, ScanPrediction
 from ..models.scan_performance_models import PerformanceMetric, ResourceUtilization
 from ..models.scan_workflow_models import ScanWorkflow, WorkflowStage, WorkflowTask
-from ..database import get_session
+from ..db_session import get_session
 
 # AI/ML dependencies
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor

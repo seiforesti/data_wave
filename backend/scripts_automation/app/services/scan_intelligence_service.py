@@ -60,8 +60,8 @@ from sqlmodel import Session
 from ..models.scan_intelligence_models import *
 from ..models.scan_models import *
 from ..models.advanced_scan_rule_models import *
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..services.ai_service import AIService
 from ..utils.performance_monitor import performance_monitor
 from ..utils.cache_manager import CacheManager

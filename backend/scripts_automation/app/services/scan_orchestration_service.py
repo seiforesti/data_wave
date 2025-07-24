@@ -52,9 +52,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 
 # Core framework imports
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
-from ..core.database import get_session
+from ..db_session import get_session
 
 # Model imports
 from ..models.scan_models import *

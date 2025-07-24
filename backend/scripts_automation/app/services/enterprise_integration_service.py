@@ -71,7 +71,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import Session
 
 # Core framework imports
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 
 # Service imports for all six groups - using conditional imports to handle missing dependencies

@@ -75,12 +75,12 @@ from ..models.advanced_catalog_models import (
     LineageGraph, CatalogAnalytics
 )
 from ..models.scan_models import DataSource, ScanResult
-from ..core.database import get_session
-from ..core.config import get_settings
-from ..core.security import get_current_user
-from ..core.cache import RedisCache
-from ..core.monitoring import MetricsCollector, AlertManager
-from ..core.logging import StructuredLogger
+from ..db_session import get_session
+from ..core.config import settings
+from ..api.security.rbac import get_current_user
+from ..utils.cache import get_cache
+# Monitoring imports - using logging for now
+from ..core.logging_config import get_logger
 
 # Integration imports
 from .data_source_service import DataSourceService

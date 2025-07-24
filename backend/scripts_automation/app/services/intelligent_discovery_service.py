@@ -64,8 +64,8 @@ from ..models.advanced_catalog_models import *
 from ..models.data_lineage_models import *
 from ..models.catalog_intelligence_models import *
 from ..models.scan_models import *
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..services.ai_service import AIService
 from ..services.data_source_connection_service import DataSourceConnectionService
 from ..services.classification_service import ClassificationService

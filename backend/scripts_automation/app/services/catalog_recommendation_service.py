@@ -62,7 +62,7 @@ except ImportError:
     nx = type('NetworkX', (), {'Graph': MockGraph})()
 
 # Core framework imports
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 
 # Service imports

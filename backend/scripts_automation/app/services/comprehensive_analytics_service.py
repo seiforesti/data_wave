@@ -33,7 +33,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
-from ..core.config import get_settings
+from ..core.config import settings
 from ..core.cache import CacheManager
 from ..services.ai_service import AIService
 from ..models.analytics_models import (

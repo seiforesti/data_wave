@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, delete
 
 from ..core.cache_manager import CacheManager
-from ..core.database import get_session
+from ..db_session import get_session
 from ..core.logging_config import get_logger
 from ..core.settings import get_settings
 from ..models.catalog_quality_models import *

@@ -50,7 +50,7 @@ from pydantic import BaseModel, Field, validator
 from typing_extensions import Annotated
 
 # Core imports
-from ...core.database import get_session
+from ...db_session import get_session
 from ...core.security import get_current_user, require_permissions
 from ...core.cache import get_cache
 from ...core.monitoring import get_metrics_collector
