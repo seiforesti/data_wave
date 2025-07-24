@@ -15,6 +15,10 @@ from .analytics_reporting_routes import router as analytics_reporting_router
 from .ai_pattern_detection_routes import router as ai_pattern_detection_router
 from .enterprise_orchestration_routes import router as enterprise_orchestration_router
 from .rule_validation_routes import router as rule_validation_router
+from .scan_workflows_routes import router as scan_workflows_router
+from .scan_optimization_routes import router as scan_optimization_router
+from .intelligent_scanning_routes import router as intelligent_scanning_router
+from .comprehensive_scan_analytics_routes import router as comprehensive_scan_analytics_router
 
 __all__ = [
     "enterprise_scan_rules_router",
@@ -24,5 +28,9 @@ __all__ = [
     "analytics_reporting_router",
     "ai_pattern_detection_router",
     "enterprise_orchestration_router",
-    "rule_validation_router"
+    "rule_validation_router",
+    "scan_workflows_router",
+    "scan_optimization_router",
+    "intelligent_scanning_router",
+    "comprehensive_scan_analytics_router"
 ]
