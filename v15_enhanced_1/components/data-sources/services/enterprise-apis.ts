@@ -2510,6 +2510,187 @@ export const useStartSecurityMonitoringMutation = () => {
   })
 }
 
+// ============================================================================
+// ENHANCED CATALOG DISCOVERY APIS - NEW IMPLEMENTATION
+// ============================================================================
+
+export interface SchemaDiscoveryRequest {
+  data_source_id: number
+  include_data_preview?: boolean
+  auto_catalog?: boolean
+  max_tables_per_schema?: number
+}
+
+export interface SchemaDiscoveryResult {
+  success: boolean
+  discovered_items: number
+  errors: string[]
+  warnings: string[]
+  processing_time_seconds: number
+  data_source_info: {
+    name: string
+    type: string
+    host: string
+    connection_time_ms: number
+  }
+}
+
+export interface CatalogSyncResult {
+  success: boolean
+  items_created: number
+  items_updated: number
+  items_deleted: number
+  errors: string[]
+  sync_duration_seconds: number
+}
+
+export interface StandardResponse {
+  success: boolean
+  message: string
+  data?: any
+  error?: string
+}
+
+// Enhanced Catalog Discovery API functions
+export const discoverAndCatalogSchema = async (
+  dataSourceId: number, 
+  forceRefresh: boolean = false
+): Promise<StandardResponse> => {
+  const params = new URLSearchParams()
+  if (forceRefresh) params.append('force_refresh', 'true')
+  
+  const { data } = await enterpriseApi.post(
+    `/data-discovery/data-sources/${dataSourceId}/discover-and-catalog?${params.toString()}`
+  )
+  return data
+}
+
+export const syncCatalogWithDataSource = async (dataSourceId: number): Promise<StandardResponse> => {
+  const { data } = await enterpriseApi.post(`/data-discovery/data-sources/${dataSourceId}/sync-catalog`)
+  return data
+}
+
+export const discoverSchemaWithOptions = async (
+  dataSourceId: number, 
+  options: SchemaDiscoveryRequest
+): Promise<StandardResponse> => {
+  const { data } = await enterpriseApi.post(
+    `/data-discovery/data-sources/${dataSourceId}/discover-schema`,
+    options
+  )
+  return data
+}
+
+export const getDataSourceCatalog = async (dataSourceId: number): Promise<any> => {
+  const { data } = await enterpriseApi.get(`/scan/data-sources/${dataSourceId}/catalog`)
+  return data
+}
+
+// Enhanced Catalog Discovery React Query Hooks
+export const useDiscoverAndCatalogSchemaMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ dataSourceId, forceRefresh }: { dataSourceId: number; forceRefresh?: boolean }) =>
+      discoverAndCatalogSchema(dataSourceId, forceRefresh),
+    onSuccess: (data, variables) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['data-source-catalog', variables.dataSourceId] })
+      queryClient.invalidateQueries({ queryKey: ['data-source-metrics', variables.dataSourceId] })
+      queryClient.invalidateQueries({ queryKey: ['catalog-stats'] })
+      
+      // Emit success event
+      if (window.enterpriseEventBus) {
+        window.enterpriseEventBus.emit('catalog:discovery:completed', {
+          dataSourceId: variables.dataSourceId,
+          result: data,
+          timestamp: new Date()
+        })
+      }
+    },
+    onError: (error, variables) => {
+      // Emit error event
+      if (window.enterpriseEventBus) {
+        window.enterpriseEventBus.emit('catalog:discovery:failed', {
+          dataSourceId: variables.dataSourceId,
+          error: error.message,
+          timestamp: new Date()
+        })
+      }
+    },
+  })
+}
+
+export const useSyncCatalogWithDataSourceMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (dataSourceId: number) => syncCatalogWithDataSource(dataSourceId),
+    onSuccess: (data, dataSourceId) => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['data-source-catalog', dataSourceId] })
+      queryClient.invalidateQueries({ queryKey: ['data-source-metrics', dataSourceId] })
+      queryClient.invalidateQueries({ queryKey: ['catalog-stats'] })
+      
+      // Emit success event
+      if (window.enterpriseEventBus) {
+        window.enterpriseEventBus.emit('catalog:sync:completed', {
+          dataSourceId,
+          result: data,
+          timestamp: new Date()
+        })
+      }
+    },
+    onError: (error, dataSourceId) => {
+      // Emit error event
+      if (window.enterpriseEventBus) {
+        window.enterpriseEventBus.emit('catalog:sync:failed', {
+          dataSourceId,
+          error: error.message,
+          timestamp: new Date()
+        })
+      }
+    },
+  })
+}
+
+export const useDiscoverSchemaWithOptionsMutation = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ dataSourceId, options }: { dataSourceId: number; options: SchemaDiscoveryRequest }) =>
+      discoverSchemaWithOptions(dataSourceId, options),
+    onSuccess: (data, variables) => {
+      // Invalidate related queries if auto_catalog was enabled
+      if (variables.options.auto_catalog) {
+        queryClient.invalidateQueries({ queryKey: ['data-source-catalog', variables.dataSourceId] })
+        queryClient.invalidateQueries({ queryKey: ['catalog-stats'] })
+      }
+      
+      // Emit success event
+      if (window.enterpriseEventBus) {
+        window.enterpriseEventBus.emit('schema:discovery:completed', {
+          dataSourceId: variables.dataSourceId,
+          options: variables.options,
+          result: data,
+          timestamp: new Date()
+        })
+      }
+    },
+  })
+}
+
+export const useDataSourceCatalogQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['data-source-catalog', dataSourceId],
+    queryFn: () => getDataSourceCatalog(dataSourceId),
+    enabled: !!dataSourceId,
+    staleTime: 300000, // 5 minutes
+    refetchInterval: 600000, // 10 minutes
+    ...options,
+  })
+}
+
 // Initialize global event bus if not already present
 if (typeof window !== 'undefined' && !window.enterpriseEventBus) {
   const listeners: Record<string, ((data: any) => void)[]> = {}
