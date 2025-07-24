@@ -181,12 +181,18 @@ from app.api.routes.Scan-Rule-Sets-completed-routes.rule_template_routes import 
 from app.api.routes.Scan-Rule-Sets-completed-routes.rule_version_control_routes import router as rule_version_control_router
 from app.api.routes.Scan-Rule-Sets-completed-routes.analytics_reporting_routes import router as analytics_reporting_router
 from app.api.routes.Scan-Rule-Sets-completed-routes.enhanced_collaboration_routes import router as enhanced_collaboration_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.ai_pattern_detection_routes import router as ai_pattern_detection_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.enterprise_orchestration_routes import router as enterprise_orchestration_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_validation_routes import router as rule_validation_router
 
 # Include Scan-Rule-Sets completed routes
 app.include_router(rule_template_router, tags=["Rule Templates"])
 app.include_router(rule_version_control_router, tags=["Rule Version Control"])
 app.include_router(analytics_reporting_router, tags=["Analytics & Reporting"])
 app.include_router(enhanced_collaboration_router, tags=["Enhanced Collaboration"])
+app.include_router(ai_pattern_detection_router, tags=["AI Pattern Detection"])
+app.include_router(enterprise_orchestration_router, tags=["Enterprise Orchestration"])
+app.include_router(rule_validation_router, tags=["Rule Validation"])
 
 # 2. DATA CATALOG GROUP - Enterprise Implementation (95KB+ Service)
 app.include_router(enterprise_catalog_router, tags=["Enterprise Data Catalog"])
