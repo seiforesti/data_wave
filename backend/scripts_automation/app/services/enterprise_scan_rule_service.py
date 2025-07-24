@@ -67,8 +67,8 @@ from ..models.scan_models import (
     EnhancedScanRuleSet, ScanOrchestrationJob, ScanWorkflowExecution,
     ScanOrchestrationStrategy, ScanOrchestrationStatus, ScanPriority
 )
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..core.security import get_current_user
 from ..core.cache import RedisCache
 from ..core.monitoring import MetricsCollector, AlertManager
@@ -78,7 +78,7 @@ from ..core.logging import StructuredLogger
 from .data_source_service import DataSourceService
 from .classification_service import ClassificationService
 from .compliance_service import ComplianceService
-from .catalog_service import CatalogService
+from .catalog_service import EnhancedCatalogService
 
 # Configure structured logging
 logger = StructuredLogger(__name__)

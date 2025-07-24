@@ -14,7 +14,7 @@ from pathlib import Path
 # Import existing services for integration
 from ..db_session import get_session
 from .scan_service import ScanService
-from .catalog_service import CatalogService
+from .catalog_service import EnhancedCatalogService
 from .compliance_rule_service import ComplianceRuleService
 from .data_source_service import DataSourceService
 from .notification_service import NotificationService

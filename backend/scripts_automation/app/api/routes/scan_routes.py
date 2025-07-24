@@ -1678,12 +1678,12 @@ async def get_data_source_catalog(
     session: Session = Depends(get_session),
     current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
 ):
-    """Get catalog data for a data source"""
+    """Get catalog data for a data source with enhanced real-time integration"""
     try:
-        from app.services.catalog_service import CatalogService
+        from app.services.catalog_service import EnhancedCatalogService
         
-        # Get catalog items from database
-        catalog_items = CatalogService.get_catalog_items_by_data_source(session, data_source_id)
+        # Get catalog items from database using enhanced service
+        catalog_items = EnhancedCatalogService.get_catalog_items_by_data_source(session, data_source_id)
         
         catalog_data = {
             "catalog": [

@@ -34,6 +34,7 @@ connection_service = DataSourceConnectionService()
 class SchemaDiscoveryRequest(BaseModel):
     data_source_id: int = Field(..., description="ID of the data source to discover")
     include_data_preview: bool = Field(default=False, description="Whether to include data previews")
+    auto_catalog: bool = Field(default=False, description="Whether to automatically catalog discovered schema")
     max_tables_per_schema: int = Field(
         default=100, ge=1, le=1000,
         description="Maximum number of tables to discover per schema"
@@ -122,15 +123,41 @@ async def discover_data_source_schema(
                 data=None
             )
         
+        # If auto_catalog is enabled, also catalog the discovered schema
+        catalog_result = None
+        if request.auto_catalog:
+            try:
+                from app.services.catalog_service import EnhancedCatalogService
+                catalog_service = EnhancedCatalogService()
+                catalog_result = await catalog_service.discover_and_catalog_schema(
+                    session, 
+                    data_source_id, 
+                    current_user.get("username", "system"),
+                    force_refresh=True
+                )
+            except Exception as e:
+                logger.warning(f"Auto-catalog failed but discovery succeeded: {str(e)}")
+        
+        response_data = {
+            "data_source_id": data_source_id,
+            "schema_structure": discovery_result["schema"],
+            "summary": discovery_result["summary"],
+            "discovery_time": discovery_result["discovery_time"]
+        }
+        
+        if catalog_result:
+            response_data["catalog_result"] = {
+                "success": catalog_result.success,
+                "discovered_items": catalog_result.discovered_items,
+                "processing_time_seconds": catalog_result.processing_time_seconds,
+                "errors": catalog_result.errors,
+                "warnings": catalog_result.warnings
+            }
+        
         return StandardResponse(
             success=True,
-            message="Schema discovery completed successfully",
-            data={
-                "data_source_id": data_source_id,
-                "schema_structure": discovery_result["schema"],
-                "summary": discovery_result["summary"],
-                "discovery_time": discovery_result["discovery_time"]
-            },
+            message="Schema discovery completed successfully" + (" with auto-cataloging" if catalog_result else ""),
+            data=response_data,
             error=None
         )
         
@@ -139,6 +166,117 @@ async def discover_data_source_schema(
         return StandardResponse(
             success=False,
             message="Schema discovery failed",
+            error=str(e),
+            data=None
+        )
+
+@router.post("/data-sources/{data_source_id}/discover-and-catalog", response_model=StandardResponse)
+async def discover_and_catalog_schema(
+    data_source_id: int,
+    force_refresh: bool = Query(default=False, description="Force refresh of cached discovery"),
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
+):
+    """
+    Discover schema and automatically catalog all discovered items.
+    This uses the enhanced catalog service for real-time integration.
+    """
+    try:
+        from app.services.catalog_service import EnhancedCatalogService
+        
+        # Get data source
+        data_source = DataSourceService.get_data_source(session, data_source_id)
+        if not data_source:
+            return StandardResponse(
+                success=False,
+                message="Data source not found",
+                error="Data source not found",
+                data=None
+            )
+        
+        # Perform discovery and cataloging
+        catalog_service = EnhancedCatalogService()
+        discovery_result = await catalog_service.discover_and_catalog_schema(
+            session, 
+            data_source_id, 
+            current_user.get("username", "system"),
+            force_refresh=force_refresh
+        )
+        
+        return StandardResponse(
+            success=discovery_result.success,
+            message="Schema discovery and cataloging completed" if discovery_result.success else "Discovery failed",
+            data={
+                "data_source_id": data_source_id,
+                "data_source_info": discovery_result.data_source_info,
+                "discovered_items": discovery_result.discovered_items,
+                "processing_time_seconds": discovery_result.processing_time_seconds,
+                "errors": discovery_result.errors,
+                "warnings": discovery_result.warnings,
+                "cached": not force_refresh and discovery_result.processing_time_seconds < 1.0
+            },
+            error="; ".join(discovery_result.errors) if discovery_result.errors else None
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in discovery and cataloging: {str(e)}")
+        return StandardResponse(
+            success=False,
+            message="Discovery and cataloging failed",
+            error=str(e),
+            data=None
+        )
+
+@router.post("/data-sources/{data_source_id}/sync-catalog", response_model=StandardResponse)
+async def sync_catalog_with_data_source(
+    data_source_id: int,
+    session: Session = Depends(get_session),
+    current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_EDIT))
+):
+    """
+    Synchronize catalog with current state of data source.
+    This will update existing items and detect changes.
+    """
+    try:
+        from app.services.catalog_service import EnhancedCatalogService
+        
+        # Get data source
+        data_source = DataSourceService.get_data_source(session, data_source_id)
+        if not data_source:
+            return StandardResponse(
+                success=False,
+                message="Data source not found",
+                error="Data source not found",
+                data=None
+            )
+        
+        # Perform synchronization
+        catalog_service = EnhancedCatalogService()
+        sync_result = await catalog_service.sync_catalog_with_data_source(
+            session, 
+            data_source_id, 
+            current_user.get("username", "system")
+        )
+        
+        return StandardResponse(
+            success=sync_result.success,
+            message="Catalog synchronization completed" if sync_result.success else "Synchronization failed",
+            data={
+                "data_source_id": data_source_id,
+                "items_created": sync_result.items_created,
+                "items_updated": sync_result.items_updated,
+                "items_deleted": sync_result.items_deleted,
+                "sync_duration_seconds": sync_result.sync_duration_seconds,
+                "errors": sync_result.errors
+            },
+            error="; ".join(sync_result.errors) if sync_result.errors else None
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in catalog synchronization: {str(e)}")
+        return StandardResponse(
+            success=False,
+            message="Catalog synchronization failed",
             error=str(e),
             data=None
         )

@@ -85,8 +85,8 @@ from .compliance_service import ComplianceService
 from .data_source_service import DataSourceService
 
 # Core infrastructure imports
-from ..core.database import get_session
-from ..core.config import get_settings
+from ..db_session import get_session
+from ..core.config import settings
 from ..core.security import get_current_user
 from ..core.cache import RedisCache
 from ..core.monitoring import MetricsCollector, AlertManager
