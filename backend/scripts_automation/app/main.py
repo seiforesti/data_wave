@@ -80,6 +80,16 @@ from app.api.routes.catalog_analytics_routes import router as catalog_analytics_
 from app.api.routes.scan_coordination_routes import router as scan_coordination_router
 from app.api.routes.scan_analytics_routes import router as scan_analytics_router
 
+# NEW ENTERPRISE ROUTES - SCAN-LOGIC GROUP
+from app.api.routes.distributed_caching_routes import router as distributed_caching_router
+from app.api.routes.advanced_monitoring_routes import router as advanced_monitoring_router
+from app.api.routes.streaming_orchestration_routes import router as streaming_orchestration_router
+
+# NEW ENTERPRISE ROUTES - SCAN-RULE-SETS GROUP  
+from app.api.routes.advanced_ai_tuning_routes import router as advanced_ai_tuning_router
+from app.api.routes.advanced_pattern_matching_routes import router as advanced_pattern_matching_router
+from app.api.routes.rule_marketplace_routes import router as rule_marketplace_router
+
 from app.services.scan_scheduler_service import ScanSchedulerService
 from fastapi import Request
 import logging
@@ -212,6 +222,20 @@ app.include_router(scan_optimization_router, tags=["Scan Optimization"])
 app.include_router(catalog_analytics_router, tags=["Catalog Analytics"])
 app.include_router(scan_coordination_router, tags=["Scan Coordination"])
 app.include_router(scan_analytics_router, tags=["Scan Analytics"])
+
+# ========================================
+# NEW ENTERPRISE ROUTES - SCAN-LOGIC GROUP SERVICES INTEGRATION
+# ========================================
+app.include_router(distributed_caching_router, tags=["Distributed Caching"])
+app.include_router(advanced_monitoring_router, tags=["Advanced Monitoring"])
+app.include_router(streaming_orchestration_router, tags=["Streaming Orchestration"])
+
+# ========================================
+# NEW ENTERPRISE ROUTES - SCAN-RULE-SETS GROUP SERVICES INTEGRATION
+# ========================================
+app.include_router(advanced_ai_tuning_router, tags=["Advanced AI Tuning"])
+app.include_router(advanced_pattern_matching_router, tags=["Advanced Pattern Matching"])
+app.include_router(rule_marketplace_router, tags=["Rule Marketplace"])
 
 app.mount("/popuphandler", StaticFiles(directory="app/popuphandler"), name="static")
 
