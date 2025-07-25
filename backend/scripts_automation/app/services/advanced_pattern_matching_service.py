@@ -720,4 +720,3 @@
 + def get_advanced_pattern_matching_service() -> AdvancedPatternMatchingService:
 +     """Get Advanced Pattern Matching Service instance"""
 +     return AdvancedPatternMatchingService()
- 
