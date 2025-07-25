@@ -54,12 +54,7 @@ from app.api.routes.ai_routes import router as ai_routes
 # 1. SCAN-RULE-SETS GROUP - Enterprise Routes
 from app.api.routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_router
 
-# 1. SCAN-RULE-SETS COMPLETED ROUTES - New Advanced Implementation
-from app.api.routes.Scan-Rule-Sets-completed-routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_completed_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.rule_template_routes import router as rule_template_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.rule_version_control_routes import router as rule_version_control_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.enhanced_collaboration_routes import router as enhanced_collaboration_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.analytics_reporting_routes import router as analytics_reporting_router
+# 1. SCAN-RULE-SETS COMPLETED ROUTES - Imports Moved to Main Section Below
 
 # 2. DATA CATALOG GROUP - Enterprise Routes  
 from app.api.routes.enterprise_catalog_routes import router as enterprise_catalog_router
@@ -175,32 +170,22 @@ app.include_router(ai_routes)  # Add AI classification routes (Version 3)
 app.include_router(enterprise_scan_rules_router, tags=["Enterprise Scan Rules"])
 
 # ========================================
-# SCAN-RULE-SETS COMPLETED ROUTES - Full Implementation
+# SCAN-RULE-SETS COMPLETED ROUTES - Corrected Implementation
 # ========================================
 from app.api.routes.Scan-Rule-Sets-completed-routes.rule_template_routes import router as rule_template_router
 from app.api.routes.Scan-Rule-Sets-completed-routes.rule_version_control_routes import router as rule_version_control_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.analytics_reporting_routes import router as analytics_reporting_router
 from app.api.routes.Scan-Rule-Sets-completed-routes.enhanced_collaboration_routes import router as enhanced_collaboration_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.ai_pattern_detection_routes import router as ai_pattern_detection_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.enterprise_orchestration_routes import router as enterprise_orchestration_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.rule_validation_routes import router as rule_validation_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.scan_workflows_routes import router as scan_workflows_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.scan_optimization_routes import router as scan_optimization_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.intelligent_scanning_routes import router as intelligent_scanning_router
-from app.api.routes.Scan-Rule-Sets-completed-routes.comprehensive_scan_analytics_routes import router as comprehensive_scan_analytics_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.rule_reviews_routes import router as rule_reviews_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.knowledge_base_routes import router as knowledge_base_router
+from app.api.routes.Scan-Rule-Sets-completed-routes.advanced_reporting_routes import router as advanced_reporting_router
 
 # Include Scan-Rule-Sets completed routes
 app.include_router(rule_template_router, tags=["Rule Templates"])
 app.include_router(rule_version_control_router, tags=["Rule Version Control"])
-app.include_router(analytics_reporting_router, tags=["Analytics & Reporting"])
 app.include_router(enhanced_collaboration_router, tags=["Enhanced Collaboration"])
-app.include_router(ai_pattern_detection_router, tags=["AI Pattern Detection"])
-app.include_router(enterprise_orchestration_router, tags=["Enterprise Orchestration"])
-app.include_router(rule_validation_router, tags=["Rule Validation"])
-app.include_router(scan_workflows_router, tags=["Scan Workflows"])
-app.include_router(scan_optimization_router, tags=["Scan Optimization"])
-app.include_router(intelligent_scanning_router, tags=["Intelligent Scanning"])
-app.include_router(comprehensive_scan_analytics_router, tags=["Comprehensive Scan Analytics"])
+app.include_router(rule_reviews_router, tags=["Rule Reviews"])
+app.include_router(knowledge_base_router, tags=["Knowledge Base"])
+app.include_router(advanced_reporting_router, tags=["Advanced Reporting"])
 
 # 2. DATA CATALOG GROUP - Enterprise Implementation (95KB+ Service)
 app.include_router(enterprise_catalog_router, tags=["Enterprise Data Catalog"])
@@ -215,12 +200,7 @@ app.include_router(scan_intelligence_router, tags=["Scan Intelligence"])
 app.include_router(scan_workflow_router, tags=["Scan Workflows"])
 app.include_router(scan_performance_router, tags=["Scan Performance"])
 
-# SCAN-RULE-SETS COMPLETED ROUTES - New Advanced Implementation
-app.include_router(enterprise_scan_rules_completed_router, tags=["Enterprise Scan Rules - Advanced"])
-app.include_router(rule_template_router, tags=["Rule Templates"])
-app.include_router(rule_version_control_router, tags=["Rule Version Control"])
-app.include_router(enhanced_collaboration_router, tags=["Enhanced Collaboration"])
-app.include_router(analytics_reporting_router, tags=["Analytics & Reporting"])
+# SCAN-RULE-SETS COMPLETED ROUTES - Unique Routes Only (Duplicates Removed)
 
 # UNIFIED ENTERPRISE INTEGRATION - Cross-System Real-time Coordination
 app.include_router(enterprise_integration_router, tags=["Enterprise Integration"])

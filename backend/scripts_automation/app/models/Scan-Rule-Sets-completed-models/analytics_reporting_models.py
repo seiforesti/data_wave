@@ -1,24 +1,26 @@
 """
-Advanced Analytics and Reporting Models for Scan-Rule-Sets Group
-==============================================================
+Analytics and Reporting Models for Scan-Rule-Sets Group
+======================================================
 
-Enterprise-grade analytics and reporting system for scan rules with comprehensive metrics:
-- Usage analytics and user behavior tracking
-- Performance metrics and trend analysis
-- ROI calculation and business value measurement
-- Executive dashboard and reporting
-- Advanced data visualization support
-- Predictive analytics and forecasting
-- Comparative analysis and benchmarking
-- Real-time monitoring and alerting
+Advanced analytics and reporting system for scan rule governance with enterprise features:
+- Comprehensive usage analytics and behavior tracking
+- Advanced trend analysis with predictive modeling
+- ROI metrics and business value calculation
+- Compliance integration with regulatory frameworks
+- Performance monitoring and optimization insights
+- User behavior analytics and recommendation engines
+- Business intelligence and executive dashboards
+- Advanced reporting with customizable visualizations
 
 Production Features:
-- Multi-dimensional analytics with drill-down capabilities
-- AI-powered insights and recommendations
-- Automated reporting and distribution
-- Custom dashboard builder
-- Advanced data export and integration
-- Real-time streaming analytics
+- Real-time analytics processing with streaming data
+- Machine learning-powered trend prediction
+- Advanced statistical analysis and correlation detection
+- Multi-dimensional data aggregation and rollups
+- Enterprise-grade reporting with scheduled delivery
+- Advanced visualization and interactive dashboards
+- Integration with external BI tools and data warehouses
+- Comprehensive audit trails and compliance reporting
 """
 
 from typing import List, Dict, Any, Optional, Union
@@ -26,546 +28,573 @@ from datetime import datetime, timedelta
 from enum import Enum
 import uuid
 
-from sqlmodel import SQLModel, Field, Relationship, Column, JSON, Text
-from sqlalchemy import Index, UniqueConstraint, CheckConstraint
+from sqlmodel import SQLModel, Field, Relationship, Column, JSON, Text, ARRAY
+from sqlalchemy import Index, UniqueConstraint, CheckConstraint, DECIMAL
 from pydantic import BaseModel, validator
 
 # ===================== ENUMS AND TYPES =====================
 
 class AnalyticsType(str, Enum):
-    """Analytics type classifications"""
-    USAGE = "usage"                        # Usage analytics
-    PERFORMANCE = "performance"            # Performance metrics
-    QUALITY = "quality"                    # Quality metrics
-    EFFICIENCY = "efficiency"              # Efficiency analysis
-    ADOPTION = "adoption"                  # Adoption tracking
-    COLLABORATION = "collaboration"        # Collaboration metrics
-    SECURITY = "security"                  # Security analytics
-    COMPLIANCE = "compliance"              # Compliance tracking
-    BUSINESS_VALUE = "business_value"      # Business impact
-    PREDICTIVE = "predictive"              # Predictive analytics
-
-class MetricType(str, Enum):
-    """Metric type classifications"""
-    COUNTER = "counter"                    # Simple count metric
-    GAUGE = "gauge"                        # Current value metric
-    HISTOGRAM = "histogram"                # Distribution metric
-    RATE = "rate"                         # Rate/frequency metric
-    RATIO = "ratio"                       # Ratio/percentage metric
-    TREND = "trend"                       # Trend analysis metric
-    COMPOSITE = "composite"               # Composite metric
-    DERIVED = "derived"                   # Calculated metric
-
-class ReportType(str, Enum):
-    """Report type classifications"""
-    EXECUTIVE_SUMMARY = "executive_summary"
-    OPERATIONAL = "operational"
-    TECHNICAL = "technical"
-    COMPLIANCE = "compliance"
-    PERFORMANCE = "performance"
-    USAGE = "usage"
-    TREND_ANALYSIS = "trend_analysis"
-    COMPARATIVE = "comparative"
-    PREDICTIVE = "predictive"
-    CUSTOM = "custom"
+    """Analytics data types"""
+    USAGE_METRICS = "usage_metrics"
+    PERFORMANCE_METRICS = "performance_metrics"
+    QUALITY_METRICS = "quality_metrics"
+    COMPLIANCE_METRICS = "compliance_metrics"
+    BUSINESS_METRICS = "business_metrics"
+    USER_BEHAVIOR = "user_behavior"
+    SYSTEM_HEALTH = "system_health"
+    SECURITY_METRICS = "security_metrics"
 
 class TrendDirection(str, Enum):
-    """Trend direction classifications"""
-    INCREASING = "increasing"
-    DECREASING = "decreasing"
+    """Trend direction indicators"""
+    UPWARD = "upward"
+    DOWNWARD = "downward"
     STABLE = "stable"
     VOLATILE = "volatile"
     SEASONAL = "seasonal"
-    UNKNOWN = "unknown"
+    CYCLICAL = "cyclical"
+    ANOMALOUS = "anomalous"
+    EMERGING = "emerging"
 
-class AlertSeverity(str, Enum):
-    """Alert severity levels"""
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
-    CRITICAL = "critical"
-    EMERGENCY = "emergency"
+class MetricGranularity(str, Enum):
+    """Metric aggregation granularity"""
+    MINUTE = "minute"
+    HOUR = "hour"
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+    QUARTER = "quarter"
+    YEAR = "year"
+    REAL_TIME = "real_time"
 
-# ===================== CORE ANALYTICS MODELS =====================
+class ROICategory(str, Enum):
+    """ROI calculation categories"""
+    COST_SAVINGS = "cost_savings"
+    PRODUCTIVITY_GAINS = "productivity_gains"
+    RISK_REDUCTION = "risk_reduction"
+    COMPLIANCE_VALUE = "compliance_value"
+    QUALITY_IMPROVEMENT = "quality_improvement"
+    TIME_TO_MARKET = "time_to_market"
+    OPERATIONAL_EFFICIENCY = "operational_efficiency"
+    REVENUE_GENERATION = "revenue_generation"
+
+class ComplianceFramework(str, Enum):
+    """Compliance framework types"""
+    GDPR = "gdpr"
+    CCPA = "ccpa"
+    HIPAA = "hipaa"
+    SOX = "sox"
+    PCI_DSS = "pci_dss"
+    ISO_27001 = "iso_27001"
+    NIST = "nist"
+    SOC2 = "soc2"
+    CUSTOM = "custom"
+
+class ComplianceStatus(str, Enum):
+    """Compliance status levels"""
+    COMPLIANT = "compliant"
+    NON_COMPLIANT = "non_compliant"
+    PARTIALLY_COMPLIANT = "partially_compliant"
+    UNDER_REVIEW = "under_review"
+    REMEDIATION_REQUIRED = "remediation_required"
+    EXEMPT = "exempt"
+    NOT_APPLICABLE = "not_applicable"
+
+# ===================== CORE MODELS =====================
 
 class UsageAnalytics(SQLModel, table=True):
     """
-    Comprehensive usage analytics tracking for scan rules.
-    Monitors user behavior, feature adoption, and system utilization.
+    Comprehensive usage analytics for scan rules and system components.
+    Tracks user behavior, system utilization, and performance metrics.
     """
     __tablename__ = "usage_analytics"
     
     # Primary identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    analytics_id: str = Field(index=True, unique=True, description="Unique analytics identifier")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    analytics_type: AnalyticsType = Field(description="Type of analytics data")
     
-    # Analytics scope and context
-    entity_type: str = Field(max_length=50, index=True, description="Entity being analyzed")
-    entity_id: str = Field(index=True, description="Entity identifier")
-    user_id: Optional[str] = Field(max_length=255, index=True, description="User identifier")
-    session_id: Optional[str] = Field(max_length=255, index=True, description="Session identifier")
+    # Entity tracking
+    entity_type: str = Field(description="Type of entity being tracked (rule, user, system, etc.)")
+    entity_id: Optional[str] = Field(default=None, description="ID of the tracked entity")
+    entity_name: Optional[str] = Field(default=None, description="Name of the tracked entity")
     
-    # Time-based analytics
-    measurement_date: datetime = Field(index=True, description="Measurement timestamp")
-    measurement_period: str = Field(max_length=20, index=True, description="Period type")  # hourly, daily, weekly, monthly
-    time_zone: str = Field(default="UTC", max_length=50)
+    # User and context information
+    user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
+    session_id: Optional[str] = Field(default=None, description="User session identifier")
+    organization_id: Optional[uuid.UUID] = Field(default=None, description="Organization context")
+    
+    # Temporal tracking
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp")
+    duration_seconds: Optional[float] = Field(default=None, description="Duration of tracked activity")
     
     # Usage metrics
-    total_usage_count: int = Field(default=0, ge=0, description="Total usage count")
-    unique_users: int = Field(default=0, ge=0, description="Unique user count")
-    active_sessions: int = Field(default=0, ge=0, description="Active session count")
-    average_session_duration: float = Field(default=0.0, ge=0.0, description="Average session duration (minutes)")
-    total_time_spent: float = Field(default=0.0, ge=0.0, description="Total time spent (minutes)")
+    usage_count: int = Field(default=1, description="Number of times used")
+    frequency_score: float = Field(default=0.0, description="Usage frequency score")
+    popularity_rank: Optional[int] = Field(default=None, description="Popularity ranking")
     
-    # Feature adoption metrics
-    feature_usage: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    feature_adoption_rate: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    new_feature_adoption: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    advanced_feature_usage: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Performance metrics
+    response_time_ms: Optional[float] = Field(default=None, description="Response time in milliseconds")
+    throughput_ops_sec: Optional[float] = Field(default=None, description="Operations per second")
+    success_rate: Optional[float] = Field(default=None, ge=0, le=1, description="Success rate (0-1)")
+    error_rate: Optional[float] = Field(default=None, ge=0, le=1, description="Error rate (0-1)")
     
-    # User behavior patterns
-    user_flow_patterns: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    click_patterns: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    navigation_patterns: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    error_patterns: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # Resource utilization
+    cpu_usage_percent: Optional[float] = Field(default=None, ge=0, le=100, description="CPU usage percentage")
+    memory_usage_mb: Optional[float] = Field(default=None, description="Memory usage in MB")
+    disk_io_ops: Optional[int] = Field(default=None, description="Disk I/O operations")
+    network_bytes: Optional[int] = Field(default=None, description="Network bytes transferred")
     
-    # Engagement metrics
-    bounce_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Bounce rate")
-    retention_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="User retention rate")
-    return_user_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Return user rate")
-    engagement_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall engagement score")
+    # Business metrics
+    business_value_score: Optional[float] = Field(default=None, description="Business value score")
+    cost_impact: Optional[float] = Field(default=None, description="Cost impact in currency units")
+    productivity_gain: Optional[float] = Field(default=None, description="Productivity gain percentage")
     
-    # Performance impact
-    page_load_times: List[float] = Field(default_factory=list, sa_column=Column(JSON))
-    response_times: List[float] = Field(default_factory=list, sa_column=Column(JSON))
-    error_rates: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    success_rates: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Detailed metrics and metadata
+    metrics_data: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    tags: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(str)))
     
-    # Device and platform analytics
-    device_types: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    browser_usage: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    platform_usage: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    screen_resolutions: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
+    # System context
+    environment: Optional[str] = Field(default=None, description="Environment context (prod, dev, test)")
+    version: Optional[str] = Field(default=None, description="System/component version")
+    region: Optional[str] = Field(default=None, description="Geographic region")
     
-    # Geographic analytics
-    geographic_distribution: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    time_zone_distribution: Dict[str, int] = Field(default_factory=dict, sa_column=Column(JSON))
-    
-    # Temporal fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    
-    # Data quality and validation
-    data_quality_score: float = Field(default=1.0, ge=0.0, le=1.0, description="Data quality score")
-    sample_size: int = Field(default=0, ge=0, description="Sample size for analytics")
-    confidence_level: float = Field(default=0.95, ge=0.0, le=1.0, description="Statistical confidence level")
-    
-    # Table constraints
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Indexes for performance
     __table_args__ = (
-        Index("idx_usage_entity", "entity_type", "entity_id"),
-        Index("idx_usage_date_period", "measurement_date", "measurement_period"),
-        Index("idx_usage_user_session", "user_id", "session_id"),
-        UniqueConstraint("analytics_id", name="uq_usage_analytics_id"),
+        Index("idx_usage_analytics_type_timestamp", "analytics_type", "timestamp"),
+        Index("idx_usage_analytics_entity", "entity_type", "entity_id"),
+        Index("idx_usage_analytics_user_timestamp", "user_id", "timestamp"),
+        Index("idx_usage_analytics_organization", "organization_id"),
+        Index("idx_usage_analytics_environment", "environment"),
     )
 
 class TrendAnalysis(SQLModel, table=True):
     """
-    Advanced trend analysis with predictive capabilities.
-    Identifies patterns, forecasts, and anomalies in scan rule metrics.
+    Advanced trend analysis with predictive modeling and pattern recognition.
+    Identifies patterns, predicts future trends, and provides insights.
     """
-    __tablename__ = "trend_analyses"
+    __tablename__ = "trend_analysis"
     
     # Primary identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    analysis_id: str = Field(index=True, unique=True, description="Unique analysis identifier")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    trend_name: str = Field(description="Human-readable trend name")
+    trend_type: str = Field(description="Type of trend being analyzed")
     
     # Analysis scope
-    metric_name: str = Field(index=True, max_length=100, description="Metric being analyzed")
-    entity_type: str = Field(max_length=50, index=True, description="Entity type")
-    entity_id: Optional[str] = Field(index=True, description="Specific entity ID")
+    entity_type: str = Field(description="Type of entity being analyzed")
+    entity_ids: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(str)))
+    scope_filter: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Time range for analysis
-    analysis_start: datetime = Field(index=True, description="Analysis period start")
-    analysis_end: datetime = Field(index=True, description="Analysis period end")
-    data_points: int = Field(ge=2, description="Number of data points analyzed")
-    sampling_interval: str = Field(max_length=20, description="Data sampling interval")
+    # Temporal scope
+    analysis_start_date: datetime = Field(description="Start date of analysis period")
+    analysis_end_date: datetime = Field(description="End date of analysis period")
+    granularity: MetricGranularity = Field(description="Analysis granularity")
     
     # Trend characteristics
-    trend_direction: TrendDirection = Field(index=True, description="Overall trend direction")
-    trend_strength: float = Field(ge=0.0, le=1.0, description="Trend strength (0-1)")
-    trend_consistency: float = Field(ge=0.0, le=1.0, description="Trend consistency")
-    volatility_index: float = Field(ge=0.0, description="Volatility measure")
+    trend_direction: TrendDirection = Field(description="Overall trend direction")
+    trend_strength: float = Field(ge=0, le=1, description="Strength of the trend (0-1)")
+    confidence_score: float = Field(ge=0, le=1, description="Confidence in the analysis (0-1)")
+    statistical_significance: float = Field(ge=0, le=1, description="Statistical significance (p-value)")
     
-    # Statistical analysis
-    correlation_coefficient: Optional[float] = Field(ge=-1.0, le=1.0, description="Correlation coefficient")
-    r_squared: Optional[float] = Field(ge=0.0, le=1.0, description="R-squared value")
-    p_value: Optional[float] = Field(ge=0.0, le=1.0, description="Statistical p-value")
-    confidence_interval: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Statistical metrics
+    correlation_coefficient: Optional[float] = Field(default=None, ge=-1, le=1)
+    r_squared: Optional[float] = Field(default=None, ge=0, le=1, description="R-squared value")
+    slope: Optional[float] = Field(default=None, description="Trend slope")
+    intercept: Optional[float] = Field(default=None, description="Trend intercept")
     
-    # Trend components
-    seasonal_component: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    cyclical_component: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    noise_component: float = Field(default=0.0, ge=0.0, le=1.0, description="Noise level")
-    baseline_value: float = Field(description="Baseline/reference value")
+    # Data points and statistics
+    data_points_count: int = Field(description="Number of data points analyzed")
+    min_value: float = Field(description="Minimum value in dataset")
+    max_value: float = Field(description="Maximum value in dataset")
+    mean_value: float = Field(description="Mean value")
+    median_value: float = Field(description="Median value")
+    std_deviation: float = Field(description="Standard deviation")
     
-    # Change points and anomalies
-    change_points: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    anomaly_points: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    outlier_count: int = Field(default=0, ge=0, description="Number of outliers detected")
+    # Seasonality and patterns
+    seasonal_patterns: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    cyclical_patterns: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    anomalies_detected: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Predictive analysis
-    forecast_values: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    forecast_confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Forecast confidence")
-    forecast_horizon_days: int = Field(default=30, ge=1, description="Forecast horizon in days")
-    prediction_accuracy: Optional[float] = Field(ge=0.0, le=1.0, description="Historical prediction accuracy")
+    # Predictions and forecasting
+    forecast_horizon_days: Optional[int] = Field(default=None, description="Days ahead forecasted")
+    predicted_values: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    prediction_intervals: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    forecast_accuracy: Optional[float] = Field(default=None, ge=0, le=1)
     
-    # Rate of change analysis
-    absolute_change: float = Field(description="Absolute change over period")
-    percentage_change: float = Field(description="Percentage change over period")
-    average_rate_of_change: float = Field(description="Average rate of change per unit time")
-    acceleration: Optional[float] = Field(description="Rate of change acceleration")
+    # Model information
+    algorithm_used: str = Field(description="Algorithm used for analysis")
+    model_parameters: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    training_metrics: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Comparative analysis
-    comparison_benchmarks: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    peer_comparison: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    industry_percentile: Optional[float] = Field(ge=0.0, le=100.0, description="Industry percentile ranking")
+    # Business insights
+    business_impact: Optional[str] = Field(default=None, sa_column=Column(Text))
+    recommendations: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    risk_factors: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    opportunities: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # AI and ML insights
-    ml_model_used: Optional[str] = Field(max_length=100, description="ML model used for analysis")
-    feature_importance: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    ai_insights: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    recommendation_score: float = Field(default=0.0, ge=0.0, le=1.0, description="AI recommendation confidence")
+    # Metadata and context
+    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
+    organization_id: Optional[uuid.UUID] = Field(default=None)
+    tags: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(str)))
+    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Analysis metadata
-    analysis_type: str = Field(max_length=50, description="Type of trend analysis")
-    analysis_algorithm: str = Field(max_length=100, description="Algorithm used")
-    computational_complexity: str = Field(max_length=20, description="Computational complexity")
-    execution_time_ms: int = Field(default=0, ge=0, description="Analysis execution time")
-    
-    # Quality and validation
-    data_quality_issues: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    validation_results: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    reliability_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Analysis reliability")
-    
-    # Temporal fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    next_analysis_due: Optional[datetime] = Field(description="Next scheduled analysis")
-    
-    # User tracking
-    requested_by: str = Field(max_length=255, index=True, description="Analysis requester")
-    approved_by: Optional[str] = Field(max_length=255, description="Analysis approver")
-    
-    # Table constraints
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = Field(default=None, description="When analysis expires")
+
+    # Indexes for performance
     __table_args__ = (
-        Index("idx_trend_metric_entity", "metric_name", "entity_type"),
-        Index("idx_trend_period", "analysis_start", "analysis_end"),
-        Index("idx_trend_direction_strength", "trend_direction", "trend_strength"),
-        UniqueConstraint("analysis_id", name="uq_trend_analysis_id"),
+        Index("idx_trend_analysis_type_date", "trend_type", "analysis_start_date"),
+        Index("idx_trend_analysis_entity", "entity_type"),
+        Index("idx_trend_analysis_organization", "organization_id"),
+        Index("idx_trend_analysis_created", "created_at"),
     )
 
 class ROIMetrics(SQLModel, table=True):
     """
-    Return on Investment calculation and business value tracking.
-    Measures financial impact and business benefits of scan rule implementations.
+    Comprehensive ROI calculation and business value metrics.
+    Tracks financial impact, business value, and return on investment.
     """
     __tablename__ = "roi_metrics"
     
     # Primary identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    roi_id: str = Field(index=True, unique=True, description="Unique ROI identifier")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    metric_name: str = Field(description="Human-readable metric name")
+    roi_category: ROICategory = Field(description="Category of ROI calculation")
     
-    # ROI scope and context
-    investment_category: str = Field(max_length=100, index=True, description="Investment category")
-    investment_description: str = Field(max_length=500, description="Investment description")
-    entity_type: str = Field(max_length=50, index=True, description="Entity type being measured")
-    entity_id: str = Field(index=True, description="Entity identifier")
+    # Scope and context
+    entity_type: str = Field(description="Type of entity being measured")
+    entity_id: str = Field(description="ID of the measured entity")
+    entity_name: Optional[str] = Field(default=None, description="Name of the measured entity")
     
-    # Investment costs
-    initial_investment: float = Field(ge=0.0, description="Initial investment amount")
-    ongoing_costs: float = Field(default=0.0, ge=0.0, description="Ongoing operational costs")
-    maintenance_costs: float = Field(default=0.0, ge=0.0, description="Maintenance costs")
-    training_costs: float = Field(default=0.0, ge=0.0, description="Training and onboarding costs")
-    infrastructure_costs: float = Field(default=0.0, ge=0.0, description="Infrastructure costs")
-    total_cost_of_ownership: float = Field(ge=0.0, description="Total cost of ownership")
-    
-    # Revenue and benefits
-    direct_revenue: float = Field(default=0.0, ge=0.0, description="Direct revenue generated")
-    cost_savings: float = Field(default=0.0, ge=0.0, description="Cost savings achieved")
-    efficiency_gains: float = Field(default=0.0, ge=0.0, description="Efficiency improvement value")
-    risk_mitigation_value: float = Field(default=0.0, ge=0.0, description="Risk mitigation value")
-    compliance_value: float = Field(default=0.0, ge=0.0, description="Compliance benefits value")
-    total_benefits: float = Field(ge=0.0, description="Total quantified benefits")
+    # Financial metrics
+    investment_amount: float = Field(description="Total investment amount")
+    cost_savings: float = Field(default=0.0, description="Cost savings achieved")
+    revenue_generated: float = Field(default=0.0, description="Revenue generated")
+    cost_avoidance: float = Field(default=0.0, description="Costs avoided")
     
     # ROI calculations
-    net_present_value: float = Field(description="Net Present Value (NPV)")
-    internal_rate_return: Optional[float] = Field(description="Internal Rate of Return (IRR)")
-    payback_period_months: Optional[float] = Field(ge=0.0, description="Payback period in months")
-    roi_percentage: float = Field(description="ROI percentage")
-    roi_ratio: float = Field(description="ROI ratio (benefits/costs)")
+    total_benefit: float = Field(description="Total financial benefit")
+    net_benefit: float = Field(description="Net benefit (benefit - investment)")
+    roi_percentage: float = Field(description="ROI as percentage")
+    payback_period_months: Optional[float] = Field(default=None, description="Payback period in months")
+    npv: Optional[float] = Field(default=None, description="Net Present Value")
+    irr: Optional[float] = Field(default=None, description="Internal Rate of Return")
     
-    # Time-based analysis
-    measurement_start: datetime = Field(index=True, description="ROI measurement period start")
-    measurement_end: datetime = Field(index=True, description="ROI measurement period end")
-    break_even_date: Optional[datetime] = Field(description="Projected break-even date")
-    maturity_date: Optional[datetime] = Field(description="Investment maturity date")
+    # Time-based metrics
+    measurement_start_date: datetime = Field(description="Start date of measurement period")
+    measurement_end_date: datetime = Field(description="End date of measurement period")
+    projection_end_date: Optional[datetime] = Field(default=None, description="End date of projections")
     
     # Productivity metrics
-    time_saved_hours: float = Field(default=0.0, ge=0.0, description="Time saved in hours")
-    error_reduction_percentage: float = Field(default=0.0, ge=0.0, le=100.0, description="Error reduction %")
-    quality_improvement_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Quality improvement")
-    automation_percentage: float = Field(default=0.0, ge=0.0, le=100.0, description="Automation achieved %")
+    time_savings_hours: float = Field(default=0.0, description="Time savings in hours")
+    productivity_improvement_percent: float = Field(default=0.0, description="Productivity improvement %")
+    efficiency_gains: float = Field(default=0.0, description="Efficiency gains score")
     
-    # Risk and compliance metrics
-    security_incidents_prevented: int = Field(default=0, ge=0, description="Security incidents prevented")
-    compliance_violations_avoided: int = Field(default=0, ge=0, description="Compliance violations avoided")
-    audit_preparation_time_reduced: float = Field(default=0.0, ge=0.0, description="Audit prep time reduced")
-    regulatory_fine_avoidance: float = Field(default=0.0, ge=0.0, description="Regulatory fines avoided")
+    # Quality and compliance metrics
+    defect_reduction_percent: float = Field(default=0.0, description="Defect reduction %")
+    compliance_improvement_score: float = Field(default=0.0, description="Compliance improvement score")
+    risk_reduction_value: float = Field(default=0.0, description="Value of risk reduction")
     
-    # User adoption and satisfaction
-    user_adoption_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="User adoption rate")
-    user_satisfaction_score: float = Field(default=0.0, ge=0.0, le=5.0, description="User satisfaction")
-    training_completion_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Training completion rate")
-    support_ticket_reduction: float = Field(default=0.0, ge=0.0, le=1.0, description="Support ticket reduction")
+    # Business impact
+    customer_satisfaction_improvement: Optional[float] = Field(default=None, description="Customer satisfaction improvement")
+    employee_satisfaction_improvement: Optional[float] = Field(default=None, description="Employee satisfaction improvement")
+    market_share_impact: Optional[float] = Field(default=None, description="Market share impact")
     
-    # Business impact metrics
-    customer_satisfaction_impact: Optional[float] = Field(ge=-1.0, le=1.0, description="Customer satisfaction impact")
-    market_competitiveness_score: Optional[float] = Field(ge=0.0, le=1.0, description="Market competitiveness")
-    innovation_score: Optional[float] = Field(ge=0.0, le=1.0, description="Innovation contribution")
-    strategic_alignment_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Strategic alignment")
+    # Calculation methodology
+    calculation_method: str = Field(description="Method used for ROI calculation")
+    assumptions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    confidence_level: float = Field(ge=0, le=1, description="Confidence in calculations (0-1)")
+    data_quality_score: float = Field(ge=0, le=1, description="Quality of underlying data (0-1)")
     
-    # Financial projections
-    projected_benefits_year1: float = Field(default=0.0, ge=0.0, description="Year 1 projected benefits")
-    projected_benefits_year2: float = Field(default=0.0, ge=0.0, description="Year 2 projected benefits")
-    projected_benefits_year3: float = Field(default=0.0, ge=0.0, description="Year 3 projected benefits")
-    long_term_roi_projection: float = Field(default=0.0, description="Long-term ROI projection")
+    # Detailed breakdowns
+    cost_breakdown: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    benefit_breakdown: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    monthly_projections: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Confidence and validation
-    calculation_confidence: float = Field(default=0.8, ge=0.0, le=1.0, description="Calculation confidence")
-    data_sources: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    validation_method: str = Field(max_length=100, description="ROI validation method")
-    peer_reviewed: bool = Field(default=False, description="Peer reviewed calculation")
+    # Benchmarking
+    industry_benchmark: Optional[float] = Field(default=None, description="Industry benchmark ROI")
+    organization_benchmark: Optional[float] = Field(default=None, description="Organization benchmark ROI")
+    peer_comparison: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Comparative analysis
-    industry_benchmark_roi: Optional[float] = Field(description="Industry benchmark ROI")
-    peer_comparison_percentile: Optional[float] = Field(ge=0.0, le=100.0, description="Peer comparison percentile")
-    best_practice_adherence: float = Field(default=0.0, ge=0.0, le=1.0, description="Best practice adherence")
+    # Metadata and context
+    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
+    organization_id: Optional[uuid.UUID] = Field(default=None)
+    currency: str = Field(default="USD", description="Currency for financial calculations")
+    discount_rate: Optional[float] = Field(default=None, description="Discount rate for NPV calculations")
     
-    # Sensitivity analysis
-    optimistic_scenario_roi: Optional[float] = Field(description="Optimistic scenario ROI")
-    pessimistic_scenario_roi: Optional[float] = Field(description="Pessimistic scenario ROI")
-    risk_adjusted_roi: Optional[float] = Field(description="Risk-adjusted ROI")
-    sensitivity_factors: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    # Validation and approval
+    validated: bool = Field(default=False, description="Whether metrics have been validated")
+    validated_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
+    validated_at: Optional[datetime] = Field(default=None)
     
-    # Temporal fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    last_validated: Optional[datetime] = Field(description="Last validation date")
-    next_review_due: Optional[datetime] = Field(description="Next review due date")
+    # Tags and metadata
+    tags: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(str)))
+    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # User tracking
-    calculated_by: str = Field(max_length=255, index=True, description="ROI calculator")
-    approved_by: Optional[str] = Field(max_length=255, description="ROI approver")
-    validated_by: Optional[str] = Field(max_length=255, description="ROI validator")
-    
-    # Table constraints
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Indexes for performance
     __table_args__ = (
-        Index("idx_roi_category_entity", "investment_category", "entity_type"),
-        Index("idx_roi_period", "measurement_start", "measurement_end"),
-        Index("idx_roi_percentage", "roi_percentage"),
-        UniqueConstraint("roi_id", name="uq_roi_metrics_id"),
+        Index("idx_roi_metrics_category_entity", "roi_category", "entity_type"),
+        Index("idx_roi_metrics_organization", "organization_id"),
+        Index("idx_roi_metrics_measurement_period", "measurement_start_date", "measurement_end_date"),
+        Index("idx_roi_metrics_created", "created_at"),
     )
 
 class ComplianceIntegration(SQLModel, table=True):
     """
-    Compliance integration tracking and regulatory alignment.
-    Monitors adherence to regulatory requirements and standards.
+    Comprehensive compliance integration with regulatory frameworks.
+    Manages compliance status, assessments, and regulatory reporting.
     """
-    __tablename__ = "compliance_integrations"
+    __tablename__ = "compliance_integration"
     
     # Primary identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    integration_id: str = Field(index=True, unique=True, description="Unique integration identifier")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    integration_name: str = Field(description="Human-readable integration name")
+    framework: ComplianceFramework = Field(description="Compliance framework")
     
-    # Compliance framework details
-    framework_name: str = Field(index=True, max_length=100, description="Compliance framework name")
-    framework_version: str = Field(max_length=20, description="Framework version")
-    regulation_type: str = Field(max_length=50, index=True, description="Type of regulation")
-    jurisdiction: str = Field(max_length=100, description="Regulatory jurisdiction")
-    
-    # Entity compliance mapping
-    entity_type: str = Field(max_length=50, index=True, description="Entity type")
-    entity_id: str = Field(index=True, description="Entity identifier")
-    rule_id: Optional[str] = Field(index=True, description="Associated rule ID")
-    
-    # Compliance requirements
-    requirements: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    controls: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    policies: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    procedures: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # Scope and applicability
+    entity_type: str = Field(description="Type of entity being assessed")
+    entity_id: str = Field(description="ID of the assessed entity")
+    entity_name: Optional[str] = Field(default=None, description="Name of the assessed entity")
+    scope_description: Optional[str] = Field(default=None, sa_column=Column(Text))
     
     # Compliance status
-    overall_compliance_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall compliance score")
-    compliance_status: str = Field(max_length=50, index=True, description="Compliance status")
-    certification_status: str = Field(max_length=50, description="Certification status")
-    last_assessment_date: Optional[datetime] = Field(description="Last assessment date")
-    next_assessment_due: Optional[datetime] = Field(description="Next assessment due")
+    overall_status: ComplianceStatus = Field(description="Overall compliance status")
+    compliance_score: float = Field(ge=0, le=100, description="Compliance score (0-100)")
+    last_assessment_date: datetime = Field(description="Date of last assessment")
+    next_assessment_due: datetime = Field(description="Next assessment due date")
     
-    # Compliance metrics
-    controls_implemented: int = Field(default=0, ge=0, description="Controls implemented")
-    controls_total: int = Field(default=0, ge=0, description="Total controls required")
-    gaps_identified: int = Field(default=0, ge=0, description="Compliance gaps identified")
-    violations_count: int = Field(default=0, ge=0, description="Violations detected")
+    # Requirements and controls
+    total_requirements: int = Field(description="Total number of requirements")
+    compliant_requirements: int = Field(description="Number of compliant requirements")
+    non_compliant_requirements: int = Field(description="Number of non-compliant requirements")
+    partially_compliant_requirements: int = Field(description="Number of partially compliant requirements")
     
-    # Risk assessment
-    risk_level: str = Field(max_length=20, index=True, description="Compliance risk level")
-    risk_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Quantified risk score")
-    mitigation_actions: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    residual_risk: float = Field(default=0.0, ge=0.0, le=1.0, description="Residual risk after mitigation")
+    # Detailed compliance tracking
+    requirements_status: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    control_mappings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    evidence_links: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Audit trail
-    audit_findings: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    remediation_actions: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    evidence_artifacts: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    audit_history: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # Risk and impact assessment
+    risk_level: str = Field(description="Overall risk level (low, medium, high, critical)")
+    potential_penalties: Optional[float] = Field(default=None, description="Potential financial penalties")
+    business_impact: Optional[str] = Field(default=None, sa_column=Column(Text))
+    reputation_risk: Optional[str] = Field(default=None, description="Reputation risk level")
     
-    # Monitoring and alerting
-    monitoring_enabled: bool = Field(default=True, description="Continuous monitoring enabled")
-    alert_thresholds: Dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    escalation_procedures: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    notification_contacts: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # Remediation tracking
+    open_findings: int = Field(default=0, description="Number of open findings")
+    critical_findings: int = Field(default=0, description="Number of critical findings")
+    remediation_plans: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    remediation_status: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     
-    # Reporting and documentation
-    compliance_reports: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # Timeline and deadlines
+    implementation_deadline: Optional[datetime] = Field(default=None, description="Implementation deadline")
+    certification_date: Optional[datetime] = Field(default=None, description="Certification date")
+    certification_expiry: Optional[datetime] = Field(default=None, description="Certification expiry date")
+    
+    # Assessment details
+    assessor_name: Optional[str] = Field(default=None, description="Name of the assessor")
+    assessment_methodology: Optional[str] = Field(default=None, description="Assessment methodology used")
+    assessment_scope: Optional[str] = Field(default=None, sa_column=Column(Text))
+    assessment_notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    
+    # Documentation and reporting
+    compliance_report_url: Optional[str] = Field(default=None, description="URL to compliance report")
     documentation_links: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    training_requirements: List[str] = Field(default_factory=list, sa_column=Column(JSON))
-    certification_documents: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    audit_trail: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # Integration metadata
-    integration_status: str = Field(default="active", max_length=50, index=True)
-    automation_level: str = Field(max_length=20, description="Automation level")
-    manual_effort_required: bool = Field(default=False, description="Manual effort required")
-    third_party_tools: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # External integration
+    external_system_id: Optional[str] = Field(default=None, description="ID in external compliance system")
+    external_system_name: Optional[str] = Field(default=None, description="Name of external system")
+    sync_status: Optional[str] = Field(default=None, description="Synchronization status")
+    last_sync_date: Optional[datetime] = Field(default=None, description="Last synchronization date")
     
-    # Temporal fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    effective_date: datetime = Field(index=True, description="Compliance effective date")
-    expiration_date: Optional[datetime] = Field(description="Compliance expiration date")
+    # Notifications and alerts
+    alert_thresholds: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    notification_settings: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    escalation_rules: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     
-    # User tracking
-    compliance_officer: str = Field(max_length=255, index=True, description="Compliance officer")
-    auditor: Optional[str] = Field(max_length=255, description="External auditor")
-    reviewer: Optional[str] = Field(max_length=255, description="Internal reviewer")
+    # Metadata and context
+    created_by: Optional[uuid.UUID] = Field(default=None, foreign_key="users.id")
+    organization_id: Optional[uuid.UUID] = Field(default=None)
+    business_unit: Optional[str] = Field(default=None, description="Business unit or department")
+    geography: Optional[str] = Field(default=None, description="Geographic scope")
     
-    # Table constraints
+    # Version and change tracking
+    version: str = Field(default="1.0", description="Integration version")
+    change_log: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    
+    # Tags and metadata
+    tags: List[str] = Field(default_factory=list, sa_column=Column(ARRAY(str)))
+    metadata: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Indexes for performance
     __table_args__ = (
-        Index("idx_compliance_framework", "framework_name", "framework_version"),
+        Index("idx_compliance_framework_status", "framework", "overall_status"),
         Index("idx_compliance_entity", "entity_type", "entity_id"),
-        Index("idx_compliance_status_risk", "compliance_status", "risk_level"),
-        Index("idx_compliance_dates", "effective_date", "next_assessment_due"),
-        UniqueConstraint("integration_id", name="uq_compliance_integration_id"),
-    )
-
-# ===================== SUPPORTING MODELS =====================
-
-class PerformanceAlert(SQLModel, table=True):
-    """
-    Performance alerting system for proactive monitoring.
-    Generates alerts based on thresholds and anomaly detection.
-    """
-    __tablename__ = "performance_alerts"
-    
-    # Primary identification
-    id: Optional[int] = Field(default=None, primary_key=True)
-    alert_id: str = Field(index=True, unique=True, description="Unique alert identifier")
-    
-    # Alert details
-    alert_type: str = Field(max_length=50, index=True, description="Alert type")
-    severity: AlertSeverity = Field(index=True, description="Alert severity")
-    title: str = Field(max_length=255, description="Alert title")
-    description: str = Field(sa_column=Column(Text), description="Alert description")
-    
-    # Alert triggers
-    metric_name: str = Field(index=True, max_length=100, description="Triggering metric")
-    threshold_value: float = Field(description="Threshold value")
-    actual_value: float = Field(description="Actual measured value")
-    threshold_type: str = Field(max_length=20, description="Threshold type")  # above, below, equal, change
-    
-    # Alert context
-    entity_type: str = Field(max_length=50, index=True, description="Entity type")
-    entity_id: str = Field(index=True, description="Entity identifier")
-    rule_id: Optional[str] = Field(index=True, description="Associated rule ID")
-    
-    # Alert status
-    status: str = Field(default="active", max_length=50, index=True, description="Alert status")
-    acknowledged: bool = Field(default=False, index=True, description="Alert acknowledged")
-    resolved: bool = Field(default=False, index=True, description="Alert resolved")
-    false_positive: bool = Field(default=False, description="Marked as false positive")
-    
-    # Response tracking
-    acknowledged_by: Optional[str] = Field(max_length=255, description="Acknowledged by user")
-    acknowledged_at: Optional[datetime] = Field(description="Acknowledgment timestamp")
-    resolved_by: Optional[str] = Field(max_length=255, description="Resolved by user")
-    resolved_at: Optional[datetime] = Field(description="Resolution timestamp")
-    resolution_notes: Optional[str] = Field(sa_column=Column(Text), description="Resolution notes")
-    
-    # Alert recurrence
-    is_recurring: bool = Field(default=False, description="Recurring alert")
-    recurrence_count: int = Field(default=1, ge=1, description="Number of occurrences")
-    first_occurrence: datetime = Field(default_factory=datetime.utcnow, description="First occurrence")
-    last_occurrence: datetime = Field(default_factory=datetime.utcnow, description="Last occurrence")
-    
-    # Notification tracking
-    notifications_sent: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    escalated: bool = Field(default=False, description="Alert escalated")
-    escalation_level: int = Field(default=0, ge=0, description="Escalation level")
-    
-    # Temporal fields
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    expires_at: Optional[datetime] = Field(description="Alert expiration")
-    
-    # Table constraints
-    __table_args__ = (
-        Index("idx_alert_type_severity", "alert_type", "severity"),
-        Index("idx_alert_status", "status", "acknowledged", "resolved"),
-        Index("idx_alert_entity", "entity_type", "entity_id"),
-        Index("idx_alert_metric", "metric_name"),
-        UniqueConstraint("alert_id", name="uq_performance_alert_id"),
+        Index("idx_compliance_organization", "organization_id"),
+        Index("idx_compliance_assessment_date", "last_assessment_date"),
+        Index("idx_compliance_next_due", "next_assessment_due"),
+        UniqueConstraint("entity_type", "entity_id", "framework", name="uq_compliance_entity_framework"),
     )
 
 # ===================== REQUEST/RESPONSE MODELS =====================
 
-class AnalyticsRequest(BaseModel):
-    """Request model for analytics generation"""
+class UsageAnalyticsCreate(BaseModel):
+    """Request model for creating usage analytics"""
+    analytics_type: AnalyticsType
     entity_type: str
     entity_id: Optional[str] = None
-    analytics_type: AnalyticsType = AnalyticsType.USAGE
-    start_date: datetime
-    end_date: datetime
-    granularity: str = "daily"  # hourly, daily, weekly, monthly
-    
-class TrendAnalysisRequest(BaseModel):
-    """Request model for trend analysis"""
+    entity_name: Optional[str] = None
+    user_id: Optional[uuid.UUID] = None
+    session_id: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    usage_count: int = 1
+    response_time_ms: Optional[float] = None
+    success_rate: Optional[float] = None
+    metrics_data: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = {}
+    tags: List[str] = []
+
+class UsageAnalyticsResponse(BaseModel):
+    """Response model for usage analytics"""
+    id: uuid.UUID
+    analytics_type: AnalyticsType
+    entity_type: str
+    entity_id: Optional[str]
+    timestamp: datetime
+    usage_count: int
+    frequency_score: float
+    metrics_data: Dict[str, Any]
+    created_at: datetime
+
+class TrendAnalysisCreate(BaseModel):
+    """Request model for creating trend analysis"""
+    trend_name: str
+    trend_type: str
+    entity_type: str
+    entity_ids: List[str] = []
+    analysis_start_date: datetime
+    analysis_end_date: datetime
+    granularity: MetricGranularity
+    scope_filter: Dict[str, Any] = {}
+    algorithm_used: str = "linear_regression"
+    model_parameters: Dict[str, Any] = {}
+    tags: List[str] = []
+
+class TrendAnalysisResponse(BaseModel):
+    """Response model for trend analysis"""
+    id: uuid.UUID
+    trend_name: str
+    trend_direction: TrendDirection
+    trend_strength: float
+    confidence_score: float
+    data_points_count: int
+    predicted_values: List[Dict[str, Any]]
+    business_impact: Optional[str]
+    recommendations: List[str]
+    created_at: datetime
+
+class ROIMetricsCreate(BaseModel):
+    """Request model for creating ROI metrics"""
     metric_name: str
-    entity_type: str
-    entity_id: Optional[str] = None
-    analysis_period_days: int = Field(default=90, ge=7, le=365)
-    forecast_days: int = Field(default=30, ge=1, le=180)
-    
-class ROICalculationRequest(BaseModel):
-    """Request model for ROI calculation"""
-    investment_category: str
+    roi_category: ROICategory
     entity_type: str
     entity_id: str
-    initial_investment: float = Field(ge=0.0)
-    measurement_period_months: int = Field(default=12, ge=1, le=60)
-    
-class ReportGenerationRequest(BaseModel):
-    """Request model for report generation"""
-    report_type: ReportType = ReportType.EXECUTIVE_SUMMARY
-    entities: List[Dict[str, str]]  # [{"type": "rule", "id": "123"}]
-    date_range: Dict[str, datetime]
-    include_predictions: bool = True
-    include_comparisons: bool = True
+    entity_name: Optional[str] = None
+    investment_amount: float
+    cost_savings: float = 0.0
+    revenue_generated: float = 0.0
+    measurement_start_date: datetime
+    measurement_end_date: datetime
+    calculation_method: str
+    currency: str = "USD"
+    assumptions: List[str] = []
+    tags: List[str] = []
+
+class ROIMetricsResponse(BaseModel):
+    """Response model for ROI metrics"""
+    id: uuid.UUID
+    metric_name: str
+    roi_category: ROICategory
+    total_benefit: float
+    net_benefit: float
+    roi_percentage: float
+    payback_period_months: Optional[float]
+    confidence_level: float
+    data_quality_score: float
+    created_at: datetime
+
+class ComplianceIntegrationCreate(BaseModel):
+    """Request model for creating compliance integration"""
+    integration_name: str
+    framework: ComplianceFramework
+    entity_type: str
+    entity_id: str
+    entity_name: Optional[str] = None
+    scope_description: Optional[str] = None
+    total_requirements: int
+    assessor_name: Optional[str] = None
+    assessment_methodology: Optional[str] = None
+    implementation_deadline: Optional[datetime] = None
+    tags: List[str] = []
+
+class ComplianceIntegrationResponse(BaseModel):
+    """Response model for compliance integration"""
+    id: uuid.UUID
+    integration_name: str
+    framework: ComplianceFramework
+    overall_status: ComplianceStatus
+    compliance_score: float
+    last_assessment_date: datetime
+    next_assessment_due: datetime
+    total_requirements: int
+    compliant_requirements: int
+    open_findings: int
+    risk_level: str
+    created_at: datetime
+
+# ===================== ANALYTICS AGGREGATION MODELS =====================
+
+class AnalyticsSummary(BaseModel):
+    """Summary analytics across multiple dimensions"""
+    total_entities: int
+    total_events: int
+    average_usage_frequency: float
+    top_entities: List[Dict[str, Any]]
+    performance_summary: Dict[str, float]
+    trend_indicators: Dict[str, Any]
+    period_start: datetime
+    period_end: datetime
+
+class ROIDashboard(BaseModel):
+    """ROI dashboard summary"""
+    total_investment: float
+    total_benefit: float
+    overall_roi_percentage: float
+    category_breakdown: Dict[ROICategory, float]
+    monthly_trends: List[Dict[str, Any]]
+    top_performing_entities: List[Dict[str, Any]]
+    projected_returns: Dict[str, Any]
+
+class ComplianceDashboard(BaseModel):
+    """Compliance dashboard summary"""
+    overall_compliance_score: float
+    framework_status: Dict[ComplianceFramework, ComplianceStatus]
+    critical_findings: int
+    upcoming_deadlines: List[Dict[str, Any]]
+    risk_distribution: Dict[str, int]
+    remediation_progress: Dict[str, Any]
