@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -23,7 +24,10 @@ import {
   Settings,
   Info,
   Clock,
-  Activity
+  Activity,
+  Zap,
+  Target,
+  Network
 } from "lucide-react"
 import { useOrchestration } from "../../hooks/useOrchestration"
 import { DependencyGraph } from "./DependencyGraph"
@@ -41,12 +45,16 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
   const [filterStatus, setFilterStatus] = useState("all")
   const [isResolving, setIsResolving] = useState(false)
   const [resolutionResults, setResolutionResults] = useState<any>(null)
+  const [autoResolve, setAutoResolve] = useState(false)
+  const [conflictResolution, setConflictResolution] = useState("auto")
 
   const {
     dependencies,
     resolveDependencies,
     validateDependencies,
     getDependencyGraph,
+    analyzeConflicts,
+    autoResolveConflicts,
     isLoading,
     error
   } = useOrchestration()
@@ -56,14 +64,18 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
     
     setIsResolving(true)
     try {
-      const results = await resolveDependencies(ruleSetId)
+      const results = await resolveDependencies(ruleSetId, {
+        autoResolve,
+        conflictResolution,
+        validateBeforeResolve: true
+      })
       setResolutionResults(results)
     } catch (err) {
       console.error("Failed to resolve dependencies:", err)
     } finally {
       setIsResolving(false)
     }
-  }, [ruleSetId, resolveDependencies])
+  }, [ruleSetId, resolveDependencies, autoResolve, conflictResolution])
 
   const handleValidateDependencies = useCallback(async () => {
     if (!ruleSetId) return
@@ -76,12 +88,27 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
     }
   }, [ruleSetId, validateDependencies])
 
+  const handleAnalyzeConflicts = useCallback(async () => {
+    if (!ruleSetId) return
+    
+    try {
+      const conflicts = await analyzeConflicts(ruleSetId)
+      console.log("Dependency conflicts:", conflicts)
+    } catch (err) {
+      console.error("Failed to analyze conflicts:", err)
+    }
+  }, [ruleSetId, analyzeConflicts])
+
   const filteredDependencies = dependencies?.filter(dep => {
     const matchesSearch = dep.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          dep.type.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || dep.status === filterStatus
     return matchesSearch && matchesStatus
   }) || []
+
+  const resolvedCount = dependencies?.filter(d => d.status === "resolved").length || 0
+  const conflictCount = dependencies?.filter(d => d.status === "conflict").length || 0
+  const pendingCount = dependencies?.filter(d => d.status === "pending").length || 0
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -94,10 +121,19 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
                 Dependency Resolver
               </CardTitle>
               <CardDescription>
-                Manage and resolve scan rule dependencies and conflicts
+                Advanced dependency management and conflict resolution for scan rule orchestration
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeConflicts}
+                disabled={isLoading}
+              >
+                <Target className="h-4 w-4 mr-2" />
+                Analyze Conflicts
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -114,7 +150,7 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
                 {isResolving ? (
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Link className="h-4 w-4 mr-2" />
+                  <Zap className="h-4 w-4 mr-2" />
                 )}
                 Resolve Dependencies
               </Button>
@@ -131,7 +167,7 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -148,9 +184,7 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">Resolved</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          {dependencies?.filter(d => d.status === "resolved").length || 0}
-                        </p>
+                        <p className="text-2xl font-bold text-green-600">{resolvedCount}</p>
                       </div>
                       <CheckCircle className="h-8 w-8 text-green-500" />
                     </div>
@@ -161,15 +195,66 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">Conflicts</p>
-                        <p className="text-2xl font-bold text-red-600">
-                          {dependencies?.filter(d => d.status === "conflict").length || 0}
-                        </p>
+                        <p className="text-2xl font-bold text-red-600">{conflictCount}</p>
                       </div>
                       <AlertTriangle className="h-8 w-8 text-red-500" />
                     </div>
                   </CardContent>
                 </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Pending</p>
+                        <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-500" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
+
+              {dependencies && dependencies.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Resolution Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Overall Progress</span>
+                        <span className="text-sm text-muted-foreground">
+                          {resolvedCount} of {dependencies.length} resolved
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(resolvedCount / dependencies.length) * 100} 
+                        className="h-2" 
+                      />
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <p className="text-2xl font-bold text-green-600">
+                            {((resolvedCount / dependencies.length) * 100).toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">Resolved</p>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-red-600">
+                            {((conflictCount / dependencies.length) * 100).toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">Conflicts</p>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-yellow-600">
+                            {((pendingCount / dependencies.length) * 100).toFixed(1)}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">Pending</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {error && (
                 <Alert variant="destructive">
@@ -197,6 +282,12 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
                         <Clock className="h-4 w-4 text-yellow-500" />
                         <span>Pending: {resolutionResults.pending || 0}</span>
                       </div>
+                      {resolutionResults.performance && (
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-blue-500" />
+                          <span>Resolution Time: {resolutionResults.performance.duration}ms</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -233,6 +324,40 @@ export function DependencyResolver({ ruleSetId, className }: DependencyResolverP
             </TabsContent>
 
             <TabsContent value="resolution" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resolution Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="autoResolve"
+                        checked={autoResolve}
+                        onChange={(e) => setAutoResolve(e.target.checked)}
+                        className="rounded"
+                      />
+                      <Label htmlFor="autoResolve">Auto-resolve conflicts</Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Conflict Resolution Strategy</Label>
+                      <Select value={conflictResolution} onValueChange={setConflictResolution}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select strategy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">Automatic</SelectItem>
+                          <SelectItem value="manual">Manual Review</SelectItem>
+                          <SelectItem value="priority">Priority-based</SelectItem>
+                          <SelectItem value="latest">Latest Version</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Resolution History</CardTitle>
