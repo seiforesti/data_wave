@@ -164,6 +164,27 @@ const RuleVersionControl = React.lazy(() => import('../components/version-contro
 const RuleOrchestrationCenter = React.lazy(() => import('../components/rule-orchestration/RuleOrchestrationCenter'));
 const WorkflowDesigner = React.lazy(() => import('../components/rule-orchestration/WorkflowDesigner'));
 const ResourceAllocationManager = React.lazy(() => import('../components/rule-orchestration/ResourceAllocationManager'));
+// Import all new components from rule-intelligence, collaboration, and reporting
+const IntelligentPatternDetector = React.lazy(() => import('../components/rule-intelligence/IntelligentPatternDetector'));
+const SemanticRuleAnalyzer = React.lazy(() => import('../components/rule-intelligence/SemanticRuleAnalyzer'));
+const RuleImpactAnalyzer = React.lazy(() => import('../components/rule-intelligence/RuleImpactAnalyzer'));
+const ComplianceIntegrator = React.lazy(() => import('../components/rule-intelligence/ComplianceIntegrator'));
+const AnomalyDetector = React.lazy(() => import('../components/rule-intelligence/AnomalyDetector'));
+const PredictiveAnalyzer = React.lazy(() => import('../components/rule-intelligence/PredictiveAnalyzer'));
+const ContextualAssistant = React.lazy(() => import('../components/rule-intelligence/ContextualAssistant'));
+const BusinessRuleMapper = React.lazy(() => import('../components/rule-intelligence/BusinessRuleMapper'));
+const TeamCollaborationHub = React.lazy(() => import('../components/collaboration/TeamCollaborationHub'));
+const RuleReviewWorkflow = React.lazy(() => import('../components/collaboration/RuleReviewWorkflow'));
+const CommentingSystem = React.lazy(() => import('../components/collaboration/CommentingSystem'));
+const ApprovalWorkflow = React.lazy(() => import('../components/collaboration/ApprovalWorkflow'));
+const KnowledgeSharing = React.lazy(() => import('../components/collaboration/KnowledgeSharing'));
+const ExpertConsultation = React.lazy(() => import('../components/collaboration/ExpertConsultation'));
+const ExecutiveDashboard = React.lazy(() => import('../components/reporting/ExecutiveDashboard'));
+const PerformanceReports = React.lazy(() => import('../components/reporting/PerformanceReports'));
+const ComplianceReporting = React.lazy(() => import('../components/reporting/ComplianceReporting'));
+const UsageAnalytics = React.lazy(() => import('../components/reporting/UsageAnalytics'));
+const TrendAnalysis = React.lazy(() => import('../components/reporting/TrendAnalysis'));
+const ROICalculator = React.lazy(() => import('../components/reporting/ROICalculator'));
 
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC<{ className?: string }> = ({ className = "h-96" }) => (
@@ -633,19 +654,45 @@ const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
       id: 'intelligence',
       label: 'Intelligence',
       icon: Brain,
-      description: 'AI insights and pattern analysis'
+      description: 'AI insights and pattern analysis',
+      subItems: [
+        { id: 'pattern-detector', label: 'Pattern Detector', icon: Brain },
+        { id: 'semantic-analyzer', label: 'Semantic Analyzer', icon: Brain },
+        { id: 'rule-impact', label: 'Rule Impact', icon: Brain },
+        { id: 'compliance-integrator', label: 'Compliance Integrator', icon: Brain },
+        { id: 'anomaly-detector', label: 'Anomaly Detector', icon: Brain },
+        { id: 'predictive-analyzer', label: 'Predictive Analyzer', icon: Brain },
+        { id: 'contextual-assistant', label: 'Contextual Assistant', icon: Brain },
+        { id: 'business-rule-mapper', label: 'Business Rule Mapper', icon: Brain }
+      ]
     },
     {
       id: 'collaboration',
       label: 'Collaboration',
       icon: Users,
-      description: 'Team workspace and sharing'
+      description: 'Team workspace and sharing',
+      subItems: [
+        { id: 'team-hub', label: 'Team Hub', icon: Users },
+        { id: 'rule-review', label: 'Rule Review', icon: Users },
+        { id: 'commenting', label: 'Commenting', icon: Users },
+        { id: 'approval', label: 'Approval', icon: Users },
+        { id: 'knowledge-sharing', label: 'Knowledge Sharing', icon: Users },
+        { id: 'expert-consultation', label: 'Expert Consultation', icon: Users }
+      ]
     },
     {
       id: 'reporting',
       label: 'Reporting',
       icon: BarChart3,
-      description: 'Analytics and reports'
+      description: 'Analytics and reports',
+      subItems: [
+        { id: 'executive-dashboard', label: 'Executive Dashboard', icon: BarChart3 },
+        { id: 'performance-reports', label: 'Performance Reports', icon: BarChart3 },
+        { id: 'compliance-reporting', label: 'Compliance Reporting', icon: BarChart3 },
+        { id: 'usage-analytics', label: 'Usage Analytics', icon: BarChart3 },
+        { id: 'trend-analysis', label: 'Trend Analysis', icon: BarChart3 },
+        { id: 'roi-calculator', label: 'ROI Calculator', icon: BarChart3 }
+      ]
     },
     {
       id: 'templates',
@@ -923,6 +970,186 @@ const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
           <ComponentErrorBoundary>
             <Suspense fallback={<LoadingSkeleton />}>
               <RuleVersionControl />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'pattern-detector':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <IntelligentPatternDetector />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'semantic-analyzer':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <SemanticRuleAnalyzer />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'rule-impact':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <RuleImpactAnalyzer />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'compliance-integrator':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ComplianceIntegrator />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'anomaly-detector':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <AnomalyDetector />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'predictive-analyzer':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <PredictiveAnalyzer />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'contextual-assistant':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ContextualAssistant />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'business-rule-mapper':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <BusinessRuleMapper />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'team-hub':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <TeamCollaborationHub />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'rule-review':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <RuleReviewWorkflow />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'commenting':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <CommentingSystem />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'approval':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ApprovalWorkflow />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'knowledge-sharing':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <KnowledgeSharing />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'expert-consultation':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ExpertConsultation />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'executive-dashboard':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ExecutiveDashboard />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'performance-reports':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <PerformanceReports />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'compliance-reporting':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ComplianceReporting />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'usage-analytics':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <UsageAnalytics />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'trend-analysis':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <TrendAnalysis />
+            </Suspense>
+          </ComponentErrorBoundary>
+        );
+
+      case 'roi-calculator':
+        return (
+          <ComponentErrorBoundary>
+            <Suspense fallback={<LoadingSkeleton />}>
+              <ROICalculator />
             </Suspense>
           </ComponentErrorBoundary>
         );
