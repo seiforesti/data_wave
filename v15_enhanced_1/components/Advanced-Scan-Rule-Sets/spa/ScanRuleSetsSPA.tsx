@@ -1098,4 +1098,1503 @@ const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
   );
 };
 
+// Enhanced Error Boundary Component
+class ComponentErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Component Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card className="p-6">
+          <CardContent>
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Component Error</h3>
+              <p className="text-muted-foreground mb-4">
+                This component encountered an error and couldn't be rendered.
+              </p>
+              <Button onClick={() => this.setState({ hasError: false })}>
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Loading Skeleton Component
+const LoadingSkeleton: React.FC = () => (
+  <div className="space-y-4 p-6">
+    <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+    <div className="space-y-2">
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+      <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+    </div>
+  </div>
+);
+
+// Enhanced Breadcrumb Component
+const Breadcrumb: React.FC<{ items: Array<{ label: string; path?: string }> }> = ({ items }) => (
+  <nav className="flex items-center space-x-2 text-sm">
+    {items.map((item, index) => (
+      <React.Fragment key={index}>
+        {index > 0 && <ChevronRight className="h-4 w-4 text-gray-400" />}
+        <span
+          className={
+            index === items.length - 1
+              ? "text-gray-900 font-medium"
+              : "text-gray-500 hover:text-gray-700 cursor-pointer"
+          }
+        >
+          {item.label}
+        </span>
+      </React.Fragment>
+    ))}
+  </nav>
+);
+
+// Real-time System Health Widget
+const SystemHealthWidget: React.FC<{ health: SystemHealth | null }> = ({ health }) => {
+  if (!health) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 bg-gray-300 rounded-full animate-pulse"></div>
+            <span className="text-sm text-gray-500">Loading system health...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return 'bg-green-500';
+      case 'warning':
+        return 'bg-yellow-500';
+      case 'critical':
+        return 'bg-red-500';
+      case 'maintenance':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <div className={`h-3 w-3 rounded-full ${getStatusColor(health.status)}`}></div>
+          System Health
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span>Overall Score</span>
+            <span className="font-medium">{health.score}%</span>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span>CPU</span>
+              <span>{health.resources.cpu.usage}%</span>
+            </div>
+            <Progress value={health.resources.cpu.usage} className="h-1" />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span>Memory</span>
+              <span>{health.resources.memory.usage}%</span>
+            </div>
+            <Progress value={health.resources.memory.usage} className="h-1" />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span>Storage</span>
+              <span>{health.resources.storage.usage}%</span>
+            </div>
+            <Progress value={health.resources.storage.usage} className="h-1" />
+          </div>
+
+          {health.alerts && health.alerts.length > 0 && (
+            <div className="mt-3 pt-3 border-t">
+              <div className="text-xs text-yellow-600 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {health.alerts.length} Alert{health.alerts.length > 1 ? 's' : ''}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Workflow Queue Management Widget
+const WorkflowQueueWidget: React.FC<{ 
+  workflows: WorkflowState[], 
+  onWorkflowAction: (action: string, workflowId: string) => void 
+}> = ({ workflows, onWorkflowAction }) => {
+  const activeWorkflows = workflows.filter(w => w.status === 'running');
+  const queuedWorkflows = workflows.filter(w => w.status === 'queued');
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Activity className="h-4 w-4" />
+          Workflow Queue
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="p-2 bg-green-50 rounded">
+              <div className="text-lg font-bold text-green-600">{activeWorkflows.length}</div>
+              <div className="text-xs text-green-700">Active</div>
+            </div>
+            <div className="p-2 bg-yellow-50 rounded">
+              <div className="text-lg font-bold text-yellow-600">{queuedWorkflows.length}</div>
+              <div className="text-xs text-yellow-700">Queued</div>
+            </div>
+          </div>
+
+          {activeWorkflows.slice(0, 3).map((workflow) => (
+            <div key={workflow.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium truncate">{workflow.name}</div>
+                <div className="text-xs text-gray-500">{workflow.progress}% complete</div>
+                <Progress value={workflow.progress} className="h-1 mt-1" />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => onWorkflowAction('pause', workflow.id)}>
+                    <PauseCircle className="h-3 w-3 mr-2" />
+                    Pause
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onWorkflowAction('stop', workflow.id)}>
+                    <StopCircle className="h-3 w-3 mr-2" />
+                    Stop
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onWorkflowAction('details', workflow.id)}>
+                    <Eye className="h-3 w-3 mr-2" />
+                    View Details
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+
+          {workflows.length === 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              No active workflows
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Recent Activity Feed Component
+const ActivityFeedWidget: React.FC<{ activities: any[] }> = ({ activities }) => (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm flex items-center gap-2">
+        <Clock className="h-4 w-4" />
+        Recent Activity
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-4 pt-2">
+      <ScrollArea className="h-48">
+        <div className="space-y-3">
+          {activities.slice(0, 10).map((activity, index) => (
+            <div key={index} className="flex items-start gap-3 text-sm">
+              <div className={`h-2 w-2 rounded-full mt-2 ${
+                activity.type === 'success' ? 'bg-green-500' :
+                activity.type === 'error' ? 'bg-red-500' :
+                activity.type === 'warning' ? 'bg-yellow-500' :
+                'bg-blue-500'
+              }`}></div>
+              <div className="flex-1 min-w-0">
+                <div className="text-gray-900">{activity.message}</div>
+                <div className="text-gray-500 text-xs">{activity.timestamp}</div>
+              </div>
+            </div>
+          ))}
+          {activities.length === 0 && (
+            <div className="text-center py-4 text-gray-500 text-sm">
+              No recent activity
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </CardContent>
+  </Card>
+);
+
+// Quick Actions Panel Component
+const QuickActionsPanel: React.FC<{
+  actions: QuickAction[],
+  isOpen: boolean,
+  onClose: () => void
+}> = ({ actions, isOpen, onClose }) => (
+  <AnimatePresence>
+    {isOpen && (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+        onClick={onClose}
+      >
+        <motion.div
+          className="bg-white rounded-lg shadow-xl max-w-md w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Quick Actions</h3>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 gap-3">
+              {actions.filter(a => a.visible).map((action) => (
+                <Button
+                  key={action.id}
+                  variant="outline"
+                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  onClick={() => {
+                    action.action();
+                    onClose();
+                  }}
+                  disabled={action.disabled}
+                >
+                  <action.icon className="h-6 w-6" />
+                  <span className="text-xs text-center">{action.label}</span>
+                  {action.shortcut && (
+                    <span className="text-xs text-gray-400">{action.shortcut}</span>
+                  )}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+// Notifications Panel Component
+const NotificationsPanel: React.FC<{
+  notifications: NotificationItem[],
+  onNotificationAction: (id: string, action: string) => void
+}> = ({ notifications, onNotificationAction }) => {
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="relative">
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold">Notifications</h4>
+            {unreadCount > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => notifications.filter(n => !n.read).forEach(n => 
+                  onNotificationAction(n.id, 'mark_read')
+                )}
+              >
+                Mark all read
+              </Button>
+            )}
+          </div>
+          
+          <ScrollArea className="h-64">
+            <div className="space-y-2">
+              {notifications.slice(0, 10).map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-3 rounded-lg border ${
+                    notification.read ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {notification.type === 'error' && <XCircle className="h-3 w-3 text-red-500" />}
+                        {notification.type === 'warning' && <AlertTriangle className="h-3 w-3 text-yellow-500" />}
+                        {notification.type === 'success' && <CheckCircle className="h-3 w-3 text-green-500" />}
+                        {notification.type === 'info' && <Info className="h-3 w-3 text-blue-500" />}
+                        <span className="text-sm font-medium">{notification.title}</span>
+                      </div>
+                      <p className="text-xs text-gray-600">{notification.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {!notification.read && (
+                          <DropdownMenuItem onClick={() => onNotificationAction(notification.id, 'mark_read')}>
+                            Mark as read
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => onNotificationAction(notification.id, 'dismiss')}>
+                          Dismiss
+                        </DropdownMenuItem>
+                        {notification.actions && notification.actions.map((action, index) => (
+                          <DropdownMenuItem 
+                            key={index}
+                            onClick={() => onNotificationAction(notification.id, action.label)}
+                          >
+                            {action.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+              {notifications.length === 0 && (
+                <div className="text-center py-8 text-gray-500 text-sm">
+                  No notifications
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// Enhanced Command Palette Component
+const CommandPalette: React.FC<{
+  open: boolean,
+  onOpenChange: (open: boolean) => void,
+  items: CommandItem[],
+  searchValue: string,
+  onSearchChange: (value: string) => void
+}> = ({ open, onOpenChange, items, searchValue, onSearchChange }) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-2xl">
+      <Command>
+        <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <Input
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Type a command or search..."
+            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0"
+          />
+        </div>
+        <CommandList className="max-h-96">
+          <CommandEmpty>No results found.</CommandEmpty>
+          
+          {Object.entries(
+            items.reduce((groups, item) => {
+              const group = item.group || 'other';
+              if (!groups[group]) groups[group] = [];
+              groups[group].push(item);
+              return groups;
+            }, {} as Record<string, CommandItem[]>)
+          ).map(([group, groupItems]) => (
+            <CommandGroup key={group} heading={group.charAt(0).toUpperCase() + group.slice(1)}>
+              {groupItems.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  onSelect={() => {
+                    item.action();
+                    onOpenChange(false);
+                  }}
+                  className="flex items-center gap-3 px-3 py-2"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">{item.label}</div>
+                    <div className="text-xs text-gray-500">{item.description}</div>
+                  </div>
+                  {item.shortcut && (
+                    <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                      {item.shortcut}
+                    </div>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+        </CommandList>
+      </Command>
+    </DialogContent>
+  </Dialog>
+);
+
+// Performance Metrics Widget
+const PerformanceMetricsWidget: React.FC<{ metrics: any }> = ({ metrics }) => (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm flex items-center gap-2">
+        <Gauge className="h-4 w-4" />
+        Performance
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-4 pt-2">
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm">
+          <span>Render Time</span>
+          <span className="font-medium">{metrics.renderTime || 0}ms</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Memory Usage</span>
+          <span className="font-medium">{Math.round((metrics.memoryUsage || 0) / 1024 / 1024)}MB</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Network Latency</span>
+          <span className="font-medium">{metrics.networkLatency || 0}ms</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Error Rate</span>
+          <span className={`font-medium ${metrics.errorRate > 5 ? 'text-red-600' : 'text-green-600'}`}>
+            {metrics.errorRate || 0}%
+          </span>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Connection Status Indicator
+const ConnectionStatusIndicator: React.FC<{ 
+  status: 'connecting' | 'connected' | 'disconnected' | 'error',
+  lastHeartbeat: Date | null 
+}> = ({ status, lastHeartbeat }) => {
+  const getStatusInfo = () => {
+    switch (status) {
+      case 'connected':
+        return { color: 'bg-green-500', text: 'Connected', icon: Wifi };
+      case 'connecting':
+        return { color: 'bg-yellow-500', text: 'Connecting', icon: Wifi };
+      case 'disconnected':
+        return { color: 'bg-gray-500', text: 'Disconnected', icon: WifiOff };
+      case 'error':
+        return { color: 'bg-red-500', text: 'Error', icon: WifiOff };
+      default:
+        return { color: 'bg-gray-500', text: 'Unknown', icon: WifiOff };
+    }
+  };
+
+  const { color, text, icon: Icon } = getStatusInfo();
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-2 text-xs">
+          <div className={`h-2 w-2 rounded-full ${color} ${status === 'connecting' ? 'animate-pulse' : ''}`}></div>
+          <Icon className="h-3 w-3" />
+          <span>{text}</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="text-sm">
+          <div>Status: {text}</div>
+          {lastHeartbeat && (
+            <div>Last update: {lastHeartbeat.toLocaleTimeString()}</div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+// Enhanced Overview Dashboard Layout
+const OverviewDashboard: React.FC<{
+  metrics: DashboardMetrics,
+  systemHealth: SystemHealth | null,
+  workflows: WorkflowState[],
+  notifications: NotificationItem[],
+  performanceMetrics: any,
+  onWorkflowAction: (action: string, workflowId: string) => void,
+  onNotificationAction: (id: string, action: string) => void
+}> = ({
+  metrics,
+  systemHealth,
+  workflows,
+  notifications,
+  performanceMetrics,
+  onWorkflowAction,
+  onNotificationAction
+}) => (
+  <div className="space-y-6">
+    {/* Top Metrics Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Total Rules</p>
+              <p className="text-2xl font-bold">{metrics.totalRules}</p>
+            </div>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Code className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Active Executions</p>
+              <p className="text-2xl font-bold">{metrics.activeExecutions}</p>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Activity className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Success Rate</p>
+              <p className="text-2xl font-bold">{metrics.successRate.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Target className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Avg Execution Time</p>
+              <p className="text-2xl font-bold">{metrics.averageExecutionTime.toFixed(0)}ms</p>
+            </div>
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Clock className="h-6 w-6 text-orange-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* Secondary Metrics Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Resource Utilization</p>
+              <p className="text-2xl font-bold">{metrics.resourceUtilization.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Cpu className="h-6 w-6 text-indigo-600" />
+            </div>
+          </div>
+          <Progress value={metrics.resourceUtilization} className="mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Compliance Score</p>
+              <p className="text-2xl font-bold">{metrics.complianceScore.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Shield className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+          <Progress value={metrics.complianceScore} className="mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Cost Efficiency</p>
+              <p className="text-2xl font-bold">{metrics.costEfficiency.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Activity className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+          <Progress value={metrics.costEfficiency} className="mt-2" />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Security Score</p>
+              <p className="text-2xl font-bold">{metrics.securityScore.toFixed(1)}%</p>
+            </div>
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Lock className="h-6 w-6 text-red-600" />
+            </div>
+          </div>
+          <Progress value={metrics.securityScore} className="mt-2" />
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* Widgets Grid */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <SystemHealthWidget health={systemHealth} />
+      <WorkflowQueueWidget workflows={workflows} onWorkflowAction={onWorkflowAction} />
+      <PerformanceMetricsWidget metrics={performanceMetrics} />
+    </div>
+
+    {/* Activity Feed */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ActivityFeedWidget activities={[]} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            System Trends
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500 text-sm">
+            Trend visualization would be implemented here
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
+
+// Advanced Workflow Designer Modal
+const WorkflowDesignerModal: React.FC<{
+  open: boolean,
+  onOpenChange: (open: boolean) => void,
+  workflow?: WorkflowState,
+  onSave: (workflow: WorkflowState) => void
+}> = ({ open, onOpenChange, workflow, onSave }) => {
+  const [workflowData, setWorkflowData] = useState<Partial<WorkflowState>>(
+    workflow || {
+      name: '',
+      category: 'designer',
+      status: 'idle',
+      progress: 0,
+      priority: 'medium',
+      resourceRequirements: { cpu: 50, memory: 512, storage: 1024, network: 100 },
+      tags: [],
+      dependencies: [],
+      errors: [],
+      warnings: [],
+      metrics: {},
+      notifications: true,
+      createdBy: 'current_user',
+      assignedTo: [],
+      approvers: []
+    }
+  );
+
+  const handleSave = () => {
+    if (workflowData.name && workflowData.category) {
+      const newWorkflow: WorkflowState = {
+        id: workflow?.id || `workflow_${Date.now()}`,
+        name: workflowData.name!,
+        category: workflowData.category!,
+        status: workflowData.status || 'idle',
+        progress: workflowData.progress || 0,
+        priority: workflowData.priority || 'medium',
+        resourceRequirements: workflowData.resourceRequirements!,
+        tags: workflowData.tags || [],
+        dependencies: workflowData.dependencies || [],
+        errors: workflowData.errors || [],
+        warnings: workflowData.warnings || [],
+        metrics: workflowData.metrics || {},
+        notifications: workflowData.notifications ?? true,
+        createdBy: workflowData.createdBy || 'current_user',
+        assignedTo: workflowData.assignedTo || [],
+        approvers: workflowData.approvers || []
+      };
+      
+      onSave(newWorkflow);
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {workflow ? 'Edit Workflow' : 'Create New Workflow'}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="workflow-name">Workflow Name</Label>
+              <Input
+                id="workflow-name"
+                value={workflowData.name || ''}
+                onChange={(e) => setWorkflowData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter workflow name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="workflow-category">Category</Label>
+              <Select
+                value={workflowData.category || 'designer'}
+                onValueChange={(value) => setWorkflowData(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORKFLOW_CATEGORIES.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="workflow-priority">Priority</Label>
+              <Select
+                value={workflowData.priority || 'medium'}
+                onValueChange={(value) => setWorkflowData(prev => ({ ...prev, priority: value as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={workflowData.notifications ?? true}
+                onCheckedChange={(checked) => setWorkflowData(prev => ({ ...prev, notifications: checked }))}
+              />
+              <Label>Enable Notifications</Label>
+            </div>
+          </div>
+
+          <div>
+            <Label>Resource Requirements</Label>
+            <div className="grid grid-cols-2 gap-4 mt-2">
+              <div>
+                <Label htmlFor="cpu-req" className="text-sm">CPU (%)</Label>
+                <Input
+                  id="cpu-req"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={workflowData.resourceRequirements?.cpu || 50}
+                  onChange={(e) => setWorkflowData(prev => ({
+                    ...prev,
+                    resourceRequirements: {
+                      ...prev.resourceRequirements!,
+                      cpu: Number(e.target.value)
+                    }
+                  }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="memory-req" className="text-sm">Memory (MB)</Label>
+                <Input
+                  id="memory-req"
+                  type="number"
+                  min="128"
+                  max="8192"
+                  value={workflowData.resourceRequirements?.memory || 512}
+                  onChange={(e) => setWorkflowData(prev => ({
+                    ...prev,
+                    resourceRequirements: {
+                      ...prev.resourceRequirements!,
+                      memory: Number(e.target.value)
+                    }
+                  }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="storage-req" className="text-sm">Storage (MB)</Label>
+                <Input
+                  id="storage-req"
+                  type="number"
+                  min="100"
+                  max="10240"
+                  value={workflowData.resourceRequirements?.storage || 1024}
+                  onChange={(e) => setWorkflowData(prev => ({
+                    ...prev,
+                    resourceRequirements: {
+                      ...prev.resourceRequirements!,
+                      storage: Number(e.target.value)
+                    }
+                  }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="network-req" className="text-sm">Network (Mbps)</Label>
+                <Input
+                  id="network-req"
+                  type="number"
+                  min="10"
+                  max="1000"
+                  value={workflowData.resourceRequirements?.network || 100}
+                  onChange={(e) => setWorkflowData(prev => ({
+                    ...prev,
+                    resourceRequirements: {
+                      ...prev.resourceRequirements!,
+                      network: Number(e.target.value)
+                    }
+                  }))}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="workflow-tags">Tags (comma-separated)</Label>
+            <Input
+              id="workflow-tags"
+              value={workflowData.tags?.join(', ') || ''}
+              onChange={(e) => setWorkflowData(prev => ({
+                ...prev,
+                tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
+              }))}
+              placeholder="tag1, tag2, tag3"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="workflow-assignees">Assigned To (comma-separated emails)</Label>
+            <Input
+              id="workflow-assignees"
+              value={workflowData.assignedTo?.join(', ') || ''}
+              onChange={(e) => setWorkflowData(prev => ({
+                ...prev,
+                assignedTo: e.target.value.split(',').map(email => email.trim()).filter(Boolean)
+              }))}
+              placeholder="user1@company.com, user2@company.com"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={!workflowData.name || !workflowData.category}>
+              {workflow ? 'Update Workflow' : 'Create Workflow'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Advanced System Settings Modal
+const SystemSettingsModal: React.FC<{
+  open: boolean,
+  onOpenChange: (open: boolean) => void,
+  preferences: UserPreferences,
+  onPreferencesChange: (preferences: UserPreferences) => void
+}> = ({ open, onOpenChange, preferences, onPreferencesChange }) => {
+  const [localPreferences, setLocalPreferences] = useState(preferences);
+
+  const handleSave = () => {
+    onPreferencesChange(localPreferences);
+    localStorage.setItem('user_preferences', JSON.stringify(localPreferences));
+    onOpenChange(false);
+    
+    toast({
+      title: "Settings Updated",
+      description: "Your preferences have been saved successfully.",
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>System Settings</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="general" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-4">
+            <div>
+              <Label htmlFor="theme">Theme</Label>
+              <Select
+                value={localPreferences.theme}
+                onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, theme: value as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="language">Language</Label>
+              <Select
+                value={localPreferences.language}
+                onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, language: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select
+                value={localPreferences.timezone}
+                onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, timezone: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                  <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                  <SelectItem value="America/Chicago">Central Time</SelectItem>
+                  <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                  <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                  <SelectItem value="Europe/London">London Time</SelectItem>
+                  <SelectItem value="Europe/Paris">Paris Time</SelectItem>
+                  <SelectItem value="Asia/Tokyo">Tokyo Time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.sidebarCollapsed}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({ ...prev, sidebarCollapsed: checked }))}
+              />
+              <Label>Start with sidebar collapsed</Label>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.notifications.enabled}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({
+                  ...prev,
+                  notifications: { ...prev.notifications, enabled: checked }
+                }))}
+              />
+              <Label>Enable notifications</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.notifications.sound}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({
+                  ...prev,
+                  notifications: { ...prev.notifications, sound: checked }
+                }))}
+              />
+              <Label>Sound notifications</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.notifications.desktop}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({
+                  ...prev,
+                  notifications: { ...prev.notifications, desktop: checked }
+                }))}
+              />
+              <Label>Desktop notifications</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.notifications.email}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({
+                  ...prev,
+                  notifications: { ...prev.notifications, email: checked }
+                }))}
+              />
+              <Label>Email notifications</Label>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="space-y-4">
+            <div>
+              <Label htmlFor="refresh-interval">Auto-refresh interval (seconds)</Label>
+              <Input
+                id="refresh-interval"
+                type="number"
+                min="10"
+                max="300"
+                value={localPreferences.dashboard.refreshInterval / 1000}
+                onChange={(e) => setLocalPreferences(prev => ({
+                  ...prev,
+                  dashboard: { ...prev.dashboard, refreshInterval: Number(e.target.value) * 1000 }
+                }))}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={localPreferences.dashboard.autoRefresh}
+                onCheckedChange={(checked) => setLocalPreferences(prev => ({
+                  ...prev,
+                  dashboard: { ...prev.dashboard, autoRefresh: checked }
+                }))}
+              />
+              <Label>Enable auto-refresh</Label>
+            </div>
+
+            <div>
+              <Label>Dashboard Layout</Label>
+              <Select
+                value={localPreferences.dashboard.layout}
+                onValueChange={(value) => setLocalPreferences(prev => ({
+                  ...prev,
+                  dashboard: { ...prev.dashboard, layout: value }
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                  <SelectItem value="detailed">Detailed</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="advanced" className="space-y-4">
+            <div>
+              <Label htmlFor="date-format">Date Format</Label>
+              <Select
+                value={localPreferences.dateFormat}
+                onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, dateFormat: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM/dd/yyyy">MM/dd/yyyy</SelectItem>
+                  <SelectItem value="dd/MM/yyyy">dd/MM/yyyy</SelectItem>
+                  <SelectItem value="yyyy-MM-dd">yyyy-MM-dd</SelectItem>
+                  <SelectItem value="dd MMM yyyy">dd MMM yyyy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="number-format">Number Format</Label>
+              <Select
+                value={localPreferences.numberFormat}
+                onValueChange={(value) => setLocalPreferences(prev => ({ ...prev, numberFormat: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en-US">US (1,234.56)</SelectItem>
+                  <SelectItem value="en-GB">UK (1,234.56)</SelectItem>
+                  <SelectItem value="de-DE">German (1.234,56)</SelectItem>
+                  <SelectItem value="fr-FR">French (1 234,56)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Keyboard Shortcuts</Label>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span>Open Command Palette</span>
+                  <kbd className="px-2 py-1 text-xs bg-gray-200 rounded">Ctrl+K</kbd>
+                </div>
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span>Quick Actions</span>
+                  <kbd className="px-2 py-1 text-xs bg-gray-200 rounded">Ctrl+/</kbd>
+                </div>
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span>Toggle Fullscreen</span>
+                  <kbd className="px-2 py-1 text-xs bg-gray-200 rounded">Ctrl+Shift+F</kbd>
+                </div>
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span>Toggle Sidebar</span>
+                  <kbd className="px-2 py-1 text-xs bg-gray-200 rounded">Ctrl+Shift+S</kbd>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            Save Settings
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Advanced Analytics Dashboard Component
+const AnalyticsDashboard: React.FC<{
+  metrics: DashboardMetrics,
+  timeRange: string,
+  onTimeRangeChange: (range: string) => void
+}> = ({ metrics, timeRange, onTimeRangeChange }) => {
+  const [selectedMetric, setSelectedMetric] = useState('performance');
+
+  const metricCards = [
+    {
+      id: 'performance',
+      title: 'Performance Index',
+      value: metrics.performanceIndex,
+      change: '+12.5%',
+      trend: 'up',
+      color: 'blue'
+    },
+    {
+      id: 'reliability',
+      title: 'Reliability Score',
+      value: metrics.reliabilityScore,
+      change: '+8.2%',
+      trend: 'up',
+      color: 'green'
+    },
+    {
+      id: 'scalability',
+      title: 'Scalability Index',
+      value: metrics.scalabilityIndex,
+      change: '-2.1%',
+      trend: 'down',
+      color: 'orange'
+    },
+    {
+      id: 'cost',
+      title: 'Cost Efficiency',
+      value: metrics.costEfficiency,
+      change: '+15.7%',
+      trend: 'up',
+      color: 'purple'
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
+        <Select value={timeRange} onValueChange={onTimeRangeChange}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1h">Last Hour</SelectItem>
+            <SelectItem value="24h">Last 24 Hours</SelectItem>
+            <SelectItem value="7d">Last 7 Days</SelectItem>
+            <SelectItem value="30d">Last 30 Days</SelectItem>
+            <SelectItem value="90d">Last 90 Days</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {metricCards.map((metric) => (
+          <Card 
+            key={metric.id}
+            className={`cursor-pointer transition-all ${
+              selectedMetric === metric.id ? 'ring-2 ring-blue-500' : ''
+            }`}
+            onClick={() => setSelectedMetric(metric.id)}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-600">{metric.title}</h3>
+                <div className={`p-1 rounded ${
+                  metric.trend === 'up' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {metric.trend === 'up' ? (
+                    <TrendingUp className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 text-red-600" />
+                  )}
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold">{metric.value.toFixed(1)}%</span>
+                <span className={`text-sm ${
+                  metric.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {metric.change}
+                </span>
+              </div>
+              <Progress value={metric.value} className="mt-2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance Trends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
+              <div className="text-center text-gray-500">
+                <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                <p>Chart visualization would be implemented here</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Resource Utilization</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 flex items-center justify-center bg-gray-50 rounded">
+              <div className="text-center text-gray-500">
+                <Activity className="h-12 w-12 mx-auto mb-2" />
+                <p>Resource monitoring charts would be here</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Detailed Metrics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Metric</th>
+                  <th className="text-left p-2">Current</th>
+                  <th className="text-left p-2">Previous</th>
+                  <th className="text-left p-2">Change</th>
+                  <th className="text-left p-2">Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-2">Total Rules</td>
+                  <td className="p-2">{metrics.totalRules}</td>
+                  <td className="p-2">842</td>
+                  <td className="p-2 text-green-600">+{metrics.totalRules - 842}</td>
+                  <td className="p-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-2">Success Rate</td>
+                  <td className="p-2">{metrics.successRate.toFixed(1)}%</td>
+                  <td className="p-2">94.2%</td>
+                  <td className="p-2 text-green-600">+{(metrics.successRate - 94.2).toFixed(1)}%</td>
+                  <td className="p-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-2">Error Rate</td>
+                  <td className="p-2">{metrics.errorRate.toFixed(1)}%</td>
+                  <td className="p-2">3.8%</td>
+                  <td className="p-2 text-red-600">{(metrics.errorRate - 3.8).toFixed(1)}%</td>
+                  <td className="p-2">
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2">Avg Execution Time</td>
+                  <td className="p-2">{metrics.averageExecutionTime.toFixed(0)}ms</td>
+                  <td className="p-2">245ms</td>
+                  <td className="p-2 text-green-600">-{(245 - metrics.averageExecutionTime).toFixed(0)}ms</td>
+                  <td className="p-2">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Comprehensive User Profile Component
+const UserProfilePanel: React.FC<{
+  user: any,
+  onSettingsOpen: () => void,
+  onLogout: () => void
+}> = ({ user, onSettingsOpen, onLogout }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium">
+          {user?.name?.charAt(0) || 'U'}
+        </div>
+        <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent className="w-80" align="end">
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-lg">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <div>
+            <div className="font-medium">{user?.name || 'Current User'}</div>
+            <div className="text-sm text-gray-500">{user?.email || 'user@company.com'}</div>
+            <div className="text-xs text-gray-400">{user?.role || 'Data Analyst'}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-2">
+        <DropdownMenuItem className="flex items-center gap-3 p-3">
+          <User className="h-4 w-4" />
+          <div>
+            <div className="font-medium">Profile</div>
+            <div className="text-xs text-gray-500">Manage your account</div>
+          </div>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem className="flex items-center gap-3 p-3" onClick={onSettingsOpen}>
+          <Settings className="h-4 w-4" />
+          <div>
+            <div className="font-medium">Settings</div>
+            <div className="text-xs text-gray-500">Preferences and configuration</div>
+          </div>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem className="flex items-center gap-3 p-3">
+          <HelpCircle className="h-4 w-4" />
+          <div>
+            <div className="font-medium">Help & Support</div>
+            <div className="text-xs text-gray-500">Documentation and assistance</div>
+          </div>
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuItem className="flex items-center gap-3 p-3 text-red-600" onClick={onLogout}>
+          <Power className="h-4 w-4" />
+          <div>
+            <div className="font-medium">Sign Out</div>
+            <div className="text-xs">End your session</div>
+          </div>
+        </DropdownMenuItem>
+      </div>
+      
+      <div className="p-3 border-t bg-gray-50">
+        <div className="text-xs text-gray-500 text-center">
+          Scan Rule Sets Enterprise v2.1.0
+        </div>
+      </div>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
+// Export the main ScanRuleSetsSPA component with all enhancements
 export default ScanRuleSetsSPA;
