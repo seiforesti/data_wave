@@ -11,6 +11,7 @@ import {
   Bell,
   BookOpen,
   BrainCircuit,
+  Building2,
   Calendar,
   CheckCircle2,
   ChevronDown,
@@ -481,6 +482,7 @@ const ComplianceReporting = lazy(() => import('../components/reporting/Complianc
 const UsageAnalytics = lazy(() => import('../components/reporting/UsageAnalytics'))
 const TrendAnalysis = lazy(() => import('../components/reporting/TrendAnalysis'))
 const ROICalculator = lazy(() => import('../components/reporting/ROICalculator'))
+const EnterpriseReporting = lazy(() => import('../components/enterprise-reporting/EnterpriseReporting'))
 
 // Custom hooks
 import { useScanRules } from '../hooks/useScanRules'
@@ -1244,6 +1246,12 @@ const DEFAULT_NAVIGATION: NavigationItem[] = [
         component: 'ExecutiveDashboard'
       },
       {
+        id: 'enterprise-reporting',
+        label: 'Enterprise Reporting',
+        icon: <Building2 className="h-4 w-4" />,
+        component: 'EnterpriseReporting'
+      },
+      {
         id: 'performance-reports',
         label: 'Performance Reports',
         icon: <LineChart className="h-4 w-4" />,
@@ -1874,7 +1882,8 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
       'ComplianceReporting': ComplianceReporting,
       'UsageAnalytics': UsageAnalytics,
       'TrendAnalysis': TrendAnalysis,
-      'ROICalculator': ROICalculator
+      'ROICalculator': ROICalculator,
+      'EnterpriseReporting': EnterpriseReporting
     }
 
     const ComponentToRender = componentMap[currentComponent?.component || 'ExecutiveDashboard']
