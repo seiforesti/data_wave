@@ -880,7 +880,7 @@ export const useOrchestration = (options: UseOrchestrationOptions = {}): UseOrch
       toast.success('Engine deleted successfully');
     },
     
-    // Workflow management (placeholder implementations)
+    // Workflow management (backend implementations)
     fetchWorkflowOrchestrators: async (fetchOptions?: any) => {
       const response = await orchestrationAPI.getWorkflowOrchestrators(fetchOptions);
       setState(prev => ({ ...prev, workflowOrchestrators: response.data }));
@@ -962,7 +962,7 @@ export const useOrchestration = (options: UseOrchestrationOptions = {}): UseOrch
       toast.success('Resources released successfully');
     },
     
-    // Scheduling (placeholder implementations)
+    // Scheduling (backend implementations)
     fetchSchedulingEngines: async () => {
       const response = await orchestrationAPI.getSchedulingEngines();
       setState(prev => ({ ...prev, schedulingEngines: response.data }));
@@ -991,7 +991,7 @@ export const useOrchestration = (options: UseOrchestrationOptions = {}): UseOrch
       return response.data;
     },
     
-    // Integration management (placeholder implementations)
+    // Integration management (backend implementations)
     fetchIntegrations: async () => {
       const response = await orchestrationAPI.getIntegrations();
       setState(prev => ({ ...prev, integrations: response.data }));

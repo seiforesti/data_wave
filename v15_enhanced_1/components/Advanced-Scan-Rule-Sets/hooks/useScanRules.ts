@@ -809,7 +809,7 @@ export const useScanRules = (options: UseScanRulesOptions = {}): UseScanRulesRet
     validateRuleSet,
     executeRuleSet,
     
-    // Pattern and AI operations (placeholder implementations)
+    // Pattern and AI operations (backend implementations)
     analyzePatterns: async (id: string, options?: any) => {
       const response = await scanRulesAPI.getPatternAnalysis(id, options);
       setState(prev => ({ ...prev, patternAnalysis: response.data.patterns }));
@@ -820,7 +820,7 @@ export const useScanRules = (options: UseScanRulesOptions = {}): UseScanRulesRet
       return response.data;
     },
     
-    // Collaboration operations (placeholder implementations)
+    // Collaboration operations (backend implementations)
     getCollaborationFeatures: async (id: string) => {
       const response = await scanRulesAPI.getCollaborationFeatures(id);
       setState(prev => ({ ...prev, collaborationFeatures: response.data }));
@@ -835,7 +835,7 @@ export const useScanRules = (options: UseScanRulesOptions = {}): UseScanRulesRet
       toast.success('Rule set shared successfully');
     },
     
-    // Analytics operations (placeholder implementations)
+    // Analytics operations (backend implementations)
     getRuleSetAnalytics: async (id: string, options?: any) => {
       const response = await scanRulesAPI.getRuleSetAnalytics(id, options);
       setState(prev => ({ ...prev, analytics: response.data }));
@@ -867,7 +867,7 @@ export const useScanRules = (options: UseScanRulesOptions = {}): UseScanRulesRet
     canDeleteRuleSet,
     formatRuleSetForDisplay,
     
-    // Import/Export (placeholder implementations)
+    // Import/Export (backend implementations)
     exportRuleSets: async (ids: string[], format: string) => {
       const response = await scanRulesAPI.exportScanRuleSets(ids, { format } as any);
       return response.data.downloadUrl;
