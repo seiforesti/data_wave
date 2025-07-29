@@ -217,64 +217,9 @@ export const CatalogCollaborationHub: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  // Mock data - in real implementation, this would come from hooks
-  const [discussions, setDiscussions] = useState<DiscussionThread[]>([
-    {
-      id: '1',
-      title: 'Data quality issues in customer_profiles table',
-      assetId: 'asset_1',
-      assetName: 'customer_profiles',
-      authorId: 'user_1',
-      authorName: 'John Doe',
-      authorAvatar: '/avatars/john.png',
-      createdAt: new Date('2024-01-15T10:30:00'),
-      updatedAt: new Date('2024-01-15T14:45:00'),
-      messageCount: 8,
-      participantCount: 4,
-      isResolved: false,
-      priority: 'high',
-      tags: ['data-quality', 'customer-data'],
-      lastMessage: {
-        content: 'I think we should add validation rules for the email field',
-        authorName: 'Jane Smith',
-        timestamp: new Date('2024-01-15T14:45:00')
-      },
-      isUnread: true,
-      isPinned: true,
-      reactions: [
-        { emoji: '👍', count: 3, userReacted: false },
-        { emoji: '🔥', count: 1, userReacted: true }
-      ]
-    },
-    // More mock discussions...
-  ]);
-
-  const [annotations, setAnnotations] = useState<Annotation[]>([
-    {
-      id: '1',
-      assetId: 'asset_1',
-      assetName: 'customer_profiles',
-      authorId: 'user_2',
-      authorName: 'Jane Smith',
-      authorAvatar: '/avatars/jane.png',
-      content: 'This field should have better documentation about the data format',
-      type: 'documentation',
-      location: {
-        field: 'email_address',
-        context: 'customer_profiles.email_address'
-      },
-      timestamp: new Date('2024-01-15T09:15:00'),
-      isResolved: false,
-      tags: ['documentation', 'email'],
-      visibility: 'public',
-      votes: {
-        upvotes: 5,
-        downvotes: 0,
-        userVote: 'up'
-      }
-    },
-    // More mock annotations...
-  ]);
+  // Real backend integration using hooks
+  const [discussions, setDiscussions] = useState<DiscussionThread[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
 
   // =============================================================================
   // HOOKS INTEGRATION
@@ -387,6 +332,74 @@ export const CatalogCollaborationHub: React.FC = () => {
   };
 
   // =============================================================================
+  // EFFECTS FOR BACKEND DATA LOADING
+  // =============================================================================
+  
+  useEffect(() => {
+    const loadCollaborationData = async () => {
+      try {
+        // Load discussions from backend
+        const discussionsResponse = await getTeamActivity();
+        if (discussionsResponse?.discussions) {
+          const mappedDiscussions = discussionsResponse.discussions.map((disc: any): DiscussionThread => ({
+            id: disc.id,
+            title: disc.title,
+            assetId: disc.assetId,
+            assetName: disc.assetName,
+            authorId: disc.authorId,
+            authorName: disc.authorName,
+            authorAvatar: disc.authorAvatar,
+            createdAt: new Date(disc.createdAt),
+            updatedAt: new Date(disc.updatedAt),
+            messageCount: disc.messageCount || 0,
+            participantCount: disc.participantCount || 1,
+            isResolved: disc.isResolved || false,
+            priority: disc.priority || 'medium',
+            tags: disc.tags || [],
+            lastMessage: disc.lastMessage || {
+              content: '',
+              authorName: disc.authorName,
+              timestamp: new Date()
+            },
+            isUnread: disc.isUnread || false,
+            isPinned: disc.isPinned || false,
+            reactions: disc.reactions || []
+          }));
+          setDiscussions(mappedDiscussions);
+        }
+
+        // Load annotations from backend
+        const collaborationMetrics = await getCollaborationMetrics();
+        if (collaborationMetrics?.annotations) {
+          const mappedAnnotations = collaborationMetrics.annotations.map((ann: any): Annotation => ({
+            id: ann.id,
+            assetId: ann.assetId,
+            assetName: ann.assetName,
+            authorId: ann.authorId,
+            authorName: ann.authorName,
+            authorAvatar: ann.authorAvatar,
+            content: ann.content,
+            type: ann.type || 'comment',
+            location: ann.location || {},
+            timestamp: new Date(ann.timestamp),
+            isResolved: ann.isResolved || false,
+            resolvedBy: ann.resolvedBy,
+            resolvedAt: ann.resolvedAt ? new Date(ann.resolvedAt) : undefined,
+            tags: ann.tags || [],
+            visibility: ann.visibility || 'public',
+            votes: ann.votes || { upvotes: 0, downvotes: 0 }
+          }));
+          setAnnotations(mappedAnnotations);
+        }
+      } catch (error) {
+        console.error('Failed to load collaboration data:', error);
+      }
+    };
+
+    loadCollaborationData();
+  }, [getTeamActivity, getCollaborationMetrics]);
+
+  // =============================================================================
   // EVENT HANDLERS
   // =============================================================================
   
@@ -394,68 +407,98 @@ export const CatalogCollaborationHub: React.FC = () => {
     if (!newThreadTitle.trim()) return;
     
     try {
-      const newThread: DiscussionThread = {
-        id: `thread_${Date.now()}`,
+      const threadData = {
         title: newThreadTitle,
         assetId: viewState.selectedAsset?.id || '',
         assetName: viewState.selectedAsset?.name || '',
-        authorId: 'current_user',
-        authorName: 'Current User',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        messageCount: 0,
-        participantCount: 1,
-        isResolved: false,
+        content: '',
         priority: 'medium',
-        tags: [],
-        lastMessage: {
-          content: '',
-          authorName: 'Current User',
-          timestamp: new Date()
-        },
-        isUnread: false,
-        isPinned: false,
-        reactions: []
+        tags: []
       };
+
+      const newThread = await createDiscussionThread(threadData);
       
-      setDiscussions(prev => [newThread, ...prev]);
+      if (newThread) {
+        const mappedThread: DiscussionThread = {
+          id: newThread.id,
+          title: newThread.title,
+          assetId: newThread.assetId,
+          assetName: newThread.assetName,
+          authorId: newThread.authorId,
+          authorName: newThread.authorName,
+          authorAvatar: newThread.authorAvatar,
+          createdAt: new Date(newThread.createdAt),
+          updatedAt: new Date(newThread.updatedAt),
+          messageCount: 0,
+          participantCount: 1,
+          isResolved: false,
+          priority: newThread.priority || 'medium',
+          tags: newThread.tags || [],
+          lastMessage: {
+            content: '',
+            authorName: newThread.authorName,
+            timestamp: new Date()
+          },
+          isUnread: false,
+          isPinned: false,
+          reactions: []
+        };
+        
+        setDiscussions(prev => [mappedThread, ...prev]);
+      }
+      
       setNewThreadTitle('');
       setShowNewThreadDialog(false);
     } catch (error) {
       console.error('Failed to create thread:', error);
     }
-  }, [newThreadTitle, viewState.selectedAsset]);
+  }, [newThreadTitle, viewState.selectedAsset, createDiscussionThread]);
 
   const handleCreateAnnotation = useCallback(async () => {
     if (!newAnnotation.trim()) return;
     
     try {
-      const annotation: Annotation = {
-        id: `annotation_${Date.now()}`,
+      const annotationData = {
         assetId: viewState.selectedAsset?.id || '',
-        assetName: viewState.selectedAsset?.name || '',
-        authorId: 'current_user',
-        authorName: 'Current User',
         content: newAnnotation,
         type: 'comment',
         location: {},
-        timestamp: new Date(),
-        isResolved: false,
-        tags: [],
         visibility: 'public',
-        votes: {
-          upvotes: 0,
-          downvotes: 0
-        }
+        tags: []
       };
+
+      const newAnnotationResult = await createAnnotation(annotationData);
       
-      setAnnotations(prev => [annotation, ...prev]);
+      if (newAnnotationResult) {
+        const mappedAnnotation: Annotation = {
+          id: newAnnotationResult.id,
+          assetId: newAnnotationResult.assetId,
+          assetName: viewState.selectedAsset?.name || '',
+          authorId: newAnnotationResult.authorId,
+          authorName: newAnnotationResult.authorName,
+          authorAvatar: newAnnotationResult.authorAvatar,
+          content: newAnnotationResult.content,
+          type: newAnnotationResult.type || 'comment',
+          location: newAnnotationResult.location || {},
+          timestamp: new Date(newAnnotationResult.timestamp),
+          isResolved: false,
+          tags: newAnnotationResult.tags || [],
+          visibility: newAnnotationResult.visibility || 'public',
+          votes: {
+            upvotes: 0,
+            downvotes: 0
+          }
+        };
+        
+        setAnnotations(prev => [mappedAnnotation, ...prev]);
+      }
+      
       setNewAnnotation('');
       setShowNewAnnotationDialog(false);
     } catch (error) {
       console.error('Failed to create annotation:', error);
     }
-  }, [newAnnotation, viewState.selectedAsset]);
+  }, [newAnnotation, viewState.selectedAsset, createAnnotation]);
 
   const handleThreadSelect = useCallback((thread: DiscussionThread) => {
     setViewState(prev => ({ ...prev, selectedThread: thread }));
@@ -485,38 +528,62 @@ export const CatalogCollaborationHub: React.FC = () => {
     }));
   }, []);
 
-  const handleVote = useCallback((annotationId: string, voteType: 'up' | 'down') => {
-    setAnnotations(prev => prev.map(annotation => {
-      if (annotation.id === annotationId) {
-        const currentVote = annotation.votes.userVote;
-        let newUpvotes = annotation.votes.upvotes;
-        let newDownvotes = annotation.votes.downvotes;
-        let newUserVote: 'up' | 'down' | undefined = voteType;
-        
-        // Remove previous vote if exists
-        if (currentVote === 'up') newUpvotes--;
-        if (currentVote === 'down') newDownvotes--;
-        
-        // Add new vote or remove if same
-        if (currentVote === voteType) {
-          newUserVote = undefined;
-        } else {
-          if (voteType === 'up') newUpvotes++;
-          if (voteType === 'down') newDownvotes++;
+  const handleVote = useCallback(async (annotationId: string, voteType: 'up' | 'down') => {
+    try {
+      const annotation = annotations.find(a => a.id === annotationId);
+      if (!annotation) return;
+
+      // Update annotation vote via backend
+      const updatedAnnotation = await updateAnnotation(annotationId, {
+        votes: {
+          type: voteType,
+          currentUserVote: annotation.votes.userVote
         }
-        
-        return {
-          ...annotation,
-          votes: {
-            upvotes: newUpvotes,
-            downvotes: newDownvotes,
-            userVote: newUserVote
-          }
-        };
+      });
+
+      if (updatedAnnotation) {
+        setAnnotations(prev => prev.map(ann => 
+          ann.id === annotationId 
+            ? { ...ann, votes: updatedAnnotation.votes }
+            : ann
+        ));
       }
-      return annotation;
-    }));
-  }, []);
+    } catch (error) {
+      console.error('Failed to update vote:', error);
+      
+      // Fallback to local state update if backend fails
+      setAnnotations(prev => prev.map(annotation => {
+        if (annotation.id === annotationId) {
+          const currentVote = annotation.votes.userVote;
+          let newUpvotes = annotation.votes.upvotes;
+          let newDownvotes = annotation.votes.downvotes;
+          let newUserVote: 'up' | 'down' | undefined = voteType;
+          
+          // Remove previous vote if exists
+          if (currentVote === 'up') newUpvotes--;
+          if (currentVote === 'down') newDownvotes--;
+          
+          // Add new vote or remove if same
+          if (currentVote === voteType) {
+            newUserVote = undefined;
+          } else {
+            if (voteType === 'up') newUpvotes++;
+            if (voteType === 'down') newDownvotes++;
+          }
+          
+          return {
+            ...annotation,
+            votes: {
+              upvotes: newUpvotes,
+              downvotes: newDownvotes,
+              userVote: newUserVote
+            }
+          };
+        }
+        return annotation;
+      }));
+    }
+  }, [annotations, updateAnnotation]);
 
   // =============================================================================
   // COMPONENT RENDERS
