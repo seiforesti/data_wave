@@ -12,6 +12,10 @@ export { default as formatters } from './formatters';
 export * from './validators';
 export { default as validators } from './validators';
 
+// Export collaboration utilities
+export * from './collaboration-utils';
+export { default as collaborationUtils } from './collaboration-utils';
+
 // Export all helper functions
 export * from './helpers';
 export { default as helpers } from './helpers';

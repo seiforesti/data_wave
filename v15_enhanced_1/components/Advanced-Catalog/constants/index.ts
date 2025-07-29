@@ -12,6 +12,10 @@ export { default as endpoints, ALL_ENDPOINTS } from './endpoints';
 export * from './config';
 export { default as config, ALL_CONFIG } from './config';
 
+// Export collaboration constants
+export * from './collaboration-constants';
+export { default as collaborationConstants } from './collaboration-constants';
+
 // ============================================================================
 // COMMON CONSTANTS
 // ============================================================================

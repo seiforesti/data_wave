@@ -60,7 +60,7 @@ import type {
 
 import {
   enterpriseCatalogService,
-  dataQualityService,
+  catalogQualityService,
   qualityMetricsService,
   qualityRulesService,
   qualityAssessmentService,

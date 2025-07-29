@@ -58,6 +58,24 @@ export {
   type ProfilingOperations
 } from './useCatalogProfiling';
 
+// Collaboration Hooks
+export {
+  useCatalogCollaboration,
+  useCollaborationHubs,
+  useCollaborationHub,
+  useCollaborationTeams,
+  useDataStewardship,
+  useDataAnnotations,
+  useAssetReviews,
+  useCrowdsourcingCampaigns,
+  useExpertConsultation,
+  useKnowledgeBase,
+  useCollaborationAnalytics,
+  type UseCatalogCollaborationOptions,
+  type CollaborationState,
+  type CollaborationOperations
+} from './useCatalogCollaboration';
+
 // ============================================================================
 // HOOK COLLECTION TYPES
 // ============================================================================
@@ -69,6 +87,7 @@ export interface CatalogHooks {
   recommendations: typeof useCatalogRecommendations;
   ai: typeof useCatalogAI;
   profiling: typeof useCatalogProfiling;
+  collaboration: typeof useCatalogCollaboration;
 }
 
 export interface CatalogHookStates {
@@ -78,6 +97,7 @@ export interface CatalogHookStates {
   recommendations: RecommendationsState;
   ai: AIState;
   profiling: ProfilingState;
+  collaboration: CollaborationState;
 }
 
 export interface CatalogHookOperations {
@@ -87,6 +107,7 @@ export interface CatalogHookOperations {
   recommendations: RecommendationOperations;
   ai: AIOperations;
   profiling: ProfilingOperations;
+  collaboration: CollaborationOperations;
 }
 
 // ============================================================================
@@ -102,7 +123,8 @@ export const catalogHooks: CatalogHooks = {
   lineage: useCatalogLineage,
   recommendations: useCatalogRecommendations,
   ai: useCatalogAI,
-  profiling: useCatalogProfiling
+  profiling: useCatalogProfiling,
+  collaboration: useCatalogCollaboration
 };
 
 /**
@@ -114,7 +136,8 @@ export const CATALOG_HOOK_NAMES = {
   LINEAGE: 'lineage',
   RECOMMENDATIONS: 'recommendations',
   AI: 'ai',
-  PROFILING: 'profiling'
+  PROFILING: 'profiling',
+  COLLABORATION: 'collaboration'
 } as const;
 
 export type CatalogHookName = keyof typeof CATALOG_HOOK_NAMES;

@@ -108,7 +108,7 @@ import {
 
 // Services and Types
 import { enterpriseCatalogService } from '../../services/enterprise-catalog.service';
-import { lineageVisualizationService } from '../../services/lineage-visualization.service';
+import { advancedLineageService } from '../../services/advanced-lineage.service';
 import {
   CatalogAsset,
   DataLineage,
@@ -957,7 +957,7 @@ const TemporalLineageViewer: React.FC<{
   // Fetch temporal lineage data
   const { data: temporalLineage, isLoading } = useQuery({
     queryKey: ['temporal-lineage', assetId, timeRange],
-    queryFn: () => lineageVisualizationService.getTemporalLineage(assetId, timeRange),
+    queryFn: () => advancedLineageService.getTemporalLineage(assetId, timeRange),
     enabled: !!assetId
   });
 
@@ -1165,14 +1165,14 @@ export const DataLineageVisualizer: React.FC<LineageVisualizationProps> = ({
   // Fetch lineage data
   const { data: lineageData, isLoading: isLineageLoading, refetch: refetchLineage } = useQuery({
     queryKey: ['data-lineage', assetId, visualizationConfig],
-    queryFn: () => lineageVisualizationService.getAssetLineage(assetId!, visualizationConfig),
+    queryFn: () => advancedLineageService.getAssetLineage(assetId!, visualizationConfig),
     enabled: !!assetId
   });
 
   // Fetch impact analysis
   const { data: impactAnalysis, isLoading: isImpactLoading } = useQuery({
     queryKey: ['impact-analysis', selectedAsset?.id],
-    queryFn: () => lineageVisualizationService.getImpactAnalysis(selectedAsset!.id),
+    queryFn: () => advancedLineageService.getImpactAnalysis(selectedAsset!.id),
     enabled: !!selectedAsset
   });
 
@@ -1186,7 +1186,7 @@ export const DataLineageVisualizer: React.FC<LineageVisualizationProps> = ({
   // Run impact analysis mutation
   const runImpactAnalysisMutation = useMutation({
     mutationFn: ({ assetId, config }: { assetId: string; config: any }) =>
-      lineageVisualizationService.runImpactAnalysis(assetId, config),
+      advancedLineageService.runImpactAnalysis(assetId, config),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['impact-analysis'] });
       if (onLineageAnalysis) {

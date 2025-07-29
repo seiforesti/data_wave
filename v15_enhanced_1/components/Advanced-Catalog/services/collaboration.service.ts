@@ -8,222 +8,333 @@
 
 import { apiClient } from '../../../shared/services/api-client';
 import {
-  CollaborationThread,
-  CollaborationComment,
-  AssetReview,
-  ApprovalWorkflow,
-  WorkflowStep,
-  CollaborationNotification,
+  CatalogCollaborationHub,
+  CollaborationTeam,
   TeamMember,
-  AssetSubscription,
+  DataStewardshipCenter,
+  DataSteward,
+  DataAnnotation,
+  AssetReview,
+  CrowdsourcingCampaign,
+  ConsultationRequest,
+  KnowledgeArticle,
   CollaborationActivity,
-  ReviewTemplate,
-  ApprovalRequest,
-  CatalogAsset
-} from '../types/catalog-core.types';
+  TeamType,
+  TeamPurpose,
+  AnnotationTargetType,
+  AnnotationType,
+  ReviewType,
+  ContributionType
+} from '../types/collaboration.types';
 
 // ============================================================================
-// COLLABORATION SERVICE CLASS
+// ADVANCED CATALOG COLLABORATION SERVICE
 // ============================================================================
 
-class CollaborationService {
+class AdvancedCatalogCollaborationService {
   private readonly baseUrl = '/api/v1/catalog/collaboration';
 
   // ========================================================================
-  // DISCUSSION THREADS OPERATIONS
+  // COLLABORATION HUB OPERATIONS
   // ========================================================================
 
   /**
-   * Get collaboration threads for an asset
+   * Create a collaboration hub for Advanced-Catalog
    */
-  async getCollaborationThreads(
-    assetId: string,
-    filters?: {
-      participants?: string[];
-      types?: string[];
-      status?: string[];
-      priority?: string[];
-      dateRange?: { start: Date; end: Date };
-      tags?: string[];
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<CollaborationThread[]> {
-    const response = await apiClient.get(`${this.baseUrl}/threads/asset/${assetId}`, {
-      params: {
-        participants: filters?.participants?.join(','),
-        types: filters?.types?.join(','),
-        status: filters?.status?.join(','),
-        priority: filters?.priority?.join(','),
-        startDate: filters?.dateRange?.start?.toISOString(),
-        endDate: filters?.dateRange?.end?.toISOString(),
-        tags: filters?.tags?.join(','),
-        limit: filters?.limit || 50,
-        offset: filters?.offset || 0
-      }
+  async createCollaborationHub(
+    name: string,
+    description: string,
+    config?: Record<string, any>,
+    governanceEnabled: boolean = true
+  ): Promise<CatalogCollaborationHub> {
+    const response = await apiClient.post(`${this.baseUrl}/hubs`, {
+      name,
+      description,
+      config,
+      governance_enabled: governanceEnabled
     });
     return response.data;
   }
 
   /**
-   * Get all collaboration threads
+   * Create a collaboration team within a hub
    */
-  async getAllCollaborationThreads(
-    filters?: {
-      search?: string;
-      participants?: string[];
-      types?: string[];
-      status?: string[];
-      priority?: string[];
-      assetIds?: string[];
-      dateRange?: { start: Date; end: Date };
-      sortBy?: 'createdAt' | 'updatedAt' | 'priority' | 'activity';
-      sortOrder?: 'asc' | 'desc';
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<{
-    threads: CollaborationThread[];
-    total: number;
-    summary: {
-      byStatus: Record<string, number>;
-      byType: Record<string, number>;
-      byPriority: Record<string, number>;
-    };
-  }> {
-    const response = await apiClient.post(`${this.baseUrl}/threads/search`, { filters });
+  async createCollaborationTeam(
+    hubId: number,
+    name: string,
+    description: string,
+    teamType: TeamType = TeamType.DATA_STEWARDSHIP,
+    purpose: TeamPurpose = TeamPurpose.ASSET_MANAGEMENT,
+    assignedAssets: string[] = []
+  ): Promise<CollaborationTeam> {
+    const response = await apiClient.post(`${this.baseUrl}/hubs/${hubId}/teams`, {
+      name,
+      description,
+      team_type: teamType,
+      purpose,
+      assigned_assets: assignedAssets
+    });
     return response.data;
   }
 
   /**
-   * Get thread details with full comment history
+   * Add a member to a collaboration team
    */
-  async getThreadDetails(threadId: string): Promise<{
-    thread: CollaborationThread;
-    comments: CollaborationComment[];
-    participants: TeamMember[];
-    relatedAssets: CatalogAsset[];
-    activity: CollaborationActivity[];
-  }> {
-    const response = await apiClient.get(`${this.baseUrl}/threads/${threadId}/details`);
+  async addTeamMember(
+    teamId: number,
+    userId: string,
+    name: string,
+    email: string,
+    role: string = 'member',
+    expertise: string[] = []
+  ): Promise<TeamMember> {
+    const response = await apiClient.post(`${this.baseUrl}/teams/${teamId}/members`, {
+      user_id: userId,
+      name,
+      email,
+      role,
+      expertise
+    });
     return response.data;
-  }
-
-  /**
-   * Create a new collaboration thread
-   */
-  async createCollaborationThread(thread: {
-    assetId?: string;
-    title: string;
-    description: string;
-    type: 'discussion' | 'question' | 'issue' | 'feedback' | 'announcement';
-    priority: 'low' | 'medium' | 'high' | 'critical';
-    tags?: string[];
-    participants?: string[];
-    isPrivate?: boolean;
-    metadata?: Record<string, any>;
-  }): Promise<CollaborationThread> {
-    const response = await apiClient.post(`${this.baseUrl}/threads`, thread);
-    return response.data;
-  }
-
-  /**
-   * Update collaboration thread
-   */
-  async updateCollaborationThread(
-    threadId: string,
-    updates: {
-      title?: string;
-      description?: string;
-      priority?: 'low' | 'medium' | 'high' | 'critical';
-      status?: 'active' | 'resolved' | 'closed' | 'archived';
-      tags?: string[];
-      isPrivate?: boolean;
-    }
-  ): Promise<CollaborationThread> {
-    const response = await apiClient.patch(`${this.baseUrl}/threads/${threadId}`, updates);
-    return response.data;
-  }
-
-  /**
-   * Delete collaboration thread
-   */
-  async deleteCollaborationThread(threadId: string): Promise<void> {
-    await apiClient.delete(`${this.baseUrl}/threads/${threadId}`);
-  }
-
-  /**
-   * Subscribe to thread notifications
-   */
-  async subscribeToThread(threadId: string, userId: string): Promise<void> {
-    await apiClient.post(`${this.baseUrl}/threads/${threadId}/subscribe`, { userId });
-  }
-
-  /**
-   * Unsubscribe from thread notifications
-   */
-  async unsubscribeFromThread(threadId: string, userId: string): Promise<void> {
-    await apiClient.post(`${this.baseUrl}/threads/${threadId}/unsubscribe`, { userId });
   }
 
   // ========================================================================
-  // COMMENTS OPERATIONS
+  // DATA STEWARDSHIP OPERATIONS
   // ========================================================================
 
   /**
-   * Add comment to thread
+   * Create a data stewardship center
    */
-  async addComment(
-    threadId: string,
+  async createStewardshipCenter(
+    name: string,
+    config?: Record<string, any>
+  ): Promise<DataStewardshipCenter> {
+    const response = await apiClient.post(`${this.baseUrl}/stewardship/centers`, {
+      name,
+      config
+    });
+    return response.data;
+  }
+
+  /**
+   * Assign a data steward to a stewardship center
+   */
+  async assignDataSteward(
+    centerId: number,
+    userId: string,
+    name: string,
+    email: string,
+    expertiseAreas: string[] = [],
+    assignedAssets: string[] = []
+  ): Promise<DataSteward> {
+    const response = await apiClient.post(`${this.baseUrl}/stewardship/centers/${centerId}/stewards`, {
+      user_id: userId,
+      name,
+      email,
+      expertise_areas: expertiseAreas,
+      assigned_assets: assignedAssets
+    });
+    return response.data;
+  }
+
+  // ========================================================================
+  // ANNOTATION MANAGEMENT OPERATIONS
+  // ========================================================================
+
+  /**
+   * Create a data annotation
+   */
+  async createAnnotation(
+    managerId: number,
+    targetId: string,
+    targetType: AnnotationTargetType,
     content: string,
-    options?: {
-      replyToCommentId?: string;
-      mentions?: string[];
-      attachments?: Array<{
-        name: string;
-        url: string;
-        type: string;
-        size: number;
-      }>;
-    }
-  ): Promise<CollaborationComment> {
-    const response = await apiClient.post(`${this.baseUrl}/threads/${threadId}/comments`, {
+    annotationType: AnnotationType = AnnotationType.COMMENT,
+    title?: string,
+    category?: string,
+    tags: string[] = []
+  ): Promise<DataAnnotation> {
+    const response = await apiClient.post(`${this.baseUrl}/annotations`, {
+      manager_id: managerId,
+      target_id: targetId,
+      target_type: targetType,
       content,
-      ...options
+      annotation_type: annotationType,
+      title,
+      category,
+      tags
     });
     return response.data;
   }
 
   /**
-   * Update comment
+   * Get annotations for a specific asset
    */
-  async updateComment(
-    commentId: string,
-    updates: {
-      content?: string;
-      isEdited?: boolean;
+  async getAssetAnnotations(
+    targetId: string,
+    annotationType?: AnnotationType,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<{
+    annotations: DataAnnotation[];
+    total: number;
+  }> {
+    const params: Record<string, any> = {
+      limit,
+      offset
+    };
+    
+    if (annotationType) {
+      params.annotation_type = annotationType;
     }
-  ): Promise<CollaborationComment> {
-    const response = await apiClient.patch(`${this.baseUrl}/comments/${commentId}`, updates);
+
+    const response = await apiClient.get(`${this.baseUrl}/annotations/assets/${targetId}`, {
+      params
+    });
+    return response.data;
+  }
+
+  // ========================================================================
+  // REVIEW WORKFLOW OPERATIONS
+  // ========================================================================
+
+  /**
+   * Create a new asset review
+   */
+  async createAssetReview(
+    engineId: number,
+    assetId: string,
+    reviewType: ReviewType,
+    criteria?: Record<string, any>[]
+  ): Promise<AssetReview> {
+    const response = await apiClient.post(`${this.baseUrl}/reviews`, {
+      engine_id: engineId,
+      asset_id: assetId,
+      review_type: reviewType,
+      criteria
+    });
     return response.data;
   }
 
   /**
-   * Delete comment
+   * Add a comment to a review
    */
-  async deleteComment(commentId: string): Promise<void> {
-    await apiClient.delete(`${this.baseUrl}/comments/${commentId}`);
+  async addReviewComment(
+    reviewId: number,
+    content: string,
+    commentType: string = 'general',
+    parentCommentId?: number
+  ): Promise<any> {
+    const response = await apiClient.post(`${this.baseUrl}/reviews/${reviewId}/comments`, {
+      content,
+      comment_type: commentType,
+      parent_comment_id: parentCommentId
+    });
+    return response.data;
+  }
+
+  // ========================================================================
+  // COMMUNITY & CROWDSOURCING OPERATIONS
+  // ========================================================================
+
+  /**
+   * Create a crowdsourcing campaign
+   */
+  async createCrowdsourcingCampaign(
+    platformId: number,
+    name: string,
+    description: string,
+    campaignType: string = 'annotation',
+    targetAssets: string[] = [],
+    goals?: Record<string, any>,
+    endDate?: Date
+  ): Promise<CrowdsourcingCampaign> {
+    const response = await apiClient.post(`${this.baseUrl}/crowdsourcing/campaigns`, {
+      platform_id: platformId,
+      name,
+      description,
+      campaign_type: campaignType,
+      target_assets: targetAssets,
+      goals,
+      end_date: endDate?.toISOString()
+    });
+    return response.data;
   }
 
   /**
-   * Like/unlike comment
+   * Submit a community contribution
    */
-  async toggleCommentLike(commentId: string, userId: string): Promise<{
-    liked: boolean;
-    likeCount: number;
-  }> {
-    const response = await apiClient.post(`${this.baseUrl}/comments/${commentId}/like`, {
-      userId
+  async submitCommunityContribution(
+    platformId: number,
+    contributorId: number,
+    contributionType: ContributionType,
+    title: string,
+    targetAssetId: string,
+    content: Record<string, any>,
+    description?: string
+  ): Promise<any> {
+    const response = await apiClient.post(`${this.baseUrl}/community/contributions`, {
+      platform_id: platformId,
+      contributor_id: contributorId,
+      contribution_type: contributionType,
+      title,
+      target_asset_id: targetAssetId,
+      content,
+      description
+    });
+    return response.data;
+  }
+
+  // ========================================================================
+  // EXPERT NETWORKING OPERATIONS
+  // ========================================================================
+
+  /**
+   * Request expert consultation
+   */
+  async requestExpertConsultation(
+    networkId: number,
+    topic: string,
+    description: string,
+    urgency: string = 'medium',
+    relatedAssets: string[] = []
+  ): Promise<ConsultationRequest> {
+    const response = await apiClient.post(`${this.baseUrl}/expert-consultation/requests`, {
+      network_id: networkId,
+      topic,
+      description,
+      urgency,
+      related_assets: relatedAssets
+    });
+    return response.data;
+  }
+
+  // ========================================================================
+  // KNOWLEDGE BASE OPERATIONS
+  // ========================================================================
+
+  /**
+   * Create a knowledge base article
+   */
+  async createKnowledgeArticle(
+    knowledgeBaseId: number,
+    title: string,
+    content: string,
+    summary?: string,
+    keywords: string[] = [],
+    tags: string[] = [],
+    authors: Record<string, any>[] = [],
+    relatedAssets: string[] = []
+  ): Promise<KnowledgeArticle> {
+    const response = await apiClient.post(`${this.baseUrl}/knowledge/articles`, {
+      knowledge_base_id: knowledgeBaseId,
+      title,
+      content,
+      summary,
+      keywords,
+      tags,
+      authors,
+      related_assets: relatedAssets
     });
     return response.data;
   }
@@ -956,39 +1067,66 @@ class CollaborationService {
    */
   async getCollaborationInsights(
     timeRange: { start: Date; end: Date }
-  ): Promise<{
-    topContributors: Array<{
-      userId: string;
-      userName: string;
-      contributionScore: number;
-      threadsCreated: number;
-      commentsPosted: number;
-    }>;
-    mostDiscussedAssets: Array<{
-      assetId: string;
-      assetName: string;
-      threadCount: number;
-      commentCount: number;
-      participantCount: number;
-    }>;
-    reviewsEfficiency: {
-      averageCompletionTime: number;
-      onTimeCompletionRate: number;
-      qualityScore: number;
-    };
-    recommendedActions: Array<{
-      type: 'increase_engagement' | 'improve_response_time' | 'enhance_reviews';
-      description: string;
-      priority: 'low' | 'medium' | 'high';
-      estimatedImpact: string;
-    }>;
-  }> {
-    const response = await apiClient.post(`${this.baseUrl}/analytics/insights`, {
-      timeRange: {
-        start: timeRange.start.toISOString(),
-        end: timeRange.end.toISOString()
+  // ========================================================================
+  // ANALYTICS & INSIGHTS OPERATIONS  
+  // ========================================================================
+
+  /**
+   * Get collaboration analytics for a hub
+   */
+  async getCollaborationAnalytics(
+    hubId: number,
+    timePeriod: string = 'week',
+    metrics?: string[]
+  ): Promise<any> {
+    const response = await apiClient.get(`${this.baseUrl}/analytics/hubs/${hubId}`, {
+      params: {
+        time_period: timePeriod,
+        metrics: metrics?.join(',')
       }
     });
+    return response.data;
+  }
+
+  /**
+   * Get advanced collaboration insights
+   */
+  async getAdvancedCollaborationInsights(
+    hubId?: number,
+    timeRange: string = 'month',
+    insightTypes?: string[]
+  ): Promise<any> {
+    const response = await apiClient.get(`${this.baseUrl}/analytics/insights/advanced`, {
+      params: {
+        hub_id: hubId,
+        time_range: timeRange,
+        insight_types: insightTypes?.join(',')
+      }
+    });
+    return response.data;
+  }
+
+  /**
+   * Get collaboration compliance status
+   */
+  async getCollaborationCompliance(
+    hubId?: number,
+    complianceFramework?: string
+  ): Promise<any> {
+    const response = await apiClient.get(`${this.baseUrl}/governance/compliance`, {
+      params: {
+        hub_id: hubId,
+        compliance_framework: complianceFramework
+      }
+    });
+    return response.data;
+  }
+
+  /**
+   * Get collaboration integration status
+   */
+  async getCollaborationIntegrationStatus(): Promise<any> {
+    const response = await apiClient.get(`${this.baseUrl}/status/integration`);
     return response.data;
   }
 }
@@ -997,5 +1135,5 @@ class CollaborationService {
 // EXPORT SERVICE INSTANCE
 // ============================================================================
 
-export const collaborationService = new CollaborationService();
-export default collaborationService;
+export const advancedCatalogCollaborationService = new AdvancedCatalogCollaborationService();
+export default advancedCatalogCollaborationService;

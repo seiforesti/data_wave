@@ -50,6 +50,11 @@ export {
   catalogAIService 
 } from './catalog-ai.service';
 
+export { 
+  AdvancedCatalogCollaborationService,
+  advancedCatalogCollaborationService 
+} from './collaboration.service';
+
 // Export service interfaces for type safety
 export type {
   AssetCreateRequest,
@@ -109,6 +114,7 @@ export const catalogServices = {
   catalogAnalytics: catalogAnalyticsService,
   catalogRecommendation: catalogRecommendationService,
   catalogAI: catalogAIService,
+  advancedCatalogCollaboration: advancedCatalogCollaborationService,
 } as const;
 
 /**
@@ -129,6 +135,7 @@ export enum CatalogServiceNames {
   CATALOG_ANALYTICS = 'catalogAnalytics',
   CATALOG_RECOMMENDATION = 'catalogRecommendation',
   CATALOG_AI = 'catalogAI',
+  ADVANCED_CATALOG_COLLABORATION = 'advancedCatalogCollaboration',
 }
 
 // ============================================================================
