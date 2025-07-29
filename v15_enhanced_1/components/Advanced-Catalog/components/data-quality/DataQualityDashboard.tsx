@@ -1,9 +1,9 @@
 // ============================================================================
-// DATA QUALITY DASHBOARD - COMPREHENSIVE QUALITY MONITORING (2200+ LINES)
+// DATA QUALITY DASHBOARD - QUALITY MONITORING & ASSESSMENT (2200+ LINES)
 // ============================================================================
-// Enterprise Data Governance System - Advanced Data Quality Management Component
-// Real-time quality monitoring, automated rule validation, quality metrics analysis,
-// data profiling, anomaly detection, and quality improvement recommendations
+// Enterprise Data Governance System - Advanced Data Quality Dashboard Component
+// Real-time quality monitoring, automated quality checks, anomaly detection,
+// quality scoring, remediation workflows, and AI-powered quality insights
 // ============================================================================
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
@@ -12,525 +12,463 @@ import { motion, AnimatePresence, useAnimation, useMotionValue, useSpring } from
 import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
-import { LineChart, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, Bar, PieChart, Pie, Cell, AreaChart, Area, ScatterChart, Scatter } from 'recharts';
-
-// ============================================================================
-// SHADCN/UI IMPORTS
-// ============================================================================
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuSub } from '@/components/ui/dropdown-menu';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar } from '@/components/ui/calendar';
-import { AlertCircle, Activity, BarChart3, Brain, ChevronDown, ChevronRight, Clock, Database, Download, Eye, Filter, GitBranch, Globe, Home, Info, Layers, LineChart as LineChartIcon, MapPin, Network, Play, Plus, RefreshCw, Save, Search, Settings, Share2, Target, Trash2, TrendingUp, Users, Zap, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, Move, Square, Circle, Triangle, Hexagon, Star, Bookmark, Bell, MessageCircle, Tag, Link, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp, MoreHorizontal, Edit, Copy, ExternalLink, FileText, Image, Video, Music, Archive, Code, Table, PieChart as PieChartIcon, TreePine, Workflow, AlertTriangle, CheckCircle, XCircle, MinusCircle, TrendingDown, Calendar as CalendarIcon, Clock3, Gauge, Shield, Award, Lightbulb, Bug, Wrench, Monitor, Server, HardDrive, Cpu, MemoryStick, CloudLightning, Wifi, WifiOff, CloudRain, Sun, Moon, Thermometer, Battery, Signal } from 'lucide-react';
+import { AlertTriangle, Search, Filter, Download, Upload, Share2, Settings, Info, Eye, EyeOff, Play, Pause, RotateCcw, ZoomIn, ZoomOut, Move, Maximize2, Minimize2, Clock, Users, MessageSquare, Bookmark, Star, Edit3, Save, X, Plus, Minus, RefreshCw, Target, TrendingUp, TrendingDown, AlertCircle, CheckCircle, XCircle, Activity, Database, FileText, Code, BarChart3, PieChart, LineChart, Layers, Network, TreePine, Workflow, Route, MapPin, Calendar as CalendarIcon, Timer, UserCheck, Flag, Hash, Link, Globe, Shield, Lock, Unlock, Key, Award, Zap, Sparkles, Brain, Cpu, HardDrive, Cloud, Server, Wifi, Radio, Bluetooth, Cable, Usb, Monitor, Smartphone, Tablet, Laptop, Watch, Gamepad2, Headphones, Camera, Mic, Speaker, Volume2, VolumeX, MoreHorizontal, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronsUp, ChevronsDown, Home, ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 
-// ============================================================================
-// TYPE IMPORTS AND INTERFACES
-// ============================================================================
-import {
-  // Core Types
-  DataAsset,
-  AssetMetadata,
-  AssetType,
-  DataSourceConfig,
-  QualityMetrics,
+// Chart components
+import { LineChart as RechartsLineChart, Line, AreaChart, Area, BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip as RechartsTooltip, RadialBarChart, RadialBar, ScatterChart, Scatter, ComposedChart } from 'recharts';
+
+// Import types and services
+import type {
+  DataQualityMetrics,
   QualityRule,
-  QualityDimension,
-  QualityProfile,
+  QualityAssessment,
   QualityReport,
-  QualityIncident,
   QualityTrend,
-  
-  // Profiling Types
-  DataProfile,
-  ColumnProfile,
-  StatisticalSummary,
-  DataType,
-  
-  // Quality Monitoring
-  QualityMonitorConfig,
-  QualityThreshold,
   QualityAlert,
-  QualityDashboardConfig,
-  
-  // Anomaly Detection
+  QualityProfile,
+  QualityDimension,
   AnomalyDetection,
-  AnomalyPattern,
-  AnomalyThreshold,
-  
-  // Search and Discovery
-  SearchQuery,
-  SearchResult,
-  SearchFilters,
-  
-  // Compliance
-  ComplianceStatus,
-  ComplianceRule,
-  
-  // Collaboration
-  Annotation,
-  Comment,
-  Tag,
-  
-  // Advanced Features
-  AIRecommendation,
-  SmartInsight,
-  AutomatedDiscovery,
-  
-  // API Response Types
-  ApiResponse,
-  PaginatedResponse,
-  ErrorResponse
-} from '../../types/catalog-core.types';
+  QualityRemediation,
+  QualityBenchmark,
+  DataAssetQuality,
+  QualityConfiguration,
+  QualityValidation,
+  QualityDashboardConfig,
+  QualityInsight,
+  QualityScorecard
+} from '../../types/catalog-quality.types';
 
-// ============================================================================
-// SERVICE IMPORTS
-// ============================================================================
 import {
   enterpriseCatalogService,
-  qualityService,
-  searchService,
-  analyticsService,
-  aiService,
-  alertingService,
-  profilingService
+  dataQualityService,
+  qualityMetricsService,
+  qualityRulesService,
+  qualityAssessmentService,
+  qualityRemediationService,
+  qualityAnalyticsService,
+  anomalyDetectionService,
+  qualityBenchmarkService
 } from '../../services/enterprise-catalog.service';
 
-// ============================================================================
-// CONSTANTS AND CONFIGURATIONS
-// ============================================================================
-const QUALITY_DIMENSIONS = {
-  COMPLETENESS: 'completeness',
-  ACCURACY: 'accuracy',
-  CONSISTENCY: 'consistency',
-  VALIDITY: 'validity',
-  TIMELINESS: 'timeliness',
-  UNIQUENESS: 'uniqueness',
-  INTEGRITY: 'integrity',
-  CONFORMITY: 'conformity'
-} as const;
+import {
+  QUALITY_DIMENSIONS,
+  QUALITY_METRICS_CONFIG,
+  QUALITY_THRESHOLDS,
+  QUALITY_ALERT_TYPES,
+  ANOMALY_DETECTION_CONFIG,
+  QUALITY_SCORING_METHODS,
+  REMEDIATION_STRATEGIES,
+  BENCHMARK_TYPES,
+  QUALITY_CHART_COLORS
+} from '../../constants/catalog-quality.constants';
 
-const QUALITY_RULE_TYPES = {
-  NULL_CHECK: 'null_check',
-  RANGE_CHECK: 'range_check',
-  FORMAT_CHECK: 'format_check',
-  UNIQUENESS_CHECK: 'uniqueness_check',
-  REFERENTIAL_INTEGRITY: 'referential_integrity',
-  BUSINESS_RULE: 'business_rule',
-  PATTERN_MATCH: 'pattern_match',
-  STATISTICAL_OUTLIER: 'statistical_outlier',
-  FRESHNESS_CHECK: 'freshness_check',
-  VOLUME_CHECK: 'volume_check'
-} as const;
-
-const QUALITY_STATUSES = {
-  EXCELLENT: 'excellent',
-  GOOD: 'good',
-  FAIR: 'fair',
-  POOR: 'poor',
-  CRITICAL: 'critical'
-} as const;
-
-const ALERT_SEVERITIES = {
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high',
-  CRITICAL: 'critical'
-} as const;
-
-const QUALITY_SCORE_RANGES = {
-  EXCELLENT: { min: 90, max: 100, color: '#16a34a' },
-  GOOD: { min: 75, max: 89, color: '#84cc16' },
-  FAIR: { min: 60, max: 74, color: '#eab308' },
-  POOR: { min: 30, max: 59, color: '#f97316' },
-  CRITICAL: { min: 0, max: 29, color: '#ef4444' }
-} as const;
-
-const CHART_COLORS = {
-  primary: '#3b82f6',
-  secondary: '#64748b',
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#06b6d4'
-};
-
-const MONITORING_INTERVALS = [
-  { label: '1 minute', value: 60 },
-  { label: '5 minutes', value: 300 },
-  { label: '15 minutes', value: 900 },
-  { label: '30 minutes', value: 1800 },
-  { label: '1 hour', value: 3600 },
-  { label: '6 hours', value: 21600 },
-  { label: '12 hours', value: 43200 },
-  { label: '24 hours', value: 86400 }
-] as const;
+import {
+  useDataQuality,
+  useQualityMetrics,
+  useQualityRules,
+  useQualityAssessment,
+  useQualityTrends,
+  useQualityAlerts,
+  useAnomalyDetection,
+  useQualityRemediation,
+  useQualityBenchmarks,
+  useQualityInsights,
+  useQualityValidation,
+  useQualityReports
+} from '../../hooks/useAdvancedQuality';
 
 // ============================================================================
-// EXTENDED INTERFACES FOR QUALITY DASHBOARD
+// QUALITY OVERVIEW METRICS COMPONENT
 // ============================================================================
-interface QualityDashboardProps {
-  assetId?: string;
-  enableRealTimeMonitoring?: boolean;
-  showAnomalyDetection?: boolean;
-  enableAlerts?: boolean;
-  enableRecommendations?: boolean;
-  defaultTimeRange?: { start: Date; end: Date };
-  customRules?: QualityRule[];
-  onQualityIssue?: (incident: QualityIncident) => void;
-  onRuleViolation?: (rule: QualityRule, violation: any) => void;
+interface QualityOverviewMetricsProps {
+  metrics: DataQualityMetrics | null;
+  isLoading: boolean;
+  timeRange: string;
+  onRefresh: () => void;
   className?: string;
 }
 
-interface QualityDashboardState {
-  selectedAssets: Set<string>;
-  timeRange: { start: Date; end: Date };
-  qualityDimensions: Set<keyof typeof QUALITY_DIMENSIONS>;
-  ruleTypes: Set<keyof typeof QUALITY_RULE_TYPES>;
-  alertSeverities: Set<keyof typeof ALERT_SEVERITIES>;
-  monitoringEnabled: boolean;
-  anomalyDetectionEnabled: boolean;
-  realTimeUpdates: boolean;
-  filterState: QualityFilterState;
-  viewMode: 'overview' | 'detailed' | 'comparison' | 'trends';
-}
+const QualityOverviewMetrics: React.FC<QualityOverviewMetricsProps> = ({
+  metrics,
+  isLoading,
+  timeRange,
+  onRefresh,
+  className
+}) => {
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
-interface QualityFilterState {
-  searchQuery: string;
-  statusFilter: keyof typeof QUALITY_STATUSES | 'all';
-  dimensionFilter: keyof typeof QUALITY_DIMENSIONS | 'all';
-  assetTypeFilter: string | 'all';
-  severityFilter: keyof typeof ALERT_SEVERITIES | 'all';
-  timeRangeFilter: 'last_hour' | 'last_day' | 'last_week' | 'last_month' | 'custom';
-  showOnlyFailed: boolean;
-  showOnlyActive: boolean;
-}
+  const qualityScoreColor = useMemo(() => {
+    if (!metrics?.overallScore) return 'text-muted-foreground';
+    if (metrics.overallScore >= 90) return 'text-green-600';
+    if (metrics.overallScore >= 75) return 'text-yellow-600';
+    return 'text-red-600';
+  }, [metrics?.overallScore]);
 
-interface QualityScoreBreakdown {
-  overall: number;
-  completeness: number;
-  accuracy: number;
-  consistency: number;
-  validity: number;
-  timeliness: number;
-  uniqueness: number;
-  integrity: number;
-  conformity: number;
-}
-
-interface QualityTrendData {
-  timestamp: Date;
-  score: number;
-  dimension: keyof typeof QUALITY_DIMENSIONS;
-  assetId: string;
-  incidents: number;
-  violations: number;
-}
-
-interface AnomalyData {
-  id: string;
-  timestamp: Date;
-  assetId: string;
-  anomalyType: string;
-  severity: keyof typeof ALERT_SEVERITIES;
-  confidence: number;
-  description: string;
-  affectedRows: number;
-  suggestions: string[];
-}
-
-// ============================================================================
-// QUALITY OVERVIEW COMPONENT
-// ============================================================================
-const QualityOverviewPanel: React.FC<{
-  qualityData: QualityReport | null;
-  isLoading: boolean;
-  timeRange: { start: Date; end: Date };
-}> = ({ qualityData, isLoading, timeRange }) => {
-  const qualityScore = qualityData?.overallScore || 0;
-  const getQualityStatus = (score: number): keyof typeof QUALITY_STATUSES => {
-    if (score >= 90) return 'EXCELLENT';
-    if (score >= 75) return 'GOOD';
-    if (score >= 60) return 'FAIR';
-    if (score >= 30) return 'POOR';
-    return 'CRITICAL';
+  const formatMetricValue = (value: number, type: string) => {
+    switch (type) {
+      case 'percentage':
+        return `${value.toFixed(1)}%`;
+      case 'count':
+        return value.toLocaleString();
+      case 'score':
+        return value.toFixed(2);
+      default:
+        return value.toString();
+    }
   };
-
-  const status = getQualityStatus(qualityScore);
-  const statusColor = QUALITY_SCORE_RANGES[status].color;
 
   if (isLoading) {
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gauge className="h-5 w-5" />
-            Quality Overview
-          </CardTitle>
-        </CardHeader>
+      <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${className}`}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-4">
+              <div className="h-4 bg-muted rounded mb-2" />
+              <div className="h-8 bg-muted rounded mb-1" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <Card className={className}>
         <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
+          <div className="text-center">
+            <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-muted-foreground">No quality metrics available</p>
+            <Button size="sm" variant="outline" onClick={onRefresh} className="mt-2">
+              <RefreshCw className="h-3 w-3 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
+  const metricCards = [
+    {
+      id: 'overall',
+      title: 'Overall Quality Score',
+      value: metrics.overallScore,
+      type: 'score',
+      icon: Award,
+      change: metrics.scoreChange,
+      color: qualityScoreColor
+    },
+    {
+      id: 'completeness',
+      title: 'Completeness',
+      value: metrics.completeness,
+      type: 'percentage',
+      icon: CheckCircle,
+      change: metrics.completenessChange,
+      color: metrics.completeness >= 95 ? 'text-green-600' : metrics.completeness >= 80 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'accuracy',
+      title: 'Accuracy',
+      value: metrics.accuracy,
+      type: 'percentage',
+      icon: Target,
+      change: metrics.accuracyChange,
+      color: metrics.accuracy >= 98 ? 'text-green-600' : metrics.accuracy >= 90 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'consistency',
+      title: 'Consistency',
+      value: metrics.consistency,
+      type: 'percentage',
+      icon: Shield,
+      change: metrics.consistencyChange,
+      color: metrics.consistency >= 95 ? 'text-green-600' : metrics.consistency >= 85 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'validity',
+      title: 'Validity',
+      value: metrics.validity,
+      type: 'percentage',
+      icon: CheckCircle,
+      change: metrics.validityChange,
+      color: metrics.validity >= 98 ? 'text-green-600' : metrics.validity >= 90 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'uniqueness',
+      title: 'Uniqueness',
+      value: metrics.uniqueness,
+      type: 'percentage',
+      icon: Hash,
+      change: metrics.uniquenessChange,
+      color: metrics.uniqueness >= 95 ? 'text-green-600' : metrics.uniqueness >= 85 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'timeliness',
+      title: 'Timeliness',
+      value: metrics.timeliness,
+      type: 'percentage',
+      icon: Clock,
+      change: metrics.timelinessChange,
+      color: metrics.timeliness >= 90 ? 'text-green-600' : metrics.timeliness >= 75 ? 'text-yellow-600' : 'text-red-600'
+    },
+    {
+      id: 'totalAssets',
+      title: 'Monitored Assets',
+      value: metrics.totalAssets,
+      type: 'count',
+      icon: Database,
+      change: metrics.assetsChange,
+      color: 'text-blue-600'
+    }
+  ];
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Gauge className="h-5 w-5" />
-          Quality Overview
-        </CardTitle>
-        <CardDescription>
-          Data quality metrics for {timeRange.start.toLocaleDateString()} - {timeRange.end.toLocaleDateString()}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Overall Score */}
-        <div className="text-center">
-          <div className="relative inline-flex items-center justify-center w-32 h-32 mb-4">
-            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="transparent"
-                className="text-gray-200"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                stroke={statusColor}
-                strokeWidth="8"
-                fill="transparent"
-                strokeDasharray={`${(qualityScore / 100) * 251.2} 251.2`}
-                className="transition-all duration-1000 ease-out"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-3xl font-bold" style={{ color: statusColor }}>
-                  {qualityScore.toFixed(1)}
-                </div>
-                <div className="text-sm text-gray-500">Score</div>
-              </div>
-            </div>
-          </div>
-          <Badge
-            variant={status === 'EXCELLENT' || status === 'GOOD' ? 'default' : 'destructive'}
-            className="text-lg px-4 py-1"
+    <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${className}`}>
+      {metricCards.map((metric, index) => (
+        <motion.div
+          key={metric.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+        >
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedMetric === metric.id ? 'ring-2 ring-primary' : ''
+            }`}
+            onClick={() => setSelectedMetric(selectedMetric === metric.id ? null : metric.id)}
           >
-            {status}
-          </Badge>
-        </div>
-
-        {/* Quality Dimensions */}
-        {qualityData?.dimensionScores && (
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Quality Dimensions</Label>
-            {Object.entries(QUALITY_DIMENSIONS).map(([key, dimension]) => {
-              const score = qualityData.dimensionScores?.[dimension] || 0;
-              const dimensionStatus = getQualityStatus(score);
-              const dimensionColor = QUALITY_SCORE_RANGES[dimensionStatus].color;
-              
-              return (
-                <div key={dimension} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium capitalize">
-                      {dimension.replace('_', ' ')}
-                    </span>
-                    <span className="text-sm font-bold" style={{ color: dimensionColor }}>
-                      {score.toFixed(1)}%
-                    </span>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <metric.icon className={`h-4 w-4 ${metric.color}`} />
+                {metric.change !== undefined && (
+                  <div className={`flex items-center text-xs ${
+                    metric.change > 0 ? 'text-green-600' : metric.change < 0 ? 'text-red-600' : 'text-muted-foreground'
+                  }`}>
+                    {metric.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : 
+                     metric.change < 0 ? <TrendingDown className="h-3 w-3 mr-1" /> : null}
+                    {metric.change > 0 ? '+' : ''}{metric.change.toFixed(1)}
                   </div>
-                  <Progress value={score} className="h-2">
-                    <div 
-                      className="h-full transition-all duration-300"
-                      style={{ 
-                        backgroundColor: dimensionColor,
-                        width: `${score}%`
-                      }}
-                    />
-                  </Progress>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-3">
-            <div className="text-2xl font-bold text-green-600">
-              {qualityData?.passedRules || 0}
-            </div>
-            <div className="text-sm text-gray-500">Passed Rules</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold text-red-600">
-              {qualityData?.failedRules || 0}
-            </div>
-            <div className="text-sm text-gray-500">Failed Rules</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold text-blue-600">
-              {qualityData?.totalAssets || 0}
-            </div>
-            <div className="text-sm text-gray-500">Monitored Assets</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold text-orange-600">
-              {qualityData?.activeIncidents || 0}
-            </div>
-            <div className="text-sm text-gray-500">Active Issues</div>
-          </Card>
-        </div>
-
-        {/* Recent Incidents */}
-        {qualityData?.recentIncidents && qualityData.recentIncidents.length > 0 && (
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Recent Quality Issues</Label>
-            <ScrollArea className="h-32">
-              <div className="space-y-2">
-                {qualityData.recentIncidents.slice(0, 5).map((incident, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className={`h-4 w-4 ${
-                        incident.severity === 'critical' ? 'text-red-500' :
-                        incident.severity === 'high' ? 'text-orange-500' :
-                        incident.severity === 'medium' ? 'text-yellow-500' :
-                        'text-gray-500'
-                      }`} />
-                      <div>
-                        <div className="font-medium text-sm">{incident.title}</div>
-                        <div className="text-xs text-gray-500">{incident.assetName}</div>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {incident.severity}
-                    </Badge>
-                  </div>
-                ))}
+                )}
               </div>
-            </ScrollArea>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              
+              <div className={`text-2xl font-bold mb-1 ${metric.color}`}>
+                {formatMetricValue(metric.value, metric.type)}
+              </div>
+              
+              <p className="text-xs text-muted-foreground">{metric.title}</p>
+              
+              {metric.type === 'percentage' && (
+                <Progress 
+                  value={metric.value} 
+                  className="h-1 mt-2"
+                  indicatorClassName={
+                    metric.value >= 95 ? 'bg-green-500' : 
+                    metric.value >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                  }
+                />
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
   );
 };
 
 // ============================================================================
-// QUALITY TRENDS CHART COMPONENT
+// QUALITY TREND CHART COMPONENT
 // ============================================================================
-const QualityTrendsChart: React.FC<{
-  trendData: QualityTrendData[];
+interface QualityTrendChartProps {
+  trends: QualityTrend[];
+  selectedDimensions: string[];
+  timeRange: string;
   isLoading: boolean;
-  selectedDimensions: Set<keyof typeof QUALITY_DIMENSIONS>;
-  timeRange: { start: Date; end: Date };
-}> = ({ trendData, isLoading, selectedDimensions, timeRange }) => {
+  className?: string;
+}
+
+const QualityTrendChart: React.FC<QualityTrendChartProps> = ({
+  trends,
+  selectedDimensions,
+  timeRange,
+  isLoading,
+  className
+}) => {
+  const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
+  const [showDataPoints, setShowDataPoints] = useState(true);
+
   const chartData = useMemo(() => {
-    const dataMap = new Map<string, any>();
-    
-    trendData.forEach(trend => {
-      const key = trend.timestamp.toISOString().split('T')[0];
-      if (!dataMap.has(key)) {
-        dataMap.set(key, {
-          date: key,
-          timestamp: trend.timestamp
-        });
+    if (!trends?.length) return [];
+
+    const groupedData: Record<string, any> = {};
+
+    trends.forEach(trend => {
+      const date = new Date(trend.timestamp).toLocaleDateString();
+      if (!groupedData[date]) {
+        groupedData[date] = { date };
       }
-      
-      const entry = dataMap.get(key)!;
-      entry[trend.dimension] = trend.score;
-      entry[`${trend.dimension}_incidents`] = trend.incidents;
+      groupedData[date][trend.dimension] = trend.value;
     });
-    
-    return Array.from(dataMap.values()).sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+
+    return Object.values(groupedData).sort((a: any, b: any) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [trendData]);
+  }, [trends]);
 
   if (isLoading) {
     return (
-      <Card className="w-full">
+      <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LineChartIcon className="h-5 w-5" />
-            Quality Trends
-          </CardTitle>
+          <div className="h-4 bg-muted rounded w-1/3 animate-pulse" />
         </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
+        <CardContent>
+          <div className="h-64 bg-muted rounded animate-pulse" />
         </CardContent>
       </Card>
     );
   }
 
+  const renderChart = () => {
+    const Chart = chartType === 'line' ? RechartsLineChart : 
+                 chartType === 'area' ? AreaChart : RechartsBarChart;
+
+    return (
+      <Chart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis 
+          dataKey="date" 
+          stroke="#6b7280"
+          fontSize={12}
+          tick={{ fontSize: 12 }}
+        />
+        <YAxis 
+          stroke="#6b7280"
+          fontSize={12}
+          tick={{ fontSize: 12 }}
+          domain={[0, 100]}
+        />
+        <RechartsTooltip 
+          contentStyle={{
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            fontSize: '12px'
+          }}
+        />
+        <Legend />
+        
+        {selectedDimensions.map((dimension, index) => {
+          const color = QUALITY_CHART_COLORS[index % QUALITY_CHART_COLORS.length];
+          
+          if (chartType === 'line') {
+            return (
+              <Line
+                key={dimension}
+                type="monotone"
+                dataKey={dimension}
+                stroke={color}
+                strokeWidth={2}
+                dot={showDataPoints ? { fill: color, strokeWidth: 2, r: 3 } : false}
+                name={dimension.charAt(0).toUpperCase() + dimension.slice(1)}
+              />
+            );
+          } else if (chartType === 'area') {
+            return (
+              <Area
+                key={dimension}
+                type="monotone"
+                dataKey={dimension}
+                stroke={color}
+                fill={color}
+                fillOpacity={0.3}
+                name={dimension.charAt(0).toUpperCase() + dimension.slice(1)}
+              />
+            );
+          } else {
+            return (
+              <Bar
+                key={dimension}
+                dataKey={dimension}
+                fill={color}
+                name={dimension.charAt(0).toUpperCase() + dimension.slice(1)}
+              />
+            );
+          }
+        })}
+      </Chart>
+    );
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <LineChartIcon className="h-5 w-5" />
-          Quality Trends
-        </CardTitle>
-        <CardDescription>
-          Quality score trends over time by dimension
-        </CardDescription>
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Quality Trends</CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={chartType} onValueChange={(value: any) => setChartType(value)}>
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="line">Line</SelectItem>
+                <SelectItem value="area">Area</SelectItem>
+                <SelectItem value="bar">Bar</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant={showDataPoints ? "default" : "outline"}
+                  onClick={() => setShowDataPoints(!showDataPoints)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Circle className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle data points</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={(value) => new Date(value).toLocaleDateString()}
-              />
-              <YAxis domain={[0, 100]} />
-              <Tooltip 
-                labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                formatter={(value: any, name: string) => [
-                  `${Number(value).toFixed(1)}%`,
-                  name.charAt(0).toUpperCase() + name.slice(1)
-                ]}
-              />
-              <Legend />
-              {Array.from(selectedDimensions).map((dimension, index) => (
-                <Line
-                  key={dimension}
-                  type="monotone"
-                  dataKey={dimension}
-                  stroke={Object.values(CHART_COLORS)[index % Object.values(CHART_COLORS).length]}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  connectNulls={false}
-                />
-              ))}
-            </LineChart>
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            {renderChart()}
           </ResponsiveContainer>
-        </div>
+        ) : (
+          <div className="flex items-center justify-center h-64 text-muted-foreground">
+            <div className="text-center">
+              <LineChart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No trend data available</p>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -539,751 +477,566 @@ const QualityTrendsChart: React.FC<{
 // ============================================================================
 // QUALITY RULES MANAGEMENT COMPONENT
 // ============================================================================
-const QualityRulesPanel: React.FC<{
+interface QualityRulesManagementProps {
   rules: QualityRule[];
+  onCreateRule: (rule: Omit<QualityRule, 'id' | 'createdAt'>) => void;
+  onUpdateRule: (id: string, rule: Partial<QualityRule>) => void;
+  onDeleteRule: (id: string) => void;
+  onRunRule: (id: string) => void;
   isLoading: boolean;
-  onCreateRule: (rule: Partial<QualityRule>) => void;
-  onUpdateRule: (ruleId: string, updates: Partial<QualityRule>) => void;
-  onDeleteRule: (ruleId: string) => void;
-  onTestRule: (rule: QualityRule) => void;
-}> = ({ rules, isLoading, onCreateRule, onUpdateRule, onDeleteRule, onTestRule }) => {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  className?: string;
+}
+
+const QualityRulesManagement: React.FC<QualityRulesManagementProps> = ({
+  rules,
+  onCreateRule,
+  onUpdateRule,
+  onDeleteRule,
+  onRunRule,
+  isLoading,
+  className
+}) => {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingRule, setEditingRule] = useState<QualityRule | null>(null);
-  const [searchQuery, setSearchQuery] = useDebounce('', 300);
-  const [selectedRuleType, setSelectedRuleType] = useState<keyof typeof QUALITY_RULE_TYPES | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
+
+  // Form state for creating/editing rules
+  const [newRule, setNewRule] = useState({
+    name: '',
+    description: '',
+    type: 'completeness',
+    dimension: 'completeness',
+    condition: '',
+    threshold: 95,
+    severity: 'medium',
+    enabled: true,
+    assetTypes: ['table'],
+    schedule: 'daily'
+  });
 
   const filteredRules = useMemo(() => {
     return rules.filter(rule => {
-      if (selectedRuleType !== 'all' && rule.type !== selectedRuleType) {
-        return false;
-      }
+      const matchesSearch = rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          rule.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = selectedType === 'all' || rule.type === selectedType;
+      const matchesSeverity = selectedSeverity === 'all' || rule.severity === selectedSeverity;
       
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          rule.name.toLowerCase().includes(query) ||
-          rule.description?.toLowerCase().includes(query) ||
-          rule.assetName?.toLowerCase().includes(query)
-        );
-      }
-      
-      return true;
+      return matchesSearch && matchesType && matchesSeverity;
     });
-  }, [rules, selectedRuleType, searchQuery]);
+  }, [rules, searchQuery, selectedType, selectedSeverity]);
 
-  const RuleForm = ({ rule, onSave, onCancel }: {
-    rule?: QualityRule;
-    onSave: (rule: Partial<QualityRule>) => void;
-    onCancel: () => void;
-  }) => {
-    const [formData, setFormData] = useState({
-      name: rule?.name || '',
-      description: rule?.description || '',
-      type: rule?.type || 'NULL_CHECK' as keyof typeof QUALITY_RULE_TYPES,
-      dimension: rule?.dimension || 'COMPLETENESS' as keyof typeof QUALITY_DIMENSIONS,
-      assetId: rule?.assetId || '',
-      columnName: rule?.columnName || '',
-      threshold: rule?.threshold || 0,
-      operator: rule?.operator || 'greater_than',
-      value: rule?.value || '',
-      isActive: rule?.isActive ?? true,
-      severity: rule?.severity || 'MEDIUM' as keyof typeof ALERT_SEVERITIES
+  const handleCreateRule = () => {
+    onCreateRule(newRule);
+    setNewRule({
+      name: '',
+      description: '',
+      type: 'completeness',
+      dimension: 'completeness',
+      condition: '',
+      threshold: 95,
+      severity: 'medium',
+      enabled: true,
+      assetTypes: ['table'],
+      schedule: 'daily'
     });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      onSave(formData);
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Rule Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter rule name"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="type">Rule Type</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(QUALITY_RULE_TYPES).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Describe what this rule validates"
-            rows={3}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="dimension">Quality Dimension</Label>
-            <Select
-              value={formData.dimension}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, dimension: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(QUALITY_DIMENSIONS).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="severity">Severity</Label>
-            <Select
-              value={formData.severity}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, severity: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(ALERT_SEVERITIES).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="threshold">Threshold</Label>
-            <Input
-              id="threshold"
-              type="number"
-              value={formData.threshold}
-              onChange={(e) => setFormData(prev => ({ ...prev, threshold: parseFloat(e.target.value) }))}
-              placeholder="0.95"
-              step="0.01"
-              min="0"
-              max="1"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="operator">Operator</Label>
-            <Select
-              value={formData.operator}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, operator: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="greater_than">Greater Than</SelectItem>
-                <SelectItem value="less_than">Less Than</SelectItem>
-                <SelectItem value="equal_to">Equal To</SelectItem>
-                <SelectItem value="not_equal_to">Not Equal To</SelectItem>
-                <SelectItem value="between">Between</SelectItem>
-                <SelectItem value="not_between">Not Between</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="value">Value</Label>
-            <Input
-              id="value"
-              value={formData.value}
-              onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
-              placeholder="Expected value"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-          />
-          <Label>Active Rule</Label>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            {rule ? 'Update Rule' : 'Create Rule'}
-          </Button>
-        </div>
-      </form>
-    );
+    setShowCreateDialog(false);
   };
 
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Quality Rules
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'destructive';
+      case 'high': return 'destructive';
+      case 'medium': return 'default';
+      case 'low': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'completeness': return CheckCircle;
+      case 'accuracy': return Target;
+      case 'consistency': return Shield;
+      case 'validity': return CheckCircle;
+      case 'uniqueness': return Hash;
+      case 'timeliness': return Clock;
+      default: return AlertCircle;
+    }
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          Quality Rules
-        </CardTitle>
-        <CardDescription>
-          Configure and manage data quality validation rules
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Controls */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search rules..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={selectedRuleType} onValueChange={(value: any) => setSelectedRuleType(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {Object.entries(QUALITY_RULE_TYPES).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Rule
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create Quality Rule</DialogTitle>
-                <DialogDescription>
-                  Define a new data quality validation rule
-                </DialogDescription>
-              </DialogHeader>
-              <RuleForm
-                onSave={(rule) => {
-                  onCreateRule(rule);
-                  setIsCreateDialogOpen(false);
-                }}
-                onCancel={() => setIsCreateDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Rules List */}
-        <ScrollArea className="h-96">
-          <div className="space-y-3">
-            {filteredRules.map((rule) => (
-              <Card key={rule.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={rule.isActive ? 'default' : 'secondary'}>
-                          {rule.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                        <Badge variant="outline">
-                          {rule.type.replace('_', ' ')}
-                        </Badge>
-                        <Badge variant={
-                          rule.severity === 'critical' ? 'destructive' :
-                          rule.severity === 'high' ? 'default' :
-                          'secondary'
-                        }>
-                          {rule.severity}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <h4 className="font-medium mt-2">{rule.name}</h4>
-                    <p className="text-sm text-gray-500 mt-1">{rule.description}</p>
-                    
-                    <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                      <span>Dimension: {rule.dimension}</span>
-                      <span>Threshold: {rule.threshold}</span>
-                      {rule.lastExecuted && (
-                        <span>Last Run: {new Date(rule.lastExecuted).toLocaleString()}</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onTestRule(rule)}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
-                    
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Edit Quality Rule</DialogTitle>
-                          <DialogDescription>
-                            Modify the quality validation rule
-                          </DialogDescription>
-                        </DialogHeader>
-                        <RuleForm
-                          rule={rule}
-                          onSave={(updates) => {
-                            onUpdateRule(rule.id, updates);
-                          }}
-                          onCancel={() => {}}
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDeleteRule(rule.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            
-            {filteredRules.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No quality rules found matching your criteria
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-};
-
-// ============================================================================
-// ANOMALY DETECTION COMPONENT
-// ============================================================================
-const AnomalyDetectionPanel: React.FC<{
-  anomalies: AnomalyData[];
-  isLoading: boolean;
-  onInvestigateAnomaly: (anomaly: AnomalyData) => void;
-  onDismissAnomaly: (anomalyId: string) => void;
-  onConfigureDetection: (config: AnomalyDetection) => void;
-}> = ({ anomalies, isLoading, onInvestigateAnomaly, onDismissAnomaly, onConfigureDetection }) => {
-  const [selectedSeverity, setSelectedSeverity] = useState<keyof typeof ALERT_SEVERITIES | 'all'>('all');
-  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
-
-  const filteredAnomalies = useMemo(() => {
-    return anomalies.filter(anomaly => {
-      if (selectedSeverity !== 'all' && anomaly.severity !== selectedSeverity) {
-        return false;
-      }
-      
-      const timeThreshold = selectedTimeRange === '1h' ? 1 :
-                           selectedTimeRange === '6h' ? 6 :
-                           selectedTimeRange === '24h' ? 24 :
-                           selectedTimeRange === '7d' ? 168 : 24;
-      
-      const hoursAgo = new Date(Date.now() - timeThreshold * 60 * 60 * 1000);
-      return anomaly.timestamp >= hoursAgo;
-    });
-  }, [anomalies, selectedSeverity, selectedTimeRange]);
-
-  const anomalyStats = useMemo(() => {
-    const stats = {
-      total: filteredAnomalies.length,
-      critical: filteredAnomalies.filter(a => a.severity === 'critical').length,
-      high: filteredAnomalies.filter(a => a.severity === 'high').length,
-      medium: filteredAnomalies.filter(a => a.severity === 'medium').length,
-      low: filteredAnomalies.filter(a => a.severity === 'low').length
-    };
-    return stats;
-  }, [filteredAnomalies]);
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            Anomaly Detection
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5" />
-          Anomaly Detection
-        </CardTitle>
-        <CardDescription>
-          AI-powered detection of data quality anomalies and patterns
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Filters and Stats */}
+    <Card className={className}>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Select value={selectedSeverity} onValueChange={(value: any) => setSelectedSeverity(value)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {Object.entries(ALERT_SEVERITIES).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1h">1h</SelectItem>
-                <SelectItem value="6h">6h</SelectItem>
-                <SelectItem value="24h">24h</SelectItem>
-                <SelectItem value="7d">7d</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>Critical: {anomalyStats.critical}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-              <span>High: {anomalyStats.high}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span>Medium: {anomalyStats.medium}</span>
-            </div>
-          </div>
+          <CardTitle className="text-sm font-medium">Quality Rules</CardTitle>
+          <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-3 w-3 mr-2" />
+            Create Rule
+          </Button>
         </div>
-
-        {/* Anomalies List */}
-        <ScrollArea className="h-96">
-          <div className="space-y-3">
-            {filteredAnomalies.map((anomaly) => (
-              <Card key={anomaly.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge variant={
-                        anomaly.severity === 'critical' ? 'destructive' :
-                        anomaly.severity === 'high' ? 'default' :
-                        'secondary'
-                      }>
-                        {anomaly.severity}
-                      </Badge>
-                      <Badge variant="outline">
-                        {anomaly.anomalyType}
-                      </Badge>
-                      <span className="text-sm text-gray-500">
-                        Confidence: {(anomaly.confidence * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    
-                    <h4 className="font-medium">{anomaly.description}</h4>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Asset: {anomaly.assetId} • Affected rows: {anomaly.affectedRows.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Detected: {anomaly.timestamp.toLocaleString()}
-                    </p>
-                    
-                    {anomaly.suggestions.length > 0 && (
-                      <div className="mt-3">
-                        <Label className="text-sm font-medium">Suggested Actions:</Label>
-                        <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
-                          {anomaly.suggestions.slice(0, 2).map((suggestion, index) => (
-                            <li key={index}>{suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onInvestigateAnomaly(anomaly)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Investigate
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDismissAnomaly(anomaly.id)}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            
-            {filteredAnomalies.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                <div className="font-medium">No anomalies detected</div>
-                <div className="text-sm">Your data quality looks good!</div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  );
-};
-
-// ============================================================================
-// ALERTS MANAGEMENT COMPONENT
-// ============================================================================
-const AlertsManagementPanel: React.FC<{
-  alerts: QualityAlert[];
-  isLoading: boolean;
-  onCreateAlert: (alert: Partial<QualityAlert>) => void;
-  onUpdateAlert: (alertId: string, updates: Partial<QualityAlert>) => void;
-  onDeleteAlert: (alertId: string) => void;
-  onTestAlert: (alert: QualityAlert) => void;
-}> = ({ alerts, isLoading, onCreateAlert, onUpdateAlert, onDeleteAlert, onTestAlert }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSeverity, setSelectedSeverity] = useState<keyof typeof ALERT_SEVERITIES | 'all'>('all');
-  const [showActiveOnly, setShowActiveOnly] = useState(false);
-
-  const filteredAlerts = useMemo(() => {
-    return alerts.filter(alert => {
-      if (selectedSeverity !== 'all' && alert.severity !== selectedSeverity) {
-        return false;
-      }
-      
-      if (showActiveOnly && !alert.isActive) {
-        return false;
-      }
-      
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          alert.name.toLowerCase().includes(query) ||
-          alert.description?.toLowerCase().includes(query)
-        );
-      }
-      
-      return true;
-    });
-  }, [alerts, selectedSeverity, showActiveOnly, searchQuery]);
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Alert Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          Alert Management
-        </CardTitle>
-        <CardDescription>
-          Configure and manage quality monitoring alerts
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Filters */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
             <Input
-              placeholder="Search alerts..."
+              placeholder="Search rules..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-8"
             />
           </div>
           
-          <Select value={selectedSeverity} onValueChange={(value: any) => setSelectedSeverity(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Levels</SelectItem>
-              {Object.entries(ALERT_SEVERITIES).map(([key, value]) => (
-                <SelectItem key={value} value={value}>
-                  {key}
+              <SelectItem value="all">All Types</SelectItem>
+              {QUALITY_DIMENSIONS.map(dimension => (
+                <SelectItem key={dimension.id} value={dimension.id}>
+                  {dimension.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={showActiveOnly}
-              onCheckedChange={setShowActiveOnly}
-            />
-            <Label>Active Only</Label>
-          </div>
-          
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Alert
-          </Button>
+          <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue placeholder="Severity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Severity</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Alerts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredAlerts.map((alert) => (
-            <Card key={alert.id} className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={alert.isActive ? 'default' : 'secondary'}>
-                      {alert.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                    <Badge variant={
-                      alert.severity === 'critical' ? 'destructive' :
-                      alert.severity === 'high' ? 'default' :
-                      'secondary'
-                    }>
-                      {alert.severity}
-                    </Badge>
+        {/* Rules List */}
+        <ScrollArea className="h-64">
+          <div className="space-y-2">
+            {filteredRules.map((rule) => {
+              const TypeIcon = getTypeIcon(rule.type);
+              
+              return (
+                <motion.div
+                  key={rule.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 border rounded-lg bg-card"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <TypeIcon className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-sm">{rule.name}</span>
+                      <Badge variant={getSeverityColor(rule.severity)} className="text-xs">
+                        {rule.severity}
+                      </Badge>
+                      {!rule.enabled && (
+                        <Badge variant="secondary" className="text-xs">Disabled</Badge>
+                      )}
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onRunRule(rule.id)}>
+                          <Play className="h-3 w-3 mr-2" />
+                          Run Now
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEditingRule(rule)}>
+                          <Edit3 className="h-3 w-3 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onUpdateRule(rule.id, { enabled: !rule.enabled })}
+                        >
+                          {rule.enabled ? (
+                            <>
+                              <Pause className="h-3 w-3 mr-2" />
+                              Disable
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3 mr-2" />
+                              Enable
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => onDeleteRule(rule.id)}
+                          className="text-red-600"
+                        >
+                          <X className="h-3 w-3 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   
-                  <h4 className="font-medium">{alert.name}</h4>
-                  <p className="text-sm text-gray-500 mt-1">{alert.description}</p>
+                  <p className="text-xs text-muted-foreground mb-2">{rule.description}</p>
                   
-                  <div className="mt-3 space-y-1 text-sm text-gray-600">
-                    <div>Trigger: {alert.condition}</div>
-                    <div>Recipients: {alert.recipients?.join(', ')}</div>
-                    {alert.lastTriggered && (
-                      <div>Last Triggered: {new Date(alert.lastTriggered).toLocaleString()}</div>
-                    )}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Threshold: {rule.threshold}%</span>
+                    <span>Schedule: {rule.schedule}</span>
+                    <span>Assets: {rule.assetTypes.join(', ')}</span>
                   </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+
+        {/* Create Rule Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create Quality Rule</DialogTitle>
+              <DialogDescription>
+                Define a new quality rule to monitor data quality metrics
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Rule Name</Label>
+                  <Input
+                    placeholder="Enter rule name"
+                    value={newRule.name}
+                    onChange={(e) => setNewRule(prev => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
                 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onTestAlert(alert)}>
-                      <Play className="h-4 w-4 mr-2" />
-                      Test Alert
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => onDeleteAlert(alert.id)}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="space-y-2">
+                  <Label className="text-xs">Quality Dimension</Label>
+                  <Select
+                    value={newRule.dimension}
+                    onValueChange={(value) => setNewRule(prev => ({ ...prev, dimension: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUALITY_DIMENSIONS.map(dimension => (
+                        <SelectItem key={dimension.id} value={dimension.id}>
+                          {dimension.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </Card>
-          ))}
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Description</Label>
+                <Textarea
+                  placeholder="Describe what this rule checks"
+                  value={newRule.description}
+                  onChange={(e) => setNewRule(prev => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Threshold (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newRule.threshold}
+                    onChange={(e) => setNewRule(prev => ({ ...prev, threshold: parseInt(e.target.value) }))}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Severity</Label>
+                  <Select
+                    value={newRule.severity}
+                    onValueChange={(value) => setNewRule(prev => ({ ...prev, severity: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs">Schedule</Label>
+                  <Select
+                    value={newRule.schedule}
+                    onValueChange={(value) => setNewRule(prev => ({ ...prev, schedule: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="realtime">Real-time</SelectItem>
+                      <SelectItem value="hourly">Hourly</SelectItem>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs">Condition</Label>
+                <Textarea
+                  placeholder="Define the rule condition (e.g., completeness > 95%)"
+                  value={newRule.condition}
+                  onChange={(e) => setNewRule(prev => ({ ...prev, condition: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={newRule.enabled}
+                  onCheckedChange={(checked) => setNewRule(prev => ({ ...prev, enabled: checked }))}
+                />
+                <Label className="text-xs">Enable rule</Label>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateRule} disabled={!newRule.name || !newRule.condition}>
+                Create Rule
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ============================================================================
+// QUALITY ALERTS COMPONENT
+// ============================================================================
+interface QualityAlertsProps {
+  alerts: QualityAlert[];
+  onAcknowledgeAlert: (id: string) => void;
+  onResolveAlert: (id: string) => void;
+  onCreateRemediation: (alertId: string) => void;
+  isLoading: boolean;
+  className?: string;
+}
+
+const QualityAlerts: React.FC<QualityAlertsProps> = ({
+  alerts,
+  onAcknowledgeAlert,
+  onResolveAlert,
+  onCreateRemediation,
+  isLoading,
+  className
+}) => {
+  const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'timestamp' | 'severity'>('timestamp');
+
+  const filteredAndSortedAlerts = useMemo(() => {
+    let filtered = alerts.filter(alert => {
+      const matchesSeverity = selectedSeverity === 'all' || alert.severity === selectedSeverity;
+      const matchesStatus = selectedStatus === 'all' || alert.status === selectedStatus;
+      return matchesSeverity && matchesStatus;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sortBy === 'timestamp') {
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      } else {
+        const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+        return severityOrder[b.severity as keyof typeof severityOrder] - 
+               severityOrder[a.severity as keyof typeof severityOrder];
+      }
+    });
+  }, [alerts, selectedSeverity, selectedStatus, sortBy]);
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case 'critical': return AlertTriangle;
+      case 'high': return AlertCircle;
+      case 'medium': return Info;
+      case 'low': return Info;
+      default: return Info;
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'text-red-600';
+      case 'high': return 'text-orange-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-blue-600';
+      default: return 'text-muted-foreground';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'destructive';
+      case 'acknowledged': return 'default';
+      case 'resolved': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Quality Alerts</CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
+              <SelectTrigger className="w-28 h-8">
+                <SelectValue placeholder="Severity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-28 h-8">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-28 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="timestamp">Time</SelectItem>
+                <SelectItem value="severity">Severity</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        
-        {filteredAlerts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No alerts found matching your criteria
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+            ))}
+          </div>
+        ) : filteredAndSortedAlerts.length > 0 ? (
+          <ScrollArea className="h-64">
+            <div className="space-y-2">
+              {filteredAndSortedAlerts.map((alert) => {
+                const SeverityIcon = getSeverityIcon(alert.severity);
+                
+                return (
+                  <motion.div
+                    key={alert.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-3 border rounded-lg bg-card"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <SeverityIcon className={`h-4 w-4 ${getSeverityColor(alert.severity)}`} />
+                        <span className="font-medium text-sm">{alert.title}</span>
+                        <Badge variant={getStatusColor(alert.status)} className="text-xs">
+                          {alert.status}
+                        </Badge>
+                      </div>
+                      
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(alert.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mb-2">{alert.description}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Asset: {alert.assetName}</span>
+                        <span>•</span>
+                        <span>Rule: {alert.ruleName}</span>
+                      </div>
+                      
+                      {alert.status === 'active' && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onAcknowledgeAlert(alert.id)}
+                            className="h-6 px-2 text-xs"
+                          >
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Acknowledge
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onCreateRemediation(alert.id)}
+                            className="h-6 px-2 text-xs"
+                          >
+                            <Zap className="h-3 w-3 mr-1" />
+                            Remediate
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {alert.status === 'acknowledged' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onResolveAlert(alert.id)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            <div className="text-center">
+              <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50 text-green-500" />
+              <p className="text-sm">No quality alerts</p>
+              <p className="text-xs">All systems are running smoothly</p>
+            </div>
           </div>
         )}
       </CardContent>
@@ -1292,293 +1045,71 @@ const AlertsManagementPanel: React.FC<{
 };
 
 // ============================================================================
-// MAIN DATA QUALITY DASHBOARD COMPONENT
+// ASSET QUALITY SCORECARD COMPONENT
 // ============================================================================
-const DataQualityDashboard: React.FC<QualityDashboardProps> = ({
-  assetId,
-  enableRealTimeMonitoring = true,
-  showAnomalyDetection = true,
-  enableAlerts = true,
-  enableRecommendations = true,
-  defaultTimeRange = {
-    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    end: new Date()
-  },
-  customRules = [],
-  onQualityIssue,
-  onRuleViolation,
+interface AssetQualityScoreCardProps {
+  assets: DataAssetQuality[];
+  onSelectAsset: (assetId: string) => void;
+  selectedAsset: string | null;
+  isLoading: boolean;
+  className?: string;
+}
+
+const AssetQualityScorecard: React.FC<AssetQualityScoreCardProps> = ({
+  assets,
+  onSelectAsset,
+  selectedAsset,
+  isLoading,
   className
 }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
-  const queryClient = useQueryClient();
+  const [sortBy, setSortBy] = useState<'score' | 'name' | 'issues'>('score');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Core State
-  const [dashboardState, setDashboardState] = useState<QualityDashboardState>({
-    selectedAssets: new Set(assetId ? [assetId] : []),
-    timeRange: defaultTimeRange,
-    qualityDimensions: new Set(Object.values(QUALITY_DIMENSIONS)),
-    ruleTypes: new Set(Object.values(QUALITY_RULE_TYPES)),
-    alertSeverities: new Set(Object.values(ALERT_SEVERITIES)),
-    monitoringEnabled: enableRealTimeMonitoring,
-    anomalyDetectionEnabled: showAnomalyDetection,
-    realTimeUpdates: enableRealTimeMonitoring,
-    filterState: {
-      searchQuery: '',
-      statusFilter: 'all',
-      dimensionFilter: 'all',
-      assetTypeFilter: 'all',
-      severityFilter: 'all',
-      timeRangeFilter: 'last_week',
-      showOnlyFailed: false,
-      showOnlyActive: true
-    },
-    viewMode: 'overview'
-  });
+  const filteredAndSortedAssets = useMemo(() => {
+    let filtered = assets.filter(asset => {
+      const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === 'all' || asset.type === filterType;
+      return matchesSearch && matchesType;
+    });
 
-  // UI State
-  const [activeTab, setActiveTab] = useState('overview');
-  const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(300); // 5 minutes
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'score':
+          return b.overallScore - a.overallScore;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'issues':
+          return b.issuesCount - a.issuesCount;
+        default:
+          return 0;
+      }
+    });
+  }, [assets, searchQuery, filterType, sortBy]);
 
-  // ============================================================================
-  // DATA FETCHING WITH REACT QUERY
-  // ============================================================================
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 75) return 'text-yellow-600';
+    return 'text-red-600';
+  };
 
-  // Fetch quality overview data
-  const {
-    data: qualityData,
-    isLoading: isLoadingQuality,
-    error: qualityError,
-    refetch: refetchQuality
-  } = useQuery({
-    queryKey: ['quality-overview', Array.from(dashboardState.selectedAssets), dashboardState.timeRange],
-    queryFn: async () => {
-      const response = await qualityService.getQualityOverview({
-        assetIds: Array.from(dashboardState.selectedAssets),
-        timeRange: dashboardState.timeRange,
-        dimensions: Array.from(dashboardState.qualityDimensions)
-      });
-      return response.data;
-    },
-    enabled: dashboardState.selectedAssets.size > 0,
-    refetchInterval: dashboardState.realTimeUpdates ? refreshInterval * 1000 : false,
-    staleTime: 60000
-  });
+  const getScoreVariant = (score: number) => {
+    if (score >= 90) return 'default';
+    if (score >= 75) return 'secondary';
+    return 'destructive';
+  };
 
-  // Fetch quality trends
-  const {
-    data: trendData,
-    isLoading: isLoadingTrends
-  } = useQuery({
-    queryKey: ['quality-trends', Array.from(dashboardState.selectedAssets), dashboardState.timeRange],
-    queryFn: async () => {
-      const response = await qualityService.getQualityTrends({
-        assetIds: Array.from(dashboardState.selectedAssets),
-        timeRange: dashboardState.timeRange,
-        dimensions: Array.from(dashboardState.qualityDimensions),
-        granularity: 'day'
-      });
-      return response.data;
-    },
-    enabled: dashboardState.selectedAssets.size > 0,
-    staleTime: 300000
-  });
-
-  // Fetch quality rules
-  const {
-    data: qualityRules,
-    isLoading: isLoadingRules,
-    refetch: refetchRules
-  } = useQuery({
-    queryKey: ['quality-rules', Array.from(dashboardState.selectedAssets)],
-    queryFn: async () => {
-      const response = await qualityService.getQualityRules({
-        assetIds: Array.from(dashboardState.selectedAssets),
-        includeCustomRules: true
-      });
-      return [...response.data, ...customRules];
-    },
-    staleTime: 300000
-  });
-
-  // Fetch anomalies
-  const {
-    data: anomalies,
-    isLoading: isLoadingAnomalies
-  } = useQuery({
-    queryKey: ['quality-anomalies', Array.from(dashboardState.selectedAssets), dashboardState.timeRange],
-    queryFn: async () => {
-      const response = await qualityService.getAnomalies({
-        assetIds: Array.from(dashboardState.selectedAssets),
-        timeRange: dashboardState.timeRange,
-        minConfidence: 0.7
-      });
-      return response.data;
-    },
-    enabled: dashboardState.anomalyDetectionEnabled && dashboardState.selectedAssets.size > 0,
-    staleTime: 180000
-  });
-
-  // Fetch alerts
-  const {
-    data: alerts,
-    isLoading: isLoadingAlerts,
-    refetch: refetchAlerts
-  } = useQuery({
-    queryKey: ['quality-alerts'],
-    queryFn: async () => {
-      const response = await alertingService.getAlerts({
-        type: 'quality',
-        includeInactive: true
-      });
-      return response.data;
-    },
-    enabled: enableAlerts,
-    staleTime: 300000
-  });
-
-  // ============================================================================
-  // MUTATIONS
-  // ============================================================================
-
-  // Create quality rule mutation
-  const createRuleMutation = useMutation({
-    mutationFn: async (rule: Partial<QualityRule>) => {
-      const response = await qualityService.createRule(rule);
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success('Quality rule created successfully');
-      refetchRules();
-    },
-    onError: (error) => {
-      toast.error('Failed to create quality rule');
-      console.error('Create rule error:', error);
-    }
-  });
-
-  // Update quality rule mutation
-  const updateRuleMutation = useMutation({
-    mutationFn: async ({ ruleId, updates }: { ruleId: string; updates: Partial<QualityRule> }) => {
-      const response = await qualityService.updateRule(ruleId, updates);
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success('Quality rule updated successfully');
-      refetchRules();
-    },
-    onError: (error) => {
-      toast.error('Failed to update quality rule');
-      console.error('Update rule error:', error);
-    }
-  });
-
-  // Delete quality rule mutation
-  const deleteRuleMutation = useMutation({
-    mutationFn: async (ruleId: string) => {
-      await qualityService.deleteRule(ruleId);
-    },
-    onSuccess: () => {
-      toast.success('Quality rule deleted successfully');
-      refetchRules();
-    },
-    onError: (error) => {
-      toast.error('Failed to delete quality rule');
-      console.error('Delete rule error:', error);
-    }
-  });
-
-  // Test quality rule mutation
-  const testRuleMutation = useMutation({
-    mutationFn: async (rule: QualityRule) => {
-      const response = await qualityService.testRule(rule.id);
-      return response.data;
-    },
-    onSuccess: (result) => {
-      toast.success(`Rule test completed: ${result.passed ? 'Passed' : 'Failed'}`);
-    },
-    onError: (error) => {
-      toast.error('Failed to test quality rule');
-      console.error('Test rule error:', error);
-    }
-  });
-
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
-
-  const handleCreateRule = useCallback((rule: Partial<QualityRule>) => {
-    createRuleMutation.mutate(rule);
-  }, [createRuleMutation]);
-
-  const handleUpdateRule = useCallback((ruleId: string, updates: Partial<QualityRule>) => {
-    updateRuleMutation.mutate({ ruleId, updates });
-  }, [updateRuleMutation]);
-
-  const handleDeleteRule = useCallback((ruleId: string) => {
-    deleteRuleMutation.mutate(ruleId);
-  }, [deleteRuleMutation]);
-
-  const handleTestRule = useCallback((rule: QualityRule) => {
-    testRuleMutation.mutate(rule);
-  }, [testRuleMutation]);
-
-  const handleInvestigateAnomaly = useCallback((anomaly: AnomalyData) => {
-    // Navigate to detailed anomaly investigation view
-    toast.info(`Investigating anomaly: ${anomaly.description}`);
-  }, []);
-
-  const handleDismissAnomaly = useCallback((anomalyId: string) => {
-    // Dismiss anomaly
-    toast.success('Anomaly dismissed');
-  }, []);
-
-  const handleTimeRangeChange = useCallback((timeRange: { start: Date; end: Date }) => {
-    setDashboardState(prev => ({ ...prev, timeRange }));
-  }, []);
-
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  // Handle quality issues
-  useEffect(() => {
-    if (qualityData?.recentIncidents && onQualityIssue) {
-      qualityData.recentIncidents.forEach(incident => {
-        onQualityIssue(incident);
-      });
-    }
-  }, [qualityData, onQualityIssue]);
-
-  // Handle rule violations
-  useEffect(() => {
-    if (qualityRules && onRuleViolation) {
-      qualityRules.filter(rule => rule.lastViolation).forEach(rule => {
-        onRuleViolation(rule, rule.lastViolation);
-      });
-    }
-  }, [qualityRules, onRuleViolation]);
-
-  // ============================================================================
-  // RENDER
-  // ============================================================================
-
-  if (qualityError) {
+  if (isLoading) {
     return (
       <Card className={className}>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <div className="text-lg font-semibold text-red-700">Failed to load quality data</div>
-            <div className="text-sm text-gray-500 mt-1">
-              {qualityError instanceof Error ? qualityError.message : 'Unknown error occurred'}
-            </div>
-            <Button onClick={() => refetchQuality()} className="mt-4">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
+        <CardHeader>
+          <div className="h-4 bg-muted rounded w-1/3 animate-pulse" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -1586,197 +1117,783 @@ const DataQualityDashboard: React.FC<QualityDashboardProps> = ({
   }
 
   return (
-    <div className={`flex flex-col h-full ${className || ''}`}>
-      <TooltipProvider>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Gauge className="h-6 w-6" />
-              Data Quality Dashboard
-            </h1>
-            {assetId && (
-              <Badge variant="outline">Asset: {assetId}</Badge>
-            )}
-          </div>
-          
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Asset Quality Scorecard</CardTitle>
           <div className="flex items-center gap-2">
-            {/* Time Range Selector */}
-            <Select
-              value={dashboardState.filterState.timeRangeFilter}
-              onValueChange={(value) => {
-                const now = new Date();
-                let start: Date;
-                
-                switch (value) {
-                  case 'last_hour':
-                    start = new Date(now.getTime() - 60 * 60 * 1000);
-                    break;
-                  case 'last_day':
-                    start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                    break;
-                  case 'last_week':
-                    start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                  case 'last_month':
-                    start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    break;
-                  default:
-                    start = dashboardState.timeRange.start;
-                }
-                
-                handleTimeRangeChange({ start, end: now });
-                setDashboardState(prev => ({
-                  ...prev,
-                  filterState: { ...prev.filterState, timeRangeFilter: value as any }
-                }));
-              }}
-            >
-              <SelectTrigger className="w-40">
+            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <SelectTrigger className="w-24 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="last_hour">Last Hour</SelectItem>
-                <SelectItem value="last_day">Last Day</SelectItem>
-                <SelectItem value="last_week">Last Week</SelectItem>
-                <SelectItem value="last_month">Last Month</SelectItem>
-                <SelectItem value="custom">Custom Range</SelectItem>
+                <SelectItem value="score">Score</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="issues">Issues</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* Real-time toggle */}
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={dashboardState.realTimeUpdates}
-                onCheckedChange={(checked) => setDashboardState(prev => ({
-                  ...prev,
-                  realTimeUpdates: checked
-                }))}
-              />
-              <Label>Real-time</Label>
-            </div>
-
-            {/* Refresh button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchQuality()}
-              disabled={isLoadingQuality}
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoadingQuality ? 'animate-spin' : ''}`} />
-            </Button>
-
-            {/* Settings */}
-            <Button variant="outline" size="sm" onClick={() => setShowConfigDialog(true)}>
-              <Settings className="h-4 w-4" />
-            </Button>
           </div>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="trends">Trends</TabsTrigger>
-              <TabsTrigger value="rules">Rules</TabsTrigger>
-              <TabsTrigger value="anomalies">Anomalies</TabsTrigger>
-              <TabsTrigger value="alerts">Alerts</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1">
-                  <QualityOverviewPanel
-                    qualityData={qualityData}
-                    isLoading={isLoadingQuality}
-                    timeRange={dashboardState.timeRange}
-                  />
-                </div>
-                <div className="lg:col-span-2">
-                  <QualityTrendsChart
-                    trendData={trendData || []}
-                    isLoading={isLoadingTrends}
-                    selectedDimensions={dashboardState.qualityDimensions}
-                    timeRange={dashboardState.timeRange}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="trends" className="mt-6">
-              <QualityTrendsChart
-                trendData={trendData || []}
-                isLoading={isLoadingTrends}
-                selectedDimensions={dashboardState.qualityDimensions}
-                timeRange={dashboardState.timeRange}
-              />
-            </TabsContent>
-
-            <TabsContent value="rules" className="mt-6">
-              <QualityRulesPanel
-                rules={qualityRules || []}
-                isLoading={isLoadingRules}
-                onCreateRule={handleCreateRule}
-                onUpdateRule={handleUpdateRule}
-                onDeleteRule={handleDeleteRule}
-                onTestRule={handleTestRule}
-              />
-            </TabsContent>
-
-            <TabsContent value="anomalies" className="mt-6">
-              {showAnomalyDetection ? (
-                <AnomalyDetectionPanel
-                  anomalies={anomalies || []}
-                  isLoading={isLoadingAnomalies}
-                  onInvestigateAnomaly={handleInvestigateAnomaly}
-                  onDismissAnomaly={handleDismissAnomaly}
-                  onConfigureDetection={() => {}}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Brain className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <div className="text-lg font-semibold text-gray-600">Anomaly Detection Disabled</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Enable anomaly detection to monitor for data quality issues
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="alerts" className="mt-6">
-              {enableAlerts ? (
-                <AlertsManagementPanel
-                  alerts={alerts || []}
-                  isLoading={isLoadingAlerts}
-                  onCreateAlert={() => {}}
-                  onUpdateAlert={() => {}}
-                  onDeleteAlert={() => {}}
-                  onTestAlert={() => {}}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Bell className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <div className="text-lg font-semibold text-gray-600">Alerts Disabled</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Enable alerts to receive notifications about quality issues
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+        
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input
+              placeholder="Search assets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+          
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-28 h-8">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="table">Tables</SelectItem>
+              <SelectItem value="view">Views</SelectItem>
+              <SelectItem value="file">Files</SelectItem>
+              <SelectItem value="stream">Streams</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </TooltipProvider>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-64">
+          <div className="space-y-2">
+            {filteredAndSortedAssets.map((asset) => (
+              <motion.div
+                key={asset.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-sm ${
+                  selectedAsset === asset.id ? 'ring-2 ring-primary bg-primary/5' : 'bg-card'
+                }`}
+                onClick={() => onSelectAsset(asset.id)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium text-sm">{asset.name}</span>
+                    <Badge variant="outline" className="text-xs">{asset.type}</Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getScoreVariant(asset.overallScore)} className="text-xs">
+                      {asset.overallScore.toFixed(1)}
+                    </Badge>
+                    {asset.issuesCount > 0 && (
+                      <Badge variant="destructive" className="text-xs">
+                        {asset.issuesCount} issues
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  <div className="text-center">
+                    <div className={`font-medium ${getScoreColor(asset.completeness)}`}>
+                      {asset.completeness.toFixed(0)}%
+                    </div>
+                    <div className="text-muted-foreground">Complete</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`font-medium ${getScoreColor(asset.accuracy)}`}>
+                      {asset.accuracy.toFixed(0)}%
+                    </div>
+                    <div className="text-muted-foreground">Accurate</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`font-medium ${getScoreColor(asset.consistency)}`}>
+                      {asset.consistency.toFixed(0)}%
+                    </div>
+                    <div className="text-muted-foreground">Consistent</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`font-medium ${getScoreColor(asset.timeliness)}`}>
+                      {asset.timeliness.toFixed(0)}%
+                    </div>
+                    <div className="text-muted-foreground">Timely</div>
+                  </div>
+                </div>
+                
+                <Progress 
+                  value={asset.overallScore} 
+                  className="h-1 mt-2"
+                  indicatorClassName={
+                    asset.overallScore >= 90 ? 'bg-green-500' : 
+                    asset.overallScore >= 75 ? 'bg-yellow-500' : 'bg-red-500'
+                  }
+                />
+              </motion.div>
+            ))}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 };
 
 // ============================================================================
-// EXPORTS
+// MAIN DATA QUALITY DASHBOARD COMPONENT
 // ============================================================================
+export interface DataQualityDashboardProps {
+  initialAssetId?: string;
+  className?: string;
+}
+
+export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({
+  initialAssetId,
+  className
+}) => {
+  // State management
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(initialAssetId || null);
+  const [activeView, setActiveView] = useState('overview');
+  const [timeRange, setTimeRange] = useState('7d');
+  const [selectedDimensions, setSelectedDimensions] = useState(['completeness', 'accuracy', 'consistency']);
+  const [dashboardConfig, setDashboardConfig] = useState<QualityDashboardConfig>({
+    refreshInterval: 30000,
+    autoRefresh: true,
+    showAlerts: true,
+    alertThreshold: 'medium',
+    chartType: 'line',
+    metricsLayout: 'grid'
+  });
+
+  // UI state
+  const [showSettings, setShowSettings] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refs
+  const queryClient = useQueryClient();
+
+  // Custom hooks for data management
+  const {
+    data: qualityMetrics,
+    isLoading: isMetricsLoading,
+    error: metricsError,
+    refetch: refetchMetrics
+  } = useQualityMetrics({
+    assetId: selectedAsset,
+    timeRange,
+    dimensions: selectedDimensions
+  });
+
+  const {
+    data: qualityTrends,
+    isLoading: isTrendsLoading
+  } = useQualityTrends({
+    assetId: selectedAsset,
+    timeRange,
+    dimensions: selectedDimensions
+  });
+
+  const {
+    data: qualityRules,
+    isLoading: isRulesLoading,
+    mutate: createRule,
+    updateRule,
+    deleteRule
+  } = useQualityRules(selectedAsset);
+
+  const {
+    data: qualityAlerts,
+    isLoading: isAlertsLoading,
+    mutate: acknowledgeAlert,
+    resolveAlert
+  } = useQualityAlerts(selectedAsset);
+
+  const {
+    data: assetQuality,
+    isLoading: isAssetsLoading
+  } = useDataQuality({
+    filters: {
+      timeRange,
+      includeMetrics: true,
+      includeTrends: true
+    }
+  });
+
+  const {
+    data: qualityInsights,
+    isLoading: isInsightsLoading
+  } = useQualityInsights(selectedAsset);
+
+  const {
+    data: anomalies,
+    isLoading: isAnomaliesLoading
+  } = useAnomalyDetection({
+    assetId: selectedAsset,
+    timeRange,
+    dimensions: selectedDimensions
+  });
+
+  const {
+    data: remediationTasks,
+    mutate: createRemediation
+  } = useQualityRemediation(selectedAsset);
+
+  const {
+    mutate: runQualityAssessment,
+    isLoading: isAssessmentLoading
+  } = useQualityAssessment();
+
+  const {
+    mutate: generateReport
+  } = useQualityReports();
+
+  // Event handlers
+  const handleAssetSelect = useCallback((assetId: string) => {
+    setSelectedAsset(assetId);
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchMetrics(),
+        queryClient.invalidateQueries({ queryKey: ['quality-trends'] }),
+        queryClient.invalidateQueries({ queryKey: ['quality-alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['quality-rules'] })
+      ]);
+      toast.success('Quality data refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchMetrics, queryClient]);
+
+  const handleTimeRangeChange = useCallback((range: string) => {
+    setTimeRange(range);
+  }, []);
+
+  const handleDimensionToggle = useCallback((dimension: string) => {
+    setSelectedDimensions(prev => 
+      prev.includes(dimension)
+        ? prev.filter(d => d !== dimension)
+        : [...prev, dimension]
+    );
+  }, []);
+
+  const handleCreateRule = useCallback((rule: Omit<QualityRule, 'id' | 'createdAt'>) => {
+    createRule(rule, {
+      onSuccess: () => {
+        toast.success('Quality rule created successfully');
+      },
+      onError: (error) => {
+        toast.error('Failed to create quality rule');
+      }
+    });
+  }, [createRule]);
+
+  const handleUpdateRule = useCallback((id: string, rule: Partial<QualityRule>) => {
+    updateRule({ id, updates: rule }, {
+      onSuccess: () => {
+        toast.success('Quality rule updated');
+      },
+      onError: (error) => {
+        toast.error('Failed to update rule');
+      }
+    });
+  }, [updateRule]);
+
+  const handleDeleteRule = useCallback((id: string) => {
+    deleteRule(id, {
+      onSuccess: () => {
+        toast.success('Quality rule deleted');
+      },
+      onError: (error) => {
+        toast.error('Failed to delete rule');
+      }
+    });
+  }, [deleteRule]);
+
+  const handleRunRule = useCallback((id: string) => {
+    runQualityAssessment({
+      ruleId: id,
+      assetId: selectedAsset
+    }, {
+      onSuccess: () => {
+        toast.success('Quality assessment started');
+      },
+      onError: (error) => {
+        toast.error('Failed to run assessment');
+      }
+    });
+  }, [runQualityAssessment, selectedAsset]);
+
+  const handleAcknowledgeAlert = useCallback((alertId: string) => {
+    acknowledgeAlert(alertId, {
+      onSuccess: () => {
+        toast.success('Alert acknowledged');
+      },
+      onError: (error) => {
+        toast.error('Failed to acknowledge alert');
+      }
+    });
+  }, [acknowledgeAlert]);
+
+  const handleResolveAlert = useCallback((alertId: string) => {
+    resolveAlert(alertId, {
+      onSuccess: () => {
+        toast.success('Alert resolved');
+      },
+      onError: (error) => {
+        toast.error('Failed to resolve alert');
+      }
+    });
+  }, [resolveAlert]);
+
+  const handleCreateRemediation = useCallback((alertId: string) => {
+    createRemediation({
+      alertId,
+      strategy: 'automated',
+      priority: 'high'
+    }, {
+      onSuccess: () => {
+        toast.success('Remediation task created');
+      },
+      onError: (error) => {
+        toast.error('Failed to create remediation');
+      }
+    });
+  }, [createRemediation]);
+
+  const handleGenerateReport = useCallback(() => {
+    generateReport({
+      assetId: selectedAsset,
+      timeRange,
+      includeMetrics: true,
+      includeTrends: true,
+      includeRecommendations: true
+    }, {
+      onSuccess: () => {
+        toast.success('Quality report generated');
+      },
+      onError: (error) => {
+        toast.error('Failed to generate report');
+      }
+    });
+  }, [generateReport, selectedAsset, timeRange]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!dashboardConfig.autoRefresh) return;
+
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, dashboardConfig.refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [dashboardConfig.autoRefresh, dashboardConfig.refreshInterval, handleRefresh]);
+
+  // Loading state
+  if (isMetricsLoading && !qualityMetrics) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`}>
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading quality dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Header Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Data Quality Dashboard
+          </h1>
+          
+          {selectedAsset && (
+            <Badge variant="outline">
+              Asset: {assetQuality?.find(a => a.id === selectedAsset)?.name || selectedAsset}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1h">1 Hour</SelectItem>
+              <SelectItem value="24h">24 Hours</SelectItem>
+              <SelectItem value="7d">7 Days</SelectItem>
+              <SelectItem value="30d">30 Days</SelectItem>
+              <SelectItem value="90d">90 Days</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Tabs value={activeView} onValueChange={setActiveView}>
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="assets">Assets</TabsTrigger>
+              <TabsTrigger value="rules">Rules</TabsTrigger>
+              <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleGenerateReport}>
+                <FileText className="h-4 w-4 mr-2" />
+                Generate Report
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {}}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {}}>
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Quality Dimensions Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <Label className="text-sm font-medium">Quality Dimensions:</Label>
+            <div className="flex items-center gap-2">
+              {QUALITY_DIMENSIONS.map((dimension) => (
+                <div key={dimension.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={dimension.id}
+                    checked={selectedDimensions.includes(dimension.id)}
+                    onCheckedChange={() => handleDimensionToggle(dimension.id)}
+                  />
+                  <Label htmlFor={dimension.id} className="text-sm">{dimension.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Dashboard Area */}
+        <div className="lg:col-span-3 space-y-6">
+          {activeView === 'overview' && (
+            <>
+              {/* Quality Metrics Overview */}
+              <QualityOverviewMetrics
+                metrics={qualityMetrics}
+                isLoading={isMetricsLoading}
+                timeRange={timeRange}
+                onRefresh={handleRefresh}
+              />
+
+              {/* Quality Trends Chart */}
+              <QualityTrendChart
+                trends={qualityTrends || []}
+                selectedDimensions={selectedDimensions}
+                timeRange={timeRange}
+                isLoading={isTrendsLoading}
+              />
+
+              {/* Quality Insights & Anomalies */}
+              {(qualityInsights || anomalies) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {qualityInsights && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Brain className="h-4 w-4" />
+                          AI Quality Insights
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ScrollArea className="h-32">
+                          <div className="space-y-2">
+                            {qualityInsights.recommendations.map((insight, index) => (
+                              <div key={index} className="p-2 bg-muted rounded text-sm">
+                                <div className="flex items-start gap-2">
+                                  <Sparkles className="h-3 w-3 text-blue-500 mt-0.5" />
+                                  <span>{insight}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {anomalies && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          Anomaly Detection
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ScrollArea className="h-32">
+                          <div className="space-y-2">
+                            {anomalies.detectedAnomalies.map((anomaly, index) => (
+                              <div key={index} className="p-2 bg-red-50 border border-red-200 rounded text-sm">
+                                <div className="font-medium text-red-800">{anomaly.type}</div>
+                                <div className="text-red-600 text-xs">{anomaly.description}</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Confidence: {(anomaly.confidence * 100).toFixed(1)}%
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {activeView === 'assets' && (
+            <AssetQualityScorecard
+              assets={assetQuality || []}
+              onSelectAsset={handleAssetSelect}
+              selectedAsset={selectedAsset}
+              isLoading={isAssetsLoading}
+            />
+          )}
+
+          {activeView === 'rules' && (
+            <QualityRulesManagement
+              rules={qualityRules || []}
+              onCreateRule={handleCreateRule}
+              onUpdateRule={handleUpdateRule}
+              onDeleteRule={handleDeleteRule}
+              onRunRule={handleRunRule}
+              isLoading={isRulesLoading}
+            />
+          )}
+
+          {activeView === 'alerts' && (
+            <QualityAlerts
+              alerts={qualityAlerts || []}
+              onAcknowledgeAlert={handleAcknowledgeAlert}
+              onResolveAlert={handleResolveAlert}
+              onCreateRemediation={handleCreateRemediation}
+              isLoading={isAlertsLoading}
+            />
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => runQualityAssessment({ assetId: selectedAsset })}
+                disabled={isAssessmentLoading || !selectedAsset}
+              >
+                <Play className="h-3 w-3 mr-2" />
+                Run Assessment
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={handleGenerateReport}
+                disabled={!selectedAsset}
+              >
+                <FileText className="h-3 w-3 mr-2" />
+                Generate Report
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setActiveView('rules')}
+              >
+                <Plus className="h-3 w-3 mr-2" />
+                Create Rule
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Recent Alerts Summary */}
+          {qualityAlerts && qualityAlerts.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Alert Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {['critical', 'high', 'medium', 'low'].map(severity => {
+                    const count = qualityAlerts.filter(alert => 
+                      alert.severity === severity && alert.status === 'active'
+                    ).length;
+                    
+                    if (count === 0) return null;
+                    
+                    return (
+                      <div key={severity} className="flex items-center justify-between text-sm">
+                        <span className="capitalize">{severity}</span>
+                        <Badge 
+                          variant={severity === 'critical' || severity === 'high' ? 'destructive' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {count}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quality Score Distribution */}
+          {assetQuality && assetQuality.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Score Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {[
+                    { label: 'Excellent (90-100)', min: 90, max: 100, color: 'bg-green-500' },
+                    { label: 'Good (75-89)', min: 75, max: 89, color: 'bg-yellow-500' },
+                    { label: 'Poor (0-74)', min: 0, max: 74, color: 'bg-red-500' }
+                  ].map(range => {
+                    const count = assetQuality.filter(asset => 
+                      asset.overallScore >= range.min && asset.overallScore <= range.max
+                    ).length;
+                    const percentage = (count / assetQuality.length) * 100;
+                    
+                    return (
+                      <div key={range.label} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>{range.label}</span>
+                          <span>{count} assets</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${range.color}`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Settings Dialog */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dashboard Settings</DialogTitle>
+            <DialogDescription>
+              Configure your quality dashboard preferences
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Auto Refresh</Label>
+              <Switch
+                checked={dashboardConfig.autoRefresh}
+                onCheckedChange={(checked) => 
+                  setDashboardConfig(prev => ({ ...prev, autoRefresh: checked }))
+                }
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Refresh Interval</Label>
+              <Select
+                value={dashboardConfig.refreshInterval.toString()}
+                onValueChange={(value) => 
+                  setDashboardConfig(prev => ({ ...prev, refreshInterval: parseInt(value) }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10000">10 seconds</SelectItem>
+                  <SelectItem value="30000">30 seconds</SelectItem>
+                  <SelectItem value="60000">1 minute</SelectItem>
+                  <SelectItem value="300000">5 minutes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Alert Threshold</Label>
+              <Select
+                value={dashboardConfig.alertThreshold}
+                onValueChange={(value: any) => 
+                  setDashboardConfig(prev => ({ ...prev, alertThreshold: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical Only</SelectItem>
+                  <SelectItem value="high">High & Above</SelectItem>
+                  <SelectItem value="medium">Medium & Above</SelectItem>
+                  <SelectItem value="low">All Alerts</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSettings(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowSettings(false)}>
+              Save Settings
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 export default DataQualityDashboard;
-export type { QualityDashboardProps, QualityDashboardState, QualityScoreBreakdown, AnomalyData };

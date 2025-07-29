@@ -1,766 +1,637 @@
 // ============================================================================
 // DATA LINEAGE VISUALIZER - INTERACTIVE LINEAGE VISUALIZATION (2600+ LINES)
 // ============================================================================
-// Enterprise Data Governance System - Advanced Data Lineage Component
-// Interactive network visualization, real-time lineage tracking, impact analysis,
-// automated lineage discovery, temporal lineage evolution, and collaborative annotations
+// Enterprise Data Governance System - Advanced Data Lineage Visualization Component
+// Interactive network graphs, impact analysis, temporal lineage tracking,
+// collaborative annotations, and intelligent lineage discovery
 // ============================================================================
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence, useAnimation, useMotionValue, useSpring } from 'framer-motion';
 import { toast } from 'sonner';
-import * as d3 from 'd3';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
-
-// ============================================================================
-// SHADCN/UI IMPORTS
-// ============================================================================
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import * as d3 from 'd3';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar } from '@/components/ui/calendar';
-import { AlertCircle, Activity, BarChart3, Brain, ChevronDown, ChevronRight, Clock, Database, Download, Eye, Filter, GitBranch, Globe, Home, Info, Layers, LineChart, MapPin, Network, Play, Plus, RefreshCw, Save, Search, Settings, Share2, Target, Trash2, TrendingUp, Users, Zap, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, Move, Square, Circle, Triangle, Hexagon, Star, Bookmark, Bell, MessageCircle, Tag, Link, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp, MoreHorizontal, Edit, Copy, ExternalLink, FileText, Image, Video, Music, Archive, Code, Table, PieChart, TreePine, Workflow } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertTriangle, Search, Filter, Download, Upload, Share2, Settings, Info, Eye, EyeOff, Play, Pause, RotateCcw, ZoomIn, ZoomOut, Move, Maximize2, Minimize2, GitBranch, ArrowRight, ArrowLeft, Clock, Users, MessageSquare, Bookmark, Star, Edit3, Save, X, Plus, Minus, RefreshCw, Target, TrendingUp, AlertCircle, CheckCircle, XCircle, Activity, Database, FileText, Code, BarChart3, PieChart, LineChart, Layers, Network, TreePine, FishIcon as Flow, Workflow, Route, MapPin, Calendar, Timer, UserCheck, Flag, Hash, Link, Globe, Shield, Lock, Unlock, Key, Award, Zap, Sparkles, Brain, Cpu, HardDrive, Cloud, Server, Wifi, Radio, Bluetooth, Cable, Usb, Monitor, Smartphone, Tablet, Laptop, Watch, Gamepad2, Headphones, Camera, Mic, Speaker, Volume2, VolumeX, Play as PlayIcon, Pause as PauseIcon, SkipBack, SkipForward, Repeat, Shuffle, MoreHorizontal, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronsUp, ChevronsDown } from 'lucide-react';
 
-// ============================================================================
-// TYPE IMPORTS AND INTERFACES
-// ============================================================================
-import {
-  // Core Types
-  DataAsset,
-  AssetMetadata,
-  AssetType,
-  DataSourceConfig,
-  LineageRelationship,
-  LineageNode,
-  LineageEdge,
-  LineageGraph,
-  ImpactAnalysis,
+// Import types and services
+import type {
+  DataLineageNode,
+  DataLineageEdge,
   LineageVisualizationConfig,
-  
-  // Search and Discovery
-  SearchQuery,
-  SearchResult,
-  SearchFilters,
-  
-  // Quality and Compliance
-  QualityMetrics,
-  ComplianceStatus,
-  
-  // Collaboration
-  Annotation,
-  Comment,
-  Tag,
-  
-  // Temporal
-  TemporalLineage,
-  LineageSnapshot,
-  ChangeEvent,
-  
-  // Advanced Features
-  AIRecommendation,
-  SmartInsight,
-  AutomatedDiscovery,
-  
-  // API Response Types
-  ApiResponse,
-  PaginatedResponse,
-  ErrorResponse
-} from '../../types/catalog-core.types';
+  LineageImpactAnalysis,
+  LineageTemporalView,
+  LineageAnnotation,
+  LineageMetrics,
+  LineageQuery,
+  AssetMetadata,
+  DataFlow,
+  TransformationRule,
+  LineageValidation,
+  CollaborationEvent,
+  LineageExport
+} from '../../types/catalog-lineage.types';
 
-// ============================================================================
-// SERVICE IMPORTS
-// ============================================================================
 import {
   enterpriseCatalogService,
-  lineageService,
-  searchService,
-  qualityService,
-  collaborationService,
-  analyticsService,
-  aiService
+  lineageVisualizationService,
+  lineageAnalyticsService,
+  lineageCollaborationService,
+  lineageValidationService,
+  dataFlowService,
+  impactAnalysisService
 } from '../../services/enterprise-catalog.service';
 
-// ============================================================================
-// CONSTANTS AND CONFIGURATIONS
-// ============================================================================
-const LINEAGE_VISUALIZATION_TYPES = {
-  NETWORK: 'network',
-  HIERARCHICAL: 'hierarchical',
-  FORCE_DIRECTED: 'force-directed',
-  LAYERED: 'layered',
-  CIRCULAR: 'circular',
-  RADIAL: 'radial'
-} as const;
+import {
+  LINEAGE_VISUALIZATION_CONFIG,
+  LINEAGE_NODE_TYPES,
+  LINEAGE_EDGE_TYPES,
+  IMPACT_ANALYSIS_TYPES,
+  TEMPORAL_VIEW_MODES,
+  COLLABORATION_EVENTS,
+  VALIDATION_RULES,
+  EXPORT_FORMATS
+} from '../../constants/catalog-lineage.constants';
 
-const NODE_TYPES = {
-  TABLE: 'table',
-  VIEW: 'view',
-  STORED_PROCEDURE: 'stored_procedure',
-  FUNCTION: 'function',
-  DATASET: 'dataset',
-  REPORT: 'report',
-  DASHBOARD: 'dashboard',
-  ML_MODEL: 'ml_model',
-  API: 'api',
-  FILE: 'file',
-  STREAM: 'stream',
-  QUEUE: 'queue'
-} as const;
-
-const EDGE_TYPES = {
-  DIRECT: 'direct',
-  TRANSFORMATION: 'transformation',
-  AGGREGATION: 'aggregation',
-  JOIN: 'join',
-  UNION: 'union',
-  FILTER: 'filter',
-  SORT: 'sort',
-  GROUP_BY: 'group_by',
-  PIVOT: 'pivot',
-  UNPIVOT: 'unpivot',
-  WINDOW_FUNCTION: 'window_function',
-  SUBQUERY: 'subquery'
-} as const;
-
-const IMPACT_LEVELS = {
-  CRITICAL: 'critical',
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low',
-  MINIMAL: 'minimal'
-} as const;
-
-const LINEAGE_DEPTH_OPTIONS = [1, 2, 3, 4, 5, 10, 'unlimited'] as const;
-
-const ANIMATION_DURATIONS = {
-  fast: 200,
-  normal: 300,
-  slow: 500,
-  layout: 1000
-} as const;
+import {
+  useLineageDiscovery,
+  useLineageVisualization,
+  useImpactAnalysis,
+  useLineageValidation,
+  useLineageCollaboration,
+  useLineageMetrics,
+  useDataFlowAnalysis,
+  useLineageSearch,
+  useLineageExport,
+  useLineageHistory
+} from '../../hooks/useAdvancedLineage';
 
 // ============================================================================
-// EXTENDED INTERFACES FOR LINEAGE VISUALIZATION
+// LINEAGE NETWORK GRAPH COMPONENT
 // ============================================================================
-interface LineageVisualizationProps {
-  assetId?: string;
-  initialView?: keyof typeof LINEAGE_VISUALIZATION_TYPES;
-  maxDepth?: number;
-  showImpactAnalysis?: boolean;
-  enableRealTimeUpdates?: boolean;
-  enableCollaboration?: boolean;
-  onNodeSelect?: (node: LineageNode) => void;
-  onEdgeSelect?: (edge: LineageEdge) => void;
-  onImpactAnalysis?: (analysis: ImpactAnalysis) => void;
-  className?: string;
-}
-
-interface LineageGraphState {
-  nodes: LineageNode[];
-  edges: LineageEdge[];
-  selectedNodes: Set<string>;
-  selectedEdges: Set<string>;
-  hoveredNode: string | null;
-  hoveredEdge: string | null;
-  zoomLevel: number;
-  panOffset: { x: number; y: number };
-  layoutAlgorithm: keyof typeof LINEAGE_VISUALIZATION_TYPES;
-  filterState: LineageFilterState;
-  temporalState: TemporalLineageState;
-}
-
-interface LineageFilterState {
-  nodeTypes: Set<keyof typeof NODE_TYPES>;
-  edgeTypes: Set<keyof typeof EDGE_TYPES>;
-  impactLevels: Set<keyof typeof IMPACT_LEVELS>;
-  timeRange: { start: Date; end: Date };
-  searchQuery: string;
-  showOnlyChanged: boolean;
-  hideOrphanNodes: boolean;
-}
-
-interface TemporalLineageState {
-  enabled: boolean;
-  currentTimestamp: Date;
-  availableSnapshots: LineageSnapshot[];
-  selectedSnapshot: string | null;
-  autoPlay: boolean;
-  playbackSpeed: number;
-}
-
-interface NodeClusterData {
-  id: string;
-  label: string;
-  nodes: LineageNode[];
-  color: string;
-  size: number;
-  position: { x: number; y: number };
-}
-
-interface LineageMetrics {
-  totalNodes: number;
-  totalEdges: number;
-  longestPath: number;
-  complexityScore: number;
-  clusteringCoefficient: number;
-  centralityMetrics: {
-    betweenness: Record<string, number>;
-    closeness: Record<string, number>;
-    degree: Record<string, number>;
-    eigenvector: Record<string, number>;
-  };
-}
-
-// ============================================================================
-// D3.JS GRAPH VISUALIZATION COMPONENT
-// ============================================================================
-const D3LineageGraph = forwardRef<any, {
-  data: LineageGraph;
+interface LineageNetworkGraphProps {
+  nodes: DataLineageNode[];
+  edges: DataLineageEdge[];
   config: LineageVisualizationConfig;
-  onNodeClick: (node: LineageNode) => void;
-  onEdgeClick: (edge: LineageEdge) => void;
-  onNodeHover: (node: LineageNode | null) => void;
-  onEdgeHover: (edge: LineageEdge | null) => void;
-  selectedNodes: Set<string>;
-  selectedEdges: Set<string>;
+  selectedNode?: string;
+  highlightedPath?: string[];
+  onNodeSelect: (nodeId: string) => void;
+  onNodeHover: (nodeId: string | null) => void;
+  onEdgeSelect: (edgeId: string) => void;
   className?: string;
-}>((props, ref) => {
+}
+
+const LineageNetworkGraph = forwardRef<any, LineageNetworkGraphProps>(({
+  nodes,
+  edges,
+  config,
+  selectedNode,
+  highlightedPath,
+  onNodeSelect,
+  onNodeHover,
+  onEdgeSelect,
+  className
+}, ref) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const simulationRef = useRef<d3.Simulation<LineageNode, LineageEdge> | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const simulationRef = useRef<d3.Simulation<DataLineageNode, DataLineageEdge> | null>(null);
+  const [transform, setTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // D3 Scales and Layout
-  const colorScale = useMemo(() => {
-    return d3.scaleOrdinal()
-      .domain(Object.values(NODE_TYPES))
-      .range(d3.schemeCategory10);
-  }, []);
-
-  const sizeScale = useMemo(() => {
-    return d3.scaleLinear()
-      .domain([0, d3.max(props.data.nodes, d => d.importance || 1) || 1])
-      .range([8, 32]);
-  }, [props.data.nodes]);
-
-  // Initialize D3 Visualization
-  useEffect(() => {
-    if (!svgRef.current || !props.data.nodes.length) return;
+  // D3 force simulation setup
+  const setupSimulation = useCallback(() => {
+    if (!svgRef.current || !nodes.length) return;
 
     const svg = d3.select(svgRef.current);
-    const width = dimensions.width;
-    const height = dimensions.height;
-
-    // Clear previous content
-    svg.selectAll('*').remove();
-
-    // Create main group for zoom/pan
-    const g = svg.append('g').attr('class', 'zoom-group');
-
-    // Setup zoom behavior
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.1, 10])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform);
-      });
-
-    svg.call(zoom);
-    zoomRef.current = zoom;
+    const container = svg.select('.graph-container');
+    
+    // Clear previous simulation
+    if (simulationRef.current) {
+      simulationRef.current.stop();
+    }
 
     // Create force simulation
-    const simulation = d3.forceSimulation<LineageNode>(props.data.nodes)
-      .force('link', d3.forceLink<LineageNode, LineageEdge>(props.data.edges)
+    const simulation = d3.forceSimulation<DataLineageNode>(nodes)
+      .force('link', d3.forceLink<DataLineageNode, DataLineageEdge>(edges)
         .id(d => d.id)
-        .distance(d => 100 + (d.strength || 1) * 50))
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => sizeScale(d.importance || 1) + 5));
+        .distance(config.layout.linkDistance)
+        .strength(config.layout.linkStrength))
+      .force('charge', d3.forceManyBody()
+        .strength(config.layout.chargeStrength))
+      .force('center', d3.forceCenter(config.dimensions.width / 2, config.dimensions.height / 2))
+      .force('collision', d3.forceCollide()
+        .radius(d => (d.metadata?.size || 20) + 5));
 
     simulationRef.current = simulation;
 
-    // Create arrow markers for directed edges
-    const defs = g.append('defs');
-    
-    Object.values(EDGE_TYPES).forEach(edgeType => {
-      defs.append('marker')
-        .attr('id', `arrow-${edgeType}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 15)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('class', `arrow arrow-${edgeType}`);
-    });
+    // Create links
+    const link = container.selectAll('.link')
+      .data(edges)
+      .join('line')
+      .attr('class', 'link')
+      .attr('stroke', d => config.theme.edgeColor)
+      .attr('stroke-width', d => d.weight || 1)
+      .attr('stroke-dasharray', d => d.type === 'derived' ? '5,5' : null)
+      .style('opacity', 0.6)
+      .on('click', (event, d) => onEdgeSelect(d.id))
+      .on('mouseenter', function(event, d) {
+        d3.select(this).style('opacity', 1);
+      })
+      .on('mouseleave', function(event, d) {
+        d3.select(this).style('opacity', 0.6);
+      });
 
-    // Create edge groups
-    const edgeGroup = g.append('g').attr('class', 'edges');
-    const edges = edgeGroup
-      .selectAll('.edge')
-      .data(props.data.edges)
-      .enter()
-      .append('g')
-      .attr('class', 'edge-group');
-
-    // Edge paths
-    const edgePaths = edges
-      .append('path')
-      .attr('class', d => `edge edge-${d.type}`)
-      .attr('marker-end', d => `url(#arrow-${d.type})`)
-      .style('stroke', d => d.color || '#999')
-      .style('stroke-width', d => Math.max(1, (d.strength || 1) * 2))
-      .style('fill', 'none')
-      .style('opacity', 0.6);
-
-    // Edge labels
-    const edgeLabels = edges
-      .append('text')
-      .attr('class', 'edge-label')
-      .style('text-anchor', 'middle')
-      .style('font-size', '10px')
-      .style('fill', '#666')
-      .text(d => d.label || d.type);
-
-    // Create node groups
-    const nodeGroup = g.append('g').attr('class', 'nodes');
-    const nodes = nodeGroup
-      .selectAll('.node')
-      .data(props.data.nodes)
-      .enter()
-      .append('g')
-      .attr('class', 'node-group')
-      .call(d3.drag<SVGGElement, LineageNode>()
-        .on('start', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }));
+    // Create nodes
+    const node = container.selectAll('.node')
+      .data(nodes)
+      .join('g')
+      .attr('class', 'node')
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => onNodeSelect(d.id))
+      .on('mouseenter', (event, d) => onNodeHover(d.id))
+      .on('mouseleave', () => onNodeHover(null))
+      .call(d3.drag<SVGGElement, DataLineageNode>()
+        .on('start', dragstarted)
+        .on('drag', dragged)
+        .on('end', dragended));
 
     // Node circles
-    const nodeCircles = nodes
-      .append('circle')
-      .attr('class', d => `node node-${d.type}`)
-      .attr('r', d => sizeScale(d.importance || 1))
-      .style('fill', d => colorScale(d.type) as string)
-      .style('stroke', '#fff')
-      .style('stroke-width', '2px');
+    node.append('circle')
+      .attr('r', d => d.metadata?.size || 20)
+      .attr('fill', d => getNodeColor(d))
+      .attr('stroke', d => selectedNode === d.id ? config.theme.selectedColor : config.theme.nodeStroke)
+      .attr('stroke-width', d => selectedNode === d.id ? 3 : 1);
+
+    // Node icons
+    node.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('font-family', 'lucide')
+      .attr('font-size', d => (d.metadata?.size || 20) * 0.6)
+      .attr('fill', 'white')
+      .text(d => getNodeIcon(d));
 
     // Node labels
-    const nodeLabels = nodes
-      .append('text')
-      .attr('class', 'node-label')
-      .attr('dy', '.35em')
-      .style('text-anchor', 'middle')
-      .style('font-size', '12px')
-      .style('font-weight', 'bold')
-      .style('fill', '#333')
-      .text(d => d.label || d.name);
+    node.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => (d.metadata?.size || 20) + 15)
+      .attr('font-size', 12)
+      .attr('fill', config.theme.textColor)
+      .text(d => d.name);
 
-    // Node icons (based on type)
-    const nodeIcons = nodes
-      .append('text')
-      .attr('class', 'node-icon')
-      .attr('dy', '.35em')
-      .style('text-anchor', 'middle')
-      .style('font-family', 'FontAwesome')
-      .style('font-size', '14px')
-      .style('fill', '#fff')
-      .text(d => getNodeIcon(d.type));
-
-    // Event handlers
-    nodes
-      .on('click', (event, d) => {
-        event.stopPropagation();
-        props.onNodeClick(d);
-      })
-      .on('mouseenter', (event, d) => {
-        props.onNodeHover(d);
-      })
-      .on('mouseleave', () => {
-        props.onNodeHover(null);
-      });
-
-    edges
-      .on('click', (event, d) => {
-        event.stopPropagation();
-        props.onEdgeClick(d);
-      })
-      .on('mouseenter', (event, d) => {
-        props.onEdgeHover(d);
-      })
-      .on('mouseleave', () => {
-        props.onEdgeHover(null);
-      });
-
-    // Update positions on simulation tick
+    // Simulation tick function
     simulation.on('tick', () => {
-      edgePaths
-        .attr('d', d => {
-          const dx = (d.target as LineageNode).x! - (d.source as LineageNode).x!;
-          const dy = (d.target as LineageNode).y! - (d.source as LineageNode).y!;
-          const dr = Math.sqrt(dx * dx + dy * dy);
-          return `M${(d.source as LineageNode).x},${(d.source as LineageNode).y}A${dr},${dr} 0 0,1 ${(d.target as LineageNode).x},${(d.target as LineageNode).y}`;
-        });
+      link
+        .attr('x1', d => (d.source as DataLineageNode).x!)
+        .attr('y1', d => (d.source as DataLineageNode).y!)
+        .attr('x2', d => (d.target as DataLineageNode).x!)
+        .attr('y2', d => (d.target as DataLineageNode).y!);
 
-      edgeLabels
-        .attr('x', d => ((d.source as LineageNode).x! + (d.target as LineageNode).x!) / 2)
-        .attr('y', d => ((d.source as LineageNode).y! + (d.target as LineageNode).y!) / 2);
-
-      nodes
-        .attr('transform', d => `translate(${d.x},${d.y})`);
+      node.attr('transform', d => `translate(${d.x!},${d.y!})`);
     });
 
-    // Update selections
-    nodeCircles
-      .classed('selected', d => props.selectedNodes.has(d.id))
-      .style('stroke-width', d => props.selectedNodes.has(d.id) ? '4px' : '2px');
+    // Drag functions
+    function dragstarted(event: d3.D3DragEvent<SVGGElement, DataLineageNode, DataLineageNode>, d: DataLineageNode) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
 
-    edgePaths
-      .classed('selected', d => props.selectedEdges.has(d.id))
-      .style('stroke-width', d => props.selectedEdges.has(d.id) ? 
-        Math.max(3, (d.strength || 1) * 3) : 
-        Math.max(1, (d.strength || 1) * 2));
+    function dragged(event: d3.D3DragEvent<SVGGElement, DataLineageNode, DataLineageNode>, d: DataLineageNode) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
 
-    return () => {
-      if (simulationRef.current) {
-        simulationRef.current.stop();
-      }
+    function dragended(event: d3.D3DragEvent<SVGGElement, DataLineageNode, DataLineageNode>, d: DataLineageNode) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+
+  }, [nodes, edges, config, selectedNode, onNodeSelect, onNodeHover, onEdgeSelect]);
+
+  // Node color mapping
+  const getNodeColor = useCallback((node: DataLineageNode) => {
+    const colorMap = {
+      'table': '#3b82f6',
+      'view': '#10b981',
+      'transformation': '#f59e0b',
+      'report': '#ef4444',
+      'api': '#8b5cf6',
+      'file': '#6b7280',
+      'external': '#ec4899'
     };
-  }, [props.data, dimensions, props.selectedNodes, props.selectedEdges, colorScale, sizeScale]);
-
-  // Resize handler
-  useEffect(() => {
-    const handleResize = () => {
-      const container = svgRef.current?.parentElement;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: rect.height });
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return colorMap[node.type as keyof typeof colorMap] || '#6b7280';
   }, []);
 
-  // Imperative methods
+  // Node icon mapping
+  const getNodeIcon = useCallback((node: DataLineageNode) => {
+    const iconMap = {
+      'table': '🗂️',
+      'view': '👁️',
+      'transformation': '⚙️',
+      'report': '📊',
+      'api': '🔌',
+      'file': '📄',
+      'external': '🌐'
+    };
+    return iconMap[node.type as keyof typeof iconMap] || '📦';
+  }, []);
+
+  // Setup zoom behavior
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const svg = d3.select(svgRef.current);
+    const container = svg.select('.graph-container');
+
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 10])
+      .on('zoom', (event) => {
+        const { transform } = event;
+        setTransform(transform);
+        container.attr('transform', transform);
+      });
+
+    svg.call(zoom);
+
+    return () => {
+      svg.on('.zoom', null);
+    };
+  }, []);
+
+  // Initialize simulation
+  useEffect(() => {
+    setupSimulation();
+  }, [setupSimulation]);
+
+  // Highlight path effect
+  useEffect(() => {
+    if (!svgRef.current || !highlightedPath?.length) return;
+
+    const svg = d3.select(svgRef.current);
+    const container = svg.select('.graph-container');
+
+    // Reset all highlights
+    container.selectAll('.node circle').attr('stroke-width', 1);
+    container.selectAll('.link').style('opacity', 0.6);
+
+    // Highlight path nodes
+    container.selectAll('.node')
+      .filter((d: any) => highlightedPath.includes(d.id))
+      .select('circle')
+      .attr('stroke-width', 3)
+      .attr('stroke', config.theme.highlightColor);
+
+    // Highlight path edges
+    container.selectAll('.link')
+      .filter((d: any) => {
+        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        return highlightedPath.includes(sourceId) && highlightedPath.includes(targetId);
+      })
+      .style('opacity', 1)
+      .attr('stroke', config.theme.highlightColor);
+
+  }, [highlightedPath, config.theme]);
+
+  // Animation controls
+  const playAnimation = useCallback(() => {
+    setIsPlaying(true);
+    if (simulationRef.current) {
+      simulationRef.current.alphaTarget(0.3).restart();
+    }
+  }, []);
+
+  const pauseAnimation = useCallback(() => {
+    setIsPlaying(false);
+    if (simulationRef.current) {
+      simulationRef.current.alphaTarget(0);
+    }
+  }, []);
+
+  const resetView = useCallback(() => {
+    if (!svgRef.current) return;
+    
+    const svg = d3.select(svgRef.current);
+    svg.transition()
+      .duration(750)
+      .call(d3.zoom<SVGSVGElement, unknown>().transform, d3.zoomIdentity);
+  }, []);
+
+  // Expose methods via ref
   useImperativeHandle(ref, () => ({
-    fitToView: () => {
-      if (!svgRef.current || !zoomRef.current) return;
+    playAnimation,
+    pauseAnimation,
+    resetView,
+    zoomToFit: () => {
+      if (!svgRef.current || !nodes.length) return;
       
       const svg = d3.select(svgRef.current);
-      const bounds = svg.select('.zoom-group').node()?.getBBox();
+      const bounds = svg.select('.graph-container').node()?.getBBox();
       
       if (bounds) {
-        const { width, height } = dimensions;
-        const scale = Math.min(width / bounds.width, height / bounds.height) * 0.9;
-        const translate = [
-          (width - scale * (bounds.x + bounds.width / 2)) / scale,
-          (height - scale * (bounds.y + bounds.height / 2)) / scale
-        ];
+        const fullWidth = config.dimensions.width;
+        const fullHeight = config.dimensions.height;
+        const width = bounds.width;
+        const height = bounds.height;
+        const midX = bounds.x + width / 2;
+        const midY = bounds.y + height / 2;
         
-        svg.transition().duration(750).call(
-          zoomRef.current.transform,
-          d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
-        );
+        const scale = Math.min(fullWidth / width, fullHeight / height) * 0.9;
+        const translate = [fullWidth / 2 - midX * scale, fullHeight / 2 - midY * scale];
+        
+        svg.transition()
+          .duration(750)
+          .call(d3.zoom<SVGSVGElement, unknown>().transform, 
+            d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
       }
     },
-    
-    centerOnNode: (nodeId: string) => {
-      const node = props.data.nodes.find(n => n.id === nodeId);
-      if (!node || !svgRef.current || !zoomRef.current) return;
+    focusNode: (nodeId: string) => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node || !svgRef.current) return;
       
       const svg = d3.select(svgRef.current);
-      const { width, height } = dimensions;
-      const scale = 1.5;
+      const scale = 2;
       const translate = [
-        (width / 2 - scale * (node.x || 0)) / scale,
-        (height / 2 - scale * (node.y || 0)) / scale
+        config.dimensions.width / 2 - (node.x || 0) * scale,
+        config.dimensions.height / 2 - (node.y || 0) * scale
       ];
       
-      svg.transition().duration(750).call(
-        zoomRef.current.transform,
-        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
-      );
-    },
-    
-    highlightPath: (nodeIds: string[]) => {
-      const svg = d3.select(svgRef.current);
-      
-      // Reset all elements
-      svg.selectAll('.node').classed('highlighted', false).classed('dimmed', true);
-      svg.selectAll('.edge').classed('highlighted', false).classed('dimmed', true);
-      
-      // Highlight path nodes
-      svg.selectAll('.node')
-        .filter((d: any) => nodeIds.includes(d.id))
-        .classed('highlighted', true)
-        .classed('dimmed', false);
-      
-      // Highlight path edges
-      svg.selectAll('.edge')
-        .filter((d: any) => {
-          const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-          const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-          return nodeIds.includes(sourceId) && nodeIds.includes(targetId);
-        })
-        .classed('highlighted', true)
-        .classed('dimmed', false);
-    },
-    
-    resetHighlight: () => {
-      const svg = d3.select(svgRef.current);
-      svg.selectAll('.node, .edge')
-        .classed('highlighted', false)
-        .classed('dimmed', false);
+      svg.transition()
+        .duration(750)
+        .call(d3.zoom<SVGSVGElement, unknown>().transform,
+          d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
     }
-  }));
-
-  // Helper function to get node icon
-  const getNodeIcon = (nodeType: keyof typeof NODE_TYPES): string => {
-    const iconMap = {
-      [NODE_TYPES.TABLE]: '📊',
-      [NODE_TYPES.VIEW]: '👁️',
-      [NODE_TYPES.STORED_PROCEDURE]: '⚙️',
-      [NODE_TYPES.FUNCTION]: '🔧',
-      [NODE_TYPES.DATASET]: '📈',
-      [NODE_TYPES.REPORT]: '📋',
-      [NODE_TYPES.DASHBOARD]: '📊',
-      [NODE_TYPES.ML_MODEL]: '🤖',
-      [NODE_TYPES.API]: '🔌',
-      [NODE_TYPES.FILE]: '📄',
-      [NODE_TYPES.STREAM]: '🌊',
-      [NODE_TYPES.QUEUE]: '📬'
-    };
-    return iconMap[nodeType] || '📦';
-  };
+  }), [nodes, config, playAnimation, pauseAnimation, resetView]);
 
   return (
-    <div className={`relative w-full h-full ${props.className || ''}`}>
+    <div ref={containerRef} className={`relative w-full h-full ${className}`}>
       <svg
         ref={svgRef}
-        width="100%"
-        height="100%"
-        className="border border-gray-200 rounded-lg bg-gray-50"
-      />
+        width={config.dimensions.width}
+        height={config.dimensions.height}
+        className="border border-border rounded-lg bg-background"
+      >
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1" opacity="0.3" />
+          </pattern>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill={config.theme.edgeColor} />
+          </marker>
+        </defs>
+        
+        {config.layout.showGrid && (
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        )}
+        
+        <g className="graph-container" />
+      </svg>
+      
+      {/* Zoom Info */}
+      <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 text-xs text-muted-foreground">
+        Zoom: {Math.round(transform.k * 100)}%
+      </div>
+      
+      {/* Animation Status */}
+      {isPlaying && (
+        <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 flex items-center gap-2 text-xs">
+          <Activity className="h-3 w-3 animate-pulse text-green-500" />
+          <span>Simulation Running</span>
+        </div>
+      )}
     </div>
   );
 });
 
-D3LineageGraph.displayName = 'D3LineageGraph';
+LineageNetworkGraph.displayName = 'LineageNetworkGraph';
 
 // ============================================================================
 // LINEAGE CONTROL PANEL COMPONENT
 // ============================================================================
-const LineageControlPanel: React.FC<{
+interface LineageControlPanelProps {
   config: LineageVisualizationConfig;
   onConfigChange: (config: Partial<LineageVisualizationConfig>) => void;
-  graphRef: React.RefObject<any>;
-  onResetView: () => void;
-  onExport: (format: string) => void;
-}> = ({ config, onConfigChange, graphRef, onResetView, onExport }) => {
+  isPlaying: boolean;
+  onPlay: () => void;
+  onPause: () => void;
+  onReset: () => void;
+  onZoomToFit: () => void;
+  className?: string;
+}
+
+const LineageControlPanel: React.FC<LineageControlPanelProps> = ({
+  config,
+  onConfigChange,
+  isPlaying,
+  onPlay,
+  onPause,
+  onReset,
+  onZoomToFit,
+  className
+}) => {
+  const [activeTab, setActiveTab] = useState('layout');
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Settings className="h-4 w-4" />
           Visualization Controls
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Layout Algorithm */}
-        <div className="space-y-2">
-          <Label>Layout Algorithm</Label>
-          <Select
-            value={config.layoutAlgorithm}
-            onValueChange={(value) => onConfigChange({ layoutAlgorithm: value as any })}
+        {/* Playback Controls */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={isPlaying ? "secondary" : "default"}
+            onClick={isPlaying ? onPause : onPlay}
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="force-directed">Force Directed</SelectItem>
-              <SelectItem value="hierarchical">Hierarchical</SelectItem>
-              <SelectItem value="circular">Circular</SelectItem>
-              <SelectItem value="layered">Layered</SelectItem>
-              <SelectItem value="radial">Radial</SelectItem>
-            </SelectContent>
-          </Select>
+            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onReset}>
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={onZoomToFit}>
+            <Maximize2 className="h-3 w-3" />
+          </Button>
         </div>
 
-        {/* Zoom and Pan Controls */}
-        <div className="space-y-2">
-          <Label>View Controls</Label>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => graphRef.current?.fitToView()}
-            >
-              <Maximize2 className="h-4 w-4 mr-1" />
-              Fit to View
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onResetView}
-            >
-              <RotateCcw className="h-4 w-4 mr-1" />
-              Reset
-            </Button>
-          </div>
-        </div>
-
-        {/* Node Filtering */}
-        <div className="space-y-2">
-          <Label>Node Types</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.values(NODE_TYPES).map(nodeType => (
-              <div key={nodeType} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`node-${nodeType}`}
-                  checked={config.visibleNodeTypes?.includes(nodeType)}
-                  onCheckedChange={(checked) => {
-                    const current = config.visibleNodeTypes || [];
-                    const updated = checked
-                      ? [...current, nodeType]
-                      : current.filter(t => t !== nodeType);
-                    onConfigChange({ visibleNodeTypes: updated });
-                  }}
-                />
-                <Label htmlFor={`node-${nodeType}`} className="text-sm">
-                  {nodeType.replace('_', ' ')}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Edge Filtering */}
-        <div className="space-y-2">
-          <Label>Edge Types</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.values(EDGE_TYPES).map(edgeType => (
-              <div key={edgeType} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`edge-${edgeType}`}
-                  checked={config.visibleEdgeTypes?.includes(edgeType)}
-                  onCheckedChange={(checked) => {
-                    const current = config.visibleEdgeTypes || [];
-                    const updated = checked
-                      ? [...current, edgeType]
-                      : current.filter(t => t !== edgeType);
-                    onConfigChange({ visibleEdgeTypes: updated });
-                  }}
-                />
-                <Label htmlFor={`edge-${edgeType}`} className="text-sm">
-                  {edgeType.replace('_', ' ')}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Depth Control */}
-        <div className="space-y-2">
-          <Label>Lineage Depth</Label>
-          <Select
-            value={config.maxDepth?.toString() || 'unlimited'}
-            onValueChange={(value) => onConfigChange({ 
-              maxDepth: value === 'unlimited' ? undefined : parseInt(value) 
-            })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LINEAGE_DEPTH_OPTIONS.map(depth => (
-                <SelectItem key={depth} value={depth.toString()}>
-                  {depth === 'unlimited' ? 'Unlimited' : `${depth} levels`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Animation Speed */}
-        <div className="space-y-2">
-          <Label>Animation Speed</Label>
-          <Slider
-            value={[config.animationSpeed || 1]}
-            onValueChange={([value]) => onConfigChange({ animationSpeed: value })}
-            min={0.1}
-            max={3}
-            step={0.1}
-            className="w-full"
-          />
-          <div className="text-sm text-gray-500">
-            {((config.animationSpeed || 1) * 100).toFixed(0)}%
-          </div>
-        </div>
-
-        {/* Export Options */}
         <Separator />
-        <div className="space-y-2">
-          <Label>Export</Label>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExport('svg')}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              SVG
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExport('png')}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              PNG
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onExport('json')}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              JSON
-            </Button>
-          </div>
-        </div>
+
+        {/* Configuration Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="layout">Layout</TabsTrigger>
+            <TabsTrigger value="style">Style</TabsTrigger>
+            <TabsTrigger value="filter">Filter</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="layout" className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Link Distance</Label>
+              <Slider
+                value={[config.layout.linkDistance]}
+                onValueChange={([value]) => onConfigChange({
+                  layout: { ...config.layout, linkDistance: value }
+                })}
+                min={50}
+                max={300}
+                step={10}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground text-right">
+                {config.layout.linkDistance}px
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Charge Strength</Label>
+              <Slider
+                value={[Math.abs(config.layout.chargeStrength)]}
+                onValueChange={([value]) => onConfigChange({
+                  layout: { ...config.layout, chargeStrength: -value }
+                })}
+                min={100}
+                max={1000}
+                step={50}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground text-right">
+                -{Math.abs(config.layout.chargeStrength)}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-grid"
+                checked={config.layout.showGrid}
+                onCheckedChange={(checked) => onConfigChange({
+                  layout: { ...config.layout, showGrid: checked }
+                })}
+              />
+              <Label htmlFor="show-grid" className="text-xs">Show Grid</Label>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="style" className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Theme</Label>
+              <Select
+                value={config.theme.mode}
+                onValueChange={(mode) => onConfigChange({
+                  theme: { ...config.theme, mode: mode as 'light' | 'dark' }
+                })}
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Node Size Scale</Label>
+              <Slider
+                value={[config.style.nodeSize]}
+                onValueChange={([value]) => onConfigChange({
+                  style: { ...config.style, nodeSize: value }
+                })}
+                min={0.5}
+                max={2}
+                step={0.1}
+                className="w-full"
+              />
+              <div className="text-xs text-muted-foreground text-right">
+                {config.style.nodeSize}x
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-labels"
+                checked={config.style.showLabels}
+                onCheckedChange={(checked) => onConfigChange({
+                  style: { ...config.style, showLabels: checked }
+                })}
+              />
+              <Label htmlFor="show-labels" className="text-xs">Show Labels</Label>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="filter" className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Node Types</Label>
+              <div className="space-y-1">
+                {LINEAGE_NODE_TYPES.map((type) => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type.id}
+                      checked={config.filters.nodeTypes.includes(type.id)}
+                      onCheckedChange={(checked) => {
+                        const nodeTypes = checked
+                          ? [...config.filters.nodeTypes, type.id]
+                          : config.filters.nodeTypes.filter(t => t !== type.id);
+                        onConfigChange({
+                          filters: { ...config.filters, nodeTypes }
+                        });
+                      }}
+                    />
+                    <Label htmlFor={type.id} className="text-xs">{type.label}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Edge Types</Label>
+              <div className="space-y-1">
+                {LINEAGE_EDGE_TYPES.map((type) => (
+                  <div key={type.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={type.id}
+                      checked={config.filters.edgeTypes.includes(type.id)}
+                      onCheckedChange={(checked) => {
+                        const edgeTypes = checked
+                          ? [...config.filters.edgeTypes, type.id]
+                          : config.filters.edgeTypes.filter(t => t !== type.id);
+                        onConfigChange({
+                          filters: { ...config.filters, edgeTypes }
+                        });
+                      }}
+                    />
+                    <Label htmlFor={type.id} className="text-xs">{type.label}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
@@ -769,132 +640,167 @@ const LineageControlPanel: React.FC<{
 // ============================================================================
 // IMPACT ANALYSIS PANEL COMPONENT
 // ============================================================================
-const ImpactAnalysisPanel: React.FC<{
-  analysis: ImpactAnalysis | null;
+interface ImpactAnalysisPanelProps {
+  selectedNode: string | null;
+  impactAnalysis: LineageImpactAnalysis | null;
+  onAnalysisTypeChange: (type: string) => void;
+  onRunAnalysis: () => void;
   isLoading: boolean;
-  onAnalyzeImpact: (nodeId: string, changeType: string) => void;
-  selectedNode: LineageNode | null;
-}> = ({ analysis, isLoading, onAnalyzeImpact, selectedNode }) => {
-  const [changeType, setChangeType] = useState('schema_change');
+  className?: string;
+}
+
+const ImpactAnalysisPanel: React.FC<ImpactAnalysisPanelProps> = ({
+  selectedNode,
+  impactAnalysis,
+  onAnalysisTypeChange,
+  onRunAnalysis,
+  isLoading,
+  className
+}) => {
+  const [analysisType, setAnalysisType] = useState('downstream');
+  const [analysisDepth, setAnalysisDepth] = useState(3);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5" />
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Target className="h-4 w-4" />
           Impact Analysis
         </CardTitle>
-        <CardDescription>
-          Analyze the potential impact of changes to data assets
+        <CardDescription className="text-xs">
+          Analyze the impact of changes to selected assets
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {selectedNode ? (
+        {!selectedNode ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Select a node to perform impact analysis</p>
+          </div>
+        ) : (
           <>
-            <div className="space-y-2">
-              <Label>Selected Asset</Label>
-              <div className="p-2 bg-gray-50 rounded border">
-                <div className="font-medium">{selectedNode.label}</div>
-                <div className="text-sm text-gray-500">{selectedNode.type}</div>
+            {/* Analysis Configuration */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Analysis Type</Label>
+                <RadioGroup
+                  value={analysisType}
+                  onValueChange={(value) => {
+                    setAnalysisType(value);
+                    onAnalysisTypeChange(value);
+                  }}
+                >
+                  {IMPACT_ANALYSIS_TYPES.map((type) => (
+                    <div key={type.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={type.id} id={type.id} />
+                      <Label htmlFor={type.id} className="text-xs">{type.label}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Analysis Depth</Label>
+                <Slider
+                  value={[analysisDepth]}
+                  onValueChange={([value]) => setAnalysisDepth(value)}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="text-xs text-muted-foreground text-right">
+                  {analysisDepth} levels
+                </div>
+              </div>
+
+              <Button
+                onClick={onRunAnalysis}
+                disabled={isLoading}
+                className="w-full"
+                size="sm"
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-3 w-3 mr-2 animate-spin" />
+                ) : (
+                  <TrendingUp className="h-3 w-3 mr-2" />
+                )}
+                Run Analysis
+              </Button>
             </div>
 
-            <div className="space-y-2">
-              <Label>Change Type</Label>
-              <Select value={changeType} onValueChange={setChangeType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="schema_change">Schema Change</SelectItem>
-                  <SelectItem value="data_type_change">Data Type Change</SelectItem>
-                  <SelectItem value="column_removal">Column Removal</SelectItem>
-                  <SelectItem value="table_removal">Table Removal</SelectItem>
-                  <SelectItem value="permission_change">Permission Change</SelectItem>
-                  <SelectItem value="location_change">Location Change</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={() => onAnalyzeImpact(selectedNode.id, changeType)}
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
-              Analyze Impact
-            </Button>
-
-            {analysis && (
-              <div className="space-y-4 mt-4">
+            {/* Analysis Results */}
+            {impactAnalysis && (
+              <div className="space-y-3">
                 <Separator />
                 
-                {/* Impact Summary */}
-                <div className="space-y-2">
-                  <Label>Impact Summary</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card className="p-3">
-                      <div className="text-2xl font-bold text-red-600">
-                        {analysis.affectedAssets?.length || 0}
-                      </div>
-                      <div className="text-sm text-gray-500">Affected Assets</div>
-                    </Card>
-                    <Card className="p-3">
-                      <div className="text-2xl font-bold text-orange-600">
-                        {analysis.impactLevel}
-                      </div>
-                      <div className="text-sm text-gray-500">Impact Level</div>
-                    </Card>
+                {/* Summary Metrics */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-muted rounded p-2">
+                    <div className="font-medium">Affected Assets</div>
+                    <div className="text-lg font-bold">{impactAnalysis.affectedAssets.length}</div>
+                  </div>
+                  <div className="bg-muted rounded p-2">
+                    <div className="font-medium">Risk Level</div>
+                    <Badge
+                      variant={
+                        impactAnalysis.riskLevel === 'high' ? 'destructive' :
+                        impactAnalysis.riskLevel === 'medium' ? 'default' : 'secondary'
+                      }
+                      className="text-xs"
+                    >
+                      {impactAnalysis.riskLevel}
+                    </Badge>
                   </div>
                 </div>
 
-                {/* Affected Assets */}
-                {analysis.affectedAssets && analysis.affectedAssets.length > 0 && (
+                {/* Affected Assets List */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Affected Assets</Label>
+                  <ScrollArea className="h-32">
+                    <div className="space-y-1">
+                      {impactAnalysis.affectedAssets.map((asset, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted rounded text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Database className="h-3 w-3" />
+                            <span className="font-medium">{asset.name}</span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {asset.type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {/* Change Recommendations */}
+                {impactAnalysis.recommendations?.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Affected Assets</Label>
-                    <ScrollArea className="h-48 border rounded">
-                      <div className="p-2 space-y-2">
-                        {analysis.affectedAssets.map((asset, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 border rounded">
-                            <div>
-                              <div className="font-medium">{asset.name}</div>
-                              <div className="text-sm text-gray-500">{asset.type}</div>
+                    <Label className="text-xs font-medium">Recommendations</Label>
+                    <ScrollArea className="h-24">
+                      <div className="space-y-1">
+                        {impactAnalysis.recommendations.map((rec, index) => (
+                          <div
+                            key={index}
+                            className="p-2 bg-muted rounded text-xs"
+                          >
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5" />
+                              <span>{rec}</span>
                             </div>
-                            <Badge variant={
-                              asset.impactLevel === 'critical' ? 'destructive' :
-                              asset.impactLevel === 'high' ? 'default' :
-                              'secondary'
-                            }>
-                              {asset.impactLevel}
-                            </Badge>
                           </div>
                         ))}
                       </div>
                     </ScrollArea>
                   </div>
                 )}
-
-                {/* Recommendations */}
-                {analysis.recommendations && analysis.recommendations.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Recommendations</Label>
-                    <div className="space-y-2">
-                      {analysis.recommendations.map((rec, index) => (
-                        <div key={index} className="p-3 bg-blue-50 border border-blue-200 rounded">
-                          <div className="font-medium text-blue-900">{rec.title}</div>
-                          <div className="text-sm text-blue-700">{rec.description}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </>
-        ) : (
-          <div className="text-center text-gray-500 py-8">
-            Select a node in the lineage graph to analyze its impact
-          </div>
         )}
       </CardContent>
     </Card>
@@ -902,150 +808,176 @@ const ImpactAnalysisPanel: React.FC<{
 };
 
 // ============================================================================
-// TEMPORAL LINEAGE COMPONENT
+// TEMPORAL LINEAGE VIEWER COMPONENT
 // ============================================================================
-const TemporalLineageControl: React.FC<{
-  temporalState: TemporalLineageState;
-  onTemporalStateChange: (state: Partial<TemporalLineageState>) => void;
-  onLoadSnapshot: (snapshotId: string) => void;
-}> = ({ temporalState, onTemporalStateChange, onLoadSnapshot }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
+interface TemporalLineageViewerProps {
+  temporalData: LineageTemporalView[];
+  selectedTimestamp: string | null;
+  onTimestampSelect: (timestamp: string) => void;
+  onPlayTimeline: () => void;
+  isPlaying: boolean;
+  className?: string;
+}
 
-  // Auto-play functionality
-  useEffect(() => {
-    if (temporalState.autoPlay && isPlaying && temporalState.availableSnapshots.length > 0) {
-      const currentIndex = temporalState.availableSnapshots.findIndex(
-        s => s.id === temporalState.selectedSnapshot
-      );
-      
-      playIntervalRef.current = setInterval(() => {
-        const nextIndex = (currentIndex + 1) % temporalState.availableSnapshots.length;
-        const nextSnapshot = temporalState.availableSnapshots[nextIndex];
-        onLoadSnapshot(nextSnapshot.id);
-      }, 1000 / temporalState.playbackSpeed);
-    }
+const TemporalLineageViewer: React.FC<TemporalLineageViewerProps> = ({
+  temporalData,
+  selectedTimestamp,
+  onTimestampSelect,
+  onPlayTimeline,
+  isPlaying,
+  className
+}) => {
+  const [viewMode, setViewMode] = useState('timeline');
+  const timelineRef = useRef<HTMLDivElement>(null);
 
-    return () => {
-      if (playIntervalRef.current) {
-        clearInterval(playIntervalRef.current);
-        playIntervalRef.current = null;
-      }
-    };
-  }, [isPlaying, temporalState, onLoadSnapshot]);
-
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    onTemporalStateChange({ autoPlay: !isPlaying });
-  };
+  // Sort temporal data by timestamp
+  const sortedData = useMemo(() => {
+    return [...temporalData].sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, [temporalData]);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Clock className="h-4 w-4" />
           Temporal Lineage
         </CardTitle>
-        <CardDescription>
-          View lineage evolution over time
+        <CardDescription className="text-xs">
+          Track lineage changes over time
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Enable/Disable Temporal Mode */}
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={temporalState.enabled}
-            onCheckedChange={(enabled) => onTemporalStateChange({ enabled })}
-          />
-          <Label>Enable Temporal View</Label>
+        {/* View Mode Selection */}
+        <div className="flex items-center justify-between">
+          <Tabs value={viewMode} onValueChange={setViewMode}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="timeline" className="text-xs">Timeline</TabsTrigger>
+              <TabsTrigger value="changes" className="text-xs">Changes</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onPlayTimeline}
+          >
+            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </Button>
         </div>
 
-        {temporalState.enabled && (
-          <>
-            {/* Timeline Control */}
-            <div className="space-y-2">
-              <Label>Timeline</Label>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePlayPause}
-                >
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-                <div className="flex-1">
-                  <Slider
-                    value={[temporalState.availableSnapshots.findIndex(
-                      s => s.id === temporalState.selectedSnapshot
-                    )]}
-                    onValueChange={([index]) => {
-                      const snapshot = temporalState.availableSnapshots[index];
-                      if (snapshot) {
-                        onLoadSnapshot(snapshot.id);
-                      }
-                    }}
-                    min={0}
-                    max={temporalState.availableSnapshots.length - 1}
-                    step={1}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Playback Speed */}
-            <div className="space-y-2">
-              <Label>Playback Speed</Label>
-              <Slider
-                value={[temporalState.playbackSpeed]}
-                onValueChange={([speed]) => onTemporalStateChange({ playbackSpeed: speed })}
-                min={0.25}
-                max={4}
-                step={0.25}
-                className="w-full"
-              />
-              <div className="text-sm text-gray-500">
-                {temporalState.playbackSpeed}x speed
-              </div>
-            </div>
-
-            {/* Current Timestamp */}
-            {temporalState.selectedSnapshot && (
-              <div className="space-y-2">
-                <Label>Current Snapshot</Label>
-                <div className="p-2 bg-gray-50 rounded border text-sm">
-                  {new Date(temporalState.currentTimestamp).toLocaleString()}
-                </div>
-              </div>
-            )}
-
-            {/* Snapshot List */}
-            <div className="space-y-2">
-              <Label>Available Snapshots</Label>
-              <ScrollArea className="h-32 border rounded">
-                <div className="p-2 space-y-1">
-                  {temporalState.availableSnapshots.map((snapshot) => (
-                    <Button
-                      key={snapshot.id}
-                      variant={snapshot.id === temporalState.selectedSnapshot ? "default" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => onLoadSnapshot(snapshot.id)}
+        {viewMode === 'timeline' ? (
+          // Timeline View
+          <div className="space-y-3">
+            <div ref={timelineRef} className="relative">
+              <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+              <ScrollArea className="h-48">
+                <div className="space-y-3 pb-4">
+                  {sortedData.map((item, index) => (
+                    <motion.div
+                      key={item.timestamp}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className={`relative flex items-start gap-3 p-2 rounded cursor-pointer transition-colors ${
+                        selectedTimestamp === item.timestamp 
+                          ? 'bg-primary/10 border border-primary/20' 
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => onTimestampSelect(item.timestamp)}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">
-                          {new Date(snapshot.timestamp).toLocaleDateString()}
+                      <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                        selectedTimestamp === item.timestamp ? 'bg-primary' : 'bg-muted-foreground'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium">
+                          {new Date(item.timestamp).toLocaleString()}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {snapshot.description || 'No description'}
+                        <div className="text-xs text-muted-foreground">
+                          {item.changes.length} changes
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.changes.slice(0, 3).map((change, changeIndex) => (
+                            <Badge key={changeIndex} variant="outline" className="text-xs">
+                              {change.type}
+                            </Badge>
+                          ))}
+                          {item.changes.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{item.changes.length - 3}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    </Button>
+                    </motion.div>
                   ))}
                 </div>
               </ScrollArea>
             </div>
-          </>
+          </div>
+        ) : (
+          // Changes View
+          <div className="space-y-3">
+            {selectedTimestamp ? (
+              (() => {
+                const selectedData = sortedData.find(d => d.timestamp === selectedTimestamp);
+                return selectedData ? (
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {selectedData.changes.map((change, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 p-2 bg-muted rounded text-xs"
+                        >
+                          <div className={`w-2 h-2 rounded-full mt-1 ${
+                            change.type === 'added' ? 'bg-green-500' :
+                            change.type === 'removed' ? 'bg-red-500' :
+                            change.type === 'modified' ? 'bg-amber-500' : 'bg-blue-500'
+                          }`} />
+                          <div className="flex-1">
+                            <div className="font-medium">{change.description}</div>
+                            <div className="text-muted-foreground">
+                              {change.assetName} ({change.assetType})
+                            </div>
+                          </div>
+                          <Badge
+                            variant={
+                              change.type === 'added' ? 'default' :
+                              change.type === 'removed' ? 'destructive' :
+                              change.type === 'modified' ? 'secondary' : 'outline'
+                            }
+                            className="text-xs"
+                          >
+                            {change.type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : null;
+              })()
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Select a timestamp to view changes</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Timeline Playback Progress */}
+        {isPlaying && sortedData.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span>Timeline Playback</span>
+              <span>{Math.round((sortedData.findIndex(d => d.timestamp === selectedTimestamp) + 1) / sortedData.length * 100)}%</span>
+            </div>
+            <Progress 
+              value={(sortedData.findIndex(d => d.timestamp === selectedTimestamp) + 1) / sortedData.length * 100} 
+              className="h-1"
+            />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -1053,924 +985,747 @@ const TemporalLineageControl: React.FC<{
 };
 
 // ============================================================================
-// LINEAGE METRICS DASHBOARD
+// LINEAGE ANNOTATIONS PANEL COMPONENT
 // ============================================================================
-const LineageMetricsDashboard: React.FC<{
-  metrics: LineageMetrics | null;
-  isLoading: boolean;
-}> = ({ metrics, isLoading }) => {
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Lineage Metrics
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
+interface LineageAnnotationsPanelProps {
+  annotations: LineageAnnotation[];
+  selectedNode: string | null;
+  onAddAnnotation: (annotation: Omit<LineageAnnotation, 'id' | 'timestamp'>) => void;
+  onUpdateAnnotation: (id: string, annotation: Partial<LineageAnnotation>) => void;
+  onDeleteAnnotation: (id: string) => void;
+  currentUser: string;
+  className?: string;
+}
 
-  if (!metrics) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Lineage Metrics
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-gray-500 py-8">
-          No metrics available
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Lineage Metrics
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Basic Metrics */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-3">
-            <div className="text-2xl font-bold">{metrics.totalNodes}</div>
-            <div className="text-sm text-gray-500">Total Nodes</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold">{metrics.totalEdges}</div>
-            <div className="text-sm text-gray-500">Total Edges</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold">{metrics.longestPath}</div>
-            <div className="text-sm text-gray-500">Longest Path</div>
-          </Card>
-          <Card className="p-3">
-            <div className="text-2xl font-bold">{metrics.complexityScore.toFixed(2)}</div>
-            <div className="text-sm text-gray-500">Complexity Score</div>
-          </Card>
-        </div>
-
-        {/* Centrality Metrics */}
-        <div className="space-y-2">
-          <Label>Top Nodes by Centrality</Label>
-          <Tabs defaultValue="degree" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="degree">Degree</TabsTrigger>
-              <TabsTrigger value="betweenness">Betweenness</TabsTrigger>
-              <TabsTrigger value="closeness">Closeness</TabsTrigger>
-              <TabsTrigger value="eigenvector">Eigenvector</TabsTrigger>
-            </TabsList>
-            
-            {Object.entries(metrics.centralityMetrics).map(([type, values]) => (
-              <TabsContent key={type} value={type} className="space-y-2">
-                <ScrollArea className="h-32">
-                  <div className="space-y-1">
-                    {Object.entries(values)
-                      .sort(([,a], [,b]) => b - a)
-                      .slice(0, 10)
-                      .map(([nodeId, value]) => (
-                        <div key={nodeId} className="flex justify-between items-center p-2 border rounded">
-                          <span className="font-medium truncate">{nodeId}</span>
-                          <Badge variant="outline">{value.toFixed(3)}</Badge>
-                        </div>
-                      ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
-
-        {/* Clustering Coefficient */}
-        <div className="space-y-2">
-          <Label>Network Analysis</Label>
-          <div className="p-3 border rounded">
-            <div className="flex justify-between items-center">
-              <span>Clustering Coefficient</span>
-              <Badge variant="outline">{metrics.clusteringCoefficient.toFixed(3)}</Badge>
-            </div>
-            <div className="text-sm text-gray-500 mt-1">
-              Measures how connected nodes are to their neighbors
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// ============================================================================
-// NODE DETAILS PANEL
-// ============================================================================
-const NodeDetailsPanel: React.FC<{
-  node: LineageNode | null;
-  onClose: () => void;
-  onAddAnnotation: (nodeId: string, annotation: Partial<Annotation>) => void;
-}> = ({ node, onClose, onAddAnnotation }) => {
+const LineageAnnotationsPanel: React.FC<LineageAnnotationsPanelProps> = ({
+  annotations,
+  selectedNode,
+  onAddAnnotation,
+  onUpdateAnnotation,
+  onDeleteAnnotation,
+  currentUser,
+  className
+}) => {
   const [newAnnotation, setNewAnnotation] = useState('');
-  const [annotationType, setAnnotationType] = useState<'note' | 'warning' | 'issue'>('note');
+  const [annotationType, setAnnotationType] = useState('note');
+  const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
 
-  if (!node) return null;
+  // Filter annotations for selected node
+  const nodeAnnotations = useMemo(() => {
+    return annotations.filter(annotation => 
+      selectedNode && (annotation.nodeId === selectedNode || annotation.edgeId === selectedNode)
+    );
+  }, [annotations, selectedNode]);
 
   const handleAddAnnotation = () => {
-    if (newAnnotation.trim()) {
-      onAddAnnotation(node.id, {
-        content: newAnnotation,
-        type: annotationType,
-        timestamp: new Date()
-      });
-      setNewAnnotation('');
-    }
+    if (!newAnnotation.trim() || !selectedNode) return;
+
+    onAddAnnotation({
+      nodeId: selectedNode,
+      type: annotationType as 'note' | 'warning' | 'issue' | 'improvement',
+      content: newAnnotation.trim(),
+      author: currentUser
+    });
+
+    setNewAnnotation('');
+    setIsAddingAnnotation(false);
   };
 
   return (
-    <Sheet open={!!node} onOpenChange={() => onClose()}>
-      <SheetContent className="w-96 sm:w-[480px]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            {node.label || node.name}
-          </SheetTitle>
-          <SheetDescription>
-            {node.type} • {node.id}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-6 space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Basic Information</Label>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Type</span>
-                <Badge>{node.type}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Importance</span>
-                <Badge variant="outline">{node.importance || 1}</Badge>
-              </div>
-              {node.description && (
-                <div>
-                  <span className="text-sm text-gray-500">Description</span>
-                  <p className="text-sm mt-1">{node.description}</p>
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          Annotations
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Collaborative notes and comments
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!selectedNode ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Select a node to view annotations</p>
+          </div>
+        ) : (
+          <>
+            {/* Add New Annotation */}
+            <div className="space-y-3">
+              {!isAddingAnnotation ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsAddingAnnotation(true)}
+                  className="w-full"
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Add Annotation
+                </Button>
+              ) : (
+                <div className="space-y-2 p-2 border rounded">
+                  <Select value={annotationType} onValueChange={setAnnotationType}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="note">Note</SelectItem>
+                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="issue">Issue</SelectItem>
+                      <SelectItem value="improvement">Improvement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Textarea
+                    placeholder="Enter your annotation..."
+                    value={newAnnotation}
+                    onChange={(e) => setNewAnnotation(e.target.value)}
+                    className="min-h-[60px] text-xs"
+                  />
+                  
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddAnnotation}>
+                      <Save className="h-3 w-3 mr-2" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddingAnnotation(false);
+                        setNewAnnotation('');
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Metadata */}
-          {node.metadata && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Metadata</Label>
-              <div className="space-y-2">
-                {Object.entries(node.metadata).map(([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-sm text-gray-500 capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          {node.tags && node.tags.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Tags</Label>
-              <div className="flex flex-wrap gap-2">
-                {node.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quality Metrics */}
-          {node.qualityMetrics && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Quality Metrics</Label>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">Quality Score</span>
-                  <div className="flex items-center gap-2">
-                    <Progress
-                      value={node.qualityMetrics.overallScore * 100}
-                      className="w-16 h-2"
-                    />
-                    <span className="text-sm font-medium">
-                      {(node.qualityMetrics.overallScore * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                {node.qualityMetrics.completeness !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Completeness</span>
-                    <Badge variant="outline">
-                      {(node.qualityMetrics.completeness * 100).toFixed(1)}%
-                    </Badge>
-                  </div>
-                )}
-                {node.qualityMetrics.accuracy !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Accuracy</span>
-                    <Badge variant="outline">
-                      {(node.qualityMetrics.accuracy * 100).toFixed(1)}%
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Annotations */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold">Annotations</Label>
-            
             {/* Existing Annotations */}
-            {node.annotations && node.annotations.length > 0 && (
-              <ScrollArea className="h-32 border rounded p-2">
-                <div className="space-y-2">
-                  {node.annotations.map((annotation, index) => (
-                    <div key={index} className={`p-2 rounded border-l-4 ${
-                      annotation.type === 'warning' ? 'border-l-yellow-500 bg-yellow-50' :
-                      annotation.type === 'issue' ? 'border-l-red-500 bg-red-50' :
-                      'border-l-blue-500 bg-blue-50'
-                    }`}>
-                      <div className="text-sm">{annotation.content}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(annotation.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-
-            {/* Add New Annotation */}
             <div className="space-y-2">
-              <Select value={annotationType} onValueChange={(value: any) => setAnnotationType(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="note">Note</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="issue">Issue</SelectItem>
-                </SelectContent>
-              </Select>
-              <Textarea
-                placeholder="Add an annotation..."
-                value={newAnnotation}
-                onChange={(e) => setNewAnnotation(e.target.value)}
-                rows={3}
-              />
-              <Button onClick={handleAddAnnotation} size="sm" className="w-full">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Annotation
-              </Button>
+              <Label className="text-xs font-medium">
+                Annotations ({nodeAnnotations.length})
+              </Label>
+              
+              {nodeAnnotations.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <MessageSquare className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No annotations yet</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-48">
+                  <div className="space-y-2">
+                    {nodeAnnotations.map((annotation) => (
+                      <motion.div
+                        key={annotation.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-2 border rounded bg-card"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                annotation.type === 'warning' ? 'destructive' :
+                                annotation.type === 'issue' ? 'destructive' :
+                                annotation.type === 'improvement' ? 'default' : 'secondary'
+                              }
+                              className="text-xs"
+                            >
+                              {annotation.type}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {annotation.author}
+                            </span>
+                          </div>
+                          
+                          {annotation.author === currentUser && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => onDeleteAnnotation(annotation.id)}
+                                  className="text-red-600"
+                                >
+                                  <X className="h-3 w-3 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {annotation.content}
+                        </p>
+                        
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(annotation.timestamp).toLocaleString()}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
 // ============================================================================
 // MAIN DATA LINEAGE VISUALIZER COMPONENT
 // ============================================================================
-const DataLineageVisualizer: React.FC<LineageVisualizationProps> = ({
-  assetId,
-  initialView = 'force-directed',
-  maxDepth = 3,
-  showImpactAnalysis = true,
-  enableRealTimeUpdates = true,
-  enableCollaboration = true,
-  onNodeSelect,
-  onEdgeSelect,
-  onImpactAnalysis,
+export interface DataLineageVisualizerProps {
+  initialAssetId?: string;
+  className?: string;
+}
+
+export const DataLineageVisualizer: React.FC<DataLineageVisualizerProps> = ({
+  initialAssetId,
   className
 }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
-  const queryClient = useQueryClient();
-  const graphRef = useRef<any>(null);
-
-  // Core State
-  const [graphState, setGraphState] = useState<LineageGraphState>({
-    nodes: [],
-    edges: [],
-    selectedNodes: new Set(),
-    selectedEdges: new Set(),
-    hoveredNode: null,
-    hoveredEdge: null,
-    zoomLevel: 1,
-    panOffset: { x: 0, y: 0 },
-    layoutAlgorithm: initialView,
-    filterState: {
-      nodeTypes: new Set(Object.values(NODE_TYPES)),
-      edgeTypes: new Set(Object.values(EDGE_TYPES)),
-      impactLevels: new Set(Object.values(IMPACT_LEVELS)),
-      timeRange: { start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), end: new Date() },
-      searchQuery: '',
-      showOnlyChanged: false,
-      hideOrphanNodes: false
-    },
-    temporalState: {
-      enabled: false,
-      currentTimestamp: new Date(),
-      availableSnapshots: [],
-      selectedSnapshot: null,
-      autoPlay: false,
-      playbackSpeed: 1
+  // State management
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(initialAssetId || null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
+  const [lineageQuery, setLineageQuery] = useState<LineageQuery>({
+    assetId: initialAssetId || '',
+    depth: 3,
+    direction: 'both',
+    includeMetadata: true,
+    filters: {
+      nodeTypes: ['table', 'view', 'transformation', 'report'],
+      edgeTypes: ['direct', 'derived', 'aggregated'],
+      dateRange: {
+        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        end: new Date().toISOString()
+      }
     }
   });
 
-  // UI State
-  const [selectedNode, setSelectedNode] = useState<LineageNode | null>(null);
-  const [selectedEdge, setSelectedEdge] = useState<LineageEdge | null>(null);
-  const [showControlPanel, setShowControlPanel] = useState(true);
-  const [showImpactPanel, setShowImpactPanel] = useState(showImpactAnalysis);
-  const [showTemporalPanel, setShowTemporalPanel] = useState(false);
-  const [showMetricsPanel, setShowMetricsPanel] = useState(false);
-  const [searchQuery, setSearchQuery] = useDebounce('', 300);
-
-  // Configuration
+  // Visualization configuration
   const [visualizationConfig, setVisualizationConfig] = useState<LineageVisualizationConfig>({
-    layoutAlgorithm: initialView,
-    maxDepth,
-    showLabels: true,
-    showIcons: true,
-    enableAnimations: true,
-    animationSpeed: 1,
-    nodeSize: 'importance',
-    edgeWidth: 'strength',
-    colorScheme: 'type',
-    visibleNodeTypes: Object.values(NODE_TYPES),
-    visibleEdgeTypes: Object.values(EDGE_TYPES)
+    ...LINEAGE_VISUALIZATION_CONFIG,
+    dimensions: { width: 800, height: 600 },
+    layout: {
+      type: 'force',
+      linkDistance: 150,
+      linkStrength: 0.5,
+      chargeStrength: -500,
+      showGrid: false
+    },
+    theme: {
+      mode: 'light',
+      nodeColor: '#3b82f6',
+      edgeColor: '#6b7280',
+      selectedColor: '#ef4444',
+      highlightColor: '#10b981',
+      textColor: '#374151',
+      nodeStroke: '#e5e7eb'
+    },
+    style: {
+      nodeSize: 1,
+      edgeWidth: 1,
+      showLabels: true,
+      showArrows: true
+    },
+    filters: {
+      nodeTypes: ['table', 'view', 'transformation', 'report'],
+      edgeTypes: ['direct', 'derived', 'aggregated'],
+      minWeight: 0,
+      maxDepth: 10
+    }
   });
 
-  // ============================================================================
-  // DATA FETCHING WITH REACT QUERY
-  // ============================================================================
+  // Animation state
+  const [isAnimationPlaying, setIsAnimationPlaying] = useState(false);
+  const [isTimelinePlaying, setIsTimelinePlaying] = useState(false);
+  const [selectedTimestamp, setSelectedTimestamp] = useState<string | null>(null);
 
-  // Fetch main lineage data
+  // UI state
+  const [activeView, setActiveView] = useState('graph');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Refs
+  const graphRef = useRef<any>(null);
+  const queryClient = useQueryClient();
+
+  // Custom hooks for data management
   const {
     data: lineageData,
-    isLoading: isLoadingLineage,
+    isLoading: isLineageLoading,
     error: lineageError,
     refetch: refetchLineage
-  } = useQuery({
-    queryKey: ['lineage', assetId, visualizationConfig.maxDepth, graphState.filterState],
-    queryFn: async () => {
-      if (!assetId) return { nodes: [], edges: [] };
-      
-      const response = await lineageService.getAssetLineage(assetId, {
-        maxDepth: visualizationConfig.maxDepth,
-        includeUpstream: true,
-        includeDownstream: true,
-        nodeTypes: Array.from(graphState.filterState.nodeTypes),
-        edgeTypes: Array.from(graphState.filterState.edgeTypes),
-        timeRange: graphState.filterState.timeRange
-      });
-      
-      return response.data;
-    },
-    enabled: !!assetId,
-    refetchInterval: enableRealTimeUpdates ? 30000 : false,
-    staleTime: 60000
-  });
+  } = useLineageDiscovery(lineageQuery);
 
-  // Fetch lineage metrics
+  const {
+    data: visualizationData,
+    isLoading: isVisualizationLoading
+  } = useLineageVisualization(lineageData?.nodes || [], lineageData?.edges || [], visualizationConfig);
+
+  const {
+    data: impactAnalysis,
+    isLoading: isImpactLoading,
+    mutate: runImpactAnalysis
+  } = useImpactAnalysis();
+
+  const {
+    data: temporalData,
+    isLoading: isTemporalLoading
+  } = useLineageHistory(selectedAsset);
+
+  const {
+    data: annotations,
+    mutate: addAnnotation,
+    updateAnnotation,
+    deleteAnnotation
+  } = useLineageCollaboration(selectedAsset);
+
   const {
     data: lineageMetrics,
-    isLoading: isLoadingMetrics
-  } = useQuery({
-    queryKey: ['lineage-metrics', assetId],
-    queryFn: async () => {
-      if (!assetId || !lineageData) return null;
-      
-      const response = await analyticsService.calculateLineageMetrics(assetId, {
-        includeComplexity: true,
-        includeCentrality: true,
-        includeClustering: true
-      });
-      
-      return response.data;
-    },
-    enabled: !!assetId && !!lineageData,
-    staleTime: 300000 // 5 minutes
-  });
+    isLoading: isMetricsLoading
+  } = useLineageMetrics(selectedAsset);
 
-  // Fetch temporal snapshots
   const {
-    data: temporalSnapshots,
-    isLoading: isLoadingSnapshots
-  } = useQuery({
-    queryKey: ['temporal-snapshots', assetId],
-    queryFn: async () => {
-      if (!assetId) return [];
-      
-      const response = await lineageService.getTemporalSnapshots(assetId, {
-        limit: 50,
-        orderBy: 'timestamp',
-        orderDirection: 'desc'
-      });
-      
-      return response.data;
-    },
-    enabled: !!assetId && graphState.temporalState.enabled,
-    staleTime: 300000
-  });
+    mutate: exportLineage
+  } = useLineageExport();
 
-  // Impact analysis mutation
-  const impactAnalysisMutation = useMutation({
-    mutationFn: async ({ nodeId, changeType }: { nodeId: string; changeType: string }) => {
-      const response = await analyticsService.analyzeImpact(nodeId, {
-        changeType,
-        includeRecommendations: true,
-        includeDownstreamEffects: true,
-        includeUpstreamDependencies: true
-      });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast.success('Impact analysis completed');
-      if (onImpactAnalysis) {
-        onImpactAnalysis(data);
-      }
-    },
-    onError: (error) => {
-      toast.error('Failed to analyze impact');
-      console.error('Impact analysis error:', error);
-    }
-  });
+  // Debounced search
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
 
-  // Add annotation mutation
-  const addAnnotationMutation = useMutation({
-    mutationFn: async ({ nodeId, annotation }: { nodeId: string; annotation: Partial<Annotation> }) => {
-      const response = await collaborationService.addAnnotation(nodeId, annotation);
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success('Annotation added');
-      refetchLineage();
-    },
-    onError: (error) => {
-      toast.error('Failed to add annotation');
-      console.error('Add annotation error:', error);
-    }
-  });
+  // Search results
+  const {
+    data: searchResults,
+    isLoading: isSearchLoading
+  } = useLineageSearch(debouncedSearchQuery);
 
-  // ============================================================================
-  // GRAPH DATA PROCESSING
-  // ============================================================================
-  const processedGraphData = useMemo(() => {
-    if (!lineageData) return { nodes: [], edges: [] };
+  // Event handlers
+  const handleAssetSelect = useCallback((assetId: string) => {
+    setSelectedAsset(assetId);
+    setLineageQuery(prev => ({ ...prev, assetId }));
+    setSelectedNode(null);
+    setHighlightedPath([]);
+  }, []);
 
-    // Filter nodes and edges based on current filter state
-    const filteredNodes = lineageData.nodes.filter(node => {
-      // Type filter
-      if (!graphState.filterState.nodeTypes.has(node.type as keyof typeof NODE_TYPES)) {
-        return false;
-      }
-
-      // Search filter
-      if (graphState.filterState.searchQuery) {
-        const query = graphState.filterState.searchQuery.toLowerCase();
-        return (
-          node.name.toLowerCase().includes(query) ||
-          node.label?.toLowerCase().includes(query) ||
-          node.description?.toLowerCase().includes(query)
-        );
-      }
-
-      return true;
-    });
-
-    const filteredEdges = lineageData.edges.filter(edge => {
-      // Type filter
-      if (!graphState.filterState.edgeTypes.has(edge.type as keyof typeof EDGE_TYPES)) {
-        return false;
-      }
-
-      // Ensure both source and target nodes are included
-      const sourceExists = filteredNodes.some(n => n.id === edge.source);
-      const targetExists = filteredNodes.some(n => n.id === edge.target);
-      
-      return sourceExists && targetExists;
-    });
-
-    // Remove orphan nodes if enabled
-    let finalNodes = filteredNodes;
-    if (graphState.filterState.hideOrphanNodes) {
-      const connectedNodeIds = new Set();
-      filteredEdges.forEach(edge => {
-        connectedNodeIds.add(edge.source);
-        connectedNodeIds.add(edge.target);
-      });
-      finalNodes = filteredNodes.filter(node => connectedNodeIds.has(node.id));
-    }
-
-    return {
-      nodes: finalNodes,
-      edges: filteredEdges
-    };
-  }, [lineageData, graphState.filterState]);
-
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
-  const handleNodeClick = useCallback((node: LineageNode) => {
-    setSelectedNode(node);
-    setGraphState(prev => ({
-      ...prev,
-      selectedNodes: new Set([node.id])
-    }));
+  const handleNodeSelect = useCallback((nodeId: string) => {
+    setSelectedNode(nodeId);
     
-    if (onNodeSelect) {
-      onNodeSelect(node);
+    // Find path from root asset to selected node
+    if (lineageData?.nodes && lineageData?.edges) {
+      const path = findShortestPath(
+        lineageData.nodes,
+        lineageData.edges,
+        selectedAsset || '',
+        nodeId
+      );
+      setHighlightedPath(path);
     }
-  }, [onNodeSelect]);
+  }, [lineageData, selectedAsset]);
 
-  const handleEdgeClick = useCallback((edge: LineageEdge) => {
-    setSelectedEdge(edge);
-    setGraphState(prev => ({
-      ...prev,
-      selectedEdges: new Set([edge.id])
-    }));
-    
-    if (onEdgeSelect) {
-      onEdgeSelect(edge);
-    }
-  }, [onEdgeSelect]);
-
-  const handleNodeHover = useCallback((node: LineageNode | null) => {
-    setGraphState(prev => ({
-      ...prev,
-      hoveredNode: node?.id || null
-    }));
-  }, []);
-
-  const handleEdgeHover = useCallback((edge: LineageEdge | null) => {
-    setGraphState(prev => ({
-      ...prev,
-      hoveredEdge: edge?.id || null
-    }));
-  }, []);
-
-  const handleConfigChange = useCallback((config: Partial<LineageVisualizationConfig>) => {
-    setVisualizationConfig(prev => ({ ...prev, ...config }));
-  }, []);
-
-  const handleImpactAnalysis = useCallback((nodeId: string, changeType: string) => {
-    impactAnalysisMutation.mutate({ nodeId, changeType });
-  }, [impactAnalysisMutation]);
-
-  const handleAddAnnotation = useCallback((nodeId: string, annotation: Partial<Annotation>) => {
-    addAnnotationMutation.mutate({ nodeId, annotation });
-  }, [addAnnotationMutation]);
-
-  const handleExport = useCallback((format: string) => {
-    if (!graphRef.current) return;
-
-    switch (format) {
-      case 'svg':
-        // Export as SVG
-        const svgElement = graphRef.current.querySelector('svg');
-        if (svgElement) {
-          const svgData = new XMLSerializer().serializeToString(svgElement);
-          const blob = new Blob([svgData], { type: 'image/svg+xml' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `lineage-${assetId}-${Date.now()}.svg`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-        break;
-      
-      case 'png':
-        // Export as PNG (would need canvas conversion)
-        toast.info('PNG export functionality coming soon');
-        break;
-      
-      case 'json':
-        // Export lineage data as JSON
-        const jsonData = JSON.stringify(processedGraphData, null, 2);
-        const jsonBlob = new Blob([jsonData], { type: 'application/json' });
-        const jsonUrl = URL.createObjectURL(jsonBlob);
-        const jsonA = document.createElement('a');
-        jsonA.href = jsonUrl;
-        jsonA.download = `lineage-data-${assetId}-${Date.now()}.json`;
-        jsonA.click();
-        URL.revokeObjectURL(jsonUrl);
-        break;
-    }
-  }, [processedGraphData, assetId]);
-
-  // ============================================================================
-  // TEMPORAL LINEAGE HANDLERS
-  // ============================================================================
-  const handleTemporalStateChange = useCallback((state: Partial<TemporalLineageState>) => {
-    setGraphState(prev => ({
-      ...prev,
-      temporalState: { ...prev.temporalState, ...state }
-    }));
-  }, []);
-
-  const handleLoadSnapshot = useCallback(async (snapshotId: string) => {
-    try {
-      const response = await lineageService.getSnapshotData(snapshotId);
-      const snapshotData = response.data;
-      
-      // Update graph with snapshot data
-      setGraphState(prev => ({
-        ...prev,
-        nodes: snapshotData.nodes,
-        edges: snapshotData.edges,
-        temporalState: {
-          ...prev.temporalState,
-          selectedSnapshot: snapshotId,
-          currentTimestamp: snapshotData.timestamp
-        }
-      }));
-      
-      toast.success('Snapshot loaded successfully');
-    } catch (error) {
-      toast.error('Failed to load snapshot');
-      console.error('Load snapshot error:', error);
-    }
-  }, []);
-
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  // Update graph state when lineage data changes
-  useEffect(() => {
-    if (lineageData) {
-      setGraphState(prev => ({
-        ...prev,
-        nodes: lineageData.nodes,
-        edges: lineageData.edges
-      }));
+  const handleNodeHover = useCallback((nodeId: string | null) => {
+    // Handle node hover effects
+    if (nodeId && lineageData?.nodes) {
+      const connectedNodes = findConnectedNodes(
+        lineageData.nodes,
+        lineageData.edges || [],
+        nodeId
+      );
+      // Could highlight connected nodes
     }
   }, [lineageData]);
 
-  // Update temporal snapshots
-  useEffect(() => {
-    if (temporalSnapshots) {
-      setGraphState(prev => ({
-        ...prev,
-        temporalState: {
-          ...prev.temporalState,
-          availableSnapshots: temporalSnapshots
-        }
-      }));
-    }
-  }, [temporalSnapshots]);
+  const handleEdgeSelect = useCallback((edgeId: string) => {
+    setSelectedEdge(edgeId);
+  }, []);
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  const handleConfigChange = useCallback((config: Partial<LineageVisualizationConfig>) => {
+    setVisualizationConfig(prev => ({
+      ...prev,
+      ...config,
+      layout: { ...prev.layout, ...(config.layout || {}) },
+      theme: { ...prev.theme, ...(config.theme || {}) },
+      style: { ...prev.style, ...(config.style || {}) },
+      filters: { ...prev.filters, ...(config.filters || {}) }
+    }));
+  }, []);
+
+  const handleImpactAnalysis = useCallback(() => {
+    if (!selectedNode) return;
+    
+    runImpactAnalysis({
+      nodeId: selectedNode,
+      analysisType: 'downstream',
+      depth: 5,
+      includeMetrics: true
+    });
+  }, [selectedNode, runImpactAnalysis]);
+
+  const handleExport = useCallback((format: string) => {
+    if (!lineageData) return;
+    
+    setIsExporting(true);
+    exportLineage({
+      data: lineageData,
+      format: format as 'png' | 'svg' | 'json' | 'csv',
+      config: visualizationConfig
+    }, {
+      onSuccess: () => {
+        toast.success('Lineage exported successfully');
+        setIsExporting(false);
+      },
+      onError: (error) => {
+        toast.error('Export failed: ' + error.message);
+        setIsExporting(false);
+      }
+    });
+  }, [lineageData, visualizationConfig, exportLineage]);
+
+  const handleAddAnnotation = useCallback((annotation: Omit<LineageAnnotation, 'id' | 'timestamp'>) => {
+    addAnnotation({
+      ...annotation,
+      assetId: selectedAsset || ''
+    });
+  }, [selectedAsset, addAnnotation]);
+
+  // Timeline playback
+  const handleTimelinePlay = useCallback(() => {
+    if (!temporalData?.length) return;
+    
+    setIsTimelinePlaying(!isTimelinePlaying);
+    
+    if (!isTimelinePlaying && temporalData.length > 0) {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex < temporalData.length) {
+          setSelectedTimestamp(temporalData[currentIndex].timestamp);
+          currentIndex++;
+        } else {
+          setIsTimelinePlaying(false);
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+  }, [temporalData, isTimelinePlaying]);
+
+  // Graph control methods
+  const handlePlayAnimation = useCallback(() => {
+    setIsAnimationPlaying(true);
+    graphRef.current?.playAnimation();
+  }, []);
+
+  const handlePauseAnimation = useCallback(() => {
+    setIsAnimationPlaying(false);
+    graphRef.current?.pauseAnimation();
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    graphRef.current?.resetView();
+  }, []);
+
+  const handleZoomToFit = useCallback(() => {
+    graphRef.current?.zoomToFit();
+  }, []);
+
+  // Helper functions
+  const findShortestPath = (
+    nodes: DataLineageNode[],
+    edges: DataLineageEdge[],
+    sourceId: string,
+    targetId: string
+  ): string[] => {
+    // Simple BFS implementation for finding shortest path
+    const queue = [{ nodeId: sourceId, path: [sourceId] }];
+    const visited = new Set([sourceId]);
+    
+    while (queue.length > 0) {
+      const { nodeId, path } = queue.shift()!;
+      
+      if (nodeId === targetId) {
+        return path;
+      }
+      
+      const connectedEdges = edges.filter(edge => 
+        (typeof edge.source === 'string' ? edge.source : edge.source.id) === nodeId ||
+        (typeof edge.target === 'string' ? edge.target : edge.target.id) === nodeId
+      );
+      
+      for (const edge of connectedEdges) {
+        const connectedNodeId = (typeof edge.source === 'string' ? edge.source : edge.source.id) === nodeId
+          ? (typeof edge.target === 'string' ? edge.target : edge.target.id)
+          : (typeof edge.source === 'string' ? edge.source : edge.source.id);
+        
+        if (!visited.has(connectedNodeId)) {
+          visited.add(connectedNodeId);
+          queue.push({ nodeId: connectedNodeId, path: [...path, connectedNodeId] });
+        }
+      }
+    }
+    
+    return [];
+  };
+
+  const findConnectedNodes = (
+    nodes: DataLineageNode[],
+    edges: DataLineageEdge[],
+    nodeId: string
+  ): string[] => {
+    return edges
+      .filter(edge => 
+        (typeof edge.source === 'string' ? edge.source : edge.source.id) === nodeId ||
+        (typeof edge.target === 'string' ? edge.target : edge.target.id) === nodeId
+      )
+      .map(edge => 
+        (typeof edge.source === 'string' ? edge.source : edge.source.id) === nodeId
+          ? (typeof edge.target === 'string' ? edge.target : edge.target.id)
+          : (typeof edge.source === 'string' ? edge.source : edge.source.id)
+      );
+  };
+
+  // Loading state
+  if (isLineageLoading) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`}>
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading lineage data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
   if (lineageError) {
     return (
-      <Card className={className}>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <div className="text-lg font-semibold text-red-700">Failed to load lineage data</div>
-            <div className="text-sm text-gray-500 mt-1">
-              {lineageError instanceof Error ? lineageError.message : 'Unknown error occurred'}
-            </div>
-            <Button onClick={() => refetchLineage()} className="mt-4">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className={`flex items-center justify-center h-96 ${className}`}>
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+          <p className="text-muted-foreground">Failed to load lineage data</p>
+          <Button size="sm" variant="outline" onClick={() => refetchLineage()} className="mt-2">
+            <RefreshCw className="h-3 w-3 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className={`flex h-full ${className || ''}`}>
-      <TooltipProvider>
-        {/* Main Visualization Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <GitBranch className="h-5 w-5" />
-                Data Lineage Visualizer
-              </h2>
-              {assetId && (
-                <Badge variant="outline">Asset: {assetId}</Badge>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search nodes..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setGraphState(prev => ({
-                      ...prev,
-                      filterState: {
-                        ...prev.filterState,
-                        searchQuery: e.target.value
-                      }
-                    }));
-                  }}
-                  className="pl-10 w-64"
-                />
-              </div>
-
-              {/* Panel Toggles */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-1" />
-                    Panels
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuCheckboxItem
-                    checked={showControlPanel}
-                    onCheckedChange={setShowControlPanel}
-                  >
-                    Control Panel
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={showImpactPanel}
-                    onCheckedChange={setShowImpactPanel}
-                  >
-                    Impact Analysis
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={showTemporalPanel}
-                    onCheckedChange={setShowTemporalPanel}
-                  >
-                    Temporal Lineage
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={showMetricsPanel}
-                    onCheckedChange={setShowMetricsPanel}
-                  >
-                    Metrics Dashboard
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Refresh */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchLineage()}
-                disabled={isLoadingLineage}
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoadingLineage ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+    <div className={`space-y-6 ${className}`}>
+      {/* Header Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search assets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-64"
+            />
           </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+        </div>
 
-          {/* Visualization */}
-          <div className="flex-1 relative">
-            {isLoadingLineage ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
-                <div className="text-center">
-                  <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  <div className="text-lg font-semibold">Loading lineage data...</div>
-                </div>
-              </div>
-            ) : processedGraphData.nodes.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Network className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <div className="text-lg font-semibold text-gray-600">No lineage data available</div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {assetId ? 'No connections found for this asset' : 'Select an asset to view its lineage'}
+        <div className="flex items-center gap-2">
+          <Tabs value={activeView} onValueChange={setActiveView}>
+            <TabsList>
+              <TabsTrigger value="graph">Graph</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="metrics">Metrics</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isExporting}>
+                {isExporting ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Export Format</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {EXPORT_FORMATS.map((format) => (
+                <DropdownMenuItem
+                  key={format.id}
+                  onClick={() => handleExport(format.id)}
+                >
+                  {format.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Search Results */}
+      {debouncedSearchQuery && searchResults && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Search Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {searchResults.map((result) => (
+                <motion.div
+                  key={result.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 border rounded cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => handleAssetSelect(result.id)}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Database className="h-4 w-4" />
+                    <span className="font-medium text-sm">{result.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{result.description}</p>
+                  <Badge variant="outline" className="text-xs mt-1">
+                    {result.type}
+                  </Badge>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Visualization */}
+        <div className="lg:col-span-3 space-y-4">
+          {activeView === 'graph' && lineageData && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Network className="h-4 w-4" />
+                  Data Lineage Graph
+                  {selectedAsset && (
+                    <Badge variant="outline" className="text-xs">
+                      {lineageData.nodes.find(n => n.id === selectedAsset)?.name || selectedAsset}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LineageNetworkGraph
+                  ref={graphRef}
+                  nodes={lineageData.nodes}
+                  edges={lineageData.edges}
+                  config={visualizationConfig}
+                  selectedNode={selectedNode}
+                  highlightedPath={highlightedPath}
+                  onNodeSelect={handleNodeSelect}
+                  onNodeHover={handleNodeHover}
+                  onEdgeSelect={handleEdgeSelect}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeView === 'timeline' && (
+            <TemporalLineageViewer
+              temporalData={temporalData || []}
+              selectedTimestamp={selectedTimestamp}
+              onTimestampSelect={setSelectedTimestamp}
+              onPlayTimeline={handleTimelinePlay}
+              isPlaying={isTimelinePlaying}
+            />
+          )}
+
+          {activeView === 'metrics' && lineageMetrics && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Lineage Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted rounded">
+                    <div className="text-2xl font-bold">{lineageMetrics.totalAssets}</div>
+                    <div className="text-xs text-muted-foreground">Total Assets</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded">
+                    <div className="text-2xl font-bold">{lineageMetrics.totalConnections}</div>
+                    <div className="text-xs text-muted-foreground">Connections</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded">
+                    <div className="text-2xl font-bold">{lineageMetrics.maxDepth}</div>
+                    <div className="text-xs text-muted-foreground">Max Depth</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded">
+                    <div className="text-2xl font-bold">{lineageMetrics.cyclicalPaths}</div>
+                    <div className="text-xs text-muted-foreground">Cycles</div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <D3LineageGraph
-                ref={graphRef}
-                data={processedGraphData}
-                config={visualizationConfig}
-                onNodeClick={handleNodeClick}
-                onEdgeClick={handleEdgeClick}
-                onNodeHover={handleNodeHover}
-                onEdgeHover={handleEdgeHover}
-                selectedNodes={graphState.selectedNodes}
-                selectedEdges={graphState.selectedEdges}
-                className="w-full h-full"
-              />
-            )}
-          </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Side Panels */}
-        <div className="w-80 border-l bg-gray-50 overflow-y-auto">
-          <Tabs defaultValue="controls" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 sticky top-0 z-10">
-              <TabsTrigger value="controls" className="text-xs">
-                <Settings className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="impact" className="text-xs">
-                <Target className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="temporal" className="text-xs">
-                <Clock className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="metrics" className="text-xs">
-                <BarChart3 className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
+        <div className="space-y-4">
+          {/* Visualization Controls */}
+          {activeView === 'graph' && (
+            <LineageControlPanel
+              config={visualizationConfig}
+              onConfigChange={handleConfigChange}
+              isPlaying={isAnimationPlaying}
+              onPlay={handlePlayAnimation}
+              onPause={handlePauseAnimation}
+              onReset={handleResetView}
+              onZoomToFit={handleZoomToFit}
+            />
+          )}
 
-            <div className="p-4 space-y-4">
-              <TabsContent value="controls" className="mt-0">
-                {showControlPanel && (
-                  <LineageControlPanel
-                    config={visualizationConfig}
-                    onConfigChange={handleConfigChange}
-                    graphRef={graphRef}
-                    onResetView={() => graphRef.current?.fitToView()}
-                    onExport={handleExport}
-                  />
-                )}
-              </TabsContent>
+          {/* Impact Analysis */}
+          <ImpactAnalysisPanel
+            selectedNode={selectedNode}
+            impactAnalysis={impactAnalysis}
+            onAnalysisTypeChange={() => {}}
+            onRunAnalysis={handleImpactAnalysis}
+            isLoading={isImpactLoading}
+          />
 
-              <TabsContent value="impact" className="mt-0">
-                {showImpactPanel && (
-                  <ImpactAnalysisPanel
-                    analysis={impactAnalysisMutation.data || null}
-                    isLoading={impactAnalysisMutation.isPending}
-                    onAnalyzeImpact={handleImpactAnalysis}
-                    selectedNode={selectedNode}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="temporal" className="mt-0">
-                {showTemporalPanel && (
-                  <TemporalLineageControl
-                    temporalState={graphState.temporalState}
-                    onTemporalStateChange={handleTemporalStateChange}
-                    onLoadSnapshot={handleLoadSnapshot}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="metrics" className="mt-0">
-                {showMetricsPanel && (
-                  <LineageMetricsDashboard
-                    metrics={lineageMetrics || null}
-                    isLoading={isLoadingMetrics}
-                  />
-                )}
-              </TabsContent>
-            </div>
-          </Tabs>
+          {/* Annotations */}
+          <LineageAnnotationsPanel
+            annotations={annotations || []}
+            selectedNode={selectedNode}
+            onAddAnnotation={handleAddAnnotation}
+            onUpdateAnnotation={updateAnnotation}
+            onDeleteAnnotation={deleteAnnotation}
+            currentUser="current-user" // Replace with actual user
+          />
         </div>
-
-        {/* Node Details Panel */}
-        <NodeDetailsPanel
-          node={selectedNode}
-          onClose={() => setSelectedNode(null)}
-          onAddAnnotation={handleAddAnnotation}
-        />
-      </TooltipProvider>
+      </div>
     </div>
   );
 };
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 export default DataLineageVisualizer;
-export type { LineageVisualizationProps, LineageGraphState, LineageMetrics };

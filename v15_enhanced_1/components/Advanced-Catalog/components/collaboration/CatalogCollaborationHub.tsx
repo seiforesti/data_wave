@@ -1,9 +1,9 @@
 // ============================================================================
-// CATALOG COLLABORATION HUB - TEAM COLLABORATION PLATFORM (2200+ LINES)
+// CATALOG COLLABORATION HUB - TEAM COLLABORATION COMPONENT (2200+ LINES)
 // ============================================================================
-// Enterprise Data Governance System - Advanced Collaboration Component
-// Real-time team collaboration, workflow management, annotation system,
-// knowledge sharing, decision tracking, and collaborative data governance
+// Enterprise Data Governance System - Advanced Team Collaboration Hub Component
+// Real-time collaboration, team messaging, shared annotations, workflow management,
+// asset discussions, approval workflows, and collaborative data governance
 // ============================================================================
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
@@ -12,1226 +12,250 @@ import { motion, AnimatePresence, useAnimation, useMotionValue, useSpring } from
 import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
-
-// ============================================================================
-// SHADCN/UI IMPORTS
-// ============================================================================
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuSub } from '@/components/ui/dropdown-menu';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Calendar } from '@/components/ui/calendar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { AlertCircle, Activity, BarChart3, Brain, ChevronDown, ChevronRight, Clock, Database, Download, Eye, Filter, GitBranch, Globe, Home, Info, Layers, LineChart, MapPin, Network, Play, Plus, RefreshCw, Save, Search, Settings, Share2, Target, Trash2, TrendingUp, Users, Zap, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, Move, Square, Circle, Triangle, Hexagon, Star, Bookmark, Bell, MessageCircle, Tag, Link, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, ChevronUp, MoreHorizontal, Edit, Copy, ExternalLink, FileText, Image, Video, Music, Archive, Code, Table, PieChart, TreePine, Workflow, AlertTriangle, CheckCircle, XCircle, MinusCircle, TrendingDown, Calendar as CalendarIcon, Clock3, Gauge, Shield, Award, Lightbulb, Bug, Wrench, Monitor, Server, HardDrive, Cpu, MemoryStick, CloudLightning, Wifi, WifiOff, CloudRain, Sun, Moon, Thermometer, Battery, Signal, MessageSquare, UserPlus, UserX, Paperclip, Send, Reply, Forward, ThumbsUp, ThumbsDown, Heart, Flag, Pin, Archive as ArchiveIcon, Unarchive, Mute, Volume2, BellRing, PhoneCall, VideoIcon, ScreenShare, Calendar as CalendarIconAlt, CheckSquare, Square as SquareIcon, Hash, AtSign, Smile, Emoji, GithubIcon, SlackIcon, TeamsIcon, EmailIcon, WhatsappIcon, Mention, Quote, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Image as ImageIcon, Link as LinkIcon, Code2, AlignLeft, AlignCenter, AlignRight, Indent, Outdent, History, Undo, Redo } from 'lucide-react';
+import { AlertTriangle, Search, Filter, Download, Upload, Share2, Settings, Info, Eye, EyeOff, Play, Pause, RotateCcw, ZoomIn, ZoomOut, Move, Maximize2, Minimize2, Clock, Users, MessageSquare, Bookmark, Star, Edit3, Save, X, Plus, Minus, RefreshCw, Target, TrendingUp, TrendingDown, AlertCircle, CheckCircle, XCircle, Activity, Database, FileText, Code, BarChart3, PieChart, LineChart, Layers, Network, TreePine, Workflow, Route, MapPin, Calendar as CalendarIcon, Timer, UserCheck, Flag, Hash, Link, Globe, Shield, Lock, Unlock, Key, Award, Zap, Sparkles, Brain, Cpu, HardDrive, Cloud, Server, Wifi, Radio, Bluetooth, Cable, Usb, Monitor, Smartphone, Tablet, Laptop, Watch, Gamepad2, Headphones, Camera, Mic, Speaker, Volume2, VolumeX, MoreHorizontal, MoreVertical, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronsUp, ChevronsDown, Home, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Send, Reply, ThumbsUp, ThumbsDown, AtSign, Bell, BellOff, Archive, Trash2, Forward, Copy, Pin, PinOff, GitBranch, GitCommit, GitMerge, Calendar as CalIcon, CheckSquare, Square, Heart, MessageCircle, Repeat, ExternalLink, Paperclip, Image, Video, Smile, Folder, FolderOpen, Tag, TagIcon } from 'lucide-react';
 
-// ============================================================================
-// TYPE IMPORTS AND INTERFACES
-// ============================================================================
-import {
-  // Core Types
-  DataAsset,
-  AssetMetadata,
-  AssetType,
-  DataSourceConfig,
-  
-  // Collaboration Types
+// Import types and services
+import type {
+  CollaborationWorkspace,
+  TeamMember,
+  Discussion,
   Comment,
   Annotation,
-  Discussion,
+  ApprovalWorkflow,
   WorkflowStep,
-  ApprovalRequest,
-  ReviewTask,
-  TeamMember,
-  UserRole,
-  Permission,
-  
-  // Notification Types
+  CollaborationEvent,
   Notification,
-  NotificationType,
-  NotificationSettings,
-  
-  // Activity Types
-  ActivityLog,
-  ActivityType,
-  UserActivity,
-  
-  // Workflow Types
-  Workflow,
-  WorkflowTemplate,
-  WorkflowStatus,
-  
-  // Tag and Organization
-  Tag,
-  Collection,
-  Bookmark,
-  
-  // Search and Discovery
-  SearchQuery,
-  SearchResult,
-  SearchFilters,
-  
-  // Advanced Features
-  AIRecommendation,
-  SmartInsight,
-  AutomatedDiscovery,
-  
-  // API Response Types
-  ApiResponse,
-  PaginatedResponse,
-  ErrorResponse
-} from '../../types/catalog-core.types';
+  AssetReview,
+  TeamRole,
+  Permission,
+  CollaborationMetrics,
+  ActivityFeed,
+  MentionUser,
+  FileAttachment,
+  CollaborationSettings,
+  ChatMessage,
+  ChannelInfo,
+  ThreadInfo
+} from '../../types/catalog-collaboration.types';
 
-// ============================================================================
-// SERVICE IMPORTS
-// ============================================================================
 import {
   enterpriseCatalogService,
   collaborationService,
-  searchService,
-  analyticsService,
-  aiService,
+  teamManagementService,
+  workflowService,
   notificationService,
-  workflowService
+  activityService,
+  discussionService,
+  annotationService,
+  approvalService,
+  messagingService
 } from '../../services/enterprise-catalog.service';
 
-// ============================================================================
-// CONSTANTS AND CONFIGURATIONS
-// ============================================================================
-const COLLABORATION_TYPES = {
-  COMMENT: 'comment',
-  ANNOTATION: 'annotation',
-  DISCUSSION: 'discussion',
-  REVIEW: 'review',
-  APPROVAL: 'approval',
-  MENTION: 'mention',
-  REACTION: 'reaction'
-} as const;
+import {
+  COLLABORATION_ROLES,
+  PERMISSIONS,
+  WORKFLOW_TYPES,
+  APPROVAL_STATUS,
+  NOTIFICATION_TYPES,
+  ACTIVITY_TYPES,
+  DISCUSSION_TYPES,
+  COMMENT_TYPES,
+  MENTION_TYPES,
+  COLLABORATION_SETTINGS
+} from '../../constants/catalog-collaboration.constants';
 
-const WORKFLOW_STATUSES = {
-  DRAFT: 'draft',
-  PENDING: 'pending',
-  IN_REVIEW: 'in_review',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
-} as const;
-
-const USER_ROLES = {
-  VIEWER: 'viewer',
-  CONTRIBUTOR: 'contributor',
-  REVIEWER: 'reviewer',
-  ADMIN: 'admin',
-  OWNER: 'owner'
-} as const;
-
-const NOTIFICATION_TYPES = {
-  COMMENT: 'comment',
-  MENTION: 'mention',
-  APPROVAL_REQUEST: 'approval_request',
-  WORKFLOW_UPDATE: 'workflow_update',
-  TASK_ASSIGNED: 'task_assigned',
-  DEADLINE_REMINDER: 'deadline_reminder',
-  ASSET_UPDATED: 'asset_updated'
-} as const;
-
-const ACTIVITY_TYPES = {
-  CREATED: 'created',
-  UPDATED: 'updated',
-  DELETED: 'deleted',
-  COMMENTED: 'commented',
-  REVIEWED: 'reviewed',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
-  TAGGED: 'tagged',
-  SHARED: 'shared'
-} as const;
-
-const REACTION_TYPES = {
-  LIKE: 'like',
-  DISLIKE: 'dislike',
-  HEART: 'heart',
-  THUMBS_UP: 'thumbs_up',
-  THUMBS_DOWN: 'thumbs_down',
-  LAUGH: 'laugh',
-  CONFUSED: 'confused',
-  EYES: 'eyes'
-} as const;
-
-const PRIORITY_LEVELS = {
-  LOW: 'low',
-  MEDIUM: 'medium',
-  HIGH: 'high',
-  CRITICAL: 'critical'
-} as const;
-
-// ============================================================================
-// EXTENDED INTERFACES FOR COLLABORATION HUB
-// ============================================================================
-interface CollaborationHubProps {
-  assetId?: string;
-  enableRealTimeUpdates?: boolean;
-  enableWorkflows?: boolean;
-  enableNotifications?: boolean;
-  enableMentions?: boolean;
-  enableReactions?: boolean;
-  defaultView?: 'discussions' | 'activities' | 'workflows' | 'team';
-  teamId?: string;
-  userRole?: keyof typeof USER_ROLES;
-  onCommentAdded?: (comment: Comment) => void;
-  onWorkflowUpdate?: (workflow: Workflow) => void;
-  onUserMention?: (mention: any) => void;
-  className?: string;
-}
-
-interface CollaborationState {
-  selectedAssets: Set<string>;
-  activeDiscussions: Discussion[];
-  currentWorkflows: Workflow[];
-  teamMembers: TeamMember[];
-  notifications: Notification[];
-  activities: ActivityLog[];
-  filterState: CollaborationFilterState;
-  viewMode: 'discussions' | 'activities' | 'workflows' | 'team' | 'notifications';
-  realTimeEnabled: boolean;
-}
-
-interface CollaborationFilterState {
-  searchQuery: string;
-  statusFilter: keyof typeof WORKFLOW_STATUSES | 'all';
-  typeFilter: keyof typeof COLLABORATION_TYPES | 'all';
-  userFilter: string | 'all';
-  priorityFilter: keyof typeof PRIORITY_LEVELS | 'all';
-  dateRange: { start: Date; end: Date };
-  showOnlyActive: boolean;
-  showOnlyMentions: boolean;
-}
-
-interface DiscussionThread {
-  id: string;
-  assetId: string;
-  title: string;
-  description: string;
-  author: TeamMember;
-  participants: TeamMember[];
-  comments: Comment[];
-  tags: Tag[];
-  priority: keyof typeof PRIORITY_LEVELS;
-  status: 'open' | 'closed' | 'resolved';
-  createdAt: Date;
-  updatedAt: Date;
-  reactions: Record<keyof typeof REACTION_TYPES, number>;
-  attachments: any[];
-}
-
-interface WorkflowInstance {
-  id: string;
-  templateId: string;
-  name: string;
-  description: string;
-  assetId: string;
-  assignee: TeamMember;
-  reviewer: TeamMember;
-  steps: WorkflowStep[];
-  currentStep: number;
-  status: keyof typeof WORKFLOW_STATUSES;
-  priority: keyof typeof PRIORITY_LEVELS;
-  dueDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  metadata: Record<string, any>;
-}
-
-interface TeamActivity {
-  id: string;
-  type: keyof typeof ACTIVITY_TYPES;
-  user: TeamMember;
-  assetId: string;
-  assetName: string;
-  description: string;
-  metadata: Record<string, any>;
-  timestamp: Date;
-}
-
-// ============================================================================
-// DISCUSSION THREAD COMPONENT
-// ============================================================================
-const DiscussionThreadPanel: React.FC<{
-  discussions: DiscussionThread[];
-  isLoading: boolean;
-  currentUser: TeamMember;
-  onCreateDiscussion: (discussion: Partial<DiscussionThread>) => void;
-  onAddComment: (discussionId: string, comment: Partial<Comment>) => void;
-  onReaction: (discussionId: string, commentId: string, reaction: keyof typeof REACTION_TYPES) => void;
-  onCloseDiscussion: (discussionId: string) => void;
-}> = ({ discussions, isLoading, currentUser, onCreateDiscussion, onAddComment, onReaction, onCloseDiscussion }) => {
-  const [selectedDiscussion, setSelectedDiscussion] = useState<DiscussionThread | null>(null);
-  const [newComment, setNewComment] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [searchQuery, setSearchQuery] = useDebounce('', 300);
-
-  const filteredDiscussions = useMemo(() => {
-    return discussions.filter(discussion => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          discussion.title.toLowerCase().includes(query) ||
-          discussion.description.toLowerCase().includes(query) ||
-          discussion.author.name.toLowerCase().includes(query)
-        );
-      }
-      return true;
-    });
-  }, [discussions, searchQuery]);
-
-  const CreateDiscussionForm = ({ onSave, onCancel }: {
-    onSave: (discussion: Partial<DiscussionThread>) => void;
-    onCancel: () => void;
-  }) => {
-    const [formData, setFormData] = useState({
-      title: '',
-      description: '',
-      priority: 'MEDIUM' as keyof typeof PRIORITY_LEVELS,
-      tags: [] as string[]
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      onSave({
-        ...formData,
-        author: currentUser,
-        participants: [currentUser],
-        status: 'open'
-      });
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Discussion Title</Label>
-          <Input
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            placeholder="Enter discussion title"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Describe the discussion topic"
-            rows={4}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
-          <Select
-            value={formData.priority}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as any }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(PRIORITY_LEVELS).map(([key, value]) => (
-                <SelectItem key={value} value={value}>
-                  {key}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">
-            Create Discussion
-          </Button>
-        </div>
-      </form>
-    );
-  };
-
-  const CommentComponent = ({ comment, onReactionClick }: {
-    comment: Comment;
-    onReactionClick: (reaction: keyof typeof REACTION_TYPES) => void;
-  }) => {
-    const [showReactions, setShowReactions] = useState(false);
-
-    return (
-      <div className="flex space-x-3 p-4 border rounded-lg">
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={comment.author.avatar} />
-          <AvatarFallback>{comment.author.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2">
-            <span className="font-medium text-sm">{comment.author.name}</span>
-            <span className="text-xs text-gray-500">
-              {new Date(comment.createdAt).toLocaleString()}
-            </span>
-            {comment.isEdited && (
-              <Badge variant="outline" className="text-xs">Edited</Badge>
-            )}
-          </div>
-          
-          <div className="mt-1 text-sm text-gray-700">
-            {comment.content}
-          </div>
-          
-          {comment.attachments && comment.attachments.length > 0 && (
-            <div className="mt-2 flex space-x-2">
-              {comment.attachments.map((attachment, index) => (
-                <div key={index} className="flex items-center space-x-1 text-xs text-blue-600">
-                  <Paperclip className="h-3 w-3" />
-                  <span>{attachment.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="mt-2 flex items-center space-x-4">
-            <Popover open={showReactions} onOpenChange={setShowReactions}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 px-2">
-                  <Smile className="h-3 w-3 mr-1" />
-                  React
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2">
-                <div className="flex space-x-1">
-                  {Object.values(REACTION_TYPES).map(reaction => (
-                    <Button
-                      key={reaction}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => {
-                        onReactionClick(reaction);
-                        setShowReactions(false);
-                      }}
-                    >
-                      {getReactionEmoji(reaction)}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Button variant="ghost" size="sm" className="h-6 px-2">
-              <Reply className="h-3 w-3 mr-1" />
-              Reply
-            </Button>
-            
-            {comment.reactions && Object.keys(comment.reactions).length > 0 && (
-              <div className="flex space-x-1">
-                {Object.entries(comment.reactions).map(([reaction, count]) => (
-                  count > 0 && (
-                    <Badge key={reaction} variant="outline" className="text-xs">
-                      {getReactionEmoji(reaction as keyof typeof REACTION_TYPES)} {count}
-                    </Badge>
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const getReactionEmoji = (reaction: keyof typeof REACTION_TYPES): string => {
-    const emojiMap = {
-      [REACTION_TYPES.LIKE]: '👍',
-      [REACTION_TYPES.DISLIKE]: '👎',
-      [REACTION_TYPES.HEART]: '❤️',
-      [REACTION_TYPES.THUMBS_UP]: '👍',
-      [REACTION_TYPES.THUMBS_DOWN]: '👎',
-      [REACTION_TYPES.LAUGH]: '😂',
-      [REACTION_TYPES.CONFUSED]: '😕',
-      [REACTION_TYPES.EYES]: '👀'
-    };
-    return emojiMap[reaction] || '👍';
-  };
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Discussions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Discussions ({filteredDiscussions.length})
-          </h2>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search discussions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-        </div>
-        
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Discussion
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Discussion</DialogTitle>
-              <DialogDescription>
-                Start a new discussion about data assets or governance topics
-              </DialogDescription>
-            </DialogHeader>
-            <CreateDiscussionForm
-              onSave={(discussion) => {
-                onCreateDiscussion(discussion);
-                setShowCreateDialog(false);
-              }}
-              onCancel={() => setShowCreateDialog(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Discussions List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Discussion List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Active Discussions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-96">
-              <div className="space-y-3">
-                {filteredDiscussions.map((discussion) => (
-                  <Card 
-                    key={discussion.id} 
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedDiscussion?.id === discussion.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedDiscussion(discussion)}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium text-sm line-clamp-2">{discussion.title}</h4>
-                        <div className="flex items-center space-x-1">
-                          <Badge variant={
-                            discussion.priority === 'critical' ? 'destructive' :
-                            discussion.priority === 'high' ? 'default' :
-                            'secondary'
-                          } className="text-xs">
-                            {discussion.priority}
-                          </Badge>
-                          <Badge variant={
-                            discussion.status === 'open' ? 'default' :
-                            discussion.status === 'resolved' ? 'secondary' :
-                            'outline'
-                          } className="text-xs">
-                            {discussion.status}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <p className="text-xs text-gray-600 line-clamp-2">{discussion.description}</p>
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-4 w-4">
-                            <AvatarImage src={discussion.author.avatar} />
-                            <AvatarFallback>{discussion.author.name.slice(0, 1)}</AvatarFallback>
-                          </Avatar>
-                          <span>{discussion.author.name}</span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <span className="flex items-center">
-                            <MessageCircle className="h-3 w-3 mr-1" />
-                            {discussion.comments.length}
-                          </span>
-                          <span className="flex items-center">
-                            <Users className="h-3 w-3 mr-1" />
-                            {discussion.participants.length}
-                          </span>
-                          <span>{new Date(discussion.updatedAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-                
-                {filteredDiscussions.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <div className="font-medium">No discussions found</div>
-                    <div className="text-sm">Start a new discussion to get the conversation going</div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Discussion Detail */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {selectedDiscussion ? selectedDiscussion.title : 'Select a Discussion'}
-            </CardTitle>
-            {selectedDiscussion && (
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline">{selectedDiscussion.status}</Badge>
-                <Badge variant="outline">{selectedDiscussion.priority}</Badge>
-                <span className="text-sm text-gray-500">
-                  Created {new Date(selectedDiscussion.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {selectedDiscussion ? (
-              <div className="space-y-4">
-                {/* Description */}
-                <div className="p-3 bg-gray-50 rounded">
-                  <p className="text-sm">{selectedDiscussion.description}</p>
-                </div>
-
-                {/* Participants */}
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">Participants:</span>
-                  <div className="flex -space-x-2">
-                    {selectedDiscussion.participants.map((participant) => (
-                      <Avatar key={participant.id} className="h-6 w-6 border-2 border-white">
-                        <AvatarImage src={participant.avatar} />
-                        <AvatarFallback className="text-xs">
-                          {participant.name.slice(0, 1).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Comments */}
-                <ScrollArea className="h-64">
-                  <div className="space-y-3">
-                    {selectedDiscussion.comments.map((comment) => (
-                      <CommentComponent
-                        key={comment.id}
-                        comment={comment}
-                        onReactionClick={(reaction) => onReaction(selectedDiscussion.id, comment.id, reaction)}
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
-
-                {/* Add Comment */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="flex justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm">
-                        <Paperclip className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <AtSign className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        if (newComment.trim()) {
-                          onAddComment(selectedDiscussion.id, {
-                            content: newComment,
-                            author: currentUser
-                          });
-                          setNewComment('');
-                        }
-                      }}
-                      disabled={!newComment.trim()}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <div className="font-medium">Select a discussion to view details</div>
-                <div className="text-sm">Choose from the list to see comments and participate</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// WORKFLOW MANAGEMENT COMPONENT
-// ============================================================================
-const WorkflowManagementPanel: React.FC<{
-  workflows: WorkflowInstance[];
-  isLoading: boolean;
-  currentUser: TeamMember;
-  onCreateWorkflow: (workflow: Partial<WorkflowInstance>) => void;
-  onUpdateWorkflow: (workflowId: string, updates: Partial<WorkflowInstance>) => void;
-  onApproveStep: (workflowId: string, stepId: string) => void;
-  onRejectStep: (workflowId: string, stepId: string, reason: string) => void;
-}> = ({ workflows, isLoading, currentUser, onCreateWorkflow, onUpdateWorkflow, onApproveStep, onRejectStep }) => {
-  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowInstance | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<keyof typeof WORKFLOW_STATUSES | 'all'>('all');
-
-  const filteredWorkflows = useMemo(() => {
-    return workflows.filter(workflow => {
-      if (statusFilter !== 'all' && workflow.status !== statusFilter) {
-        return false;
-      }
-      return true;
-    });
-  }, [workflows, statusFilter]);
-
-  const getStatusColor = (status: keyof typeof WORKFLOW_STATUSES) => {
-    switch (status) {
-      case 'COMPLETED': return 'text-green-600 bg-green-100';
-      case 'APPROVED': return 'text-green-600 bg-green-100';
-      case 'REJECTED': return 'text-red-600 bg-red-100';
-      case 'IN_REVIEW': return 'text-blue-600 bg-blue-100';
-      case 'PENDING': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const WorkflowStepComponent = ({ step, isActive, isCompleted, onApprove, onReject }: {
-    step: WorkflowStep;
-    isActive: boolean;
-    isCompleted: boolean;
-    onApprove: () => void;
-    onReject: (reason: string) => void;
-  }) => {
-    const [rejectReason, setRejectReason] = useState('');
-    const [showRejectDialog, setShowRejectDialog] = useState(false);
-
-    return (
-      <div className={`p-4 border rounded-lg ${
-        isActive ? 'border-blue-300 bg-blue-50' :
-        isCompleted ? 'border-green-300 bg-green-50' :
-        'border-gray-200'
-      }`}>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center space-x-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                isCompleted ? 'bg-green-500 text-white' :
-                isActive ? 'bg-blue-500 text-white' :
-                'bg-gray-300'
-              }`}>
-                {isCompleted ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  <span className="text-sm font-bold">{step.order}</span>
-                )}
-              </div>
-              <h4 className="font-medium">{step.name}</h4>
-              <Badge variant="outline" className="text-xs">
-                {step.type}
-              </Badge>
-            </div>
-            
-            <p className="text-sm text-gray-600 mt-2">{step.description}</p>
-            
-            <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500">
-              <span>Assignee: {step.assignee?.name || 'Unassigned'}</span>
-              {step.dueDate && (
-                <span>Due: {new Date(step.dueDate).toLocaleDateString()}</span>
-              )}
-              {step.estimatedHours && (
-                <span>Est: {step.estimatedHours}h</span>
-              )}
-            </div>
-          </div>
-          
-          {isActive && step.requiresApproval && (
-            <div className="flex items-center space-x-2">
-              <Button size="sm" onClick={onApprove}>
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Approve
-              </Button>
-              
-              <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline">
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Reject
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Reject Step</DialogTitle>
-                    <DialogDescription>
-                      Please provide a reason for rejecting this step
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Reason for rejection..."
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      rows={4}
-                    />
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowRejectDialog(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          onReject(rejectReason);
-                          setShowRejectDialog(false);
-                          setRejectReason('');
-                        }}
-                        disabled={!rejectReason.trim()}
-                      >
-                        Reject Step
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            Workflows
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            Workflows ({filteredWorkflows.length})
-          </h2>
-          
-          <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {Object.entries(WORKFLOW_STATUSES).map(([key, value]) => (
-                <SelectItem key={value} value={value}>
-                  {key.replace('_', ' ')}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Workflow
-        </Button>
-      </div>
-
-      {/* Workflows Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Workflow List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Active Workflows</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-96">
-              <div className="space-y-3">
-                {filteredWorkflows.map((workflow) => (
-                  <Card 
-                    key={workflow.id} 
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedWorkflow?.id === workflow.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedWorkflow(workflow)}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium text-sm">{workflow.name}</h4>
-                          <p className="text-xs text-gray-600 mt-1">{workflow.description}</p>
-                        </div>
-                        <Badge className={`text-xs ${getStatusColor(workflow.status)}`}>
-                          {workflow.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      
-                      {/* Progress */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span>Progress</span>
-                          <span>{workflow.currentStep}/{workflow.steps.length}</span>
-                        </div>
-                        <Progress 
-                          value={(workflow.currentStep / workflow.steps.length) * 100} 
-                          className="h-2"
-                        />
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-4 w-4">
-                            <AvatarImage src={workflow.assignee.avatar} />
-                            <AvatarFallback>{workflow.assignee.name.slice(0, 1)}</AvatarFallback>
-                          </Avatar>
-                          <span>{workflow.assignee.name}</span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <Badge variant={
-                            workflow.priority === 'critical' ? 'destructive' :
-                            workflow.priority === 'high' ? 'default' :
-                            'secondary'
-                          } className="text-xs">
-                            {workflow.priority}
-                          </Badge>
-                          {workflow.dueDate && (
-                            <span>Due: {new Date(workflow.dueDate).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-                
-                {filteredWorkflows.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Workflow className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <div className="font-medium">No workflows found</div>
-                    <div className="text-sm">Create a new workflow to get started</div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Workflow Detail */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {selectedWorkflow ? selectedWorkflow.name : 'Select a Workflow'}
-            </CardTitle>
-            {selectedWorkflow && (
-              <div className="flex items-center space-x-2">
-                <Badge className={getStatusColor(selectedWorkflow.status)}>
-                  {selectedWorkflow.status.replace('_', ' ')}
-                </Badge>
-                <Badge variant="outline">{selectedWorkflow.priority}</Badge>
-                {selectedWorkflow.dueDate && (
-                  <span className="text-sm text-gray-500">
-                    Due: {new Date(selectedWorkflow.dueDate).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {selectedWorkflow ? (
-              <div className="space-y-4">
-                {/* Description */}
-                <div className="p-3 bg-gray-50 rounded">
-                  <p className="text-sm">{selectedWorkflow.description}</p>
-                </div>
-
-                {/* Workflow Steps */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Workflow Steps</h4>
-                  <ScrollArea className="h-64">
-                    <div className="space-y-3">
-                      {selectedWorkflow.steps.map((step, index) => (
-                        <WorkflowStepComponent
-                          key={step.id}
-                          step={step}
-                          isActive={index === selectedWorkflow.currentStep}
-                          isCompleted={index < selectedWorkflow.currentStep}
-                          onApprove={() => onApproveStep(selectedWorkflow.id, step.id)}
-                          onReject={(reason) => onRejectStep(selectedWorkflow.id, step.id, reason)}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-
-                {/* Team */}
-                <div className="space-y-2">
-                  <h4 className="font-medium">Team</h4>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">Assignee:</span>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={selectedWorkflow.assignee.avatar} />
-                        <AvatarFallback>{selectedWorkflow.assignee.name.slice(0, 1)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{selectedWorkflow.assignee.name}</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">Reviewer:</span>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={selectedWorkflow.reviewer.avatar} />
-                        <AvatarFallback>{selectedWorkflow.reviewer.name.slice(0, 1)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{selectedWorkflow.reviewer.name}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Workflow className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <div className="font-medium">Select a workflow to view details</div>
-                <div className="text-sm">Choose from the list to see steps and progress</div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
+import {
+  useCollaboration,
+  useTeamMembers,
+  useDiscussions,
+  useAnnotations,
+  useWorkflows,
+  useNotifications,
+  useActivityFeed,
+  useMessaging,
+  useAssetReviews,
+  useCollaborationMetrics,
+  useApprovals,
+  usePermissions
+} from '../../hooks/useAdvancedCollaboration';
 
 // ============================================================================
 // TEAM ACTIVITY FEED COMPONENT
 // ============================================================================
-const TeamActivityFeed: React.FC<{
-  activities: TeamActivity[];
+interface TeamActivityFeedProps {
+  activities: ActivityFeed[];
   isLoading: boolean;
-  currentUser: TeamMember;
-}> = ({ activities, isLoading, currentUser }) => {
-  const [timeFilter, setTimeFilter] = useState('all');
-  const [userFilter, setUserFilter] = useState('all');
+  onLoadMore: () => void;
+  hasMore: boolean;
+  className?: string;
+}
+
+const TeamActivityFeed: React.FC<TeamActivityFeedProps> = ({
+  activities,
+  isLoading,
+  onLoadMore,
+  hasMore,
+  className
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   const filteredActivities = useMemo(() => {
-    return activities.filter(activity => {
-      if (userFilter !== 'all' && activity.user.id !== userFilter) {
-        return false;
-      }
+    if (selectedFilter === 'all') return activities;
+    return activities.filter(activity => activity.type === selectedFilter);
+  }, [activities, selectedFilter]);
 
-      if (timeFilter !== 'all') {
-        const now = new Date();
-        const activityDate = new Date(activity.timestamp);
-        const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);
-
-        switch (timeFilter) {
-          case '1h': return hoursDiff <= 1;
-          case '24h': return hoursDiff <= 24;
-          case '7d': return hoursDiff <= 168;
-          default: return true;
-        }
-      }
-
-      return true;
-    });
-  }, [activities, timeFilter, userFilter]);
-
-  const getActivityIcon = (type: keyof typeof ACTIVITY_TYPES) => {
+  const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'CREATED': return <Plus className="h-4 w-4 text-green-600" />;
-      case 'UPDATED': return <Edit className="h-4 w-4 text-blue-600" />;
-      case 'DELETED': return <Trash2 className="h-4 w-4 text-red-600" />;
-      case 'COMMENTED': return <MessageCircle className="h-4 w-4 text-purple-600" />;
-      case 'REVIEWED': return <Eye className="h-4 w-4 text-orange-600" />;
-      case 'APPROVED': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'REJECTED': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'TAGGED': return <Tag className="h-4 w-4 text-yellow-600" />;
-      case 'SHARED': return <Share2 className="h-4 w-4 text-indigo-600" />;
-      default: return <Activity className="h-4 w-4 text-gray-600" />;
+      case 'asset_created': return Plus;
+      case 'asset_updated': return Edit3;
+      case 'comment_added': return MessageCircle;
+      case 'annotation_added': return MessageSquare;
+      case 'approval_requested': return CheckCircle;
+      case 'workflow_started': return Workflow;
+      case 'team_member_added': return UserCheck;
+      case 'discussion_started': return MessageSquare;
+      default: return Activity;
     }
   };
 
-  const getRelativeTime = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'asset_created': return 'text-green-600';
+      case 'asset_updated': return 'text-blue-600';
+      case 'comment_added': return 'text-purple-600';
+      case 'annotation_added': return 'text-orange-600';
+      case 'approval_requested': return 'text-yellow-600';
+      case 'workflow_started': return 'text-indigo-600';
+      case 'team_member_added': return 'text-cyan-600';
+      case 'discussion_started': return 'text-pink-600';
+      default: return 'text-gray-600';
+    }
   };
 
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Activity Feed
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const formatRelativeTime = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diff = now.getTime() - time.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return time.toLocaleDateString();
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <Card className={className}>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Team Activity
-          </CardTitle>
-          
-          <div className="flex items-center space-x-2">
-            <Select value={timeFilter} onValueChange={setTimeFilter}>
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="1h">1h</SelectItem>
-                <SelectItem value="24h">24h</SelectItem>
-                <SelectItem value="7d">7d</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                {/* Add user options here */}
-              </SelectContent>
-            </Select>
-          </div>
+          <CardTitle className="text-sm font-medium">Team Activity</CardTitle>
+          <Select value={selectedFilter} onValueChange={setSelectedFilter}>
+            <SelectTrigger className="w-32 h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Activity</SelectItem>
+              {ACTIVITY_TYPES.map(type => (
+                <SelectItem key={type.id} value={type.id}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-96">
+        <ScrollArea className="h-80" ref={containerRef}>
           <div className="space-y-3">
-            {filteredActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex-shrink-0 mt-1">
-                  {getActivityIcon(activity.type)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={activity.user.avatar} />
-                      <AvatarFallback className="text-xs">
-                        {activity.user.name.slice(0, 1).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-sm">{activity.user.name}</span>
-                    <span className="text-xs text-gray-500">{getRelativeTime(activity.timestamp)}</span>
+            {filteredActivities.map((activity, index) => {
+              const ActivityIcon = getActivityIcon(activity.type);
+              
+              return (
+                <motion.div
+                  key={activity.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                >
+                  <div className={`p-1.5 rounded-full bg-background border ${getActivityColor(activity.type)}`}>
+                    <ActivityIcon className="h-3 w-3" />
                   </div>
                   
-                  <p className="text-sm text-gray-700 mt-1">
-                    {activity.description}
-                  </p>
-                  
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      {activity.assetName}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {activity.type.replace('_', ' ').toLowerCase()}
-                    </Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={activity.user.avatar} />
+                        <AvatarFallback className="text-xs">
+                          {activity.user.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-sm">{activity.user.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelativeTime(activity.timestamp)}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {activity.description}
+                    </p>
+                    
+                    {activity.assetName && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Database className="h-3 w-3" />
+                        <span>{activity.assetName}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+                  
+                  {activity.metadata?.hasAttachment && (
+                    <Paperclip className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </motion.div>
+              );
+            })}
             
-            {filteredActivities.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <div className="font-medium">No recent activity</div>
-                <div className="text-sm">Team activities will appear here</div>
+            {hasMore && (
+              <div className="text-center py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <RefreshCw className="h-3 w-3 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-3 w-3 mr-2" />
+                  )}
+                  Load More
+                </Button>
               </div>
             )}
           </div>
@@ -1242,176 +266,1092 @@ const TeamActivityFeed: React.FC<{
 };
 
 // ============================================================================
-// NOTIFICATION CENTER COMPONENT
+// REAL-TIME CHAT COMPONENT
 // ============================================================================
-const NotificationCenter: React.FC<{
-  notifications: Notification[];
+interface RealTimeChatProps {
+  channelId: string;
+  messages: ChatMessage[];
+  currentUser: TeamMember;
+  onSendMessage: (content: string, attachments?: FileAttachment[]) => void;
+  onReplyToMessage: (messageId: string, content: string) => void;
   isLoading: boolean;
-  onMarkAsRead: (notificationId: string) => void;
-  onMarkAllAsRead: () => void;
-  onDeleteNotification: (notificationId: string) => void;
-}> = ({ notifications, isLoading, onMarkAsRead, onMarkAllAsRead, onDeleteNotification }) => {
-  const [typeFilter, setTypeFilter] = useState<keyof typeof NOTIFICATION_TYPES | 'all'>('all');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  className?: string;
+}
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter(notification => {
-      if (typeFilter !== 'all' && notification.type !== typeFilter) {
-        return false;
-      }
-      
-      if (showUnreadOnly && notification.isRead) {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [notifications, typeFilter, showUnreadOnly]);
+const RealTimeChat: React.FC<RealTimeChatProps> = ({
+  channelId,
+  messages,
+  currentUser,
+  onSendMessage,
+  onReplyToMessage,
+  isLoading,
+  className
+}) => {
+  const [newMessage, setNewMessage] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  const getNotificationIcon = (type: keyof typeof NOTIFICATION_TYPES) => {
-    switch (type) {
-      case 'COMMENT': return <MessageCircle className="h-4 w-4 text-blue-600" />;
-      case 'MENTION': return <AtSign className="h-4 w-4 text-purple-600" />;
-      case 'APPROVAL_REQUEST': return <CheckSquare className="h-4 w-4 text-orange-600" />;
-      case 'WORKFLOW_UPDATE': return <Workflow className="h-4 w-4 text-indigo-600" />;
-      case 'TASK_ASSIGNED': return <UserPlus className="h-4 w-4 text-green-600" />;
-      case 'DEADLINE_REMINDER': return <Clock className="h-4 w-4 text-red-600" />;
-      case 'ASSET_UPDATED': return <Database className="h-4 w-4 text-gray-600" />;
-      default: return <Bell className="h-4 w-4 text-gray-600" />;
+  const handleSendMessage = () => {
+    if (!newMessage.trim()) return;
+
+    if (replyingTo) {
+      onReplyToMessage(replyingTo, newMessage);
+      setReplyingTo(null);
+    } else {
+      onSendMessage(newMessage);
+    }
+    
+    setNewMessage('');
+    textareaRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-8">
-          <RefreshCw className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const formatMessageTime = (timestamp: string) => {
+    const time = new Date(timestamp);
+    const now = new Date();
+    const isToday = time.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return time.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const groupedMessages = useMemo(() => {
+    const groups: ChatMessage[][] = [];
+    let currentGroup: ChatMessage[] = [];
+    
+    messages.forEach((message, index) => {
+      const prevMessage = messages[index - 1];
+      const timeDiff = prevMessage 
+        ? new Date(message.timestamp).getTime() - new Date(prevMessage.timestamp).getTime()
+        : 0;
+      
+      if (!prevMessage || 
+          prevMessage.user.id !== message.user.id || 
+          timeDiff > 5 * 60 * 1000) { // 5 minutes
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+        }
+        currentGroup = [message];
+      } else {
+        currentGroup.push(message);
+      }
+    });
+    
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+    
+    return groups;
+  }, [messages]);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {unreadCount}
-              </Badge>
-            )}
-          </CardTitle>
-          
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={showUnreadOnly}
-                onCheckedChange={setShowUnreadOnly}
-              />
-              <Label className="text-sm">Unread only</Label>
-            </div>
-            
-            <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {Object.entries(NOTIFICATION_TYPES).map(([key, value]) => (
-                  <SelectItem key={value} value={value}>
-                    {key.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" size="sm" onClick={onMarkAllAsRead}>
-              Mark All Read
-            </Button>
-          </div>
-        </div>
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <MessageCircle className="h-4 w-4" />
+          Team Chat
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-96">
-          <div className="space-y-2">
-            {filteredNotifications.map((notification) => (
-              <div 
-                key={notification.id} 
-                className={`p-3 rounded-lg border transition-colors ${
-                  notification.isRead 
-                    ? 'bg-gray-50 border-gray-200' 
-                    : 'bg-blue-50 border-blue-200'
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.type)}
-                  </div>
+      <CardContent className="p-0">
+        {/* Messages Area */}
+        <ScrollArea className="h-80 px-4">
+          <div className="space-y-4 py-4">
+            {groupedMessages.map((group, groupIndex) => (
+              <div key={groupIndex} className="space-y-1">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={group[0].user.avatar} />
+                    <AvatarFallback className="text-sm">
+                      {group[0].user.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className={`text-sm ${notification.isRead ? 'text-gray-900' : 'font-medium'}`}>
-                          {notification.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Badge variant="outline" className="text-xs">
-                            {notification.type.replace('_', ' ')}
-                          </Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!notification.isRead && (
-                            <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark as read
-                            </DropdownMenuItem>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-sm">{group[0].user.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatMessageTime(group[0].timestamp)}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {group.map((message) => (
+                        <div
+                          key={message.id}
+                          className="group relative p-2 rounded bg-muted/50 hover:bg-muted transition-colors"
+                        >
+                          {message.replyTo && (
+                            <div className="text-xs text-muted-foreground mb-1 pl-2 border-l-2 border-muted">
+                              Replying to: {message.replyTo.content.substring(0, 50)}...
+                            </div>
                           )}
-                          <DropdownMenuItem onClick={() => onDeleteNotification(notification.id)}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          
+                          <p className="text-sm">{message.content}</p>
+                          
+                          {message.attachments && message.attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {message.attachments.map((attachment, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  <Paperclip className="h-3 w-3 mr-1" />
+                                  {attachment.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setReplyingTo(message.id)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Reply className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                              >
+                                <ThumbsUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+        
+        {/* Message Input */}
+        <div className="p-4 border-t">
+          {replyingTo && (
+            <div className="flex items-center justify-between p-2 mb-2 bg-muted rounded text-sm">
+              <span>Replying to message</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setReplyingTo(null)}
+                className="h-5 w-5 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+          
+          <div className="flex items-end gap-2">
+            <div className="flex-1 relative">
+              <Textarea
+                ref={textareaRef}
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="min-h-[40px] max-h-32 resize-none pr-20"
+                rows={1}
+              />
+              
+              <div className="absolute right-2 bottom-2 flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                >
+                  <Paperclip className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setShowEmoji(!showEmoji)}
+                >
+                  <Smile className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
             
-            {filteredNotifications.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <div className="font-medium">No notifications</div>
-                <div className="text-sm">You're all caught up!</div>
+            <Button
+              size="sm"
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || isLoading}
+            >
+              <Send className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ============================================================================
+// DISCUSSION THREADS COMPONENT
+// ============================================================================
+interface DiscussionThreadsProps {
+  discussions: Discussion[];
+  selectedDiscussion: string | null;
+  onSelectDiscussion: (discussionId: string) => void;
+  onCreateDiscussion: (discussion: Omit<Discussion, 'id' | 'createdAt'>) => void;
+  onAddComment: (discussionId: string, comment: string) => void;
+  isLoading: boolean;
+  className?: string;
+}
+
+const DiscussionThreads: React.FC<DiscussionThreadsProps> = ({
+  discussions,
+  selectedDiscussion,
+  onSelectDiscussion,
+  onCreateDiscussion,
+  onAddComment,
+  isLoading,
+  className
+}) => {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newDiscussion, setNewDiscussion] = useState({
+    title: '',
+    description: '',
+    type: 'general',
+    assetId: '',
+    tags: [] as string[]
+  });
+  const [newComment, setNewComment] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredDiscussions = useMemo(() => {
+    if (!searchQuery) return discussions;
+    return discussions.filter(discussion =>
+      discussion.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      discussion.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [discussions, searchQuery]);
+
+  const selectedDiscussionData = useMemo(() => {
+    return discussions.find(d => d.id === selectedDiscussion);
+  }, [discussions, selectedDiscussion]);
+
+  const handleCreateDiscussion = () => {
+    if (!newDiscussion.title.trim()) return;
+    
+    onCreateDiscussion({
+      title: newDiscussion.title,
+      description: newDiscussion.description,
+      type: newDiscussion.type,
+      assetId: newDiscussion.assetId,
+      tags: newDiscussion.tags,
+      status: 'active',
+      priority: 'medium'
+    });
+    
+    setNewDiscussion({
+      title: '',
+      description: '',
+      type: 'general',
+      assetId: '',
+      tags: []
+    });
+    setShowCreateDialog(false);
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !selectedDiscussion) return;
+    
+    onAddComment(selectedDiscussion, newComment);
+    setNewComment('');
+  };
+
+  const getDiscussionTypeIcon = (type: string) => {
+    switch (type) {
+      case 'question': return MessageCircle;
+      case 'issue': return AlertTriangle;
+      case 'proposal': return Lightbulb;
+      case 'review': return Eye;
+      default: return MessageSquare;
+    }
+  };
+
+  const getDiscussionTypeColor = (type: string) => {
+    switch (type) {
+      case 'question': return 'text-blue-600';
+      case 'issue': return 'text-red-600';
+      case 'proposal': return 'text-green-600';
+      case 'review': return 'text-purple-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'destructive';
+      case 'high': return 'default';
+      case 'medium': return 'secondary';
+      case 'low': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  return (
+    <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 ${className}`}>
+      {/* Discussions List */}
+      <Card className="lg:col-span-1">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">Discussions</CardTitle>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-3 w-3 mr-2" />
+              New
+            </Button>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input
+              placeholder="Search discussions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-8"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-96">
+            <div className="space-y-1 p-4">
+              {filteredDiscussions.map((discussion) => {
+                const TypeIcon = getDiscussionTypeIcon(discussion.type);
+                
+                return (
+                  <motion.div
+                    key={discussion.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      selectedDiscussion === discussion.id 
+                        ? 'bg-primary/10 border border-primary/20' 
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={() => onSelectDiscussion(discussion.id)}
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <TypeIcon className={`h-4 w-4 mt-0.5 ${getDiscussionTypeColor(discussion.type)}`} />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">{discussion.title}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {discussion.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Badge variant={getPriorityColor(discussion.priority)} className="text-xs">
+                          {discussion.priority}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {discussion.comments?.length || 0} replies
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={discussion.author.avatar} />
+                          <AvatarFallback className="text-xs">
+                            {discussion.author.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(discussion.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Discussion Detail */}
+      <Card className="lg:col-span-2">
+        {selectedDiscussionData ? (
+          <>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    {(() => {
+                      const TypeIcon = getDiscussionTypeIcon(selectedDiscussionData.type);
+                      return <TypeIcon className={`h-4 w-4 ${getDiscussionTypeColor(selectedDiscussionData.type)}`} />;
+                    })()}
+                    {selectedDiscussionData.title}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {selectedDiscussionData.description}
+                  </CardDescription>
+                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Pin className="h-4 w-4 mr-2" />
+                      Pin Discussion
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant={getPriorityColor(selectedDiscussionData.priority)} className="text-xs">
+                  {selectedDiscussionData.priority}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {selectedDiscussionData.type}
+                </Badge>
+                {selectedDiscussionData.tags?.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {/* Comments */}
+              <ScrollArea className="h-64 mb-4">
+                <div className="space-y-3">
+                  {selectedDiscussionData.comments?.map((comment) => (
+                    <div key={comment.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={comment.author.avatar} />
+                        <AvatarFallback className="text-xs">
+                          {comment.author.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{comment.author.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm">{comment.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              
+              {/* Add Comment */}
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Add a comment..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="flex-1 min-h-[60px]"
+                />
+                <Button 
+                  onClick={handleAddComment}
+                  disabled={!newComment.trim()}
+                >
+                  <Send className="h-3 w-3" />
+                </Button>
+              </div>
+            </CardContent>
+          </>
+        ) : (
+          <CardContent className="flex items-center justify-center h-96">
+            <div className="text-center text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Select a discussion to view details</p>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Create Discussion Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Discussion</DialogTitle>
+            <DialogDescription>
+              Start a new discussion thread with your team
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                placeholder="Discussion title"
+                value={newDiscussion.title}
+                onChange={(e) => setNewDiscussion(prev => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="What would you like to discuss?"
+                value={newDiscussion.description}
+                onChange={(e) => setNewDiscussion(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select
+                  value={newDiscussion.type}
+                  onValueChange={(value) => setNewDiscussion(prev => ({ ...prev, type: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISCUSSION_TYPES.map(type => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Asset (Optional)</Label>
+                <Input
+                  placeholder="Asset ID"
+                  value={newDiscussion.assetId}
+                  onChange={(e) => setNewDiscussion(prev => ({ ...prev, assetId: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateDiscussion} disabled={!newDiscussion.title.trim()}>
+              Create Discussion
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ============================================================================
+// APPROVAL WORKFLOWS COMPONENT
+// ============================================================================
+interface ApprovalWorkflowsProps {
+  workflows: ApprovalWorkflow[];
+  onCreateWorkflow: (workflow: Omit<ApprovalWorkflow, 'id' | 'createdAt'>) => void;
+  onUpdateWorkflow: (id: string, updates: Partial<ApprovalWorkflow>) => void;
+  onApprove: (workflowId: string, stepId: string, comments?: string) => void;
+  onReject: (workflowId: string, stepId: string, reason: string) => void;
+  currentUser: TeamMember;
+  isLoading: boolean;
+  className?: string;
+}
+
+const ApprovalWorkflows: React.FC<ApprovalWorkflowsProps> = ({
+  workflows,
+  onCreateWorkflow,
+  onUpdateWorkflow,
+  onApprove,
+  onReject,
+  currentUser,
+  isLoading,
+  className
+}) => {
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  const filteredWorkflows = useMemo(() => {
+    if (filterStatus === 'all') return workflows;
+    return workflows.filter(workflow => workflow.status === filterStatus);
+  }, [workflows, filterStatus]);
+
+  const selectedWorkflowData = useMemo(() => {
+    return workflows.find(w => w.id === selectedWorkflow);
+  }, [workflows, selectedWorkflow]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'default';
+      case 'approved': return 'success';
+      case 'rejected': return 'destructive';
+      case 'in_progress': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
+  const getStepStatus = (step: WorkflowStep) => {
+    if (step.completedAt) {
+      return step.approved ? 'approved' : 'rejected';
+    }
+    return 'pending';
+  };
+
+  const canUserApprove = (step: WorkflowStep) => {
+    return step.assignee.id === currentUser.id && !step.completedAt;
+  };
+
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Approval Workflows</CardTitle>
+          <div className="flex items-center gap-2">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-32 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-3 w-3 mr-2" />
+              New Workflow
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Workflows List */}
+          <div className="space-y-3">
+            <ScrollArea className="h-96">
+              {filteredWorkflows.map((workflow) => (
+                <motion.div
+                  key={workflow.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedWorkflow === workflow.id 
+                      ? 'ring-2 ring-primary bg-primary/5' 
+                      : 'hover:bg-muted'
+                  }`}
+                  onClick={() => setSelectedWorkflow(workflow.id)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{workflow.title}</h4>
+                      <p className="text-xs text-muted-foreground">{workflow.description}</p>
+                    </div>
+                    
+                    <Badge variant={getStatusColor(workflow.status)} className="text-xs">
+                      {workflow.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {workflow.steps.filter(s => s.completedAt).length}/{workflow.steps.length} steps
+                      </span>
+                      <Progress 
+                        value={(workflow.steps.filter(s => s.completedAt).length / workflow.steps.length) * 100}
+                        className="w-16 h-1"
+                      />
+                    </div>
+                    
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(workflow.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </ScrollArea>
+          </div>
+
+          {/* Workflow Detail */}
+          <div>
+            {selectedWorkflowData ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium">{selectedWorkflowData.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedWorkflowData.description}
+                  </p>
+                  
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant={getStatusColor(selectedWorkflowData.status)} className="text-xs">
+                      {selectedWorkflowData.status}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedWorkflowData.type}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                {/* Workflow Steps */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Approval Steps</h4>
+                  
+                  {selectedWorkflowData.steps.map((step, index) => {
+                    const stepStatus = getStepStatus(step);
+                    const canApprove = canUserApprove(step);
+                    
+                    return (
+                      <div
+                        key={step.id}
+                        className={`p-3 rounded-lg border ${
+                          stepStatus === 'approved' ? 'bg-green-50 border-green-200' :
+                          stepStatus === 'rejected' ? 'bg-red-50 border-red-200' :
+                          'bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-start gap-2">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                              stepStatus === 'approved' ? 'bg-green-500 text-white' :
+                              stepStatus === 'rejected' ? 'bg-red-500 text-white' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{step.title}</span>
+                                {stepStatus === 'approved' && <CheckCircle className="h-4 w-4 text-green-600" />}
+                                {stepStatus === 'rejected' && <XCircle className="h-4 w-4 text-red-600" />}
+                              </div>
+                              
+                              <div className="flex items-center gap-2 mt-1">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={step.assignee.avatar} />
+                                  <AvatarFallback className="text-xs">
+                                    {step.assignee.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {step.assignee.name}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {canApprove && (
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onApprove(selectedWorkflowData.id, step.id)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onReject(selectedWorkflowData.id, step.id, 'Rejected')}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {step.comments && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {step.comments}
+                          </p>
+                        )}
+                        
+                        {step.completedAt && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Completed: {new Date(step.completedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-96 text-muted-foreground">
+                <div className="text-center">
+                  <Workflow className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Select a workflow to view details</p>
+                </div>
               </div>
             )}
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ============================================================================
+// TEAM MEMBERS MANAGEMENT COMPONENT
+// ============================================================================
+interface TeamMembersManagementProps {
+  members: TeamMember[];
+  onInviteMember: (email: string, role: string) => void;
+  onUpdateMemberRole: (memberId: string, role: string) => void;
+  onRemoveMember: (memberId: string) => void;
+  currentUser: TeamMember;
+  isLoading: boolean;
+  className?: string;
+}
+
+const TeamMembersManagement: React.FC<TeamMembersManagementProps> = ({
+  members,
+  onInviteMember,
+  onUpdateMemberRole,
+  onRemoveMember,
+  currentUser,
+  isLoading,
+  className
+}) => {
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('member');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery) return members;
+    return members.filter(member =>
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [members, searchQuery]);
+
+  const handleInviteMember = () => {
+    if (!inviteEmail.trim()) return;
+    
+    onInviteMember(inviteEmail, inviteRole);
+    setInviteEmail('');
+    setInviteRole('member');
+    setShowInviteDialog(false);
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'destructive';
+      case 'moderator': return 'default';
+      case 'member': return 'secondary';
+      case 'viewer': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'text-green-600';
+      case 'inactive': return 'text-gray-600';
+      case 'pending': return 'text-yellow-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const canManageMember = (member: TeamMember) => {
+    return currentUser.role === 'admin' && member.id !== currentUser.id;
+  };
+
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+          <Button size="sm" onClick={() => setShowInviteDialog(true)}>
+            <Plus className="h-3 w-3 mr-2" />
+            Invite Member
+          </Button>
+        </div>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-8"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-96">
+          <div className="space-y-3">
+            {filteredMembers.map((member) => (
+              <motion.div
+                key={member.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-between p-3 border rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={member.avatar} />
+                      <AvatarFallback>
+                        {member.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-background ${getStatusColor(member.status)}`} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{member.name}</span>
+                      {member.id === currentUser.id && (
+                        <Badge variant="outline" className="text-xs">You</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={getRoleColor(member.role)} className="text-xs">
+                        {member.role}
+                      </Badge>
+                      <span className={`text-xs ${getStatusColor(member.status)}`}>
+                        {member.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {canManageMember(member) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="ghost">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onUpdateMemberRole(member.id, 'admin')}>
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Make Admin
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onUpdateMemberRole(member.id, 'member')}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Make Member
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => onRemoveMember(member.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </motion.div>
+            ))}
+          </div>
         </ScrollArea>
+        
+        {/* Invite Member Dialog */}
+        <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite Team Member</DialogTitle>
+              <DialogDescription>
+                Invite a new member to join your collaboration workspace
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input
+                  type="email"
+                  placeholder="member@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COLLABORATION_ROLES.map(role => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.label} - {role.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleInviteMember} disabled={!inviteEmail.trim()}>
+                Send Invite
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
@@ -1420,432 +1360,480 @@ const NotificationCenter: React.FC<{
 // ============================================================================
 // MAIN CATALOG COLLABORATION HUB COMPONENT
 // ============================================================================
-const CatalogCollaborationHub: React.FC<CollaborationHubProps> = ({
-  assetId,
-  enableRealTimeUpdates = true,
-  enableWorkflows = true,
-  enableNotifications = true,
-  enableMentions = true,
-  enableReactions = true,
-  defaultView = 'discussions',
-  teamId,
-  userRole = 'CONTRIBUTOR',
-  onCommentAdded,
-  onWorkflowUpdate,
-  onUserMention,
+export interface CatalogCollaborationHubProps {
+  workspaceId?: string;
+  className?: string;
+}
+
+export const CatalogCollaborationHub: React.FC<CatalogCollaborationHubProps> = ({
+  workspaceId,
   className
 }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
+  // State management
+  const [activeView, setActiveView] = useState('overview');
+  const [selectedDiscussion, setSelectedDiscussion] = useState<string | null>(null);
+  const [currentChannel, setCurrentChannel] = useState('general');
+  
+  // Refs
   const queryClient = useQueryClient();
 
-  // Core State
-  const [collaborationState, setCollaborationState] = useState<CollaborationState>({
-    selectedAssets: new Set(assetId ? [assetId] : []),
-    activeDiscussions: [],
-    currentWorkflows: [],
-    teamMembers: [],
-    notifications: [],
-    activities: [],
-    filterState: {
-      searchQuery: '',
-      statusFilter: 'all',
-      typeFilter: 'all',
-      userFilter: 'all',
-      priorityFilter: 'all',
-      dateRange: { 
-        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 
-        end: new Date() 
-      },
-      showOnlyActive: true,
-      showOnlyMentions: false
-    },
-    viewMode: defaultView,
-    realTimeEnabled: enableRealTimeUpdates
-  });
+  // Custom hooks for data management
+  const {
+    data: workspace,
+    isLoading: isWorkspaceLoading
+  } = useCollaboration(workspaceId);
 
-  // UI State
-  const [activeTab, setActiveTab] = useState(defaultView);
-  const [currentUser, setCurrentUser] = useState<TeamMember>({
-    id: 'current-user',
-    name: 'Current User',
-    email: 'user@example.com',
-    avatar: '',
-    role: userRole,
-    isOnline: true
-  });
+  const {
+    data: teamMembers,
+    isLoading: isMembersLoading,
+    mutate: inviteMember,
+    updateMemberRole,
+    removeMember
+  } = useTeamMembers(workspaceId);
 
-  // ============================================================================
-  // DATA FETCHING WITH REACT QUERY
-  // ============================================================================
-
-  // Fetch discussions
   const {
     data: discussions,
-    isLoading: isLoadingDiscussions,
-    refetch: refetchDiscussions
-  } = useQuery({
-    queryKey: ['discussions', Array.from(collaborationState.selectedAssets)],
-    queryFn: async () => {
-      const response = await collaborationService.getDiscussions({
-        assetIds: Array.from(collaborationState.selectedAssets),
-        includeComments: true,
-        includeReactions: enableReactions
-      });
-      return response.data;
-    },
-    refetchInterval: collaborationState.realTimeEnabled ? 30000 : false,
-    staleTime: 60000
-  });
+    isLoading: isDiscussionsLoading,
+    mutate: createDiscussion,
+    addComment
+  } = useDiscussions(workspaceId);
 
-  // Fetch workflows
   const {
     data: workflows,
-    isLoading: isLoadingWorkflows,
-    refetch: refetchWorkflows
-  } = useQuery({
-    queryKey: ['workflows', Array.from(collaborationState.selectedAssets)],
-    queryFn: async () => {
-      const response = await workflowService.getWorkflows({
-        assetIds: Array.from(collaborationState.selectedAssets),
-        includeSteps: true
-      });
-      return response.data;
-    },
-    enabled: enableWorkflows,
-    refetchInterval: collaborationState.realTimeEnabled ? 30000 : false,
-    staleTime: 60000
-  });
+    isLoading: isWorkflowsLoading,
+    mutate: createWorkflow,
+    updateWorkflow,
+    approve: approveWorkflow,
+    reject: rejectWorkflow
+  } = useWorkflows(workspaceId);
 
-  // Fetch team activities
   const {
     data: activities,
-    isLoading: isLoadingActivities
-  } = useQuery({
-    queryKey: ['team-activities', teamId, collaborationState.filterState.dateRange],
-    queryFn: async () => {
-      const response = await analyticsService.getTeamActivities({
-        teamId,
-        dateRange: collaborationState.filterState.dateRange,
-        limit: 100
-      });
-      return response.data;
-    },
-    staleTime: 300000
-  });
+    isLoading: isActivitiesLoading,
+    hasNextPage,
+    fetchNextPage
+  } = useActivityFeed(workspaceId);
 
-  // Fetch notifications
+  const {
+    data: chatMessages,
+    isLoading: isMessagesLoading,
+    mutate: sendMessage,
+    replyToMessage
+  } = useMessaging(currentChannel);
+
   const {
     data: notifications,
-    isLoading: isLoadingNotifications,
-    refetch: refetchNotifications
-  } = useQuery({
-    queryKey: ['notifications', currentUser.id],
-    queryFn: async () => {
-      const response = await notificationService.getUserNotifications(currentUser.id);
-      return response.data;
-    },
-    enabled: enableNotifications,
-    refetchInterval: collaborationState.realTimeEnabled ? 15000 : false,
-    staleTime: 30000
-  });
+    markAsRead,
+    markAllAsRead
+  } = useNotifications();
 
-  // ============================================================================
-  // MUTATIONS
-  // ============================================================================
+  const {
+    data: collaborationMetrics,
+    isLoading: isMetricsLoading
+  } = useCollaborationMetrics(workspaceId);
 
-  // Create discussion mutation
-  const createDiscussionMutation = useMutation({
-    mutationFn: async (discussion: Partial<DiscussionThread>) => {
-      const response = await collaborationService.createDiscussion(discussion);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast.success('Discussion created successfully');
-      refetchDiscussions();
-    },
-    onError: (error) => {
-      toast.error('Failed to create discussion');
-      console.error('Create discussion error:', error);
-    }
-  });
-
-  // Add comment mutation
-  const addCommentMutation = useMutation({
-    mutationFn: async ({ discussionId, comment }: { discussionId: string; comment: Partial<Comment> }) => {
-      const response = await collaborationService.addComment(discussionId, comment);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast.success('Comment added');
-      refetchDiscussions();
-      if (onCommentAdded) {
-        onCommentAdded(data);
-      }
-    },
-    onError: (error) => {
-      toast.error('Failed to add comment');
-      console.error('Add comment error:', error);
-    }
-  });
-
-  // Add reaction mutation
-  const addReactionMutation = useMutation({
-    mutationFn: async ({ discussionId, commentId, reaction }: { 
-      discussionId: string; 
-      commentId: string; 
-      reaction: keyof typeof REACTION_TYPES; 
-    }) => {
-      const response = await collaborationService.addReaction(commentId, reaction);
-      return response.data;
-    },
-    onSuccess: () => {
-      refetchDiscussions();
-    },
-    onError: (error) => {
-      toast.error('Failed to add reaction');
-      console.error('Add reaction error:', error);
-    }
-  });
-
-  // Workflow mutations
-  const createWorkflowMutation = useMutation({
-    mutationFn: async (workflow: Partial<WorkflowInstance>) => {
-      const response = await workflowService.createWorkflow(workflow);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      toast.success('Workflow created successfully');
-      refetchWorkflows();
-      if (onWorkflowUpdate) {
-        onWorkflowUpdate(data);
-      }
-    },
-    onError: (error) => {
-      toast.error('Failed to create workflow');
-      console.error('Create workflow error:', error);
-    }
-  });
-
-  // Notification mutations
-  const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      await notificationService.markAsRead(notificationId);
-    },
-    onSuccess: () => {
-      refetchNotifications();
-    }
-  });
-
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
-
-  const handleCreateDiscussion = useCallback((discussion: Partial<DiscussionThread>) => {
-    createDiscussionMutation.mutate(discussion);
-  }, [createDiscussionMutation]);
-
-  const handleAddComment = useCallback((discussionId: string, comment: Partial<Comment>) => {
-    addCommentMutation.mutate({ discussionId, comment });
-  }, [addCommentMutation]);
-
-  const handleReaction = useCallback((discussionId: string, commentId: string, reaction: keyof typeof REACTION_TYPES) => {
-    addReactionMutation.mutate({ discussionId, commentId, reaction });
-  }, [addReactionMutation]);
-
-  const handleCloseDiscussion = useCallback((discussionId: string) => {
-    // Implementation for closing discussion
-  }, []);
-
-  const handleCreateWorkflow = useCallback((workflow: Partial<WorkflowInstance>) => {
-    createWorkflowMutation.mutate(workflow);
-  }, [createWorkflowMutation]);
-
-  const handleUpdateWorkflow = useCallback((workflowId: string, updates: Partial<WorkflowInstance>) => {
-    // Implementation for updating workflow
-  }, []);
-
-  const handleApproveStep = useCallback((workflowId: string, stepId: string) => {
-    // Implementation for approving workflow step
-  }, []);
-
-  const handleRejectStep = useCallback((workflowId: string, stepId: string, reason: string) => {
-    // Implementation for rejecting workflow step
-  }, []);
-
-  const handleMarkAsRead = useCallback((notificationId: string) => {
-    markAsReadMutation.mutate(notificationId);
-  }, [markAsReadMutation]);
-
-  const handleMarkAllAsRead = useCallback(() => {
-    notifications?.forEach(notification => {
-      if (!notification.isRead) {
-        markAsReadMutation.mutate(notification.id);
+  // Event handlers
+  const handleCreateDiscussion = useCallback((discussion: Omit<Discussion, 'id' | 'createdAt'>) => {
+    createDiscussion(discussion, {
+      onSuccess: () => {
+        toast.success('Discussion created successfully');
+      },
+      onError: (error) => {
+        toast.error('Failed to create discussion');
       }
     });
-  }, [notifications, markAsReadMutation]);
+  }, [createDiscussion]);
 
-  const handleDeleteNotification = useCallback((notificationId: string) => {
-    // Implementation for deleting notification
-  }, []);
+  const handleAddComment = useCallback((discussionId: string, comment: string) => {
+    addComment({ discussionId, content: comment }, {
+      onSuccess: () => {
+        toast.success('Comment added');
+      },
+      onError: (error) => {
+        toast.error('Failed to add comment');
+      }
+    });
+  }, [addComment]);
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
+  const handleSendMessage = useCallback((content: string, attachments?: FileAttachment[]) => {
+    sendMessage({
+      channelId: currentChannel,
+      content,
+      attachments
+    }, {
+      onSuccess: () => {
+        // Message sent successfully
+      },
+      onError: (error) => {
+        toast.error('Failed to send message');
+      }
+    });
+  }, [sendMessage, currentChannel]);
 
-  // Update collaboration state when data changes
-  useEffect(() => {
-    setCollaborationState(prev => ({
-      ...prev,
-      activeDiscussions: discussions || [],
-      currentWorkflows: workflows || [],
-      notifications: notifications || [],
-      activities: activities || []
-    }));
-  }, [discussions, workflows, notifications, activities]);
+  const handleReplyToMessage = useCallback((messageId: string, content: string) => {
+    replyToMessage({
+      messageId,
+      content
+    }, {
+      onSuccess: () => {
+        // Reply sent successfully
+      },
+      onError: (error) => {
+        toast.error('Failed to send reply');
+      }
+    });
+  }, [replyToMessage]);
 
-  // ============================================================================
-  // RENDER
-  // ============================================================================
+  const handleInviteMember = useCallback((email: string, role: string) => {
+    inviteMember({
+      email,
+      role,
+      workspaceId
+    }, {
+      onSuccess: () => {
+        toast.success('Invitation sent successfully');
+      },
+      onError: (error) => {
+        toast.error('Failed to send invitation');
+      }
+    });
+  }, [inviteMember, workspaceId]);
+
+  const handleUpdateMemberRole = useCallback((memberId: string, role: string) => {
+    updateMemberRole({ memberId, role }, {
+      onSuccess: () => {
+        toast.success('Member role updated');
+      },
+      onError: (error) => {
+        toast.error('Failed to update member role');
+      }
+    });
+  }, [updateMemberRole]);
+
+  const handleRemoveMember = useCallback((memberId: string) => {
+    removeMember(memberId, {
+      onSuccess: () => {
+        toast.success('Member removed from workspace');
+      },
+      onError: (error) => {
+        toast.error('Failed to remove member');
+      }
+    });
+  }, [removeMember]);
+
+  const handleCreateWorkflow = useCallback((workflow: Omit<ApprovalWorkflow, 'id' | 'createdAt'>) => {
+    createWorkflow(workflow, {
+      onSuccess: () => {
+        toast.success('Workflow created successfully');
+      },
+      onError: (error) => {
+        toast.error('Failed to create workflow');
+      }
+    });
+  }, [createWorkflow]);
+
+  const handleApproveWorkflow = useCallback((workflowId: string, stepId: string, comments?: string) => {
+    approveWorkflow({ workflowId, stepId, comments }, {
+      onSuccess: () => {
+        toast.success('Step approved');
+      },
+      onError: (error) => {
+        toast.error('Failed to approve step');
+      }
+    });
+  }, [approveWorkflow]);
+
+  const handleRejectWorkflow = useCallback((workflowId: string, stepId: string, reason: string) => {
+    rejectWorkflow({ workflowId, stepId, reason }, {
+      onSuccess: () => {
+        toast.success('Step rejected');
+      },
+      onError: (error) => {
+        toast.error('Failed to reject step');
+      }
+    });
+  }, [rejectWorkflow]);
+
+  const currentUser = useMemo(() => {
+    return teamMembers?.find(member => member.isCurrentUser) || {
+      id: 'current-user',
+      name: 'Current User',
+      email: 'user@example.com',
+      role: 'member',
+      status: 'active',
+      isCurrentUser: true
+    } as TeamMember;
+  }, [teamMembers]);
+
+  // Loading state
+  if (isWorkspaceLoading) {
+    return (
+      <div className={`flex items-center justify-center h-96 ${className}`}>
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading collaboration workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`flex flex-col h-full ${className || ''}`}>
-      <TooltipProvider>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              Collaboration Hub
-            </h1>
-            {assetId && (
-              <Badge variant="outline">Asset: {assetId}</Badge>
-            )}
-            {teamId && (
-              <Badge variant="outline">Team: {teamId}</Badge>
-            )}
-          </div>
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Collaboration Hub
+          </h1>
           
-          <div className="flex items-center gap-2">
-            {/* Real-time indicator */}
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                collaborationState.realTimeEnabled ? 'bg-green-500' : 'bg-gray-400'
-              }`} />
-              <span className="text-sm text-gray-600">
-                {collaborationState.realTimeEnabled ? 'Live' : 'Offline'}
-              </span>
-            </div>
-
-            {/* Settings */}
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
+          {workspace && (
+            <Badge variant="outline">
+              Workspace: {workspace.name}
+            </Badge>
+          )}
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="discussions" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Discussions
-              </TabsTrigger>
-              <TabsTrigger value="workflows" className="flex items-center gap-2">
-                <Workflow className="h-4 w-4" />
-                Workflows
-              </TabsTrigger>
-              <TabsTrigger value="activities" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Activity
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-                {notifications && notifications.filter(n => !n.isRead).length > 0 && (
-                  <Badge variant="destructive" className="text-xs ml-1">
-                    {notifications.filter(n => !n.isRead).length}
-                  </Badge>
-                )}
-              </TabsTrigger>
+        <div className="flex items-center gap-2">
+          <Tabs value={activeView} onValueChange={setActiveView}>
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="discussions">Discussions</TabsTrigger>
+              <TabsTrigger value="workflows">Workflows</TabsTrigger>
+              <TabsTrigger value="team">Team</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="discussions" className="mt-6">
-              <DiscussionThreadPanel
-                discussions={discussions || []}
-                isLoading={isLoadingDiscussions}
-                currentUser={currentUser}
-                onCreateDiscussion={handleCreateDiscussion}
-                onAddComment={handleAddComment}
-                onReaction={handleReaction}
-                onCloseDiscussion={handleCloseDiscussion}
-              />
-            </TabsContent>
-
-            <TabsContent value="workflows" className="mt-6">
-              {enableWorkflows ? (
-                <WorkflowManagementPanel
-                  workflows={workflows || []}
-                  isLoading={isLoadingWorkflows}
-                  currentUser={currentUser}
-                  onCreateWorkflow={handleCreateWorkflow}
-                  onUpdateWorkflow={handleUpdateWorkflow}
-                  onApproveStep={handleApproveStep}
-                  onRejectStep={handleRejectStep}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Workflow className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <div className="text-lg font-semibold text-gray-600">Workflows Disabled</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Enable workflows to manage approval processes and tasks
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="activities" className="mt-6">
-              <TeamActivityFeed
-                activities={activities || []}
-                isLoading={isLoadingActivities}
-                currentUser={currentUser}
-              />
-            </TabsContent>
-
-            <TabsContent value="notifications" className="mt-6">
-              {enableNotifications ? (
-                <NotificationCenter
-                  notifications={notifications || []}
-                  isLoading={isLoadingNotifications}
-                  onMarkAsRead={handleMarkAsRead}
-                  onMarkAllAsRead={handleMarkAllAsRead}
-                  onDeleteNotification={handleDeleteNotification}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <Bell className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <div className="text-lg font-semibold text-gray-600">Notifications Disabled</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      Enable notifications to stay updated on team activities
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
           </Tabs>
+
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
-      </TooltipProvider>
+      </div>
+
+      {/* Collaboration Metrics */}
+      {collaborationMetrics && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-500" />
+                <div>
+                  <div className="text-2xl font-bold">{collaborationMetrics.totalMembers}</div>
+                  <div className="text-xs text-muted-foreground">Team Members</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-green-500" />
+                <div>
+                  <div className="text-2xl font-bold">{collaborationMetrics.activeDiscussions}</div>
+                  <div className="text-xs text-muted-foreground">Active Discussions</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Workflow className="h-4 w-4 text-purple-500" />
+                <div>
+                  <div className="text-2xl font-bold">{collaborationMetrics.pendingApprovals}</div>
+                  <div className="text-xs text-muted-foreground">Pending Approvals</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-orange-500" />
+                <div>
+                  <div className="text-2xl font-bold">{collaborationMetrics.todayActivity}</div>
+                  <div className="text-xs text-muted-foreground">Today's Activity</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Content Area */}
+        <div className="lg:col-span-3">
+          {activeView === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <RealTimeChat
+                channelId={currentChannel}
+                messages={chatMessages || []}
+                currentUser={currentUser}
+                onSendMessage={handleSendMessage}
+                onReplyToMessage={handleReplyToMessage}
+                isLoading={isMessagesLoading}
+              />
+              
+              <TeamActivityFeed
+                activities={activities?.pages.flat() || []}
+                isLoading={isActivitiesLoading}
+                onLoadMore={() => fetchNextPage()}
+                hasMore={!!hasNextPage}
+              />
+            </div>
+          )}
+
+          {activeView === 'discussions' && (
+            <DiscussionThreads
+              discussions={discussions || []}
+              selectedDiscussion={selectedDiscussion}
+              onSelectDiscussion={setSelectedDiscussion}
+              onCreateDiscussion={handleCreateDiscussion}
+              onAddComment={handleAddComment}
+              isLoading={isDiscussionsLoading}
+            />
+          )}
+
+          {activeView === 'workflows' && (
+            <ApprovalWorkflows
+              workflows={workflows || []}
+              onCreateWorkflow={handleCreateWorkflow}
+              onUpdateWorkflow={updateWorkflow}
+              onApprove={handleApproveWorkflow}
+              onReject={handleRejectWorkflow}
+              currentUser={currentUser}
+              isLoading={isWorkflowsLoading}
+            />
+          )}
+
+          {activeView === 'team' && (
+            <TeamMembersManagement
+              members={teamMembers || []}
+              onInviteMember={handleInviteMember}
+              onUpdateMemberRole={handleUpdateMemberRole}
+              onRemoveMember={handleRemoveMember}
+              currentUser={currentUser}
+              isLoading={isMembersLoading}
+            />
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Notifications */}
+          {notifications && notifications.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium">Notifications</CardTitle>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => markAllAsRead()}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Mark all read
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-32">
+                  <div className="space-y-2">
+                    {notifications.slice(0, 5).map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`p-2 rounded text-sm ${
+                          notification.read ? 'bg-muted/50' : 'bg-primary/10'
+                        }`}
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-xs text-muted-foreground">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => setActiveView('discussions')}
+              >
+                <MessageSquare className="h-3 w-3 mr-2" />
+                Start Discussion
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setActiveView('workflows')}
+              >
+                <Workflow className="h-3 w-3 mr-2" />
+                Create Workflow
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setActiveView('team')}
+              >
+                <Users className="h-3 w-3 mr-2" />
+                Invite Member
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Online Members */}
+          {teamMembers && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Online Now</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {teamMembers
+                    .filter(member => member.status === 'active')
+                    .slice(0, 5)
+                    .map((member) => (
+                      <div key={member.id} className="flex items-center gap-2">
+                        <div className="relative">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="text-xs">
+                              {member.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-background" />
+                        </div>
+                        <span className="text-sm font-medium">{member.name}</span>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 export default CatalogCollaborationHub;
-export type { CollaborationHubProps, CollaborationState, DiscussionThread, WorkflowInstance, TeamActivity };
