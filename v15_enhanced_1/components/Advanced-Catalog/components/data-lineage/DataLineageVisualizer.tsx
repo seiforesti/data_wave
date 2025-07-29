@@ -54,7 +54,7 @@ import type {
 
 import {
   enterpriseCatalogService,
-  lineageVisualizationService,
+  advancedLineageService,
   lineageAnalyticsService,
   lineageCollaborationService,
   lineageValidationService,

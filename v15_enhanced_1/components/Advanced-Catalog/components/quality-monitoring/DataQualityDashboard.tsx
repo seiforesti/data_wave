@@ -113,7 +113,7 @@ import {
 
 // Services and Types
 import { enterpriseCatalogService } from '../../services/enterprise-catalog.service';
-import { dataQualityService } from '../../services/data-quality.service';
+import { catalogQualityService } from '../../services/catalog-quality.service';
 import {
   CatalogAsset,
   DataQualityMetrics,
@@ -1024,7 +1024,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({
   // Fetch quality metrics
   const { data: qualityMetrics, isLoading: isMetricsLoading, refetch: refetchMetrics } = useQuery({
     queryKey: ['quality-metrics', assetId, qualityFilters],
-    queryFn: () => dataQualityService.getAssetQualityMetrics(assetId!, qualityFilters),
+    queryFn: () => catalogQualityService.getAssetQualityMetrics(assetId!, qualityFilters),
     enabled: !!assetId,
     refetchInterval: dashboardConfig.autoRefresh ? dashboardConfig.refreshInterval : false
   });
@@ -1032,41 +1032,41 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({
   // Fetch quality issues
   const { data: qualityIssues, isLoading: isIssuesLoading } = useQuery({
     queryKey: ['quality-issues', assetId, qualityFilters],
-    queryFn: () => dataQualityService.getQualityIssues(assetId!, qualityFilters),
+    queryFn: () => catalogQualityService.getQualityIssues(assetId!, qualityFilters),
     enabled: !!assetId
   });
 
   // Fetch quality trends
   const { data: qualityTrends, isLoading: isTrendsLoading } = useQuery({
     queryKey: ['quality-trends', assetId, qualityFilters.dateRange],
-    queryFn: () => dataQualityService.getQualityTrends(assetId!, qualityFilters.dateRange),
+    queryFn: () => catalogQualityService.getQualityTrends(assetId!, qualityFilters.dateRange),
     enabled: !!assetId
   });
 
   // Fetch quality rules
   const { data: qualityRules, isLoading: isRulesLoading } = useQuery({
     queryKey: ['quality-rules', assetId],
-    queryFn: () => dataQualityService.getQualityRules(assetId!),
+    queryFn: () => catalogQualityService.getQualityRules(assetId!),
     enabled: !!assetId
   });
 
   // Fetch quality alerts
   const { data: qualityAlerts, isLoading: isAlertsLoading } = useQuery({
     queryKey: ['quality-alerts', assetId],
-    queryFn: () => dataQualityService.getQualityAlerts(assetId!),
+    queryFn: () => catalogQualityService.getQualityAlerts(assetId!),
     enabled: !!assetId
   });
 
   // Fetch quality recommendations
   const { data: qualityRecommendations } = useQuery({
     queryKey: ['quality-recommendations', assetId],
-    queryFn: () => dataQualityService.getQualityRecommendations(assetId!),
+    queryFn: () => catalogQualityService.getQualityRecommendations(assetId!),
     enabled: !!assetId
   });
 
   // Mutations
   const resolveIssueMutation = useMutation({
-    mutationFn: (issueId: string) => dataQualityService.resolveQualityIssue(issueId),
+    mutationFn: (issueId: string) => catalogQualityService.resolveQualityIssue(issueId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quality-issues'] });
       toast.success('Issue resolved successfully');
@@ -1074,7 +1074,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({
   });
 
   const acknowledgeAlertMutation = useMutation({
-    mutationFn: (alertId: string) => dataQualityService.acknowledgeQualityAlert(alertId),
+    mutationFn: (alertId: string) => catalogQualityService.acknowledgeQualityAlert(alertId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quality-alerts'] });
       toast.success('Alert acknowledged');
@@ -1082,7 +1082,7 @@ export const DataQualityDashboard: React.FC<DataQualityDashboardProps> = ({
   });
 
   const createRuleMutation = useMutation({
-    mutationFn: (rule: Partial<QualityRule>) => dataQualityService.createQualityRule(rule),
+    mutationFn: (rule: Partial<QualityRule>) => catalogQualityService.createQualityRule(rule),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quality-rules'] });
       toast.success('Quality rule created successfully');
