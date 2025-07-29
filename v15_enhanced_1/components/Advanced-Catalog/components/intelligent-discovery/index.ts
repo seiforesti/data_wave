@@ -7,10 +7,14 @@
 // Core Discovery Components
 export { default as AIDiscoveryEngine } from './AIDiscoveryEngine';
 export { default as SemanticSchemaAnalyzer } from './SemanticSchemaAnalyzer';
+export { default as AutoClassificationEngine } from './AutoClassificationEngine';
+export { default as MetadataEnrichmentEngine } from './MetadataEnrichmentEngine';
 
 // Component Props Types (for external use)
 export type { AIDiscoveryEngineProps } from './AIDiscoveryEngine';
 export type { SemanticSchemaAnalyzerProps } from './SemanticSchemaAnalyzer';
+export type { AutoClassificationEngineProps } from './AutoClassificationEngine';
+export type { MetadataEnrichmentEngineProps } from './MetadataEnrichmentEngine';
 
 // Re-export component types for convenience
 export type {
@@ -22,7 +26,11 @@ export type {
   SchemaElement,
   SemanticMapping,
   DataRelationship,
-  SchemaPattern
+  SchemaPattern,
+  ClassificationResult,
+  ClassificationRule,
+  MetadataEnrichment,
+  EnrichmentSuggestion
 } from '../../types';
 
 // ============================================================================
@@ -35,6 +43,8 @@ export type {
 export const IntelligentDiscoveryComponents = {
   AIDiscoveryEngine,
   SemanticSchemaAnalyzer,
+  AutoClassificationEngine,
+  MetadataEnrichmentEngine,
 } as const;
 
 /**
@@ -43,6 +53,8 @@ export const IntelligentDiscoveryComponents = {
 export const INTELLIGENT_DISCOVERY_COMPONENT_NAMES = {
   AI_DISCOVERY_ENGINE: 'AIDiscoveryEngine',
   SEMANTIC_SCHEMA_ANALYZER: 'SemanticSchemaAnalyzer',
+  AUTO_CLASSIFICATION_ENGINE: 'AutoClassificationEngine',
+  METADATA_ENRICHMENT_ENGINE: 'MetadataEnrichmentEngine',
 } as const;
 
 export type IntelligentDiscoveryComponentName = keyof typeof INTELLIGENT_DISCOVERY_COMPONENT_NAMES;
