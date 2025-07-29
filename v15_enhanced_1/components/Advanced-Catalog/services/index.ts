@@ -25,6 +25,31 @@ export {
   catalogQualityService 
 } from './catalog-quality.service';
 
+export { 
+  DataProfilingService,
+  dataProfilingService 
+} from './data-profiling.service';
+
+export { 
+  AdvancedLineageService,
+  advancedLineageService 
+} from './advanced-lineage.service';
+
+export { 
+  CatalogAnalyticsService,
+  catalogAnalyticsService 
+} from './catalog-analytics.service';
+
+export { 
+  CatalogRecommendationService,
+  catalogRecommendationService 
+} from './catalog-recommendation.service';
+
+export { 
+  CatalogAIService,
+  catalogAIService 
+} from './catalog-ai.service';
+
 // Export service interfaces for type safety
 export type {
   AssetCreateRequest,
@@ -79,6 +104,11 @@ export const catalogServices = {
   semanticSearch: semanticSearchService,
   intelligentDiscovery: intelligentDiscoveryService,
   catalogQuality: catalogQualityService,
+  dataProfiling: dataProfilingService,
+  advancedLineage: advancedLineageService,
+  catalogAnalytics: catalogAnalyticsService,
+  catalogRecommendation: catalogRecommendationService,
+  catalogAI: catalogAIService,
 } as const;
 
 /**
@@ -94,6 +124,11 @@ export enum CatalogServiceNames {
   SEMANTIC_SEARCH = 'semanticSearch',
   INTELLIGENT_DISCOVERY = 'intelligentDiscovery',
   CATALOG_QUALITY = 'catalogQuality',
+  DATA_PROFILING = 'dataProfiling',
+  ADVANCED_LINEAGE = 'advancedLineage',
+  CATALOG_ANALYTICS = 'catalogAnalytics',
+  CATALOG_RECOMMENDATION = 'catalogRecommendation',
+  CATALOG_AI = 'catalogAI',
 }
 
 // ============================================================================
