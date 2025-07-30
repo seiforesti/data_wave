@@ -1,600 +1,576 @@
 // ============================================================================
-// USE CATALOG ANALYTICS HOOK - ENTERPRISE DATA GOVERNANCE SYSTEM
+// CATALOG ANALYTICS HOOKS - ADVANCED CATALOG ANALYTICS
 // ============================================================================
-// React hook for managing catalog analytics operations and insights
+// Custom React hooks for managing catalog analytics data and real-time updates
+// Integrates with catalog_analytics_service.py and comprehensive_analytics_service.py
 // ============================================================================
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
+
+// Services
+import { 
   catalogAnalyticsService,
-  AnalyticsRequest,
-  UsageAnalyticsRequest,
-  TrendAnalysisRequest,
-  PopularityAnalysisRequest,
-  ImpactAnalysisRequest,
-  CustomAnalyticsRequest,
-  ReportGenerationRequest,
-  MetricsComparisonRequest
+  enterpriseCatalogService,
+  catalogRecommendationService,
+  catalogQualityService 
 } from '../services';
-import {
-  CatalogMetrics,
-  AnalyticsReport,
-  UsageMetrics,
-  AssetUsageMetrics,
-  TrendAnalysis,
-  PopularityMetrics,
-  ImpactAnalysis,
-  PredictiveInsights,
-  AnalyticsQuery,
-  TimeRange,
-  CatalogApiResponse
-} from '../types';
+
+// Types
+import { 
+  UsageAnalyticsModule,
+  AnalyticsDashboardConfig,
+  UsageMetric,
+  UserEngagementMetric,
+  AssetPopularityMetric,
+  UsageTrend,
+  UserBehaviorAnalysis,
+  AccessPatternAnalysis,
+  UsageRecommendation,
+  UsagePerformanceMetrics,
+  AnalyticsFilter,
+  TimePeriod,
+  PopularityAnalyticsModule,
+  BusinessAnalyticsModule,
+  TechnicalAnalyticsModule,
+  AnalyticsWidget,
+  CatalogAnalyticsDashboard
+} from '../types/analytics.types';
 
 // ============================================================================
-// HOOK INTERFACES
+// ANALYTICS CONFIGURATION TYPES
 // ============================================================================
 
-export interface UseCatalogAnalyticsOptions {
-  enableRealTimeUpdates?: boolean;
-  autoRefreshInterval?: number;
+interface AnalyticsConfig {
+  timeRange: TimePeriod;
+  filters: AnalyticsFilter[];
+  enableRealTime?: boolean;
+  refreshInterval?: number;
+  granularity?: 'minute' | 'hour' | 'day' | 'week' | 'month';
+  includeAdvancedMetrics?: boolean;
+}
+
+interface ExportOptions {
+  format: 'csv' | 'pdf' | 'excel' | 'json';
+  timeRange: TimePeriod;
+  filters: AnalyticsFilter[];
+  includeCharts?: boolean;
+  includeInsights?: boolean;
+  sections?: string[];
+}
+
+interface RealTimeConfig {
+  enabled: boolean;
+  metrics: string[];
+  updateInterval: number;
   maxRetries?: number;
-  defaultTimeRange?: TimeRange;
-  onAnalyticsComplete?: (result: any) => void;
-  onAnalyticsError?: (error: Error) => void;
-}
-
-export interface AnalyticsState {
-  overview: CatalogMetrics | null;
-  usageMetrics: UsageMetrics | null;
-  trendAnalysis: TrendAnalysis | null;
-  popularityMetrics: PopularityMetrics | null;
-  impactAnalysis: ImpactAnalysis | null;
-  predictiveInsights: PredictiveInsights | null;
-  customResults: any | null;
-  reports: AnalyticsReport[];
-  savedQueries: AnalyticsQuery[];
-  isLoading: boolean;
-  isAnalyzing: boolean;
-  isGeneratingReport: boolean;
-  error: string | null;
-  lastRefresh: Date | null;
-}
-
-export interface AnalyticsFilters {
-  timeRange: TimeRange;
-  assetTypes?: string[];
-  departments?: string[];
-  metrics?: string[];
-  aggregationType?: 'SUM' | 'AVERAGE' | 'COUNT' | 'MIN' | 'MAX';
-  granularity?: 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
+  reconnectDelay?: number;
 }
 
 // ============================================================================
-// ANALYTICS OPERATIONS
+// WEBSOCKET CONNECTION MANAGER
 // ============================================================================
 
-export interface AnalyticsOperations {
-  // Core Analytics
-  refreshOverview: (timeRange?: TimeRange) => Promise<void>;
-  getCatalogMetrics: (request: AnalyticsRequest) => Promise<any>;
-  getAssetMetricsByType: (assetType: string, timeRange: TimeRange) => Promise<any>;
+class WebSocketManager {
+  private ws: WebSocket | null = null;
+  private subscribers: Map<string, (data: any) => void> = new Map();
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private maxRetries: number = 5;
+  private retryCount: number = 0;
+  private reconnectDelay: number = 3000;
 
-  // Usage Analytics
-  getUsageAnalytics: (request: UsageAnalyticsRequest) => Promise<UsageMetrics>;
-  getAssetUsageMetrics: (assetId: string, timeRange: TimeRange) => Promise<AssetUsageMetrics>;
-  getUserUsageAnalytics: (userId?: string, timeRange?: TimeRange) => Promise<any>;
-  getDepartmentUsageAnalytics: (department: string, timeRange: TimeRange) => Promise<any>;
+  constructor() {
+    this.connect();
+  }
 
-  // Trend Analysis
-  performTrendAnalysis: (request: TrendAnalysisRequest) => Promise<TrendAnalysis>;
-  getGrowthTrends: (metric: string, timeRange: TimeRange) => Promise<any>;
-  getAdoptionTrends: (timeRange: TimeRange) => Promise<any>;
-  getSeasonalPatterns: (metric: string, timeRange: TimeRange) => Promise<any>;
+  private connect() {
+    try {
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/catalog-analytics';
+      this.ws = new WebSocket(wsUrl);
 
-  // Popularity Analysis
-  getPopularityAnalysis: (request: PopularityAnalysisRequest) => Promise<PopularityMetrics>;
-  getTopAssets: (metric: string, timeRange: TimeRange, limit?: number) => Promise<any>;
-  getTrendingAssets: (timeRange: TimeRange, limit?: number) => Promise<any>;
-  getUnderutilizedAssets: (threshold?: number, timeRange?: TimeRange) => Promise<any>;
+      this.ws.onopen = () => {
+        console.log('WebSocket connected to catalog analytics');
+        this.retryCount = 0;
+      };
 
-  // Impact Analysis
-  performImpactAnalysis: (request: ImpactAnalysisRequest) => Promise<ImpactAnalysis>;
-  getBusinessImpactMetrics: (assetId: string, timeRange: TimeRange) => Promise<any>;
-  getRiskAnalysis: (assetId?: string, riskType?: string) => Promise<any>;
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.notifySubscribers(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-  // Predictive Analytics
-  getPredictiveInsights: (metric: string, timeRange: TimeRange, predictionHorizon: number) => Promise<PredictiveInsights>;
-  getCapacityForecasting: (resource: string, timeRange: TimeRange) => Promise<any>;
-  getAnomalyDetection: (metric: string, timeRange: TimeRange) => Promise<any>;
+      this.ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.scheduleReconnect();
+      };
 
-  // Custom Analytics
-  executeCustomAnalytics: (request: CustomAnalyticsRequest) => Promise<any>;
-  saveAnalyticsQuery: (query: AnalyticsQuery) => Promise<void>;
-  loadSavedQuery: (queryId: string) => Promise<any>;
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+      this.scheduleReconnect();
+    }
+  }
 
-  // Reporting
-  generateReport: (request: ReportGenerationRequest) => Promise<AnalyticsReport>;
-  scheduleReport: (reportConfig: ReportGenerationRequest, schedule: any) => Promise<void>;
-  exportAnalyticsData: (query: AnalyticsQuery, format: string) => Promise<Blob>;
+  private scheduleReconnect() {
+    if (this.retryCount < this.maxRetries) {
+      this.reconnectTimer = setTimeout(() => {
+        this.retryCount++;
+        this.connect();
+      }, this.reconnectDelay * Math.pow(2, this.retryCount));
+    }
+  }
 
-  // Real-time Analytics
-  getRealTimeMetrics: (metrics: string[]) => Promise<any>;
-  subscribeToMetricUpdates: (metrics: string[], callback: (data: any) => void) => Promise<void>;
+  private notifySubscribers(data: any) {
+    this.subscribers.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error('Error in WebSocket subscriber callback:', error);
+      }
+    });
+  }
 
-  // Comparison & Benchmarking
-  compareMetrics: (request: MetricsComparisonRequest) => Promise<any>;
-  getBenchmarkComparison: (metric: string, benchmarkType: string) => Promise<any>;
+  subscribe(id: string, callback: (data: any) => void) {
+    this.subscribers.set(id, callback);
+    return () => {
+      this.subscribers.delete(id);
+    };
+  }
 
-  // State Management
-  setFilters: (filters: AnalyticsFilters) => void;
-  clearFilters: () => void;
-  setTimeRange: (timeRange: TimeRange) => void;
-  refreshAll: () => Promise<void>;
-  resetState: () => void;
+  send(data: any) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+    }
+  }
+
+  disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    if (this.ws) {
+      this.ws.close();
+    }
+    this.subscribers.clear();
+  }
+
+  getConnectionStatus(): 'connecting' | 'connected' | 'disconnected' | 'error' {
+    if (!this.ws) return 'disconnected';
+    
+    switch (this.ws.readyState) {
+      case WebSocket.CONNECTING: return 'connecting';
+      case WebSocket.OPEN: return 'connected';
+      case WebSocket.CLOSING:
+      case WebSocket.CLOSED: return 'disconnected';
+      default: return 'error';
+    }
+  }
 }
 
-// ============================================================================
-// QUERY KEYS
-// ============================================================================
+// Global WebSocket manager instance
+let wsManager: WebSocketManager | null = null;
 
-const QUERY_KEYS = {
-  ANALYTICS_OVERVIEW: 'catalogAnalytics.overview',
-  CATALOG_METRICS: 'catalogAnalytics.metrics',
-  USAGE_ANALYTICS: 'catalogAnalytics.usage',
-  TREND_ANALYSIS: 'catalogAnalytics.trends',
-  POPULARITY_METRICS: 'catalogAnalytics.popularity',
-  IMPACT_ANALYSIS: 'catalogAnalytics.impact',
-  PREDICTIVE_INSIGHTS: 'catalogAnalytics.predictive',
-  ANALYTICS_REPORTS: 'catalogAnalytics.reports',
-  SAVED_QUERIES: 'catalogAnalytics.savedQueries',
-  REAL_TIME_METRICS: 'catalogAnalytics.realTime',
-} as const;
+const getWebSocketManager = () => {
+  if (!wsManager) {
+    wsManager = new WebSocketManager();
+  }
+  return wsManager;
+};
 
 // ============================================================================
-// CATALOG ANALYTICS HOOK
+// MAIN CATALOG ANALYTICS HOOK
 // ============================================================================
 
-export function useCatalogAnalytics(
-  options: UseCatalogAnalyticsOptions = {}
-): AnalyticsState & AnalyticsOperations {
-  const {
-    enableRealTimeUpdates = false,
-    autoRefreshInterval = 60000, // 1 minute
-    maxRetries = 3,
-    defaultTimeRange = {
-      start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
-      end: new Date()
-    },
-    onAnalyticsComplete,
-    onAnalyticsError
-  } = options;
-
+export const useCatalogAnalytics = (config: AnalyticsConfig) => {
   const queryClient = useQueryClient();
-
-  // Local State
-  const [filters, setFiltersState] = useState<AnalyticsFilters>({
-    timeRange: defaultTimeRange
-  });
-  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState<boolean>(false);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-
-  // ============================================================================
-  // QUERIES
-  // ============================================================================
-
-  // Overview Query
-  const {
-    data: overviewResponse,
-    isLoading: overviewLoading,
-    error: overviewError,
-    refetch: refetchOverview
-  } = useQuery({
-    queryKey: [QUERY_KEYS.ANALYTICS_OVERVIEW, filters.timeRange],
-    queryFn: () => catalogAnalyticsService.getCatalogOverview(filters.timeRange),
-    refetchInterval: enableRealTimeUpdates ? autoRefreshInterval : false,
-    retry: maxRetries
-  });
-
-  // Usage Analytics Query
-  const {
-    data: usageResponse,
-    isLoading: usageLoading,
-    refetch: refetchUsage
-  } = useQuery({
-    queryKey: [QUERY_KEYS.USAGE_ANALYTICS, filters],
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Query for usage analytics
+  const usageAnalyticsQuery = useQuery({
+    queryKey: ['catalogAnalytics', 'usage', config.timeRange, config.filters],
     queryFn: () => catalogAnalyticsService.getUsageAnalytics({
-      timeRange: filters.timeRange,
-      includeDetails: true,
-      includeUsers: true,
-      includeSources: true
+      timeRange: config.timeRange,
+      filters: config.filters,
+      granularity: config.granularity || 'day',
+      includeAdvanced: config.includeAdvancedMetrics || false
     }),
-    enabled: !!filters.timeRange,
-    retry: maxRetries
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: config.enableRealTime ? 30000 : false,
+    refetchIntervalInBackground: config.enableRealTime
   });
 
-  // Saved Queries
-  const {
-    data: savedQueriesResponse,
-    refetch: refetchSavedQueries
-  } = useQuery({
-    queryKey: [QUERY_KEYS.SAVED_QUERIES],
-    queryFn: () => catalogAnalyticsService.getSavedQueries(),
-    retry: maxRetries
+  // Query for business analytics
+  const businessAnalyticsQuery = useQuery({
+    queryKey: ['catalogAnalytics', 'business', config.timeRange, config.filters],
+    queryFn: () => catalogAnalyticsService.getBusinessAnalytics({
+      timeRange: config.timeRange,
+      filters: config.filters
+    }),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: config.includeAdvancedMetrics
   });
 
-  // ============================================================================
-  // MUTATIONS
-  // ============================================================================
+  // Query for technical analytics
+  const technicalAnalyticsQuery = useQuery({
+    queryKey: ['catalogAnalytics', 'technical', config.timeRange, config.filters],
+    queryFn: () => catalogAnalyticsService.getTechnicalAnalytics({
+      timeRange: config.timeRange,
+      filters: config.filters
+    }),
+    staleTime: 5 * 60 * 1000,
+    enabled: config.includeAdvancedMetrics
+  });
 
-  // Generate Report Mutation
-  const generateReportMutation = useMutation({
-    mutationFn: (request: ReportGenerationRequest) =>
-      catalogAnalyticsService.generateReport(request),
-    onMutate: () => {
-      setIsGeneratingReport(true);
-    },
-    onSuccess: (result) => {
-      setIsGeneratingReport(false);
-      onAnalyticsComplete?.(result.data);
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.ANALYTICS_REPORTS] });
+  // Export mutation
+  const exportMutation = useMutation({
+    mutationFn: (options: ExportOptions) => catalogAnalyticsService.exportAnalytics(options),
+    onSuccess: (data, variables) => {
+      // Handle successful export (e.g., download file)
+      if (data.downloadUrl) {
+        window.open(data.downloadUrl, '_blank');
+      } else if (data.blob) {
+        const url = URL.createObjectURL(data.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `catalog-analytics-${new Date().toISOString().split('T')[0]}.${variables.format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     },
     onError: (error) => {
-      setIsGeneratingReport(false);
-      onAnalyticsError?.(error as Error);
+      console.error('Export failed:', error);
     }
   });
 
-  // Custom Analytics Mutation
-  const customAnalyticsMutation = useMutation({
-    mutationFn: (request: CustomAnalyticsRequest) =>
-      catalogAnalyticsService.executeCustomAnalytics(request),
-    onMutate: () => {
-      setIsAnalyzing(true);
-    },
-    onSuccess: (result) => {
-      setIsAnalyzing(false);
-      onAnalyticsComplete?.(result.data);
-    },
-    onError: (error) => {
-      setIsAnalyzing(false);
-      onAnalyticsError?.(error as Error);
+  // Refresh all analytics data
+  const refreshAnalytics = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['catalogAnalytics'] }),
+        queryClient.refetchQueries({ queryKey: ['catalogAnalytics'] })
+      ]);
+    } finally {
+      setIsRefreshing(false);
     }
-  });
+  }, [queryClient]);
 
-  // Trend Analysis Mutation
-  const trendAnalysisMutation = useMutation({
-    mutationFn: (request: TrendAnalysisRequest) =>
-      catalogAnalyticsService.getTrendAnalysis(request),
-    onMutate: () => {
-      setIsAnalyzing(true);
-    },
-    onSuccess: (result) => {
-      setIsAnalyzing(false);
-      queryClient.setQueryData([QUERY_KEYS.TREND_ANALYSIS, request], result);
-    },
-    onError: (error) => {
-      setIsAnalyzing(false);
-      onAnalyticsError?.(error as Error);
-    }
-  });
+  // Export analytics data
+  const exportAnalytics = useCallback(async (options: ExportOptions) => {
+    return exportMutation.mutateAsync(options);
+  }, [exportMutation]);
 
-  // ============================================================================
-  // COMPUTED STATE
-  // ============================================================================
+  // Combined analytics data
+  const usageAnalytics = useMemo<UsageAnalyticsModule | null>(() => {
+    if (!usageAnalyticsQuery.data) return null;
 
-  const overview = useMemo(() => overviewResponse?.data || null, [overviewResponse]);
-  const usageMetrics = useMemo(() => usageResponse?.data || null, [usageResponse]);
-  const savedQueries = useMemo(() => savedQueriesResponse?.data || [], [savedQueriesResponse]);
-  const isLoading = overviewLoading || usageLoading;
-  const error = overviewError?.message || null;
+    const data = usageAnalyticsQuery.data;
+    return {
+      id: `usage-analytics-${Date.now()}`,
+      name: 'Usage Analytics',
+      totalUsage: data.totalUsage || {},
+      userEngagement: data.userEngagement || {},
+      assetPopularity: data.assetPopularity || {},
+      usageTrends: data.trends || [],
+      seasonalPatterns: data.seasonalPatterns || [],
+      userBehavior: data.userBehavior || {},
+      accessPatterns: data.accessPatterns || {},
+      usageRecommendations: data.recommendations || [],
+      performanceMetrics: data.performance || {}
+    };
+  }, [usageAnalyticsQuery.data]);
 
-  // ============================================================================
-  // OPERATIONS
-  // ============================================================================
+  const loading = usageAnalyticsQuery.isLoading || 
+                  businessAnalyticsQuery.isLoading || 
+                  technicalAnalyticsQuery.isLoading ||
+                  isRefreshing;
 
-  const refreshOverview = useCallback(async (timeRange?: TimeRange) => {
-    if (timeRange) {
-      setFiltersState(prev => ({ ...prev, timeRange }));
-    }
-    await refetchOverview();
-    setLastRefresh(new Date());
-  }, [refetchOverview]);
-
-  const getCatalogMetrics = useCallback(async (request: AnalyticsRequest): Promise<any> => {
-    const result = await catalogAnalyticsService.getCatalogMetrics(request);
-    return result.data;
-  }, []);
-
-  const getAssetMetricsByType = useCallback(async (
-    assetType: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getAssetMetricsByType(assetType, timeRange);
-    return result.data;
-  }, []);
-
-  const getUsageAnalytics = useCallback(async (
-    request: UsageAnalyticsRequest
-  ): Promise<UsageMetrics> => {
-    const result = await catalogAnalyticsService.getUsageAnalytics(request);
-    return result.data;
-  }, []);
-
-  const getAssetUsageMetrics = useCallback(async (
-    assetId: string,
-    timeRange: TimeRange
-  ): Promise<AssetUsageMetrics> => {
-    const result = await catalogAnalyticsService.getAssetUsageMetrics(assetId, timeRange);
-    return result.data;
-  }, []);
-
-  const getUserUsageAnalytics = useCallback(async (
-    userId?: string,
-    timeRange?: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getUserUsageAnalytics(userId, timeRange);
-    return result.data;
-  }, []);
-
-  const getDepartmentUsageAnalytics = useCallback(async (
-    department: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getDepartmentUsageAnalytics(department, timeRange);
-    return result.data;
-  }, []);
-
-  const performTrendAnalysis = useCallback(async (
-    request: TrendAnalysisRequest
-  ): Promise<TrendAnalysis> => {
-    const result = await trendAnalysisMutation.mutateAsync(request);
-    return result.data;
-  }, [trendAnalysisMutation]);
-
-  const getGrowthTrends = useCallback(async (
-    metric: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getGrowthTrends(metric as any, timeRange);
-    return result.data;
-  }, []);
-
-  const getAdoptionTrends = useCallback(async (timeRange: TimeRange): Promise<any> => {
-    const result = await catalogAnalyticsService.getAdoptionTrends(timeRange);
-    return result.data;
-  }, []);
-
-  const getSeasonalPatterns = useCallback(async (
-    metric: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getSeasonalPatterns(metric, timeRange);
-    return result.data;
-  }, []);
-
-  const getPopularityAnalysis = useCallback(async (
-    request: PopularityAnalysisRequest
-  ): Promise<PopularityMetrics> => {
-    const result = await catalogAnalyticsService.getPopularityAnalysis(request);
-    return result.data;
-  }, []);
-
-  const getTopAssets = useCallback(async (
-    metric: string,
-    timeRange: TimeRange,
-    limit: number = 10
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getTopAssets(metric as any, timeRange, limit);
-    return result.data;
-  }, []);
-
-  const getTrendingAssets = useCallback(async (
-    timeRange: TimeRange,
-    limit: number = 10
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getTrendingAssets(timeRange, limit);
-    return result.data;
-  }, []);
-
-  const getUnderutilizedAssets = useCallback(async (
-    threshold?: number,
-    timeRange?: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getUnderutilizedAssets(threshold, timeRange);
-    return result.data;
-  }, []);
-
-  const performImpactAnalysis = useCallback(async (
-    request: ImpactAnalysisRequest
-  ): Promise<ImpactAnalysis> => {
-    const result = await catalogAnalyticsService.performImpactAnalysis(request);
-    return result.data;
-  }, []);
-
-  const getBusinessImpactMetrics = useCallback(async (
-    assetId: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getBusinessImpactMetrics(assetId, timeRange);
-    return result.data;
-  }, []);
-
-  const getRiskAnalysis = useCallback(async (
-    assetId?: string,
-    riskType?: string
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getRiskAnalysis(assetId, riskType as any);
-    return result.data;
-  }, []);
-
-  const getPredictiveInsights = useCallback(async (
-    metric: string,
-    timeRange: TimeRange,
-    predictionHorizon: number
-  ): Promise<PredictiveInsights> => {
-    const result = await catalogAnalyticsService.getPredictiveInsights(metric, timeRange, predictionHorizon);
-    return result.data;
-  }, []);
-
-  const getCapacityForecasting = useCallback(async (
-    resource: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getCapacityForecasting(resource as any, timeRange);
-    return result.data;
-  }, []);
-
-  const getAnomalyDetection = useCallback(async (
-    metric: string,
-    timeRange: TimeRange
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getAnomalyDetection(metric, timeRange);
-    return result.data;
-  }, []);
-
-  const executeCustomAnalytics = useCallback(async (
-    request: CustomAnalyticsRequest
-  ): Promise<any> => {
-    const result = await customAnalyticsMutation.mutateAsync(request);
-    return result.data;
-  }, [customAnalyticsMutation]);
-
-  const generateReport = useCallback(async (
-    request: ReportGenerationRequest
-  ): Promise<AnalyticsReport> => {
-    const result = await generateReportMutation.mutateAsync(request);
-    return result.data;
-  }, [generateReportMutation]);
-
-  const scheduleReport = useCallback(async (
-    reportConfig: ReportGenerationRequest,
-    schedule: any
-  ): Promise<void> => {
-    await catalogAnalyticsService.scheduleReport(reportConfig, schedule);
-  }, []);
-
-  const exportAnalyticsData = useCallback(async (
-    query: AnalyticsQuery,
-    format: string
-  ): Promise<Blob> => {
-    return catalogAnalyticsService.exportAnalyticsData(query, format as any);
-  }, []);
-
-  const getRealTimeMetrics = useCallback(async (metrics: string[]): Promise<any> => {
-    const result = await catalogAnalyticsService.getRealTimeMetrics(metrics);
-    return result.data;
-  }, []);
-
-  const subscribeToMetricUpdates = useCallback(async (
-    metrics: string[],
-    callback: (data: any) => void
-  ): Promise<void> => {
-    await catalogAnalyticsService.subscribeToMetricUpdates(metrics, callback);
-  }, []);
-
-  const compareMetrics = useCallback(async (
-    request: MetricsComparisonRequest
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.compareMetrics(request);
-    return result.data;
-  }, []);
-
-  const getBenchmarkComparison = useCallback(async (
-    metric: string,
-    benchmarkType: string
-  ): Promise<any> => {
-    const result = await catalogAnalyticsService.getBenchmarkComparison(metric, benchmarkType as any);
-    return result.data;
-  }, []);
-
-  const setFilters = useCallback((newFilters: AnalyticsFilters) => {
-    setFiltersState(newFilters);
-  }, []);
-
-  const clearFilters = useCallback(() => {
-    setFiltersState({ timeRange: defaultTimeRange });
-  }, [defaultTimeRange]);
-
-  const setTimeRange = useCallback((timeRange: TimeRange) => {
-    setFiltersState(prev => ({ ...prev, timeRange }));
-  }, []);
-
-  const refreshAll = useCallback(async () => {
-    await Promise.all([
-      refetchOverview(),
-      refetchUsage(),
-      refetchSavedQueries()
-    ]);
-    setLastRefresh(new Date());
-  }, [refetchOverview, refetchUsage, refetchSavedQueries]);
-
-  const resetState = useCallback(() => {
-    setFiltersState({ timeRange: defaultTimeRange });
-    setIsAnalyzing(false);
-    setIsGeneratingReport(false);
-    setLastRefresh(null);
-    queryClient.removeQueries({ queryKey: [QUERY_KEYS.ANALYTICS_OVERVIEW] });
-  }, [queryClient, defaultTimeRange]);
-
-  // ============================================================================
-  // RETURN HOOK INTERFACE
-  // ============================================================================
+  const error = usageAnalyticsQuery.error?.message || 
+                businessAnalyticsQuery.error?.message || 
+                technicalAnalyticsQuery.error?.message ||
+                exportMutation.error?.message;
 
   return {
-    // State
-    overview,
-    usageMetrics,
-    trendAnalysis: null,
-    popularityMetrics: null,
-    impactAnalysis: null,
-    predictiveInsights: null,
-    customResults: null,
-    reports: [],
-    savedQueries,
-    isLoading,
-    isAnalyzing,
-    isGeneratingReport,
+    usageAnalytics,
+    businessAnalytics: businessAnalyticsQuery.data || null,
+    technicalAnalytics: technicalAnalyticsQuery.data || null,
+    loading,
     error,
-    lastRefresh,
-
-    // Operations
-    refreshOverview,
-    getCatalogMetrics,
-    getAssetMetricsByType,
-    getUsageAnalytics,
-    getAssetUsageMetrics,
-    getUserUsageAnalytics,
-    getDepartmentUsageAnalytics,
-    performTrendAnalysis,
-    getGrowthTrends,
-    getAdoptionTrends,
-    getSeasonalPatterns,
-    getPopularityAnalysis,
-    getTopAssets,
-    getTrendingAssets,
-    getUnderutilizedAssets,
-    performImpactAnalysis,
-    getBusinessImpactMetrics,
-    getRiskAnalysis,
-    getPredictiveInsights,
-    getCapacityForecasting,
-    getAnomalyDetection,
-    executeCustomAnalytics,
-    saveAnalyticsQuery: async () => {}, // TODO: Implement
-    loadSavedQuery: async () => ({}), // TODO: Implement
-    generateReport,
-    scheduleReport,
-    exportAnalyticsData,
-    getRealTimeMetrics,
-    subscribeToMetricUpdates,
-    compareMetrics,
-    getBenchmarkComparison,
-    setFilters,
-    clearFilters,
-    setTimeRange,
-    refreshAll,
-    resetState
+    isRefreshing,
+    refreshAnalytics,
+    exportAnalytics,
+    exportLoading: exportMutation.isPending
   };
+};
+
+// ============================================================================
+// USAGE ANALYTICS SPECIFIC HOOK
+// ============================================================================
+
+interface UseUsageAnalyticsConfig {
+  timeRange: TimePeriod;
+  filters: AnalyticsFilter[];
+  granularity?: 'minute' | 'hour' | 'day' | 'week' | 'month';
+  includePatterns?: boolean;
+  includePredictions?: boolean;
 }
+
+export const useUsageAnalytics = (config: UseUsageAnalyticsConfig) => {
+  const query = useQuery({
+    queryKey: ['usageAnalytics', config.timeRange, config.filters, config.granularity],
+    queryFn: async () => {
+      const [metrics, trends, behavior] = await Promise.all([
+        catalogAnalyticsService.getUsageMetrics(config),
+        catalogAnalyticsService.getUsageTrends(config),
+        config.includePatterns ? catalogAnalyticsService.getUserBehaviorAnalysis(config) : null
+      ]);
+
+      return {
+        usageMetrics: metrics,
+        trendData: trends,
+        behaviorAnalysis: behavior,
+        userEngagement: metrics?.userEngagement || null,
+        assetPopularity: metrics?.assetPopularity || null
+      };
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 30000 // 30 seconds
+  });
+
+  return {
+    usageMetrics: query.data?.usageMetrics || null,
+    userEngagement: query.data?.userEngagement || null,
+    assetPopularity: query.data?.assetPopularity || null,
+    trendData: query.data?.trendData || [],
+    behaviorAnalysis: query.data?.behaviorAnalysis || null,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch
+  };
+};
+
+// ============================================================================
+// REAL-TIME METRICS HOOK
+// ============================================================================
+
+export const useRealTimeMetrics = (config: RealTimeConfig) => {
+  const [metrics, setMetrics] = useState<any>({});
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [latency, setLatency] = useState<number>(0);
+  const wsManager = useRef<WebSocketManager | null>(null);
+  const pingInterval = useRef<NodeJS.Timeout | null>(null);
+  const lastPingTime = useRef<number>(0);
+
+  useEffect(() => {
+    if (!config.enabled) {
+      if (wsManager.current) {
+        wsManager.current.disconnect();
+        wsManager.current = null;
+      }
+      return;
+    }
+
+    wsManager.current = getWebSocketManager();
+    
+    const unsubscribe = wsManager.current.subscribe('analytics-metrics', (data) => {
+      if (data.type === 'metrics_update' && config.metrics.includes(data.metric)) {
+        setMetrics(prev => ({
+          ...prev,
+          [data.metric]: data.value,
+          timestamp: data.timestamp
+        }));
+      } else if (data.type === 'pong') {
+        const currentTime = Date.now();
+        setLatency(currentTime - lastPingTime.current);
+      }
+    });
+
+    // Monitor connection status
+    const statusInterval = setInterval(() => {
+      if (wsManager.current) {
+        setConnectionStatus(wsManager.current.getConnectionStatus());
+      }
+    }, 1000);
+
+    // Send periodic pings for latency measurement
+    pingInterval.current = setInterval(() => {
+      if (wsManager.current && wsManager.current.getConnectionStatus() === 'connected') {
+        lastPingTime.current = Date.now();
+        wsManager.current.send({ type: 'ping', timestamp: lastPingTime.current });
+      }
+    }, 5000);
+
+    // Subscribe to metrics
+    if (wsManager.current.getConnectionStatus() === 'connected') {
+      wsManager.current.send({
+        type: 'subscribe_metrics',
+        metrics: config.metrics,
+        updateInterval: config.updateInterval
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      clearInterval(statusInterval);
+      if (pingInterval.current) {
+        clearInterval(pingInterval.current);
+      }
+    };
+  }, [config.enabled, config.metrics, config.updateInterval]);
+
+  return {
+    realTimeMetrics: metrics,
+    connectionStatus,
+    latency,
+    isConnected: connectionStatus === 'connected'
+  };
+};
+
+// ============================================================================
+// ANALYTICS DASHBOARD HOOK
+// ============================================================================
+
+interface UseDashboardConfig {
+  dashboardId?: string;
+  timeRange: TimePeriod;
+  filters: AnalyticsFilter[];
+  enableRealTime?: boolean;
+  widgets?: string[];
+}
+
+export const useAnalyticsDashboard = (config: UseDashboardConfig) => {
+  const [dashboardConfig, setDashboardConfig] = useState<AnalyticsDashboardConfig | null>(null);
+  const [widgets, setWidgets] = useState<AnalyticsWidget[]>([]);
+
+  // Load dashboard configuration
+  const dashboardQuery = useQuery({
+    queryKey: ['analyticsDashboard', config.dashboardId],
+    queryFn: () => catalogAnalyticsService.getDashboardConfig(config.dashboardId),
+    enabled: !!config.dashboardId,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // Load widget data
+  const widgetsQuery = useQuery({
+    queryKey: ['analyticsWidgets', config.widgets, config.timeRange, config.filters],
+    queryFn: () => catalogAnalyticsService.getWidgetsData({
+      widgets: config.widgets || [],
+      timeRange: config.timeRange,
+      filters: config.filters
+    }),
+    enabled: !!(config.widgets && config.widgets.length > 0),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: config.enableRealTime ? 30000 : false
+  });
+
+  // Save dashboard configuration
+  const saveDashboardMutation = useMutation({
+    mutationFn: (dashboard: Partial<CatalogAnalyticsDashboard>) => 
+      catalogAnalyticsService.saveDashboardConfig(dashboard),
+    onSuccess: () => {
+      dashboardQuery.refetch();
+    }
+  });
+
+  const updateDashboardConfig = useCallback((updates: Partial<AnalyticsDashboardConfig>) => {
+    setDashboardConfig(prev => prev ? { ...prev, ...updates } : null);
+  }, []);
+
+  const addWidget = useCallback((widget: AnalyticsWidget) => {
+    setWidgets(prev => [...prev, widget]);
+  }, []);
+
+  const removeWidget = useCallback((widgetId: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== widgetId));
+  }, []);
+
+  const saveDashboard = useCallback(async (dashboard: Partial<CatalogAnalyticsDashboard>) => {
+    return saveDashboardMutation.mutateAsync(dashboard);
+  }, [saveDashboardMutation]);
+
+  useEffect(() => {
+    if (dashboardQuery.data) {
+      setDashboardConfig(dashboardQuery.data.config);
+      setWidgets(dashboardQuery.data.widgets || []);
+    }
+  }, [dashboardQuery.data]);
+
+  return {
+    dashboard: dashboardQuery.data || null,
+    dashboardConfig,
+    widgets: widgetsQuery.data || widgets,
+    loading: dashboardQuery.isLoading || widgetsQuery.isLoading,
+    error: dashboardQuery.error?.message || widgetsQuery.error?.message,
+    updateDashboardConfig,
+    addWidget,
+    removeWidget,
+    saveDashboard,
+    saveLoading: saveDashboardMutation.isPending
+  };
+};
+
+// ============================================================================
+// ANALYTICS INSIGHTS HOOK
+// ============================================================================
+
+export const useAnalyticsInsights = (config: AnalyticsConfig) => {
+  const query = useQuery({
+    queryKey: ['analyticsInsights', config.timeRange, config.filters],
+    queryFn: () => catalogAnalyticsService.getAnalyticsInsights({
+      timeRange: config.timeRange,
+      filters: config.filters,
+      includeRecommendations: true,
+      includeAnomalies: true,
+      includePredictions: true
+    }),
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    refetchInterval: config.enableRealTime ? 5 * 60 * 1000 : false // 5 minutes when real-time
+  });
+
+  const generateInsight = useMutation({
+    mutationFn: (params: { type: string; context: any }) => 
+      catalogAnalyticsService.generateInsight(params),
+    onSuccess: () => {
+      query.refetch();
+    }
+  });
+
+  return {
+    insights: query.data?.insights || [],
+    recommendations: query.data?.recommendations || [],
+    anomalies: query.data?.anomalies || [],
+    predictions: query.data?.predictions || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    generateInsight: generateInsight.mutateAsync,
+    generatingInsight: generateInsight.isPending,
+    refetch: query.refetch
+  };
+};
+
+// ============================================================================
+// EXPORT ALL HOOKS
+// ============================================================================
+
+export {
+  useCatalogAnalytics,
+  useUsageAnalytics,
+  useRealTimeMetrics,
+  useAnalyticsDashboard,
+  useAnalyticsInsights
+};
+
+// Export types for external use
+export type {
+  AnalyticsConfig,
+  ExportOptions,
+  RealTimeConfig,
+  UseUsageAnalyticsConfig,
+  UseDashboardConfig
+};
