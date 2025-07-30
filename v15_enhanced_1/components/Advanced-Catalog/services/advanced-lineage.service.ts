@@ -44,7 +44,28 @@ import {
   LineageOptimizationSuggestion,
   LineageComplianceStatus,
   LineageSecurityClassification,
-  TimeRange
+  TimeRange,
+  // Backend-aligned types
+  LineageQueryRequest,
+  LineageQueryResponse,
+  LineageStreamResponse,
+  LineageDependenciesResponse,
+  LineageImpactAnalysisResponse,
+  LineageVisualizationResponse,
+  LineageMetricsResponse,
+  LineageSearchResponse,
+  LineageDiscoveryResponse,
+  LineageHealthResponse,
+  BatchImpactAnalysisRequest,
+  BatchImpactAnalysisResponse,
+  LineageRealTimeUpdate,
+  LineageValidationResponse,
+  LineageGovernanceResponse,
+  GraphAlgorithm,
+  LineageUpdateType,
+  LineageDirection,
+  LineageType,
+  TransformationType
 } from '../types';
 import { 
   ADVANCED_LINEAGE_ENDPOINTS, 
@@ -194,7 +215,108 @@ export class AdvancedLineageService {
   }
 
   // ============================================================================
-  // LINEAGE MANAGEMENT
+  // CORE LINEAGE QUERY (Backend-aligned)
+  // ============================================================================
+
+  /**
+   * Query lineage with advanced graph algorithms (Backend: advanced_lineage_service.py)
+   */
+  async queryLineage(request: LineageQueryRequest): Promise<CatalogApiResponse<LineageQueryResponse>> {
+    const response = await axios.post<CatalogApiResponse<LineageQueryResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.QUERY_LINEAGE),
+      request,
+      { timeout: this.timeout * 2 }
+    );
+    return response.data;
+  }
+
+  /**
+   * Stream real-time lineage updates (Backend: advanced_lineage_routes.py)
+   */
+  async streamLineageUpdates(
+    assetId: string,
+    includeDownstream: boolean = true,
+    includeUpstream: boolean = true
+  ): Promise<AsyncGenerator<LineageStreamResponse>> {
+    const response = await axios.get(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.STREAM_LINEAGE_UPDATES, { assetId }),
+      { 
+        params: { includeDownstream, includeUpstream },
+        responseType: 'stream',
+        timeout: this.timeout * 5
+      }
+    );
+    
+    // Return async generator for streaming
+    return this._processStreamResponse(response.data);
+  }
+
+  /**
+   * Get asset dependencies (Backend: advanced_lineage_routes.py)
+   */
+  async getAssetDependencies(
+    assetId: string,
+    dependencyType: string = 'all',
+    includeIndirect: boolean = true,
+    maxDepth: number = 5
+  ): Promise<CatalogApiResponse<LineageDependenciesResponse>> {
+    const response = await axios.get<CatalogApiResponse<LineageDependenciesResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_DEPENDENCIES, { assetId }),
+      { 
+        params: { dependencyType, includeIndirect, maxDepth },
+        timeout: this.timeout 
+      }
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // IMPACT ANALYSIS (Backend-aligned)
+  // ============================================================================
+
+  /**
+   * Perform impact analysis (Backend: advanced_lineage_service.py)
+   */
+  async performImpactAnalysis(request: ImpactAnalysisRequest): Promise<CatalogApiResponse<LineageImpactAnalysisResponse>> {
+    const response = await axios.post<CatalogApiResponse<LineageImpactAnalysisResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS),
+      request,
+      { timeout: this.timeout * 2 }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get impact analysis by ID (Backend: advanced_lineage_routes.py)
+   */
+  async getImpactAnalysis(
+    analysisId: string,
+    includeDetails: boolean = true
+  ): Promise<CatalogApiResponse<LineageImpactAnalysisResponse>> {
+    const response = await axios.get<CatalogApiResponse<LineageImpactAnalysisResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_IMPACT_ANALYSIS, { analysisId }),
+      { 
+        params: { includeDetails },
+        timeout: this.timeout 
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Batch impact analysis (Backend: advanced_lineage_routes.py)
+   */
+  async batchImpactAnalysis(request: BatchImpactAnalysisRequest): Promise<CatalogApiResponse<BatchImpactAnalysisResponse>> {
+    const response = await axios.post<CatalogApiResponse<BatchImpactAnalysisResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.BATCH_IMPACT_ANALYSIS),
+      request,
+      { timeout: this.timeout * 3 }
+    );
+    return response.data;
+  }
+
+  // ============================================================================
+  // LINEAGE MANAGEMENT (Backend-aligned)
   // ============================================================================
 
   /**
@@ -332,25 +454,69 @@ export class AdvancedLineageService {
     discoveryType: 'SQL_PARSING' | 'METADATA_ANALYSIS' | 'EXECUTION_LOGS' | 'ALL'
   ): Promise<CatalogApiResponse<EnterpriseDataLineage[]>> {
     const response = await axios.post<CatalogApiResponse<EnterpriseDataLineage[]>>(
-      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DISCOVER_LINEAGE, { assetId }),
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DISCOVER_LINEAGE_ASSET, { assetId }),
       { discoveryType },
       { timeout: this.timeout * 3 }
     );
     return response.data;
   }
 
+  /**
+   * Start lineage discovery process (Backend: advanced_lineage_routes.py)
+   */
+  async startLineageDiscovery(
+    dataSourceIds: number[],
+    discoveryConfig: Record<string, any> = {}
+  ): Promise<CatalogApiResponse<LineageDiscoveryResponse>> {
+    const response = await axios.post<CatalogApiResponse<LineageDiscoveryResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DISCOVER_LINEAGE),
+      { dataSourceIds, discoveryConfig },
+      { timeout: this.timeout * 2 }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get discovery status (Backend: advanced_lineage_routes.py)
+   */
+  async getDiscoveryStatus(discoveryId: string): Promise<CatalogApiResponse<LineageDiscoveryResponse>> {
+    const response = await axios.get<CatalogApiResponse<LineageDiscoveryResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_DISCOVERY_STATUS, { discoveryId }),
+      { timeout: this.timeout }
+    );
+    return response.data;
+  }
+
   // ============================================================================
-  // LINEAGE VISUALIZATION
+  // LINEAGE VISUALIZATION (Backend-aligned)
   // ============================================================================
 
   /**
-   * Generate lineage visualization
+   * Generate lineage visualization (Backend: advanced_lineage_routes.py)
    */
-  async generateLineageVisualization(request: LineageVisualizationRequest): Promise<CatalogApiResponse<any>> {
-    const response = await axios.post<CatalogApiResponse<any>>(
+  async generateLineageVisualization(request: LineageVisualizationRequest): Promise<CatalogApiResponse<LineageVisualizationResponse>> {
+    const response = await axios.post<CatalogApiResponse<LineageVisualizationResponse>>(
       buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GENERATE_VISUALIZATION),
       request,
       { timeout: this.timeout * 2 }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get interactive lineage visualization (Backend: advanced_lineage_routes.py)
+   */
+  async getInteractiveVisualization(
+    assetId: string,
+    depth: number = 3,
+    theme: string = 'light'
+  ): Promise<CatalogApiResponse<LineageVisualizationResponse>> {
+    const response = await axios.get<CatalogApiResponse<LineageVisualizationResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_INTERACTIVE_VISUALIZATION, { assetId }),
+      { 
+        params: { depth, theme },
+        timeout: this.timeout 
+      }
     );
     return response.data;
   }
@@ -439,17 +605,34 @@ export class AdvancedLineageService {
   }
 
   // ============================================================================
-  // LINEAGE SEARCH & QUERY
+  // LINEAGE SEARCH & QUERY (Backend-aligned)
   // ============================================================================
 
   /**
-   * Search lineage relationships
+   * Search lineage relationships (Backend: advanced_lineage_routes.py)
    */
-  async searchLineage(request: LineageSearchRequest): Promise<CatalogApiResponse<EnterpriseDataLineage[]>> {
-    const response = await axios.post<CatalogApiResponse<EnterpriseDataLineage[]>>(
+  async searchLineage(request: LineageSearchRequest): Promise<CatalogApiResponse<LineageSearchResponse>> {
+    const response = await axios.post<CatalogApiResponse<LineageSearchResponse>>(
       buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.SEARCH_LINEAGE),
       request,
       { timeout: this.timeout }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get search suggestions (Backend: advanced_lineage_routes.py)
+   */
+  async getSearchSuggestions(
+    query: string,
+    maxSuggestions: number = 10
+  ): Promise<CatalogApiResponse<string[]>> {
+    const response = await axios.get<CatalogApiResponse<string[]>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_SEARCH_SUGGESTIONS),
+      { 
+        params: { query, maxSuggestions },
+        timeout: this.timeout 
+      }
     );
     return response.data;
   }
@@ -484,17 +667,51 @@ export class AdvancedLineageService {
   }
 
   // ============================================================================
-  // LINEAGE METRICS & ANALYTICS
+  // LINEAGE METRICS & ANALYTICS (Backend-aligned)
   // ============================================================================
 
   /**
-   * Get lineage metrics
+   * Get lineage metrics (Backend: advanced_lineage_routes.py)
    */
-  async getLineageMetrics(assetId?: string): Promise<CatalogApiResponse<LineageMetrics>> {
-    const response = await axios.get<CatalogApiResponse<LineageMetrics>>(
-      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_METRICS),
+  async getLineageMetrics(request?: LineageMetricsRequest): Promise<CatalogApiResponse<LineageMetricsResponse>> {
+    const response = await axios.get<CatalogApiResponse<LineageMetricsResponse>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE_METRICS),
       { 
-        params: assetId ? { assetId } : {},
+        params: request,
+        timeout: this.timeout 
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get coverage analytics (Backend: advanced_lineage_routes.py)
+   */
+  async getCoverageAnalytics(
+    timeRange: string = '30d',
+    includeRecommendations: boolean = true
+  ): Promise<CatalogApiResponse<any>> {
+    const response = await axios.get<CatalogApiResponse<any>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_COVERAGE_ANALYTICS),
+      { 
+        params: { timeRange, includeRecommendations },
+        timeout: this.timeout 
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get performance analytics (Backend: advanced_lineage_routes.py)
+   */
+  async getPerformanceAnalytics(
+    timeWindow: string = '24h',
+    includeBottlenecks: boolean = true
+  ): Promise<CatalogApiResponse<any>> {
+    const response = await axios.get<CatalogApiResponse<any>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_PERFORMANCE_ANALYTICS),
+      { 
+        params: { timeWindow, includeBottlenecks },
         timeout: this.timeout 
       }
     );
@@ -624,12 +841,12 @@ export class AdvancedLineageService {
   }
 
   /**
-   * Get change requests for impact analysis
+   * Get change requests for impact analysis (Backend: advanced_lineage_routes.py)
    */
   async getChangeRequests(): Promise<any[]> {
     try {
       const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/change-requests'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_CHANGE_REQUESTS),
         { timeout: this.timeout }
       );
       return response.data.data || [];
@@ -640,12 +857,12 @@ export class AdvancedLineageService {
   }
 
   /**
-   * Get predictive models for impact analysis
+   * Get predictive models for impact analysis (Backend: advanced_lineage_routes.py)
    */
   async getPredictiveModels(): Promise<any[]> {
     try {
       const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/predictive-models'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_PREDICTIVE_MODELS),
         { timeout: this.timeout }
       );
       return response.data.data || [];
@@ -656,12 +873,28 @@ export class AdvancedLineageService {
   }
 
   /**
+   * Health check (Backend: advanced_lineage_routes.py)
+   */
+  async healthCheck(): Promise<CatalogApiResponse<LineageHealthResponse>> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageHealthResponse>>(
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.HEALTH_CHECK),
+        { timeout: this.timeout }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Health check failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get lineage by ID
    */
   async getLineageById(lineageId: string): Promise<any> {
     try {
       const response = await axios.get<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE, { assetId: lineageId }),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE, { lineageId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -677,7 +910,7 @@ export class AdvancedLineageService {
   async updateLineage(id: string, updates: any): Promise<any> {
     try {
       const response = await axios.put<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${id}`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.UPDATE_LINEAGE, { lineageId: id }),
         updates,
         { timeout: this.timeout }
       );
@@ -694,7 +927,7 @@ export class AdvancedLineageService {
   async deleteLineage(id: string): Promise<void> {
     try {
       await axios.delete(
-        buildUrl(this.baseURL, `/lineage/${id}`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DELETE_LINEAGE, { lineageId: id }),
         { timeout: this.timeout }
       );
     } catch (error) {
@@ -709,7 +942,7 @@ export class AdvancedLineageService {
   async validateLineage(lineageId: string): Promise<any> {
     try {
       const response = await axios.post<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${lineageId}/validate`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.VALIDATE_LINEAGE, { lineageId }),
         {},
         { timeout: this.timeout }
       );
@@ -721,12 +954,12 @@ export class AdvancedLineageService {
   }
 
   /**
-   * Get lineage metrics
+   * Get lineage metrics by ID
    */
-  async getLineageMetrics(lineageId: string): Promise<any> {
+  async getLineageMetricsById(lineageId: string): Promise<any> {
     try {
       const response = await axios.get<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${lineageId}/metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE_METRICS_BY_ID, { lineageId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -739,10 +972,10 @@ export class AdvancedLineageService {
   /**
    * Perform comprehensive impact analysis
    */
-  async performImpactAnalysis(request: ImpactAnalysisRequest): Promise<LineageImpactAnalysis> {
+  async performComprehensiveImpactAnalysis(request: ImpactAnalysisRequest): Promise<LineageImpactAnalysis> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageImpactAnalysis>>(
-        buildUrl(this.baseURL, '/lineage/impact-analysis'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS),
         request,
         { timeout: this.timeout }
       );
@@ -759,7 +992,7 @@ export class AdvancedLineageService {
   async assessLineageRisk(request: RiskAssessmentRequest): Promise<LineageRiskAssessment> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageRiskAssessment>>(
-        buildUrl(this.baseURL, '/lineage/risk-assessment'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.ASSESS_LINEAGE_RISK),
         request,
         { timeout: this.timeout }
       );
@@ -776,7 +1009,7 @@ export class AdvancedLineageService {
   async analyzeLineageCost(request: CostAnalysisRequest): Promise<LineageCostAnalysis> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageCostAnalysis>>(
-        buildUrl(this.baseURL, '/lineage/cost-analysis'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.ANALYZE_LINEAGE_COST),
         request,
         { timeout: this.timeout }
       );
@@ -793,7 +1026,7 @@ export class AdvancedLineageService {
   async generateBusinessImpact(request: BusinessImpactRequest): Promise<LineageBusinessImpact> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageBusinessImpact>>(
-        buildUrl(this.baseURL, '/lineage/business-impact'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GENERATE_BUSINESS_IMPACT),
         request,
         { timeout: this.timeout }
       );
@@ -810,7 +1043,7 @@ export class AdvancedLineageService {
   async calculateROIMetrics(request: ROICalculationRequest): Promise<LineageROIMetrics> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageROIMetrics>>(
-        buildUrl(this.baseURL, '/lineage/roi-metrics'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.CALCULATE_ROI_METRICS),
         request,
         { timeout: this.timeout }
       );
@@ -832,7 +1065,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageEfficiencyMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/efficiency-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_EFFICIENCY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -856,7 +1089,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageUsageStatistics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/usage-statistics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_USAGE_STATISTICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -875,7 +1108,7 @@ export class AdvancedLineageService {
   async getHealthMetrics(assetId: string): Promise<LineageHealthMetrics> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageHealthMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/health-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_HEALTH_METRICS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -896,7 +1129,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageReliabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/reliability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_RELIABILITY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -920,7 +1153,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageAvailabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/availability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_AVAILABILITY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -939,7 +1172,7 @@ export class AdvancedLineageService {
   async getScalabilityMetrics(assetId: string): Promise<LineageScalabilityMetrics> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageScalabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/scalability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_SCALABILITY_METRICS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -960,7 +1193,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineagePerformanceMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/performance-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_PERFORMANCE_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -979,7 +1212,7 @@ export class AdvancedLineageService {
   async getQualityContext(assetId: string): Promise<LineageQualityContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageQualityContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/quality-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_QUALITY_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -995,7 +1228,7 @@ export class AdvancedLineageService {
   async getSecurityContext(assetId: string): Promise<LineageSecurityContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageSecurityContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/security-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_SECURITY_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1011,7 +1244,7 @@ export class AdvancedLineageService {
   async getComplianceContext(assetId: string): Promise<LineageComplianceContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageComplianceContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_COMPLIANCE_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1027,7 +1260,7 @@ export class AdvancedLineageService {
   async getOperationalContext(assetId: string): Promise<LineageOperationalContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageOperationalContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/operational-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_OPERATIONAL_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1043,7 +1276,7 @@ export class AdvancedLineageService {
   async getBusinessContext(assetId: string): Promise<LineageBusinessContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageBusinessContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/business-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_BUSINESS_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1059,7 +1292,7 @@ export class AdvancedLineageService {
   async getDataContext(assetId: string): Promise<LineageDataContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageDataContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/data-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_DATA_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1075,7 +1308,7 @@ export class AdvancedLineageService {
   async getTechnicalContext(assetId: string): Promise<LineageTechnicalContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageTechnicalContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/technical-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_TECHNICAL_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1091,7 +1324,7 @@ export class AdvancedLineageService {
   async getGovernanceContext(assetId: string): Promise<LineageGovernanceContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageGovernanceContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/governance-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_GOVERNANCE_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1107,7 +1340,7 @@ export class AdvancedLineageService {
   async getOptimizationSuggestions(assetId: string): Promise<LineageOptimizationSuggestion[]> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageOptimizationSuggestion[]>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/optimization-suggestions`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_OPTIMIZATION_SUGGESTIONS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1123,7 +1356,7 @@ export class AdvancedLineageService {
   async getComplianceStatus(assetId: string): Promise<LineageComplianceStatus> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageComplianceStatus>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-status`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_COMPLIANCE_STATUS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1139,7 +1372,7 @@ export class AdvancedLineageService {
   async getSecurityClassification(assetId: string): Promise<LineageSecurityClassification> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageSecurityClassification>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/security-classification`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_SECURITY_CLASSIFICATION, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1147,6 +1380,143 @@ export class AdvancedLineageService {
       console.error('Failed to get security classification:', error);
       throw error;
     }
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  /**
+   * Process streaming response
+   */
+  private async *_processStreamResponse(stream: any): AsyncGenerator<LineageStreamResponse> {
+    try {
+      for await (const chunk of stream) {
+        const data = JSON.parse(chunk.toString());
+        yield data as LineageStreamResponse;
+      }
+    } catch (error) {
+      console.error('Error processing stream:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Build lineage query from parameters
+   */
+  private buildLineageQuery(
+    assetId: string,
+    direction: LineageDirection = LineageDirection.DOWNSTREAM,
+    maxDepth: number = 5,
+    includeColumnLineage: boolean = true,
+    filterConfidence: number = 0.0,
+    filterAssetTypes?: string[],
+    includeTransformations: boolean = true,
+    includeMetadata: boolean = true,
+    algorithm: GraphAlgorithm = GraphAlgorithm.BREADTH_FIRST
+  ): LineageQueryRequest {
+    return {
+      asset_id: assetId,
+      direction,
+      max_depth: maxDepth,
+      include_column_lineage: includeColumnLineage,
+      filter_confidence: filterConfidence,
+      filter_asset_types: filterAssetTypes,
+      include_transformations: includeTransformations,
+      include_metadata: includeMetadata,
+      algorithm: algorithm
+    };
+  }
+
+  /**
+   * Build impact analysis request
+   */
+  private buildImpactAnalysisRequest(
+    sourceAssetId: string,
+    changeType: string,
+    changeDetails?: Record<string, any>,
+    includeRecommendations: boolean = true,
+    analysisDepth: number = 10,
+    priorityThreshold: number = 0.5
+  ): ImpactAnalysisRequest {
+    return {
+      source_asset_id: sourceAssetId,
+      change_type: changeType,
+      change_details: changeDetails,
+      include_recommendations: includeRecommendations,
+      analysis_depth: analysisDepth,
+      priority_threshold: priorityThreshold
+    };
+  }
+
+  /**
+   * Build lineage update request
+   */
+  private buildLineageUpdateRequest(
+    updateType: LineageUpdateType,
+    lineageData: Record<string, any>,
+    sourceSystem: string,
+    updateMetadata: Record<string, any> = {}
+  ): LineageUpdateRequest {
+    return {
+      update_type: updateType,
+      lineage_data: lineageData,
+      source_system: sourceSystem,
+      update_metadata: updateMetadata
+    };
+  }
+
+  /**
+   * Build visualization request
+   */
+  private buildVisualizationRequest(
+    assetIds: string[],
+    layoutType: string = 'hierarchical',
+    includeColumnLevel: boolean = false,
+    maxNodes: number = 1000,
+    visualizationConfig: Record<string, any> = {}
+  ): LineageVisualizationRequest {
+    return {
+      asset_ids: assetIds,
+      layout_type: layoutType,
+      include_column_level: includeColumnLevel,
+      max_nodes: maxNodes,
+      visualization_config: visualizationConfig
+    };
+  }
+
+  /**
+   * Build search request
+   */
+  private buildSearchRequest(
+    searchQuery: string,
+    searchType: string = 'semantic',
+    maxResults: number = 100,
+    includeLineage: boolean = true
+  ): LineageSearchRequest {
+    return {
+      search_query: searchQuery,
+      search_type: searchType,
+      max_results: maxResults,
+      include_lineage: includeLineage
+    };
+  }
+
+  /**
+   * Build metrics request
+   */
+  private buildMetricsRequest(
+    timeWindow: string = '24h',
+    aggregationLevel: string = 'hour',
+    includePredictions: boolean = true,
+    assetFilter?: string[]
+  ): LineageMetricsRequest {
+    return {
+      time_window: timeWindow,
+      aggregation_level: aggregationLevel,
+      include_predictions: includePredictions,
+      asset_filter: assetFilter
+    };
   }
 }
 

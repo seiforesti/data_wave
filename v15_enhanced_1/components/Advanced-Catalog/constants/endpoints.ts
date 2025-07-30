@@ -229,6 +229,9 @@ export const DATA_PROFILING_ENDPOINTS = {
 // ============================================================================
 
 export const ADVANCED_LINEAGE_ENDPOINTS = {
+  // Core Lineage Query
+  QUERY_LINEAGE: '/query',
+  
   // Lineage Management
   CREATE_LINEAGE: '/lineage',
   GET_LINEAGE: '/lineage/{lineageId}',
@@ -236,43 +239,99 @@ export const ADVANCED_LINEAGE_ENDPOINTS = {
   DELETE_LINEAGE: '/lineage/{lineageId}',
   BULK_UPDATE: '/lineage/bulk',
   
-  // Lineage Tracking
-  TRACK_LINEAGE: '/track',
+  // Real-time Streaming
+  STREAM_LINEAGE_UPDATES: '/assets/{assetId}/lineage/stream',
+  
+  // Dependencies
+  GET_DEPENDENCIES: '/assets/{assetId}/dependencies',
+  
+  // Impact Analysis
+  IMPACT_ANALYSIS: '/impact-analysis',
+  GET_IMPACT_ANALYSIS: '/impact-analysis/{analysisId}',
+  BATCH_IMPACT_ANALYSIS: '/impact-analysis/batch',
+  
+  // Lineage Updates
+  UPDATE_LINEAGE_REAL_TIME: '/update',
+  DELETE_ASSET_LINEAGE: '/assets/{assetId}',
+  
+  // Visualization
+  GENERATE_VISUALIZATION: '/visualization',
+  GET_INTERACTIVE_VISUALIZATION: '/visualization/interactive/{assetId}',
+  
+  // Metrics and Analytics
+  GET_LINEAGE_METRICS: '/metrics',
+  GET_COVERAGE_ANALYTICS: '/analytics/coverage',
+  GET_PERFORMANCE_ANALYTICS: '/analytics/performance',
+  
+  // Search
+  SEARCH_LINEAGE: '/search',
+  GET_SEARCH_SUGGESTIONS: '/search/suggestions',
+  
+  // Discovery
+  DISCOVER_LINEAGE: '/discover',
+  GET_DISCOVERY_STATUS: '/discover/{discoveryId}/status',
+  
+  // Health Check
+  HEALTH_CHECK: '/health',
+  
+  // Additional Backend-Aligned Endpoints
   GET_UPSTREAM: '/upstream/{assetId}',
   GET_DOWNSTREAM: '/downstream/{assetId}',
   GET_COLUMN_LINEAGE: '/column/{assetId}/{columnName}',
-  DISCOVER_LINEAGE: '/discover/{assetId}',
-  
-  // Lineage Visualization
-  GENERATE_VISUALIZATION: '/visualization',
+  DISCOVER_LINEAGE_ASSET: '/discover/{assetId}',
   GET_GRAPH: '/graph/{assetId}',
   UPDATE_VIZ_CONFIG: '/visualization/config/{assetId}',
-  
-  // Impact Analysis
-  IMPACT_ANALYSIS: '/impact',
   CHANGE_IMPACT: '/impact/change/{assetId}',
   DEPENDENCY_ANALYSIS: '/dependency/{assetId}',
   COVERAGE_ANALYSIS: '/coverage',
-  
-  // Lineage Search
-  SEARCH_LINEAGE: '/search',
   EXECUTE_QUERY: '/query',
   GET_PATH: '/path',
-  
-  // Lineage Metrics
-  GET_METRICS: '/metrics',
   QUALITY_METRICS: '/metrics/quality',
   GET_STATISTICS: '/metrics/statistics',
-  
-  // Lineage Validation
   VALIDATE_CONSISTENCY: '/validate/consistency',
   VALIDATE_COMPLETENESS: '/validate/completeness/{assetId}',
   GOVERNANCE_POLICIES: '/governance/policies',
-  
-  // Export & Reporting
   EXPORT_LINEAGE: '/export/{assetId}',
   GENERATE_REPORT: '/report/{assetId}',
-  SCHEDULE_TRACKING: '/schedule/{assetId}'
+  SCHEDULE_TRACKING: '/schedule/{assetId}',
+  
+  // Context Endpoints
+  GET_QUALITY_CONTEXT: '/{assetId}/quality-context',
+  GET_SECURITY_CONTEXT: '/{assetId}/security-context',
+  GET_COMPLIANCE_CONTEXT: '/{assetId}/compliance-context',
+  GET_OPERATIONAL_CONTEXT: '/{assetId}/operational-context',
+  GET_BUSINESS_CONTEXT: '/{assetId}/business-context',
+  GET_DATA_CONTEXT: '/{assetId}/data-context',
+  GET_TECHNICAL_CONTEXT: '/{assetId}/technical-context',
+  GET_GOVERNANCE_CONTEXT: '/{assetId}/governance-context',
+  
+  // Metrics Endpoints
+  GET_EFFICIENCY_METRICS: '/{assetId}/efficiency-metrics',
+  GET_USAGE_STATISTICS: '/{assetId}/usage-statistics',
+  GET_HEALTH_METRICS: '/{assetId}/health-metrics',
+  GET_RELIABILITY_METRICS: '/{assetId}/reliability-metrics',
+  GET_AVAILABILITY_METRICS: '/{assetId}/availability-metrics',
+  GET_SCALABILITY_METRICS: '/{assetId}/scalability-metrics',
+  GET_PERFORMANCE_METRICS: '/{assetId}/performance-metrics',
+  
+  // Additional Analysis Endpoints
+  GET_OPTIMIZATION_SUGGESTIONS: '/{assetId}/optimization-suggestions',
+  GET_COMPLIANCE_STATUS: '/{assetId}/compliance-status',
+  GET_SECURITY_CLASSIFICATION: '/{assetId}/security-classification',
+  
+  // Change Requests and Predictive Models
+  GET_CHANGE_REQUESTS: '/change-requests',
+  GET_PREDICTIVE_MODELS: '/predictive-models',
+  
+  // Validation Endpoints
+  VALIDATE_LINEAGE: '/{lineageId}/validate',
+  GET_LINEAGE_METRICS_BY_ID: '/{lineageId}/metrics',
+  
+  // ROI and Business Impact
+  CALCULATE_ROI_METRICS: '/roi-metrics',
+  GENERATE_BUSINESS_IMPACT: '/business-impact',
+  ANALYZE_LINEAGE_COST: '/cost-analysis',
+  ASSESS_LINEAGE_RISK: '/risk-assessment'
 } as const;
 
 // ============================================================================
