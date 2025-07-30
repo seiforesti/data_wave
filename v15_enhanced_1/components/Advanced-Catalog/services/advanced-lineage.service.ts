@@ -6,6 +6,8 @@
 // ============================================================================
 
 import axios, { AxiosResponse } from 'axios';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { 
   EnterpriseDataLineage,
   DataLineageNode,
@@ -15,7 +17,34 @@ import {
   LineageImpactAnalysis,
   LineageQuery,
   CatalogApiResponse,
-  PaginationRequest
+  PaginationRequest,
+  LineageVisualization,
+  LineageAnalysisResult,
+  LineageRiskAssessment,
+  LineageCostAnalysis,
+  LineageBusinessImpact,
+  LineageROIMetrics,
+  LineageEfficiencyMetrics,
+  LineageUsageStatistics,
+  LineageHealthMetrics,
+  LineageReliabilityMetrics,
+  LineageAvailabilityMetrics,
+  LineageScalabilityMetrics,
+  LineagePerformanceMetrics,
+  LineageQualityContext,
+  LineageSecurityContext,
+  LineageComplianceContext,
+  LineageOperationalContext,
+  LineageBusinessContext,
+  LineageDataContext,
+  LineageTechnicalContext,
+  LineageGovernanceContext,
+  LineageMetadata,
+  LineageValidationResult,
+  LineageOptimizationSuggestion,
+  LineageComplianceStatus,
+  LineageSecurityClassification,
+  TimeRange
 } from '../types';
 import { 
   ADVANCED_LINEAGE_ENDPOINTS, 
@@ -23,6 +52,61 @@ import {
   buildUrl,
   buildPaginatedUrl 
 } from '../constants';
+
+// ============================================================================
+// REQUEST TYPES FOR ADVANCED LINEAGE OPERATIONS
+// ============================================================================
+
+export interface ImpactAnalysisRequest {
+  assetIds: string[];
+  analysisType: 'IMPACT' | 'DEPENDENCY' | 'CHANGE' | 'RISK';
+  includeMetrics?: boolean;
+  timeRange?: TimeRange;
+  depth?: number;
+  includeDownstream?: boolean;
+  includeUpstream?: boolean;
+  includeCrossDomain?: boolean;
+  changeType?: 'schema_change' | 'data_change' | 'process_change' | 'system_change';
+  changeDetails?: Record<string, any>;
+}
+
+export interface RiskAssessmentRequest {
+  assetIds: string[];
+  riskFactors?: string[];
+  assessmentType?: 'OPERATIONAL' | 'SECURITY' | 'COMPLIANCE' | 'BUSINESS';
+  timeHorizon?: number; // days
+  includeHistoricalData?: boolean;
+  mitigationStrategy?: 'PROACTIVE' | 'REACTIVE' | 'PREVENTIVE';
+}
+
+export interface CostAnalysisRequest {
+  assetIds: string[];
+  analysisScope: 'DIRECT' | 'INDIRECT' | 'COMPREHENSIVE';
+  currency?: string;
+  timeHorizon?: number; // months
+  includeOpportunityCost?: boolean;
+  includeRiskCost?: boolean;
+  costCategories?: string[];
+}
+
+export interface BusinessImpactRequest {
+  assetIds: string[];
+  businessProcesses?: string[];
+  stakeholders?: string[];
+  impactCategories?: string[];
+  severityThreshold?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  timeframe?: TimeRange;
+}
+
+export interface ROICalculationRequest {
+  assetIds: string[];
+  investmentAmount?: number;
+  currency?: string;
+  timeHorizon?: number; // months
+  discountRate?: number;
+  benefitCategories?: string[];
+  costCategories?: string[];
+}
 
 // ============================================================================
 // LINEAGE REQUEST INTERFACES
@@ -649,6 +733,419 @@ export class AdvancedLineageService {
     } catch (error) {
       console.error('Failed to fetch lineage metrics:', error);
       return null;
+    }
+  }
+
+  /**
+   * Perform comprehensive impact analysis
+   */
+  async performImpactAnalysis(request: ImpactAnalysisRequest): Promise<LineageImpactAnalysis> {
+    try {
+      const response = await axios.post<CatalogApiResponse<LineageImpactAnalysis>>(
+        buildUrl(this.baseURL, '/lineage/impact-analysis'),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to perform impact analysis:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assess lineage risks
+   */
+  async assessLineageRisk(request: RiskAssessmentRequest): Promise<LineageRiskAssessment> {
+    try {
+      const response = await axios.post<CatalogApiResponse<LineageRiskAssessment>>(
+        buildUrl(this.baseURL, '/lineage/risk-assessment'),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to assess lineage risk:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyze lineage costs
+   */
+  async analyzeLineageCost(request: CostAnalysisRequest): Promise<LineageCostAnalysis> {
+    try {
+      const response = await axios.post<CatalogApiResponse<LineageCostAnalysis>>(
+        buildUrl(this.baseURL, '/lineage/cost-analysis'),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to analyze lineage cost:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate business impact assessment
+   */
+  async generateBusinessImpact(request: BusinessImpactRequest): Promise<LineageBusinessImpact> {
+    try {
+      const response = await axios.post<CatalogApiResponse<LineageBusinessImpact>>(
+        buildUrl(this.baseURL, '/lineage/business-impact'),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to generate business impact assessment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate ROI metrics for lineage changes
+   */
+  async calculateROIMetrics(request: ROICalculationRequest): Promise<LineageROIMetrics> {
+    try {
+      const response = await axios.post<CatalogApiResponse<LineageROIMetrics>>(
+        buildUrl(this.baseURL, '/lineage/roi-metrics'),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to calculate ROI metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get efficiency metrics
+   */
+  async getEfficiencyMetrics(assetId: string, timeRange?: TimeRange): Promise<LineageEfficiencyMetrics> {
+    try {
+      const params = timeRange ? { 
+        start: timeRange.start.toISOString(), 
+        end: timeRange.end.toISOString() 
+      } : {};
+      
+      const response = await axios.get<CatalogApiResponse<LineageEfficiencyMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/efficiency-metrics`),
+        { 
+          params,
+          timeout: this.timeout 
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get efficiency metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get usage statistics
+   */
+  async getUsageStatistics(assetId: string, timeRange?: TimeRange): Promise<LineageUsageStatistics> {
+    try {
+      const params = timeRange ? { 
+        start: timeRange.start.toISOString(), 
+        end: timeRange.end.toISOString() 
+      } : {};
+      
+      const response = await axios.get<CatalogApiResponse<LineageUsageStatistics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/usage-statistics`),
+        { 
+          params,
+          timeout: this.timeout 
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get usage statistics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get health metrics
+   */
+  async getHealthMetrics(assetId: string): Promise<LineageHealthMetrics> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageHealthMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/health-metrics`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get health metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get reliability metrics
+   */
+  async getReliabilityMetrics(assetId: string, timeRange?: TimeRange): Promise<LineageReliabilityMetrics> {
+    try {
+      const params = timeRange ? { 
+        start: timeRange.start.toISOString(), 
+        end: timeRange.end.toISOString() 
+      } : {};
+      
+      const response = await axios.get<CatalogApiResponse<LineageReliabilityMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/reliability-metrics`),
+        { 
+          params,
+          timeout: this.timeout 
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get reliability metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get availability metrics
+   */
+  async getAvailabilityMetrics(assetId: string, timeRange?: TimeRange): Promise<LineageAvailabilityMetrics> {
+    try {
+      const params = timeRange ? { 
+        start: timeRange.start.toISOString(), 
+        end: timeRange.end.toISOString() 
+      } : {};
+      
+      const response = await axios.get<CatalogApiResponse<LineageAvailabilityMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/availability-metrics`),
+        { 
+          params,
+          timeout: this.timeout 
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get availability metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get scalability metrics
+   */
+  async getScalabilityMetrics(assetId: string): Promise<LineageScalabilityMetrics> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageScalabilityMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/scalability-metrics`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get scalability metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get performance metrics
+   */
+  async getPerformanceMetrics(assetId: string, timeRange?: TimeRange): Promise<LineagePerformanceMetrics> {
+    try {
+      const params = timeRange ? { 
+        start: timeRange.start.toISOString(), 
+        end: timeRange.end.toISOString() 
+      } : {};
+      
+      const response = await axios.get<CatalogApiResponse<LineagePerformanceMetrics>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/performance-metrics`),
+        { 
+          params,
+          timeout: this.timeout 
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get performance metrics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get quality context
+   */
+  async getQualityContext(assetId: string): Promise<LineageQualityContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageQualityContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/quality-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get quality context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get security context
+   */
+  async getSecurityContext(assetId: string): Promise<LineageSecurityContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageSecurityContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/security-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get security context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get compliance context
+   */
+  async getComplianceContext(assetId: string): Promise<LineageComplianceContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageComplianceContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get compliance context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get operational context
+   */
+  async getOperationalContext(assetId: string): Promise<LineageOperationalContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageOperationalContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/operational-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get operational context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get business context
+   */
+  async getBusinessContext(assetId: string): Promise<LineageBusinessContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageBusinessContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/business-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get business context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get data context
+   */
+  async getDataContext(assetId: string): Promise<LineageDataContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageDataContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/data-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get data context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get technical context
+   */
+  async getTechnicalContext(assetId: string): Promise<LineageTechnicalContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageTechnicalContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/technical-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get technical context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get governance context
+   */
+  async getGovernanceContext(assetId: string): Promise<LineageGovernanceContext> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageGovernanceContext>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/governance-context`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get governance context:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get optimization suggestions
+   */
+  async getOptimizationSuggestions(assetId: string): Promise<LineageOptimizationSuggestion[]> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageOptimizationSuggestion[]>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/optimization-suggestions`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get optimization suggestions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get compliance status
+   */
+  async getComplianceStatus(assetId: string): Promise<LineageComplianceStatus> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageComplianceStatus>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-status`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get compliance status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get security classification
+   */
+  async getSecurityClassification(assetId: string): Promise<LineageSecurityClassification> {
+    try {
+      const response = await axios.get<CatalogApiResponse<LineageSecurityClassification>>(
+        buildUrl(this.baseURL, `/lineage/${assetId}/security-classification`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to get security classification:', error);
+      throw error;
     }
   }
 }
