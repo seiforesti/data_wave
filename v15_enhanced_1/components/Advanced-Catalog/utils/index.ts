@@ -24,6 +24,10 @@ export { default as helpers } from './helpers';
 export * from './calculations';
 export { default as calculations } from './calculations';
 
+// Export lineage calculator
+export * from './lineage-calculator';
+export { default as lineageCalculator } from './lineage-calculator';
+
 // ============================================================================
 // UTILITY COLLECTIONS
 // ============================================================================

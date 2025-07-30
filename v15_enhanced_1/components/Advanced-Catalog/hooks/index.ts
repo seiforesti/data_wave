@@ -49,6 +49,17 @@ export {
   type AIOperations
 } from './useCatalogAI';
 
+// Search Hooks
+export {
+  useCatalogSearch,
+  type UseCatalogSearchOptions,
+  type SearchState,
+  type SearchFilters,
+  type SearchOptions,
+  type SavedSearch,
+  type SearchOperations
+} from './useCatalogSearch';
+
 // Profiling Hooks
 export {
   useCatalogProfiling,
