@@ -229,50 +229,67 @@ export const DATA_PROFILING_ENDPOINTS = {
 // ============================================================================
 
 export const ADVANCED_LINEAGE_ENDPOINTS = {
-  // Lineage Management
-  CREATE_LINEAGE: '/lineage',
-  GET_LINEAGE: '/lineage/{lineageId}',
-  UPDATE_LINEAGE: '/lineage/{lineageId}',
-  DELETE_LINEAGE: '/lineage/{lineageId}',
-  BULK_UPDATE: '/lineage/bulk',
+  // Lineage Query & Management
+  QUERY_LINEAGE: '/api/v1/lineage/query',
+  CREATE_LINEAGE: '/api/v1/lineage',
+  GET_LINEAGE: '/api/v1/lineage/{lineageId}',
+  UPDATE_LINEAGE: '/api/v1/lineage/update',
+  DELETE_LINEAGE: '/api/v1/lineage/assets/{assetId}',
+  BULK_UPDATE: '/api/v1/lineage/bulk',
   
-  // Lineage Tracking
-  TRACK_LINEAGE: '/track',
-  GET_UPSTREAM: '/upstream/{assetId}',
-  GET_DOWNSTREAM: '/downstream/{assetId}',
-  GET_COLUMN_LINEAGE: '/column/{assetId}/{columnName}',
-  DISCOVER_LINEAGE: '/discover/{assetId}',
+  // Lineage Tracking & Discovery
+  TRACK_LINEAGE: '/api/v1/lineage/track',
+  GET_UPSTREAM: '/api/v1/lineage/upstream/{assetId}',
+  GET_DOWNSTREAM: '/api/v1/lineage/downstream/{assetId}',
+  GET_COLUMN_LINEAGE: '/api/v1/lineage/column/{assetId}/{columnName}',
+  DISCOVER_LINEAGE: '/api/v1/lineage/discover',
+  GET_DISCOVERY_STATUS: '/api/v1/lineage/discover/{discoveryId}/status',
+  
+  // Asset Dependencies
+  GET_DEPENDENCIES: '/api/v1/lineage/assets/{assetId}/dependencies',
   
   // Lineage Visualization
-  GENERATE_VISUALIZATION: '/visualization',
-  GET_GRAPH: '/graph/{assetId}',
-  UPDATE_VIZ_CONFIG: '/visualization/config/{assetId}',
+  GENERATE_VISUALIZATION: '/api/v1/lineage/visualization',
+  GET_INTERACTIVE_VISUALIZATION: '/api/v1/lineage/visualization/interactive/{assetId}',
+  GET_GRAPH: '/api/v1/lineage/graph/{assetId}',
+  UPDATE_VIZ_CONFIG: '/api/v1/lineage/visualization/config/{assetId}',
   
   // Impact Analysis
-  IMPACT_ANALYSIS: '/impact',
-  CHANGE_IMPACT: '/impact/change/{assetId}',
-  DEPENDENCY_ANALYSIS: '/dependency/{assetId}',
-  COVERAGE_ANALYSIS: '/coverage',
+  IMPACT_ANALYSIS: '/api/v1/lineage/impact-analysis',
+  GET_IMPACT_ANALYSIS: '/api/v1/lineage/impact-analysis/{analysisId}',
+  BATCH_IMPACT_ANALYSIS: '/api/v1/lineage/impact-analysis/batch',
+  CHANGE_IMPACT: '/api/v1/lineage/impact/change/{assetId}',
+  DEPENDENCY_ANALYSIS: '/api/v1/lineage/dependency/{assetId}',
+  COVERAGE_ANALYSIS: '/api/v1/lineage/coverage',
   
   // Lineage Search
-  SEARCH_LINEAGE: '/search',
-  EXECUTE_QUERY: '/query',
-  GET_PATH: '/path',
+  SEARCH_LINEAGE: '/api/v1/lineage/search',
+  GET_SEARCH_SUGGESTIONS: '/api/v1/lineage/search/suggestions',
+  EXECUTE_QUERY: '/api/v1/lineage/query',
+  GET_PATH: '/api/v1/lineage/path',
   
-  // Lineage Metrics
-  GET_METRICS: '/metrics',
-  QUALITY_METRICS: '/metrics/quality',
-  GET_STATISTICS: '/metrics/statistics',
+  // Lineage Metrics & Analytics
+  GET_METRICS: '/api/v1/lineage/metrics',
+  GET_COVERAGE_ANALYTICS: '/api/v1/lineage/analytics/coverage',
+  GET_PERFORMANCE_ANALYTICS: '/api/v1/lineage/analytics/performance',
+  QUALITY_METRICS: '/api/v1/lineage/metrics/quality',
+  GET_STATISTICS: '/api/v1/lineage/metrics/statistics',
   
   // Lineage Validation
-  VALIDATE_CONSISTENCY: '/validate/consistency',
-  VALIDATE_COMPLETENESS: '/validate/completeness/{assetId}',
-  GOVERNANCE_POLICIES: '/governance/policies',
+  VALIDATE_CONSISTENCY: '/api/v1/lineage/validate/consistency',
+  VALIDATE_COMPLETENESS: '/api/v1/lineage/validate/completeness/{assetId}',
+  GOVERNANCE_POLICIES: '/api/v1/lineage/governance/policies',
   
   // Export & Reporting
-  EXPORT_LINEAGE: '/export/{assetId}',
-  GENERATE_REPORT: '/report/{assetId}',
-  SCHEDULE_TRACKING: '/schedule/{assetId}'
+  EXPORT_LINEAGE: '/api/v1/lineage/export/{assetId}',
+  GENERATE_REPORT: '/api/v1/lineage/report/{assetId}',
+  SCHEDULE_TRACKING: '/api/v1/lineage/schedule/{assetId}',
+  
+  // Streaming
+  STREAM_LINEAGE_UPDATES: '/api/v1/lineage/assets/{assetId}/lineage/stream',
+  
+  // Health Check
+  HEALTH_CHECK: '/api/v1/lineage/health'
 } as const;
 
 // ============================================================================

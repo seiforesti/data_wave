@@ -13,6 +13,75 @@ import {
 } from './catalog-core.types';
 
 // ============================================================================
+// BACKEND MAPPING - ADVANCED LINEAGE SERVICE TYPES
+// ============================================================================
+// Maps to: advanced_lineage_service.py (1114 lines)
+// Maps to: data_lineage_models.py (447 lines)
+// Maps to: advanced_lineage_routes.py (998 lines)
+// ============================================================================
+
+export interface LineageQuery {
+  asset_id: string;
+  direction: LineageDirection;
+  max_depth: number;
+  include_column_lineage: boolean;
+  filter_confidence: number;
+  filter_asset_types?: string[];
+  include_transformations: boolean;
+  include_metadata: boolean;
+}
+
+export interface LineageGraph {
+  nodes: LineageNode[];
+  edges: LineageEdge[];
+  root_node: string;
+  direction: LineageDirection;
+  max_depth: number;
+  total_nodes: number;
+  total_edges: number;
+  query_metadata: Record<string, any>;
+}
+
+export interface LineageNode {
+  node_id: string;
+  asset_type: string;
+  asset_name: string;
+  schema_name?: string;
+  database_name?: string;
+  metadata: Record<string, any>;
+  level: number;
+  distance: number;
+}
+
+export interface LineageEdge {
+  source_id: string;
+  target_id: string;
+  lineage_type: LineageType;
+  transformation_type?: TransformationType;
+  confidence: number;
+  metadata: Record<string, any>;
+}
+
+export interface ImpactAnalysisResult {
+  source_asset: string;
+  affected_assets: AffectedAsset[];
+  impact_score: number;
+  critical_path: string[];
+  recommended_actions: string[];
+  analysis_metadata: Record<string, any>;
+}
+
+export interface AffectedAsset {
+  asset_id: string;
+  asset: IntelligentDataAsset;
+  impact_level: ImpactLevel;
+  impact_type: ImpactType;
+  distance: number;
+  path_count: number;
+  risk_level: RiskLevel;
+}
+
+// ============================================================================
 // ADVANCED LINEAGE TYPES (advanced_lineage_service.py)
 // ============================================================================
 
@@ -875,6 +944,76 @@ export interface LineageDocumentation {
 // ENUM DEFINITIONS
 // ============================================================================
 
+// ============================================================================
+// BACKEND ENUM MAPPINGS - FROM data_lineage_models.py
+// ============================================================================
+
+export enum LineageType {
+  TABLE_TO_TABLE = 'table_to_table',
+  COLUMN_TO_COLUMN = 'column_to_column',
+  VIEW_DEPENDENCY = 'view_dependency',
+  ETL_TRANSFORMATION = 'etl_transformation',
+  API_CONSUMPTION = 'api_consumption',
+  REPORT_USAGE = 'report_usage',
+  ML_TRAINING = 'ml_training',
+  STREAM_PROCESSING = 'stream_processing',
+  CUSTOM_LOGIC = 'custom_logic'
+}
+
+export enum LineageDirection {
+  UPSTREAM = 'upstream',
+  DOWNSTREAM = 'downstream',
+  BIDIRECTIONAL = 'bidirectional'
+}
+
+export enum TransformationType {
+  DIRECT_COPY = 'direct_copy',
+  AGGREGATION = 'aggregation',
+  JOIN = 'join',
+  FILTER = 'filter',
+  CALCULATION = 'calculation',
+  LOOKUP = 'lookup',
+  SPLIT = 'split',
+  MERGE = 'merge',
+  PIVOT = 'pivot',
+  UNPIVOT = 'unpivot',
+  CUSTOM_FUNCTION = 'custom_function',
+  ML_PREDICTION = 'ml_prediction'
+}
+
+export enum LineageConfidence {
+  VERIFIED = 'verified',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+  INFERRED = 'inferred'
+}
+
+export enum ImpactSeverity {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+  MINIMAL = 'minimal'
+}
+
+export enum GraphAlgorithm {
+  BREADTH_FIRST = 'breadth_first',
+  DEPTH_FIRST = 'depth_first',
+  SHORTEST_PATH = 'shortest_path',
+  ALL_PATHS = 'all_paths',
+  CRITICAL_PATH = 'critical_path',
+  CENTRALITY_BASED = 'centrality_based'
+}
+
+export enum LineageUpdateType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  BULK_LOAD = 'bulk_load',
+  SYNC = 'sync'
+}
+
 export enum LineageNodeType {
   SOURCE = 'SOURCE',
   TARGET = 'TARGET',
@@ -892,19 +1031,6 @@ export enum LineageEdgeType {
   DEPENDENCY = 'DEPENDENCY',
   TRIGGER = 'TRIGGER',
   CONTROL_FLOW = 'CONTROL_FLOW'
-}
-
-export enum TransformationType {
-  COPY = 'COPY',
-  FILTER = 'FILTER',
-  AGGREGATE = 'AGGREGATE',
-  JOIN = 'JOIN',
-  UNION = 'UNION',
-  TRANSFORM = 'TRANSFORM',
-  CALCULATE = 'CALCULATE',
-  SPLIT = 'SPLIT',
-  MERGE = 'MERGE',
-  CLEANSE = 'CLEANSE'
 }
 
 export enum LineageDiscoveryStatus {
@@ -969,6 +1095,81 @@ export enum DocumentationApprovalStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   NEEDS_UPDATE = 'NEEDS_UPDATE'
+}
+
+// ============================================================================
+// BACKEND API REQUEST/RESPONSE TYPES - FROM advanced_lineage_routes.py
+// ============================================================================
+
+export interface LineageQueryRequest {
+  asset_id: string;
+  direction: LineageDirection;
+  max_depth: number;
+  include_column_lineage: boolean;
+  filter_confidence: number;
+  filter_asset_types?: string[];
+  include_transformations: boolean;
+  include_metadata: boolean;
+  algorithm: string;
+}
+
+export interface ImpactAnalysisRequest {
+  source_asset_id: string;
+  change_type: string;
+  change_details?: Record<string, any>;
+  include_recommendations: boolean;
+  analysis_depth: number;
+  priority_threshold: number;
+}
+
+export interface LineageUpdateRequest {
+  update_type: string;
+  lineage_data: Record<string, any>;
+  source_system: string;
+  update_metadata: Record<string, any>;
+}
+
+export interface LineageVisualizationRequest {
+  asset_ids: string[];
+  layout_type: string;
+  include_column_level: boolean;
+  max_nodes: number;
+  visualization_config: Record<string, any>;
+}
+
+export interface LineageMetricsRequest {
+  time_window: string;
+  aggregation_level: string;
+  include_predictions: boolean;
+  asset_filter?: string[];
+}
+
+export interface LineageSearchRequest {
+  search_query: string;
+  search_type: string;
+  max_results: number;
+  include_lineage: boolean;
+}
+
+export interface LineageGraphResponse {
+  nodes: Record<string, any>[];
+  edges: Record<string, any>[];
+  total_nodes: number;
+  total_edges: number;
+  depth_levels: number;
+  has_more: boolean;
+  query_metadata: Record<string, any>;
+}
+
+export interface ImpactAnalysisResponse {
+  analysis_id: string;
+  source_node_id: string;
+  total_affected_assets: number;
+  risk_score: number;
+  critical_assets: Record<string, any>[];
+  recommended_actions: string[];
+  affected_teams: string[];
+  analysis_date: Date;
 }
 
 // ============================================================================
