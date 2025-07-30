@@ -629,7 +629,7 @@ export class AdvancedLineageService {
   async getChangeRequests(): Promise<any[]> {
     try {
       const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/change-requests'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.CHANGE_REQUESTS),
         { timeout: this.timeout }
       );
       return response.data.data || [];
@@ -645,7 +645,7 @@ export class AdvancedLineageService {
   async getPredictiveModels(): Promise<any[]> {
     try {
       const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/predictive-models'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.PREDICTIVE_MODELS),
         { timeout: this.timeout }
       );
       return response.data.data || [];
@@ -674,10 +674,10 @@ export class AdvancedLineageService {
   /**
    * Update lineage
    */
-  async updateLineage(id: string, updates: any): Promise<any> {
+  async updateLineageById(id: string, updates: any): Promise<any> {
     try {
       const response = await axios.put<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${id}`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.UPDATE_LINEAGE, { lineageId: id }),
         updates,
         { timeout: this.timeout }
       );
@@ -689,12 +689,12 @@ export class AdvancedLineageService {
   }
 
   /**
-   * Delete lineage
+   * Delete lineage by ID
    */
-  async deleteLineage(id: string): Promise<void> {
+  async deleteLineageById(id: string): Promise<void> {
     try {
       await axios.delete(
-        buildUrl(this.baseURL, `/lineage/${id}`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DELETE_LINEAGE, { lineageId: id }),
         { timeout: this.timeout }
       );
     } catch (error) {
@@ -706,10 +706,10 @@ export class AdvancedLineageService {
   /**
    * Validate lineage
    */
-  async validateLineage(lineageId: string): Promise<any> {
+  async validateLineageById(lineageId: string): Promise<any> {
     try {
       const response = await axios.post<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${lineageId}/validate`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.VALIDATE_LINEAGE, { lineageId }),
         {},
         { timeout: this.timeout }
       );
@@ -721,12 +721,12 @@ export class AdvancedLineageService {
   }
 
   /**
-   * Get lineage metrics
+   * Get lineage metrics by ID
    */
-  async getLineageMetrics(lineageId: string): Promise<any> {
+  async getLineageMetricsById(lineageId: string): Promise<any> {
     try {
       const response = await axios.get<CatalogApiResponse<any>>(
-        buildUrl(this.baseURL, `/lineage/${lineageId}/metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE_METRICS, { lineageId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -739,10 +739,10 @@ export class AdvancedLineageService {
   /**
    * Perform comprehensive impact analysis
    */
-  async performImpactAnalysis(request: ImpactAnalysisRequest): Promise<LineageImpactAnalysis> {
+  async performAdvancedImpactAnalysis(request: ImpactAnalysisRequest): Promise<LineageImpactAnalysis> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageImpactAnalysis>>(
-        buildUrl(this.baseURL, '/lineage/impact-analysis'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS_ADVANCED),
         request,
         { timeout: this.timeout }
       );
@@ -759,7 +759,7 @@ export class AdvancedLineageService {
   async assessLineageRisk(request: RiskAssessmentRequest): Promise<LineageRiskAssessment> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageRiskAssessment>>(
-        buildUrl(this.baseURL, '/lineage/risk-assessment'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.RISK_ASSESSMENT),
         request,
         { timeout: this.timeout }
       );
@@ -776,7 +776,7 @@ export class AdvancedLineageService {
   async analyzeLineageCost(request: CostAnalysisRequest): Promise<LineageCostAnalysis> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageCostAnalysis>>(
-        buildUrl(this.baseURL, '/lineage/cost-analysis'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.COST_ANALYSIS),
         request,
         { timeout: this.timeout }
       );
@@ -793,7 +793,7 @@ export class AdvancedLineageService {
   async generateBusinessImpact(request: BusinessImpactRequest): Promise<LineageBusinessImpact> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageBusinessImpact>>(
-        buildUrl(this.baseURL, '/lineage/business-impact'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.BUSINESS_IMPACT),
         request,
         { timeout: this.timeout }
       );
@@ -810,7 +810,7 @@ export class AdvancedLineageService {
   async calculateROIMetrics(request: ROICalculationRequest): Promise<LineageROIMetrics> {
     try {
       const response = await axios.post<CatalogApiResponse<LineageROIMetrics>>(
-        buildUrl(this.baseURL, '/lineage/roi-metrics'),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.ROI_METRICS),
         request,
         { timeout: this.timeout }
       );
@@ -832,7 +832,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageEfficiencyMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/efficiency-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.EFFICIENCY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -856,7 +856,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageUsageStatistics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/usage-statistics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.USAGE_STATISTICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -875,7 +875,7 @@ export class AdvancedLineageService {
   async getHealthMetrics(assetId: string): Promise<LineageHealthMetrics> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageHealthMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/health-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.HEALTH_METRICS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -896,7 +896,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageReliabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/reliability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.RELIABILITY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -920,7 +920,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineageAvailabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/availability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.AVAILABILITY_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -939,7 +939,7 @@ export class AdvancedLineageService {
   async getScalabilityMetrics(assetId: string): Promise<LineageScalabilityMetrics> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageScalabilityMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/scalability-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.SCALABILITY_METRICS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -960,7 +960,7 @@ export class AdvancedLineageService {
       } : {};
       
       const response = await axios.get<CatalogApiResponse<LineagePerformanceMetrics>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/performance-metrics`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.PERFORMANCE_METRICS, { assetId }),
         { 
           params,
           timeout: this.timeout 
@@ -979,7 +979,7 @@ export class AdvancedLineageService {
   async getQualityContext(assetId: string): Promise<LineageQualityContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageQualityContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/quality-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.QUALITY_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -995,7 +995,7 @@ export class AdvancedLineageService {
   async getSecurityContext(assetId: string): Promise<LineageSecurityContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageSecurityContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/security-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.SECURITY_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1011,7 +1011,7 @@ export class AdvancedLineageService {
   async getComplianceContext(assetId: string): Promise<LineageComplianceContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageComplianceContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.COMPLIANCE_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1027,7 +1027,7 @@ export class AdvancedLineageService {
   async getOperationalContext(assetId: string): Promise<LineageOperationalContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageOperationalContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/operational-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.OPERATIONAL_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1043,7 +1043,7 @@ export class AdvancedLineageService {
   async getBusinessContext(assetId: string): Promise<LineageBusinessContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageBusinessContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/business-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.BUSINESS_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1059,7 +1059,7 @@ export class AdvancedLineageService {
   async getDataContext(assetId: string): Promise<LineageDataContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageDataContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/data-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.DATA_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1075,7 +1075,7 @@ export class AdvancedLineageService {
   async getTechnicalContext(assetId: string): Promise<LineageTechnicalContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageTechnicalContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/technical-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.TECHNICAL_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1091,7 +1091,7 @@ export class AdvancedLineageService {
   async getGovernanceContext(assetId: string): Promise<LineageGovernanceContext> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageGovernanceContext>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/governance-context`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GOVERNANCE_CONTEXT, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1107,7 +1107,7 @@ export class AdvancedLineageService {
   async getOptimizationSuggestions(assetId: string): Promise<LineageOptimizationSuggestion[]> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageOptimizationSuggestion[]>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/optimization-suggestions`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.OPTIMIZATION_SUGGESTIONS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1123,7 +1123,7 @@ export class AdvancedLineageService {
   async getComplianceStatus(assetId: string): Promise<LineageComplianceStatus> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageComplianceStatus>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/compliance-status`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.COMPLIANCE_STATUS, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
@@ -1139,7 +1139,7 @@ export class AdvancedLineageService {
   async getSecurityClassification(assetId: string): Promise<LineageSecurityClassification> {
     try {
       const response = await axios.get<CatalogApiResponse<LineageSecurityClassification>>(
-        buildUrl(this.baseURL, `/lineage/${assetId}/security-classification`),
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.SECURITY_CLASSIFICATION, { assetId }),
         { timeout: this.timeout }
       );
       return response.data.data;
