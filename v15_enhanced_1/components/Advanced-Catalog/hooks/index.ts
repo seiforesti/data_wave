@@ -31,6 +31,13 @@ export {
   type LineageOperations
 } from './useCatalogLineage';
 
+// Data Lineage Hook
+export {
+  useDataLineage,
+  type UseDataLineageOptions,
+  type UseDataLineageReturn
+} from './useDataLineage';
+
 // Recommendations Hooks
 export {
   useCatalogRecommendations,
