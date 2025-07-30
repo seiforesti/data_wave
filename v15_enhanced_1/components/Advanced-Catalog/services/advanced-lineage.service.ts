@@ -306,15 +306,28 @@ export class AdvancedLineageService {
   // ============================================================================
 
   /**
-   * Perform impact analysis
+   * Perform impact analysis for asset changes
+   * Maps to: /advanced-lineage/impact-analysis (POST)
    */
-  async performImpactAnalysis(request: LineageAnalysisRequest): Promise<CatalogApiResponse<LineageImpactAnalysis>> {
-    const response = await axios.post<CatalogApiResponse<LineageImpactAnalysis>>(
-      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS),
-      request,
-      { timeout: this.timeout * 2 }
-    );
-    return response.data;
+  async performImpactAnalysis(request: {
+    source_asset_id: string;
+    change_type: string;
+    change_details?: any;
+    include_recommendations?: boolean;
+    analysis_depth?: number;
+    priority_threshold?: number;
+  }): Promise<CatalogApiResponse<any>> {
+    try {
+      const response = await axios.post<CatalogApiResponse<any>>(
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS),
+        request,
+        { timeout: this.timeout }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to perform impact analysis:', error);
+      throw error;
+    }
   }
 
   /**
@@ -541,14 +554,14 @@ export class AdvancedLineageService {
 
   /**
    * Get change requests for impact analysis
+   * NOTE: This endpoint is not yet implemented in backend, providing fallback
    */
   async getChangeRequests(): Promise<any[]> {
     try {
-      const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/change-requests'),
-        { timeout: this.timeout }
-      );
-      return response.data.data || [];
+      // Try to get from impact analysis history or return empty array
+      // This could be enhanced when backend implements the endpoint
+      console.warn('change-requests endpoint not implemented in backend, returning empty array');
+      return [];
     } catch (error) {
       console.error('Failed to fetch change requests:', error);
       return [];
@@ -557,14 +570,14 @@ export class AdvancedLineageService {
 
   /**
    * Get predictive models for impact analysis
+   * NOTE: This endpoint is not yet implemented in backend, providing fallback
    */
   async getPredictiveModels(): Promise<any[]> {
     try {
-      const response = await axios.get<CatalogApiResponse<any[]>>(
-        buildUrl(this.baseURL, '/predictive-models'),
-        { timeout: this.timeout }
-      );
-      return response.data.data || [];
+      // Try to get from ML service or return empty array
+      // This could be enhanced when backend implements the endpoint
+      console.warn('predictive-models endpoint not implemented in backend, returning empty array');
+      return [];
     } catch (error) {
       console.error('Failed to fetch predictive models:', error);
       return [];

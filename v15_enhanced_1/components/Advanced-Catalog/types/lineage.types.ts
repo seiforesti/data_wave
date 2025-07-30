@@ -795,3 +795,142 @@ export enum PatternType {
   QUALITY = 'QUALITY',
   GOVERNANCE = 'GOVERNANCE'
 }
+
+// ============================================================================
+// IMPACT ANALYSIS TYPES
+// ============================================================================
+
+export interface DirectImpact {
+  assetId: string;
+  assetName: string;
+  impactType: string;
+  severity: ImpactLevel;
+  description: string;
+  estimatedEffort: number;
+  riskLevel: RiskLevel;
+  mitigation: string[];
+}
+
+export interface IndirectImpact {
+  assetId: string;
+  assetName: string;
+  impactType: string;
+  severity: ImpactLevel;
+  description: string;
+  estimatedEffort: number;
+  riskLevel: RiskLevel;
+  propagationPath: string[];
+  dependencyChain: string[];
+}
+
+export interface CascadingImpact {
+  assetId: string;
+  assetName: string;
+  impactType: string;
+  severity: ImpactLevel;
+  description: string;
+  estimatedEffort: number;
+  riskLevel: RiskLevel;
+  cascadeLevel: number;
+  triggerConditions: string[];
+  affectedDownstream: string[];
+}
+
+export interface MitigationRecommendation {
+  id: string;
+  type: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  effort: number;
+  cost: number;
+  timeline: number;
+  effectiveness: number;
+  dependencies: string[];
+}
+
+export interface ImpactAnalysisMetadata {
+  analysisId: string;
+  version: string;
+  timestamp: Date;
+  analyst: string;
+  confidence: number;
+  scope: string;
+  methodology: string;
+  assumptions: string[];
+  limitations: string[];
+}
+
+export interface LineageRiskAssessment {
+  overallRisk: RiskScore;
+  riskCategories: RiskCategory[];
+  riskFactors: RiskFactor[];
+  mitigation: RiskMitigation[];
+  monitoring: RiskMonitoring;
+  recommendations: string[];
+}
+
+export interface LineageBusinessImpact {
+  revenueImpact: number;
+  customerImpact: number;
+  operationalImpact: number;
+  strategicImpact: number;
+  complianceImpact: number;
+  brandImpact: number;
+  marketImpact: number;
+  partnershipImpact: number;
+}
+
+export interface LineageTechnicalImpact {
+  performanceImpact: number;
+  availabilityImpact: number;
+  scalabilityImpact: number;
+  securityImpact: number;
+  maintainabilityImpact: number;
+  reliabilityImpact: number;
+  compatibilityImpact: number;
+  dataQualityImpact: number;
+}
+
+export interface RiskScore {
+  score: number;
+  level: RiskLevel;
+  confidence: number;
+  calculationMethod: string;
+}
+
+export interface RiskCategory {
+  id: string;
+  name: string;
+  type: string;
+  severity: RiskLevel;
+  probability: number;
+  impact: number;
+  description: string;
+}
+
+export interface RiskFactor {
+  id: string;
+  name: string;
+  type: string;
+  weight: number;
+  contribution: number;
+  description: string;
+}
+
+export interface RiskMitigation {
+  id: string;
+  riskId: string;
+  strategy: string;
+  actions: string[];
+  timeline: number;
+  cost: number;
+  effectiveness: number;
+}
+
+export interface RiskMonitoring {
+  metrics: string[];
+  alerts: string[];
+  thresholds: Record<string, number>;
+  frequency: string;
+}

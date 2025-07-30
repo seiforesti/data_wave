@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { advancedLineageService } from '../services/advanced-lineage.service';
+import { AdvancedLineageService } from '../services/advanced-lineage.service';
 import {
   EnterpriseDataLineage,
   DataLineageNode,
@@ -18,6 +18,9 @@ import {
   LineageMetrics,
   LineageValidationResult
 } from '../types';
+
+// Create service instance
+const advancedLineageService = new AdvancedLineageService();
 
 // ============================================================================
 // HOOK INTERFACES
@@ -53,6 +56,11 @@ export interface UseDataLineageReturn {
   deleteLineage: (id: string) => Promise<void>;
   analyzeImpact: (assetIds: string[]) => Promise<LineageImpactAnalysis>;
   validateLineage: (lineageId: string) => Promise<LineageValidationResult>;
+  
+  // New methods from enhanced service
+  getChangeRequests: () => Promise<any[]>;
+  getPredictiveModels: () => Promise<any[]>;
+  performImpactAnalysis: (request: any) => Promise<any>;
 }
 
 // ============================================================================
@@ -90,7 +98,8 @@ export const useDataLineage = (
     queryKey: ['lineage', lineageId],
     queryFn: async () => {
       if (!lineageId) return null;
-      return await advancedLineageService.getLineageById(lineageId);
+      const response = await advancedLineageService.getLineageById(lineageId);
+      return response;
     },
     enabled: !!lineageId,
     retry: maxRetries,
@@ -202,11 +211,17 @@ export const useDataLineage = (
 
   const analyzeImpact = useCallback(async (assetIds: string[]): Promise<LineageImpactAnalysis> => {
     try {
-      const analysis = await advancedLineageService.analyzeLineageImpact({
-        assetIds,
-        analysisType: 'IMPACT',
-        includeMetrics: true
-      });
+      // Use the new performImpactAnalysis method with proper request format
+      const request = {
+        source_asset_id: assetIds[0] || '',
+        change_type: 'schema_change',
+        include_recommendations: true,
+        analysis_depth: 10,
+        priority_threshold: 0.5
+      };
+      
+      const response = await advancedLineageService.performImpactAnalysis(request);
+      const analysis = response.data || response;
       setImpactAnalysis(analysis);
       return analysis;
     } catch (error) {
@@ -218,11 +233,44 @@ export const useDataLineage = (
 
   const validateLineage = useCallback(async (lineageId: string): Promise<LineageValidationResult> => {
     try {
-      const validationResult = await advancedLineageService.validateLineage(lineageId);
-      setValidation(validationResult);
-      return validationResult;
+      const validationResult = await advancedLineageService.validateConsistency();
+      const validation = validationResult.data || validationResult;
+      setValidation(validation);
+      return validation;
     } catch (error) {
       console.error('Lineage validation error:', error);
+      onError?.(error as Error);
+      throw error;
+    }
+  }, [onError]);
+
+  // New enhanced methods
+  const getChangeRequests = useCallback(async (): Promise<any[]> => {
+    try {
+      return await advancedLineageService.getChangeRequests();
+    } catch (error) {
+      console.error('Failed to get change requests:', error);
+      onError?.(error as Error);
+      return [];
+    }
+  }, [onError]);
+
+  const getPredictiveModels = useCallback(async (): Promise<any[]> => {
+    try {
+      return await advancedLineageService.getPredictiveModels();
+    } catch (error) {
+      console.error('Failed to get predictive models:', error);
+      onError?.(error as Error);
+      return [];
+    }
+  }, [onError]);
+
+  const performImpactAnalysis = useCallback(async (request: any): Promise<any> => {
+    try {
+      const response = await advancedLineageService.performImpactAnalysis(request);
+      return response;
+    } catch (error) {
+      console.error('Failed to perform impact analysis:', error);
       onError?.(error as Error);
       throw error;
     }
@@ -278,6 +326,11 @@ export const useDataLineage = (
     updateLineage,
     deleteLineage,
     analyzeImpact,
-    validateLineage
+    validateLineage,
+    
+    // New enhanced methods
+    getChangeRequests,
+    getPredictiveModels,
+    performImpactAnalysis
   };
 };
