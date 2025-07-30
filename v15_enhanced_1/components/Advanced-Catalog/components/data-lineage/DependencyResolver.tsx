@@ -1449,6 +1449,62 @@ export const DependencyResolver = forwardRef<
   }, [state.analysisResults, state.resolutions, state.circularDependencies]);
   
   // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+  
+  const detectCircularDependencies = useCallback((edges: any[]): string[][] => {
+    const adjacencyList: Record<string, string[]> = {};
+    const visited: Set<string> = new Set();
+    const recursionStack: Set<string> = new Set();
+    const cycles: string[][] = [];
+    
+    // Build adjacency list
+    edges.forEach(edge => {
+      if (!adjacencyList[edge.sourceId]) {
+        adjacencyList[edge.sourceId] = [];
+      }
+      adjacencyList[edge.sourceId].push(edge.targetId);
+    });
+    
+    const dfs = (node: string, path: string[]): void => {
+      if (recursionStack.has(node)) {
+        // Found a cycle
+        const cycleStart = path.indexOf(node);
+        if (cycleStart !== -1) {
+          const cycle = [...path.slice(cycleStart), node];
+          cycles.push(cycle);
+        }
+        return;
+      }
+      
+      if (visited.has(node)) {
+        return;
+      }
+      
+      visited.add(node);
+      recursionStack.add(node);
+      path.push(node);
+      
+      const neighbors = adjacencyList[node] || [];
+      neighbors.forEach(neighbor => {
+        dfs(neighbor, [...path]);
+      });
+      
+      recursionStack.delete(node);
+      path.pop();
+    };
+    
+    // Check all nodes
+    Object.keys(adjacencyList).forEach(node => {
+      if (!visited.has(node)) {
+        dfs(node, []);
+      }
+    });
+    
+    return cycles;
+  }, []);
+
+  // ============================================================================
   // CORE FUNCTIONS
   // ============================================================================
   
@@ -1738,36 +1794,41 @@ export const DependencyResolver = forwardRef<
         }
       }));
       
-      // Simulate circular dependency detection
-      const mockCircularDependency: CircularDependency = {
-        id: `cycle_${Date.now()}`,
-        cycle: ['table_a', 'table_b', 'table_c', 'table_a'],
-        length: 3,
-        type: 'direct',
-        severity: 'high',
-        impact: {
-          performance: {
-            score: 75,
-            description: 'High performance impact due to circular references',
-            factors: ['Query optimization issues', 'Increased execution time'],
-            recommendations: ['Break the cycle', 'Implement caching']
-          },
-          maintainability: {
-            score: 60,
-            description: 'Moderate maintainability impact',
-            factors: ['Complex dependency structure', 'Difficult debugging'],
-            recommendations: ['Refactor dependencies', 'Add documentation']
-          },
-          reliability: {
-            score: 80,
-            description: 'High reliability impact',
-            factors: ['Potential deadlocks', 'System instability'],
-            recommendations: ['Implement timeout mechanisms', 'Add monitoring']
-          },
-          scalability: {
-            score: 70,
-            description: 'High scalability impact',
-            factors: ['Resource contention', 'Performance bottlenecks'],
+      // Real circular dependency detection using lineage data
+      if (lineageData?.edges && lineageData.edges.length > 0) {
+        // Detect actual circular dependencies from lineage data
+        const cycles = detectCircularDependencies(lineageData.edges);
+        
+        if (cycles.length > 0) {
+          const circularDependency: CircularDependency = {
+            id: `cycle_${Date.now()}`,
+            cycle: cycles[0],
+            length: cycles[0].length - 1,
+            type: 'direct',
+            severity: cycles[0].length > 5 ? 'critical' : cycles[0].length > 3 ? 'high' : 'medium',
+            impact: {
+              performance: {
+                score: Math.min(90, cycles[0].length * 15),
+                description: `Performance impact from ${cycles[0].length - 1}-node circular dependency`,
+                factors: ['Query optimization complexity', 'Increased execution time'],
+                recommendations: ['Break the cycle', 'Implement caching']
+              },
+              maintainability: {
+                score: Math.min(85, cycles[0].length * 12),
+                description: 'Maintainability impact from circular references',
+                factors: ['Complex dependency structure', 'Difficult debugging'],
+                recommendations: ['Refactor dependencies', 'Add documentation']
+              },
+              reliability: {
+                score: Math.min(95, cycles[0].length * 18),
+                description: 'Reliability impact from circular dependencies',
+                factors: ['Potential deadlocks', 'System instability'],
+                recommendations: ['Implement timeout mechanisms', 'Add monitoring']
+              },
+              scalability: {
+                score: Math.min(80, cycles[0].length * 14),
+                description: 'Scalability impact from dependency cycles',
+                factors: ['Resource contention', 'Performance bottlenecks'],
             recommendations: ['Optimize resource usage', 'Implement load balancing']
           },
           security: {
@@ -1848,13 +1909,15 @@ export const DependencyResolver = forwardRef<
         status: 'detected'
       };
       
-      setState(prev => ({
-        ...prev,
-        circularDependencies: [mockCircularDependency, ...prev.circularDependencies]
-      }));
-      
-      // Trigger callback
-      onCircularDependencyDetected?.(mockCircularDependency);
+          setState(prev => ({
+            ...prev,
+            circularDependencies: [circularDependency, ...prev.circularDependencies]
+          }));
+          
+          // Trigger callback
+          onCircularDependencyDetected?.(circularDependency);
+        }
+      }
       
     } catch (error) {
       console.error('Circular dependency detection failed:', error);
@@ -1872,38 +1935,50 @@ export const DependencyResolver = forwardRef<
         }
       }));
       
-      // Simulate optimization suggestion generation
-      const mockOptimizationSuggestion: OptimizationSuggestion = {
-        id: `optimization_${Date.now()}`,
-        type: 'performance',
-        priority: 'high',
-        title: 'Implement Dependency Caching',
-        description: 'Implement caching mechanisms to reduce dependency resolution overhead',
-        targetNodes: ['table_a', 'table_b'],
-        currentState: {
-          complexity: 75,
-          performance: 60,
-          maintainability: 65,
-          reliability: 70,
-          cost: 100,
-          metrics: {
-            'response_time': 500,
-            'throughput': 1000,
-            'error_rate': 0.05
-          }
-        },
-        proposedState: {
-          complexity: 65,
-          performance: 85,
-          maintainability: 70,
-          reliability: 80,
-          cost: 80,
-          metrics: {
-            'response_time': 200,
-            'throughput': 2500,
-            'error_rate': 0.02
-          }
-        },
+      // Generate real optimization suggestions based on lineage data
+      if (lineageData?.nodes && lineageData.nodes.length > 0) {
+        // Analyze nodes for optimization opportunities
+        const highDependencyNodes = lineageData.nodes.filter(node => 
+          lineageData.edges.filter(edge => edge.sourceId === node.id || edge.targetId === node.id).length > 3
+        );
+        
+        if (highDependencyNodes.length > 0) {
+          const targetNode = highDependencyNodes[0];
+          const dependencyCount = lineageData.edges.filter(edge => 
+            edge.sourceId === targetNode.id || edge.targetId === targetNode.id
+          ).length;
+          
+          const optimizationSuggestion: OptimizationSuggestion = {
+            id: `optimization_${Date.now()}`,
+            type: dependencyCount > 10 ? 'architecture' : dependencyCount > 5 ? 'performance' : 'maintainability',
+            priority: dependencyCount > 10 ? 'critical' : dependencyCount > 5 ? 'high' : 'medium',
+            title: `Optimize ${targetNode.name} Dependencies`,
+            description: `Reduce dependency complexity for ${targetNode.name} (${dependencyCount} dependencies)`,
+            targetNodes: [targetNode.id],
+            currentState: {
+              complexity: Math.min(100, dependencyCount * 8),
+              performance: Math.max(20, 100 - dependencyCount * 6),
+              maintainability: Math.max(30, 100 - dependencyCount * 5),
+              reliability: Math.max(40, 100 - dependencyCount * 4),
+              cost: 100,
+              metrics: {
+                'dependency_count': dependencyCount,
+                'complexity_score': dependencyCount * 8,
+                'optimization_potential': Math.min(80, dependencyCount * 5)
+              }
+            },
+            proposedState: {
+              complexity: Math.max(20, Math.min(100, dependencyCount * 8) - 30),
+              performance: Math.min(95, Math.max(20, 100 - dependencyCount * 6) + 25),
+              maintainability: Math.min(90, Math.max(30, 100 - dependencyCount * 5) + 20),
+              reliability: Math.min(95, Math.max(40, 100 - dependencyCount * 4) + 15),
+              cost: 70,
+              metrics: {
+                'dependency_count': Math.max(1, dependencyCount - 3),
+                'complexity_score': Math.max(10, dependencyCount * 8 - 30),
+                'optimization_potential': 20
+              }
+            },
         benefits: [
           {
             type: 'performance',
@@ -1993,13 +2068,15 @@ export const DependencyResolver = forwardRef<
         }
       };
       
-      setState(prev => ({
-        ...prev,
-        optimizationSuggestions: [mockOptimizationSuggestion, ...prev.optimizationSuggestions]
-      }));
-      
-      // Trigger callback
-      onOptimizationSuggestion?.(mockOptimizationSuggestion);
+          setState(prev => ({
+            ...prev,
+            optimizationSuggestions: [optimizationSuggestion, ...prev.optimizationSuggestions]
+          }));
+          
+          // Trigger callback
+          onOptimizationSuggestion?.(optimizationSuggestion);
+        }
+      }
       
     } catch (error) {
       console.error('Optimization suggestion generation failed:', error);

@@ -538,6 +538,119 @@ export class AdvancedLineageService {
     );
     return response.data;
   }
+
+  /**
+   * Get change requests for impact analysis
+   */
+  async getChangeRequests(): Promise<any[]> {
+    try {
+      const response = await axios.get<CatalogApiResponse<any[]>>(
+        buildUrl(this.baseURL, '/change-requests'),
+        { timeout: this.timeout }
+      );
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Failed to fetch change requests:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get predictive models for impact analysis
+   */
+  async getPredictiveModels(): Promise<any[]> {
+    try {
+      const response = await axios.get<CatalogApiResponse<any[]>>(
+        buildUrl(this.baseURL, '/predictive-models'),
+        { timeout: this.timeout }
+      );
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Failed to fetch predictive models:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get lineage by ID
+   */
+  async getLineageById(lineageId: string): Promise<any> {
+    try {
+      const response = await axios.get<CatalogApiResponse<any>>(
+        buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_LINEAGE, { assetId: lineageId }),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to fetch lineage by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update lineage
+   */
+  async updateLineage(id: string, updates: any): Promise<any> {
+    try {
+      const response = await axios.put<CatalogApiResponse<any>>(
+        buildUrl(this.baseURL, `/lineage/${id}`),
+        updates,
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to update lineage:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete lineage
+   */
+  async deleteLineage(id: string): Promise<void> {
+    try {
+      await axios.delete(
+        buildUrl(this.baseURL, `/lineage/${id}`),
+        { timeout: this.timeout }
+      );
+    } catch (error) {
+      console.error('Failed to delete lineage:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate lineage
+   */
+  async validateLineage(lineageId: string): Promise<any> {
+    try {
+      const response = await axios.post<CatalogApiResponse<any>>(
+        buildUrl(this.baseURL, `/lineage/${lineageId}/validate`),
+        {},
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to validate lineage:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get lineage metrics
+   */
+  async getLineageMetrics(lineageId: string): Promise<any> {
+    try {
+      const response = await axios.get<CatalogApiResponse<any>>(
+        buildUrl(this.baseURL, `/lineage/${lineageId}/metrics`),
+        { timeout: this.timeout }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to fetch lineage metrics:', error);
+      return null;
+    }
+  }
 }
 
 // Create and export singleton instance
