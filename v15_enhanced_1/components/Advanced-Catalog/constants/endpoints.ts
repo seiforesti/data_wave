@@ -249,7 +249,7 @@ export const ADVANCED_LINEAGE_ENDPOINTS = {
   UPDATE_VIZ_CONFIG: '/visualization/config/{assetId}',
   
   // Impact Analysis
-  IMPACT_ANALYSIS: '/impact',
+  IMPACT_ANALYSIS: '/impact-analysis',
   CHANGE_IMPACT: '/impact/change/{assetId}',
   DEPENDENCY_ANALYSIS: '/dependency/{assetId}',
   COVERAGE_ANALYSIS: '/coverage',
