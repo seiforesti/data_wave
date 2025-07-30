@@ -5,6 +5,17 @@
 // ============================================================================
 
 // ============================================================================
+// API CONFIGURATION
+// ============================================================================
+
+export const API_CONFIG = {
+  BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+  TIMEOUT: 30000, // 30 seconds
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000 // 1 second
+} as const;
+
+// ============================================================================
 // BASE ENDPOINTS
 // ============================================================================
 
@@ -272,7 +283,46 @@ export const ADVANCED_LINEAGE_ENDPOINTS = {
   // Export & Reporting
   EXPORT_LINEAGE: '/export/{assetId}',
   GENERATE_REPORT: '/report/{assetId}',
-  SCHEDULE_TRACKING: '/schedule/{assetId}'
+  SCHEDULE_TRACKING: '/schedule/{assetId}',
+  
+  // Advanced Analytics & Context
+  IMPACT_ANALYSIS_ADVANCED: '/lineage/impact-analysis',
+  RISK_ASSESSMENT: '/lineage/risk-assessment',
+  COST_ANALYSIS: '/lineage/cost-analysis',
+  BUSINESS_IMPACT: '/lineage/business-impact',
+  ROI_METRICS: '/lineage/roi-metrics',
+  
+  // Performance & Efficiency Metrics
+  EFFICIENCY_METRICS: '/lineage/{assetId}/efficiency-metrics',
+  USAGE_STATISTICS: '/lineage/{assetId}/usage-statistics',
+  HEALTH_METRICS: '/lineage/{assetId}/health-metrics',
+  RELIABILITY_METRICS: '/lineage/{assetId}/reliability-metrics',
+  AVAILABILITY_METRICS: '/lineage/{assetId}/availability-metrics',
+  SCALABILITY_METRICS: '/lineage/{assetId}/scalability-metrics',
+  PERFORMANCE_METRICS: '/lineage/{assetId}/performance-metrics',
+  
+  // Context & Governance
+  QUALITY_CONTEXT: '/lineage/{assetId}/quality-context',
+  SECURITY_CONTEXT: '/lineage/{assetId}/security-context',
+  COMPLIANCE_CONTEXT: '/lineage/{assetId}/compliance-context',
+  OPERATIONAL_CONTEXT: '/lineage/{assetId}/operational-context',
+  BUSINESS_CONTEXT: '/lineage/{assetId}/business-context',
+  DATA_CONTEXT: '/lineage/{assetId}/data-context',
+  TECHNICAL_CONTEXT: '/lineage/{assetId}/technical-context',
+  GOVERNANCE_CONTEXT: '/lineage/{assetId}/governance-context',
+  
+  // Optimization & Compliance
+  OPTIMIZATION_SUGGESTIONS: '/lineage/{assetId}/optimization-suggestions',
+  COMPLIANCE_STATUS: '/lineage/{assetId}/compliance-status',
+  SECURITY_CLASSIFICATION: '/lineage/{assetId}/security-classification',
+  
+  // Change Management
+  CHANGE_REQUESTS: '/change-requests',
+  PREDICTIVE_MODELS: '/predictive-models',
+  
+  // Validation & Verification
+  VALIDATE_LINEAGE: '/lineage/{lineageId}/validate',
+  GET_LINEAGE_METRICS: '/lineage/{lineageId}/metrics'
 } as const;
 
 // ============================================================================
