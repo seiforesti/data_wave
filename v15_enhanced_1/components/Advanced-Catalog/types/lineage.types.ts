@@ -152,30 +152,371 @@ export interface LineageImpactAnalysis {
   validUntil?: Date;
 }
 
-export interface LineageGovernance {
+// ============================================================================
+// MISSING TYPES FOR IMPACT ANALYSIS VIEWER
+// ============================================================================
+
+export interface LineageAnalysisResult {
   id: string;
-  name: string;
+  sourceAssetId: string;
+  analysisType: 'IMPACT' | 'DEPENDENCY' | 'COVERAGE' | 'QUALITY';
   
-  // Governance Policies
-  policies: LineageGovernancePolicy[];
+  // Results
+  results: LineageImpactAnalysis;
   
-  // Quality Standards
-  qualityStandards: LineageQualityStandard[];
+  // Metadata
+  metadata: {
+    executionTime: number;
+    confidence: number;
+    dataQuality: number;
+    lastUpdated: Date;
+  };
   
-  // Validation Rules
-  validationRules: LineageValidationRule[];
+  // Performance
+  performance: {
+    nodesAnalyzed: number;
+    edgesTraversed: number;
+    processingTime: number;
+  };
+}
+
+export interface LineageRiskAssessment {
+  id: string;
+  sourceAssetId: string;
   
-  // Compliance Requirements
-  complianceRequirements: LineageComplianceRequirement[];
+  // Overall Risk
+  overallRisk: {
+    score: number;
+    level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    confidence: number;
+    factors: RiskFactor[];
+  };
   
-  // Monitoring
-  monitoring: LineageGovernanceMonitoring;
+  // Risk Categories
+  riskCategories: RiskCategory[];
   
-  // Audit Trail
-  auditTrail: LineageAuditEvent[];
+  // Risk Mitigation
+  riskMitigation: RiskMitigation[];
+  
+  // Contingency Plans
+  contingencyPlans: ContingencyPlan[];
+  
+  // Monitoring Plan
+  monitoringPlan: MonitoringPlan;
+  
+  // Assessment Metadata
+  assessedAt: Date;
+  validUntil?: Date;
+}
+
+export interface LineageCostAnalysis {
+  id: string;
+  sourceAssetId: string;
+  
+  // Total Cost
+  totalCost: {
+    directCosts: number;
+    indirectCosts: number;
+    opportunityCosts: number;
+    riskCosts: number;
+    totalCost: number;
+    currency: string;
+  };
+  
+  // Cost Breakdown
+  costByCategory: CategoryCost[];
+  costByPhase: PhaseCost[];
+  costByAsset: AssetCost[];
+  
+  // ROI Analysis
+  roi: ROIAnalysis;
+  
+  // Sensitivity Analysis
+  sensitivity: SensitivityAnalysis;
+  
+  // Cost Scenarios
+  scenarios: CostScenario[];
+  
+  // Analysis Metadata
+  analyzedAt: Date;
+  currency: string;
+}
+
+export interface LineageROIMetrics {
+  investment: number;
+  benefits: BenefitItem[];
+  netBenefit: number;
+  roi: number;
+  paybackPeriod: number;
+  npv: number;
+  irr: number;
+}
+
+export interface LineageBusinessImpact {
+  id: string;
+  sourceAssetId: string;
+  
+  // Business Metrics
+  revenueImpact: number;
+  customerImpact: number;
+  operationalImpact: number;
+  strategicImpact: number;
+  complianceImpact: number;
+  brandImpact: number;
+  
+  // Impact Categories
+  categories: BusinessImpactCategory[];
+  
+  // Business Processes Affected
+  affectedProcesses: BusinessProcess[];
+  
+  // Stakeholder Impact
+  stakeholderImpact: StakeholderImpact[];
+  
+  // Business Continuity
+  businessContinuity: BusinessContinuityAssessment;
+}
+
+export interface LineageEfficiencyMetrics {
+  processingTime: number;
+  resourceUtilization: number;
+  throughput: number;
+  latency: number;
+  errorRate: number;
+  availability: number;
+}
+
+export interface LineageUsageStatistics {
+  totalQueries: number;
+  avgQueriesPerDay: number;
+  peakUsageTimes: TimeWindow[];
+  userDistribution: UserUsageDistribution[];
+  queryPatterns: QueryPattern[];
+  performanceMetrics: PerformanceMetric[];
+}
+
+export interface LineageHealthMetrics {
+  overallHealth: number;
+  dataQuality: number;
+  schemaHealth: number;
+  connectivityHealth: number;
+  performanceHealth: number;
+  governanceHealth: number;
+}
+
+export interface LineageReliabilityMetrics {
+  uptime: number;
+  availability: number;
+  errorRate: number;
+  meanTimeBetweenFailures: number;
+  meanTimeToRecovery: number;
+  dataConsistency: number;
+}
+
+export interface LineageAvailabilityMetrics {
+  currentAvailability: number;
+  targetAvailability: number;
+  monthlyAvailability: number;
+  yearlyAvailability: number;
+  downtimeEvents: DowntimeEvent[];
+  maintenanceWindows: MaintenanceWindow[];
+}
+
+export interface LineageScalabilityMetrics {
+  currentScale: ScaleMetrics;
+  scalingLimits: ScalingLimits;
+  growthTrends: GrowthTrend[];
+  capacityPlan: CapacityPlan;
+  scalingRecommendations: ScalingRecommendation[];
+}
+
+export interface LineagePerformanceMetrics {
+  queryPerformance: QueryPerformance;
+  indexingPerformance: IndexingPerformance;
+  updatePerformance: UpdatePerformance;
+  networkPerformance: NetworkPerformance;
+  resourceUtilization: ResourceUtilization;
+}
+
+export interface LineageQualityContext {
+  dataQuality: DataQualityMetrics;
+  schemaQuality: SchemaQualityMetrics;
+  lineageQuality: LineageQualityMetrics;
+  metadataQuality: MetadataQualityMetrics;
+}
+
+export interface LineageSecurityContext {
+  accessControls: AccessControl[];
+  encryptionStatus: EncryptionStatus;
+  auditTrail: AuditEvent[];
+  securityClassification: SecurityClassification;
+  vulnerabilities: SecurityVulnerability[];
+}
+
+export interface LineageComplianceContext {
+  regulations: ComplianceRegulation[];
+  policies: CompliancePolicy[];
+  requirements: ComplianceRequirement[];
+  violations: ComplianceViolation[];
+  certifications: ComplianceCertification[];
+}
+
+export interface LineageOperationalContext {
+  environment: string;
+  deployment: DeploymentInfo;
+  monitoring: MonitoringConfiguration;
+  alerts: AlertConfiguration[];
+  maintenance: MaintenanceSchedule[];
+}
+
+export interface LineageBusinessContext {
+  businessFunction: string;
+  businessProcess: string;
+  businessOwner: string;
+  stakeholders: Stakeholder[];
+  businessRules: BusinessRule[];
+  kpis: KPI[];
+}
+
+export interface LineageDataContext {
+  dataTypes: DataTypeInfo[];
+  dataVolume: DataVolumeMetrics;
+  dataFlow: DataFlowMetrics;
+  dataRetention: DataRetentionPolicy;
+  dataArchival: DataArchivalPolicy;
+}
+
+export interface LineageTechnicalContext {
+  platform: string;
+  technology: string;
+  version: string;
+  configuration: TechnicalConfiguration;
+  dependencies: TechnicalDependency[];
+  integrations: TechnicalIntegration[];
+}
+
+export interface LineageGovernanceContext {
+  policies: GovernancePolicy[];
+  standards: GovernanceStandard[];
+  procedures: GovernanceProcedure[];
+  roles: GovernanceRole[];
+  responsibilities: GovernanceResponsibility[];
+}
+
+export interface LineageMetadata {
+  id: string;
+  version: string;
+  lastUpdated: Date;
+  createdBy: string;
+  updatedBy: string;
+  source: string;
+  confidence: number;
+  tags: string[];
+  annotations: Annotation[];
+}
+
+export interface LineageValidationResult {
+  id: string;
+  lineageId: string;
+  validationRuleId: string;
+  
+  // Validation Outcome
+  passed: boolean;
+  score: number;
+  confidence: number;
+  
+  // Details
+  details: ValidationDetails;
+  evidence: ValidationEvidence[];
+  
+  // Issues Found
+  issues: ValidationIssue[];
+  
+  // Recommendations
+  recommendations: ValidationRecommendation[];
+  
+  // Performance
+  validationDuration: number;
+  
+  // Timestamps
+  validatedAt: Date;
+}
+
+export interface LineageOptimizationSuggestion {
+  id: string;
+  type: 'PERFORMANCE' | 'COST' | 'QUALITY' | 'GOVERNANCE';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  
+  // Suggestion Details
+  title: string;
+  description: string;
+  rationale: string;
+  
+  // Impact Assessment
+  expectedBenefit: string;
+  estimatedEffort: number;
+  riskLevel: string;
+  
+  // Implementation
+  implementationSteps: string[];
+  resources: string[];
+  timeline: number;
   
   // Metrics
-  governanceMetrics: LineageGovernanceMetric[];
+  successMetrics: string[];
+  validationCriteria: string[];
+}
+
+export interface LineageComplianceStatus {
+  id: string;
+  assetId: string;
+  
+  // Overall Compliance
+  overallStatus: 'COMPLIANT' | 'NON_COMPLIANT' | 'PARTIALLY_COMPLIANT' | 'UNKNOWN';
+  complianceScore: number;
+  
+  // Regulation Compliance
+  regulationCompliance: RegulationCompliance[];
+  
+  // Policy Compliance
+  policyCompliance: PolicyCompliance[];
+  
+  // Violations
+  violations: ComplianceViolation[];
+  
+  // Remediation
+  remediationPlan: RemediationAction[];
+  
+  // Assessment Details
+  lastAssessed: Date;
+  nextAssessment: Date;
+  assessedBy: string;
+}
+
+export interface LineageSecurityClassification {
+  id: string;
+  assetId: string;
+  
+  // Classification Level
+  classificationLevel: 'PUBLIC' | 'INTERNAL' | 'CONFIDENTIAL' | 'RESTRICTED' | 'SECRET';
+  
+  // Data Categories
+  dataCategories: DataCategory[];
+  
+  // Sensitivity Indicators
+  sensitivityIndicators: SensitivityIndicator[];
+  
+  // Access Requirements
+  accessRequirements: AccessRequirement[];
+  
+  // Handling Instructions
+  handlingInstructions: HandlingInstruction[];
+  
+  // Classification Metadata
+  classifiedBy: string;
+  classifiedAt: Date;
+  reviewDate: Date;
+  declassificationDate?: Date;
 }
 
 // ============================================================================
