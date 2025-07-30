@@ -651,6 +651,33 @@ export class AdvancedLineageService {
       return null;
     }
   }
+
+  /**
+   * Analyze lineage impact
+   */
+  async analyzeLineageImpact(request: LineageAnalysisRequest): Promise<CatalogApiResponse<LineageImpactAnalysis>> {
+    const response = await axios.post<CatalogApiResponse<LineageImpactAnalysis>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.IMPACT_ANALYSIS),
+      request,
+      { timeout: this.timeout * 2 }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get lineage visualization
+   */
+  async getLineageVisualization(
+    assetId: string,
+    config: LineageVisualizationConfig
+  ): Promise<CatalogApiResponse<{ nodes: DataLineageNode[]; edges: DataLineageEdge[] }>> {
+    const response = await axios.post<CatalogApiResponse<{ nodes: DataLineageNode[]; edges: DataLineageEdge[] }>>(
+      buildUrl(this.baseURL, ADVANCED_LINEAGE_ENDPOINTS.GET_GRAPH, { assetId }),
+      config,
+      { timeout: this.timeout }
+    );
+    return response.data;
+  }
 }
 
 // Create and export singleton instance
