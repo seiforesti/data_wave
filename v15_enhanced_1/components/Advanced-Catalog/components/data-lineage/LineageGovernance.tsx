@@ -189,6 +189,11 @@ import {
 import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+// Import backend services
+import { advancedLineageService } from '../../services/advanced-lineage.service';
+import { collaborationService } from '../../services/collaboration.service';
+import { enterpriseCatalogService } from '../../services/enterprise-catalog.service';
+
 // Advanced Types for Lineage Governance
 interface LineageGovernancePolicy {
   id: string;
@@ -437,109 +442,121 @@ export default function LineageGovernance({
   const loadGovernanceData = async () => {
     setLoading(true);
     try {
-      // Simulate backend API calls
-      const mockPolicies: LineageGovernancePolicy[] = [
-        {
-          id: 'pol-001',
-          name: 'Data Quality Validation',
-          description: 'Ensures data quality standards across all lineage paths',
-          category: 'data_quality',
-          severity: 'high',
-          status: 'active',
-          rules: [],
-          enforcement: 'automatic',
-          scope: { data_sources: [], schemas: [], tables: [], columns: [], transformations: [], users: [], roles: [] },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          created_by: 'admin',
-          approvers: ['manager1'],
-          violations: 3,
-          compliance_score: 85
-        }
-      ];
+      // Load governance policies from backend
+      const policiesResponse = await advancedLineageService.getLineageGovernancePolicies();
+      const policiesData = policiesResponse.data || [];
+      
+      // Transform backend data to frontend format
+      const transformedPolicies: LineageGovernancePolicy[] = policiesData.map((policy: any) => ({
+        id: policy.id,
+        name: policy.name,
+        description: policy.description,
+        category: policy.category || 'data_quality',
+        severity: policy.severity || 'medium',
+        status: policy.status || 'active',
+        rules: policy.rules || [],
+        enforcement: policy.enforcement || 'automatic',
+        scope: policy.scope || { data_sources: [], schemas: [], tables: [], columns: [], transformations: [], users: [], roles: [] },
+        created_at: policy.created_at,
+        updated_at: policy.updated_at,
+        created_by: policy.created_by,
+        approvers: policy.approvers || [],
+        violations: policy.violations_count || 0,
+        compliance_score: policy.compliance_score || 100
+      }));
 
-      const mockWorkflows: GovernanceWorkflow[] = [
-        {
-          id: 'wf-001',
-          name: 'Data Classification Review',
-          description: 'Review and approve data classification changes',
-          type: 'approval',
-          status: 'in_progress',
-          priority: 'high',
-          assignee: 'data-steward',
-          reviewer: 'data-manager',
-          approver: 'data-owner',
-          due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          steps: [],
-          lineage_items: [],
-          progress: 60,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
+      // Load collaboration workflows from backend
+      const workflowsResponse = await collaborationService.getActiveWorkflows();
+      const workflowsData = workflowsResponse.data || [];
+      
+      const transformedWorkflows: GovernanceWorkflow[] = workflowsData.map((workflow: any) => ({
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        type: workflow.workflow_type || 'approval',
+        status: workflow.status,
+        priority: workflow.priority || 'medium',
+        assignee: workflow.assignee_id,
+        reviewer: workflow.reviewer_id,
+        approver: workflow.approver_id,
+        due_date: workflow.due_date,
+        steps: workflow.steps || [],
+        lineage_items: workflow.lineage_items || [],
+        progress: workflow.progress_percentage || 0,
+        created_at: workflow.created_at,
+        updated_at: workflow.updated_at
+      }));
 
-      const mockDashboard: GovernanceDashboard = {
+      // Load dashboard metrics from backend
+      const metricsResponse = await advancedLineageService.getLineageMetrics();
+      const metrics = metricsResponse.data || {};
+      
+      // Load compliance status from backend
+      const complianceResponse = await advancedLineageService.getComplianceStatus('all');
+      const compliance = complianceResponse.data || {};
+      
+      // Load lineage statistics for trends
+      const timeRange = {
+        start: subDays(new Date(), 7),
+        end: new Date()
+      };
+      const statsResponse = await advancedLineageService.getLineageStatistics(timeRange);
+      const stats = statsResponse.data || {};
+
+      const transformedDashboard: GovernanceDashboard = {
         overview: {
-          total_policies: 15,
-          active_workflows: 8,
-          compliance_score: 87,
-          violations_count: 12,
-          risk_level: 'medium'
+          total_policies: transformedPolicies.length,
+          active_workflows: transformedWorkflows.filter(w => w.status === 'in_progress').length,
+          compliance_score: compliance.overallStatus?.complianceScore || 0,
+          violations_count: compliance.violations?.length || 0,
+          risk_level: compliance.overallStatus?.level?.toLowerCase() || 'low'
         },
         trends: {
-          compliance_trends: [
-            { date: subDays(new Date(), 7).toISOString(), score: 80, violations: 15 },
-            { date: subDays(new Date(), 6).toISOString(), score: 82, violations: 13 },
-            { date: subDays(new Date(), 5).toISOString(), score: 85, violations: 12 },
-            { date: subDays(new Date(), 4).toISOString(), score: 83, violations: 14 },
-            { date: subDays(new Date(), 3).toISOString(), score: 86, violations: 11 },
-            { date: subDays(new Date(), 2).toISOString(), score: 88, violations: 9 },
-            { date: subDays(new Date(), 1).toISOString(), score: 87, violations: 10 }
-          ],
-          workflow_trends: [
-            { date: subDays(new Date(), 7).toISOString(), completed: 5, pending: 3, failed: 1 },
-            { date: subDays(new Date(), 6).toISOString(), completed: 6, pending: 4, failed: 0 },
-            { date: subDays(new Date(), 5).toISOString(), completed: 4, pending: 5, failed: 2 },
-            { date: subDays(new Date(), 4).toISOString(), completed: 7, pending: 2, failed: 1 },
-            { date: subDays(new Date(), 3).toISOString(), completed: 8, pending: 3, failed: 0 },
-            { date: subDays(new Date(), 2).toISOString(), completed: 6, pending: 4, failed: 1 },
-            { date: subDays(new Date(), 1).toISOString(), completed: 9, pending: 2, failed: 0 }
-          ],
-          policy_effectiveness: [
-            { policy: 'Data Quality', effectiveness: 92, violations: 3 },
-            { policy: 'Access Control', effectiveness: 88, violations: 5 },
-            { policy: 'Retention', effectiveness: 95, violations: 1 },
-            { policy: 'Classification', effectiveness: 82, violations: 7 }
-          ]
+          compliance_trends: stats.compliance_trends || [],
+          workflow_trends: stats.workflow_trends || [],
+          policy_effectiveness: stats.policy_effectiveness || []
         },
-        alerts: [
-          {
-            id: 'alert-001',
-            type: 'violation',
-            severity: 'high',
-            message: 'Data quality threshold exceeded in customer database',
-            timestamp: new Date().toISOString(),
-            resolved: false
-          },
-          {
-            id: 'alert-002',
-            type: 'workflow',
-            severity: 'medium',
-            message: 'Approval workflow pending for sensitive data access',
-            timestamp: subDays(new Date(), 1).toISOString(),
-            resolved: false
-          }
-        ]
+        alerts: compliance.violations?.slice(0, 5).map((violation: any) => ({
+          id: violation.id,
+          type: 'violation' as const,
+          severity: violation.severity,
+          message: violation.description,
+          timestamp: violation.detected_at,
+          resolved: !!violation.resolved_at
+        })) || []
       };
       
-      setPolicies(mockPolicies);
-      setWorkflows(mockWorkflows);
-      setDashboard(mockDashboard);
+      // Load compliance reports from backend
+      const reportsResponse = await enterpriseCatalogService.getComplianceReports();
+      const reports = reportsResponse.data || [];
+      
+      // Load audit logs from backend
+      const auditResponse = await enterpriseCatalogService.getAuditLogs({
+        limit: 100,
+        sortBy: 'timestamp',
+        sortOrder: 'desc'
+      });
+      const audits = auditResponse.data || [];
+      
+      setPolicies(transformedPolicies);
+      setWorkflows(transformedWorkflows);
+      setDashboard(transformedDashboard);
+      setComplianceReports(reports);
+      setAuditLogs(audits);
+    } catch (err) {
+      setError('Failed to load governance data from backend');
+      console.error('Error loading governance data:', err);
+      
+      // Fallback to minimal data structure
+      setPolicies([]);
+      setWorkflows([]);
+      setDashboard({
+        overview: { total_policies: 0, active_workflows: 0, compliance_score: 0, violations_count: 0, risk_level: 'unknown' },
+        trends: { compliance_trends: [], workflow_trends: [], policy_effectiveness: [] },
+        alerts: []
+      });
       setComplianceReports([]);
       setAuditLogs([]);
-    } catch (err) {
-      setError('Failed to load governance data');
-      console.error('Error loading governance data:', err);
     } finally {
       setLoading(false);
     }
@@ -555,20 +572,22 @@ export default function LineageGovernance({
   // Policy Management Functions
   const createPolicy = async (policyData: Partial<LineageGovernancePolicy>) => {
     try {
-      const newPolicyItem: LineageGovernancePolicy = {
-        id: `pol-${Date.now()}`,
+      // Create policy via backend API
+      const createRequest = {
         name: policyData.name || '',
         description: policyData.description || '',
         category: policyData.category || 'data_quality',
         severity: policyData.severity || 'medium',
-        status: 'active',
-        rules: [],
         enforcement: policyData.enforcement || 'automatic',
-        scope: { data_sources: [], schemas: [], tables: [], columns: [], transformations: [], users: [], roles: [] },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: 'current-user',
-        approvers: [],
+        rules: policyData.rules || [],
+        scope: policyData.scope || { data_sources: [], schemas: [], tables: [], columns: [], transformations: [], users: [], roles: [] }
+      };
+      
+      const response = await enterpriseCatalogService.createGovernancePolicy(createRequest);
+      const newPolicy = response.data;
+      
+      const newPolicyItem: LineageGovernancePolicy = {
+        ...newPolicy,
         violations: 0,
         compliance_score: 100
       };
@@ -578,93 +597,122 @@ export default function LineageGovernance({
       setNewPolicy({});
       onPolicyChange?.(newPolicyItem);
     } catch (err) {
-      setError('Failed to create policy');
+      setError('Failed to create policy via backend');
+      console.error('Policy creation error:', err);
     }
   };
 
   const updatePolicy = async (policyId: string, updates: Partial<LineageGovernancePolicy>) => {
     try {
+      // Update policy via backend API
+      const updateRequest = {
+        name: updates.name,
+        description: updates.description,
+        category: updates.category,
+        severity: updates.severity,
+        status: updates.status,
+        enforcement: updates.enforcement,
+        rules: updates.rules,
+        scope: updates.scope
+      };
+      
+      const response = await enterpriseCatalogService.updateGovernancePolicy(policyId, updateRequest);
+      const updatedPolicy = response.data;
+      
       setPolicies(prev => prev.map(p => 
-        p.id === policyId ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
+        p.id === policyId ? { ...p, ...updatedPolicy, updated_at: new Date().toISOString() } : p
       ));
     } catch (err) {
-      setError('Failed to update policy');
+      setError('Failed to update policy via backend');
+      console.error('Policy update error:', err);
     }
   };
 
   const deletePolicy = async (policyId: string) => {
     try {
+      // Delete policy via backend API
+      await enterpriseCatalogService.deleteGovernancePolicy(policyId);
       setPolicies(prev => prev.filter(p => p.id !== policyId));
     } catch (err) {
-      setError('Failed to delete policy');
+      setError('Failed to delete policy via backend');
+      console.error('Policy deletion error:', err);
     }
   };
 
   // Workflow Management Functions
   const createWorkflow = async (workflowData: Partial<GovernanceWorkflow>) => {
     try {
-      const newWorkflowItem: GovernanceWorkflow = {
-        id: `wf-${Date.now()}`,
+      // Create workflow via backend API
+      const createRequest = {
         name: workflowData.name || '',
         description: workflowData.description || '',
-        type: workflowData.type || 'approval',
-        status: 'pending',
+        workflow_type: workflowData.type || 'approval',
         priority: workflowData.priority || 'medium',
-        assignee: workflowData.assignee || '',
-        reviewer: workflowData.reviewer || '',
-        approver: workflowData.approver || '',
+        assignee_id: workflowData.assignee || '',
+        reviewer_id: workflowData.reviewer || '',
+        approver_id: workflowData.approver || '',
         due_date: workflowData.due_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        steps: [],
-        lineage_items: [],
-        progress: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        lineage_items: workflowData.lineage_items || []
+      };
+      
+      const response = await collaborationService.createWorkflow(createRequest);
+      const newWorkflow = response.data;
+      
+      const newWorkflowItem: GovernanceWorkflow = {
+        id: newWorkflow.id,
+        name: newWorkflow.name,
+        description: newWorkflow.description,
+        type: newWorkflow.workflow_type,
+        status: newWorkflow.status,
+        priority: newWorkflow.priority,
+        assignee: newWorkflow.assignee_id,
+        reviewer: newWorkflow.reviewer_id,
+        approver: newWorkflow.approver_id,
+        due_date: newWorkflow.due_date,
+        steps: newWorkflow.steps || [],
+        lineage_items: newWorkflow.lineage_items || [],
+        progress: newWorkflow.progress_percentage || 0,
+        created_at: newWorkflow.created_at,
+        updated_at: newWorkflow.updated_at
       };
       
       setWorkflows(prev => [...prev, newWorkflowItem]);
       setShowWorkflowDialog(false);
       setNewWorkflow({});
     } catch (err) {
-      setError('Failed to create workflow');
+      setError('Failed to create workflow via backend');
+      console.error('Workflow creation error:', err);
     }
   };
 
   const executeWorkflowAction = async (workflowId: string, action: string, data?: any) => {
     try {
+      // Execute workflow action via backend API
+      const actionRequest = {
+        action,
+        data: data || {},
+        notes: data?.notes || ''
+      };
+      
+      const response = await collaborationService.executeWorkflowAction(workflowId, actionRequest);
+      const updatedWorkflow = response.data;
+      
       setWorkflows(prev => prev.map(w => {
         if (w.id === workflowId) {
-          let updatedStatus = w.status;
-          let updatedProgress = w.progress;
-          
-          switch (action) {
-            case 'start':
-              updatedStatus = 'in_progress';
-              updatedProgress = Math.max(w.progress, 10);
-              break;
-            case 'approve':
-              updatedStatus = 'completed';
-              updatedProgress = 100;
-              break;
-            case 'reject':
-              updatedStatus = 'failed';
-              break;
-            case 'pause':
-              updatedStatus = 'pending';
-              break;
-          }
-          
-          return { 
-            ...w, 
-            status: updatedStatus,
-            progress: updatedProgress,
-            updated_at: new Date().toISOString()
+          return {
+            ...w,
+            status: updatedWorkflow.status,
+            progress: updatedWorkflow.progress_percentage || w.progress,
+            updated_at: updatedWorkflow.updated_at
           };
         }
         return w;
       }));
+      
       onWorkflowAction?.(workflowId, action);
     } catch (err) {
-      setError('Failed to execute workflow action');
+      setError('Failed to execute workflow action via backend');
+      console.error('Workflow action error:', err);
     }
   };
 
