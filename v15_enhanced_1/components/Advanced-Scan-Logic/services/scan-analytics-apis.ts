@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-analytics-apis.ts
-// Comprehensive scan analytics API service aligned with backend routes
+/**
+ * 📊 Scan Analytics APIs - Advanced Scan Logic
+ * ============================================
+ * 
+ * Comprehensive API integration for scan analytics operations
+ * Maps to: backend/api/routes/intelligent_scanning_routes.py (analytics endpoints)
+ * 
+ * Features:
+ * - Advanced scan analytics and insights
+ * - Performance analytics and metrics
+ * - Predictive analytics and forecasting
+ * - Business intelligence and reporting
+ * - Real-time analytics monitoring
+ * - Cross-system analytics coordination
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   ScanAnalytics,
   AnalyticsMetric,
@@ -18,787 +35,486 @@ import {
   ReportFormat
 } from '../types/analytics.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+// Correct API base paths matching backend routes
+const API_BASE = '/api/v1/scan-logic/intelligent-scanning';
+const MONITORING_BASE = '/api/v1/monitoring';
 
-// Request types based on backend models
-interface ScanAnalyticsRequest {
-  analysis_type: string;
-  scope?: string;
-  target_ids?: string[];
-  timeframe?: string;
-  granularity?: string;
-  include_predictions?: boolean;
-  include_anomalies?: boolean;
-}
+const ENDPOINTS = {
+  // Analytics from intelligent scanning routes
+  ANALYZE_SCAN_PATTERNS: `${API_BASE}/analyze`,
+  GENERATE_SCAN_INTELLIGENCE: `${API_BASE}/intelligence/generate`,
+  ANALYZE_SCAN_BEHAVIOR: `${API_BASE}/intelligence/behavior`,
+  PREDICT_SCAN_OUTCOMES: `${API_BASE}/intelligence/predictions`,
+  DETECT_SCAN_ANOMALIES: `${API_BASE}/intelligence/anomalies`,
+  GET_PERFORMANCE_INSIGHTS: `${API_BASE}/monitoring/insights`,
+  EXECUTE_PREDICTIVE_ANALYSIS: `${API_BASE}/advanced/predictive`,
+  PERFORM_CONTEXTUAL_ANALYSIS: `${API_BASE}/advanced/contextual`,
+  GENERATE_INTELLIGENCE_REPORTS: `${API_BASE}/advanced/reports`,
+  
+  // Analytics from monitoring routes
+  GET_MONITORING_ANALYTICS: `${MONITORING_BASE}/analytics/monitoring`,
+  GET_TREND_ANALYSIS: `${MONITORING_BASE}/analytics/trends`,
+  GET_ANOMALY_DETECTION: `${MONITORING_BASE}/analytics/anomalies`,
+  GET_PREDICTIVE_INSIGHTS: `${MONITORING_BASE}/analytics/predictions`,
+  GET_PERFORMANCE_METRICS: `${MONITORING_BASE}/performance/metrics`,
+  GET_PERFORMANCE_TRENDS: `${MONITORING_BASE}/performance/trends`,
+  GET_PERFORMANCE_INSIGHTS: `${MONITORING_BASE}/performance/insights`
+} as const;
 
-interface PerformanceAnalyticsRequest {
-  metric_types: string[];
-  aggregation_method?: string;
-  comparison_baseline?: string;
-  include_bottlenecks?: boolean;
-  optimization_focus?: string;
-}
-
-interface TrendAnalysisRequest {
-  trend_dimensions: string[];
-  forecasting_horizon?: string;
-  confidence_level?: number;
-  seasonal_analysis?: boolean;
-  correlation_analysis?: boolean;
-}
-
-interface ScanInsightsRequest {
-  insight_categories: string[];
-  priority_threshold?: number;
-  actionable_only?: boolean;
-  business_context?: Record<string, any>;
-}
-
-interface ReportRequest {
-  report_type: string;
-  sections: string[];
-  format?: string;
-  delivery_method?: string;
-}
-
-class ScanAnalyticsAPI {
-  private baseUrl: string;
+export class ScanAnalyticsAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/v1/scan-analytics`;
+    this.apiClient = new ApiClient();
   }
 
-  private getAuthToken(): string {
-    return localStorage.getItem('auth_token') || '';
-  }
-
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
+  /**
+   * Analyze scan patterns using intelligent scanning backend
+   */
+  async analyzeScanPatterns(
+    request: {
+      analysis_dimensions: string[];
+      analysis_depth?: string;
+      include_predictions?: boolean;
+      comparison_baseline?: string;
+      intelligence_insights?: boolean;
     }
-    return response.json();
-  }
-
-  // ==================== COMPREHENSIVE ANALYTICS ====================
-
-  /**
-   * Generate comprehensive scan analytics
-   * Maps to: POST /scan-analytics/analyze
-   * Backend: scan_analytics_routes.py -> generate_scan_analytics
-   */
-  async generateScanAnalytics(request: ScanAnalyticsRequest): Promise<{
-    analytics_id: string;
-    analytics: ScanAnalytics;
-    insights: AnalyticsInsight[];
-    recommendations: string[];
-    metadata: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get analytics overview
-   * Maps to: GET /scan-analytics/overview
-   * Backend: scan_analytics_routes.py -> get_analytics_overview
-   */
-  async getAnalyticsOverview(params: {
-    scope?: AnalyticsScope;
-    time_range?: string;
-    include_trends?: boolean;
-    include_forecasts?: boolean;
-  } = {}): Promise<{
-    overview: any;
-    key_metrics: AnalyticsMetric[];
-    performance_summary: any;
-    insights_summary: any;
-    recent_trends: TrendAnalysis[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.scope) queryParams.append('scope', params.scope);
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-    if (params.include_trends !== undefined) queryParams.append('include_trends', params.include_trends.toString());
-    if (params.include_forecasts !== undefined) queryParams.append('include_forecasts', params.include_forecasts.toString());
-
-    const response = await fetch(`${this.baseUrl}/overview?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get real-time analytics metrics
-   * Maps to: GET /scan-analytics/metrics/realtime
-   * Backend: scan_analytics_routes.py -> get_realtime_metrics
-   */
-  async getRealtimeMetrics(params: {
-    metric_types?: string[];
-    granularity?: AnalyticsGranularity;
-    refresh_interval?: number;
-  } = {}): Promise<{
-    metrics: AnalyticsMetric[];
-    timestamp: string;
-    next_refresh: string;
-    performance_indicators: any;
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.metric_types) {
-      params.metric_types.forEach(type => queryParams.append('metric_types', type));
+  ): Promise<AnalyticsReport> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.ANALYZE_SCAN_PATTERNS,
+        request
+      );
+      
+      return {
+        report_id: response.analysis_id || `analysis_${Date.now()}`,
+        report_type: 'pattern_analysis',
+        scope: 'scan_patterns',
+        analytics_data: response.analysis_results || {},
+        insights: response.insights || [],
+        metrics: response.metrics || {},
+        trends: response.trends || [],
+        predictions: response.predictions || [],
+        generated_at: response.timestamp || new Date().toISOString(),
+        report_format: 'json'
+      } as AnalyticsReport;
+    } catch (error) {
+      console.error('Error analyzing scan patterns:', error);
+      throw new Error(`Failed to analyze scan patterns: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.granularity) queryParams.append('granularity', params.granularity);
-    if (params.refresh_interval) queryParams.append('refresh_interval', params.refresh_interval.toString());
-
-    const response = await fetch(`${this.baseUrl}/metrics/realtime?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== PERFORMANCE ANALYTICS ====================
-
-  /**
-   * Analyze scan performance metrics
-   * Maps to: POST /scan-analytics/performance/analyze
-   * Backend: scan_analytics_routes.py -> analyze_performance_metrics
-   */
-  async analyzePerformanceMetrics(request: PerformanceAnalyticsRequest): Promise<{
-    performance_analytics: PerformanceAnalytics;
-    bottleneck_analysis: any;
-    optimization_recommendations: string[];
-    benchmark_comparisons: any;
-    efficiency_scores: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/performance/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
   }
 
   /**
-   * Get performance benchmarks
-   * Maps to: GET /scan-analytics/performance/benchmarks
-   * Backend: scan_analytics_routes.py -> get_performance_benchmarks
+   * Generate scan intelligence insights
    */
-  async getPerformanceBenchmarks(params: {
-    benchmark_type?: string[];
-    time_range?: string;
-    comparison_scope?: string;
-  } = {}): Promise<{
-    benchmarks: any[];
-    industry_comparisons: any;
-    historical_performance: any;
-    improvement_areas: string[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.benchmark_type) {
-      params.benchmark_type.forEach(type => queryParams.append('benchmark_type', type));
+  async generateScanIntelligence(
+    request: {
+      intelligence_type?: string;
+      analysis_scope?: string;
+      insight_depth?: string;
+      include_recommendations?: boolean;
     }
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-    if (params.comparison_scope) queryParams.append('comparison_scope', params.comparison_scope);
-
-    const response = await fetch(`${this.baseUrl}/performance/benchmarks?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get efficiency analysis
-   * Maps to: GET /scan-analytics/performance/efficiency
-   * Backend: scan_analytics_routes.py -> get_efficiency_analysis
-   */
-  async getEfficiencyAnalysis(params: {
-    analysis_scope?: AnalyticsScope;
-    time_range?: string;
-    include_recommendations?: boolean;
-  } = {}): Promise<{
-    efficiency_metrics: any;
-    resource_utilization: any;
-    cost_effectiveness: any;
-    optimization_opportunities: any[];
-    efficiency_trends: TrendAnalysis[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.analysis_scope) queryParams.append('analysis_scope', params.analysis_scope);
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-    if (params.include_recommendations !== undefined) queryParams.append('include_recommendations', params.include_recommendations.toString());
-
-    const response = await fetch(`${this.baseUrl}/performance/efficiency?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== TREND ANALYSIS ====================
-
-  /**
-   * Perform comprehensive trend analysis
-   * Maps to: POST /scan-analytics/trends/analyze
-   * Backend: scan_analytics_routes.py -> analyze_trends
-   */
-  async analyzeTrends(request: TrendAnalysisRequest): Promise<{
-    trend_analysis: TrendAnalysis;
-    pattern_recognition: any;
-    seasonal_patterns: any;
-    correlation_matrix: any;
-    forecast_accuracy: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/trends/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get trending metrics
-   * Maps to: GET /scan-analytics/trends/metrics
-   * Backend: scan_analytics_routes.py -> get_trending_metrics
-   */
-  async getTrendingMetrics(params: {
-    time_range?: string;
-    trend_direction?: 'up' | 'down' | 'stable';
-    significance_threshold?: number;
-    metric_categories?: string[];
-  } = {}): Promise<{
-    trending_up: AnalyticsMetric[];
-    trending_down: AnalyticsMetric[];
-    stable_metrics: AnalyticsMetric[];
-    significant_changes: any[];
-    trend_summary: any;
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-    if (params.trend_direction) queryParams.append('trend_direction', params.trend_direction);
-    if (params.significance_threshold) queryParams.append('significance_threshold', params.significance_threshold.toString());
-    if (params.metric_categories) {
-      params.metric_categories.forEach(cat => queryParams.append('metric_categories', cat));
+  ): Promise<AnalyticsInsight[]> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.GENERATE_SCAN_INTELLIGENCE,
+        request
+      );
+      
+      return (response.intelligence_insights || []).map((insight: any) => ({
+        id: insight.insight_id || `insight_${Date.now()}`,
+        type: insight.insight_type || 'intelligence',
+        priority: insight.priority || 'medium',
+        title: insight.title || 'Scan Intelligence Insight',
+        description: insight.description || '',
+        confidence_score: insight.confidence_score || 0,
+        impact_assessment: insight.impact_assessment || {},
+        recommendations: insight.recommendations || [],
+        data_sources: insight.data_sources || [],
+        generated_at: insight.timestamp || new Date().toISOString()
+      })) as AnalyticsInsight[];
+    } catch (error) {
+      console.error('Error generating scan intelligence:', error);
+      throw new Error(`Failed to generate scan intelligence: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const response = await fetch(`${this.baseUrl}/trends/metrics?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
   }
 
   /**
-   * Get predictive forecasts
-   * Maps to: GET /scan-analytics/trends/forecasts
-   * Backend: scan_analytics_routes.py -> get_predictive_forecasts
+   * Analyze scan behavior patterns
    */
-  async getPredictiveForecasts(params: {
-    forecast_horizon?: string;
-    metric_types?: string[];
-    confidence_intervals?: boolean;
-    scenario_analysis?: boolean;
-  } = {}): Promise<{
-    forecasts: PredictiveAnalytics[];
-    confidence_intervals: any;
-    scenario_outcomes: any;
-    forecast_accuracy: any;
-    risk_assessments: any;
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.forecast_horizon) queryParams.append('forecast_horizon', params.forecast_horizon);
-    if (params.metric_types) {
-      params.metric_types.forEach(type => queryParams.append('metric_types', type));
+  async analyzeScanBehavior(
+    request: {
+      behavior_dimensions?: string[];
+      time_range?: { start: string; end: string };
+      pattern_detection?: boolean;
+      anomaly_detection?: boolean;
     }
-    if (params.confidence_intervals !== undefined) queryParams.append('confidence_intervals', params.confidence_intervals.toString());
-    if (params.scenario_analysis !== undefined) queryParams.append('scenario_analysis', params.scenario_analysis.toString());
-
-    const response = await fetch(`${this.baseUrl}/trends/forecasts?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== INSIGHTS GENERATION ====================
-
-  /**
-   * Generate actionable insights
-   * Maps to: POST /scan-analytics/insights/generate
-   * Backend: scan_analytics_routes.py -> generate_insights
-   */
-  async generateInsights(request: ScanInsightsRequest): Promise<{
-    insights: AnalyticsInsight[];
-    prioritized_recommendations: any[];
-    business_impact_analysis: any;
-    implementation_roadmap: any;
-    roi_projections: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/insights/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get business insights
-   * Maps to: GET /scan-analytics/insights/business
-   * Backend: scan_analytics_routes.py -> get_business_insights
-   */
-  async getBusinessInsights(params: {
-    insight_types?: InsightType[];
-    priority_filter?: InsightPriority[];
-    business_domain?: string[];
-    time_range?: string;
-  } = {}): Promise<{
-    business_insights: BusinessInsight[];
-    value_propositions: any[];
-    cost_benefit_analysis: any;
-    strategic_recommendations: string[];
-    competitive_advantages: any[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.insight_types) {
-      params.insight_types.forEach(type => queryParams.append('insight_types', type));
+  ): Promise<AnalyticsReport> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.ANALYZE_SCAN_BEHAVIOR,
+        request
+      );
+      
+      return {
+        report_id: response.analysis_id || `behavior_${Date.now()}`,
+        report_type: 'behavior_analysis',
+        scope: 'scan_behavior',
+        analytics_data: response.behavior_analysis || {},
+        insights: response.behavioral_insights || [],
+        metrics: response.behavior_metrics || {},
+        patterns: response.detected_patterns || [],
+        anomalies: response.detected_anomalies || [],
+        generated_at: response.timestamp || new Date().toISOString(),
+        report_format: 'json'
+      } as AnalyticsReport;
+    } catch (error) {
+      console.error('Error analyzing scan behavior:', error);
+      throw new Error(`Failed to analyze scan behavior: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.priority_filter) {
-      params.priority_filter.forEach(priority => queryParams.append('priority_filter', priority));
-    }
-    if (params.business_domain) {
-      params.business_domain.forEach(domain => queryParams.append('business_domain', domain));
-    }
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-
-    const response = await fetch(`${this.baseUrl}/insights/business?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
   }
 
   /**
-   * Get operational insights
-   * Maps to: GET /scan-analytics/insights/operational
-   * Backend: scan_analytics_routes.py -> get_operational_insights
+   * Predict scan outcomes using ML models
    */
-  async getOperationalInsights(params: {
-    operational_areas?: string[];
-    urgency_filter?: string[];
-    include_automation_opportunities?: boolean;
-  } = {}): Promise<{
-    operational_insights: AnalyticsInsight[];
-    automation_opportunities: any[];
-    process_improvements: any[];
-    resource_optimizations: any[];
-    efficiency_gains: any[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.operational_areas) {
-      params.operational_areas.forEach(area => queryParams.append('operational_areas', area));
+  async predictScanOutcomes(
+    request: {
+      prediction_horizon?: string;
+      prediction_models?: string[];
+      confidence_threshold?: number;
+      include_scenarios?: boolean;
     }
-    if (params.urgency_filter) {
-      params.urgency_filter.forEach(urgency => queryParams.append('urgency_filter', urgency));
+  ): Promise<PredictiveAnalytics> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.PREDICT_SCAN_OUTCOMES,
+        request
+      );
+      
+      return {
+        prediction_id: response.prediction_id || `pred_${Date.now()}`,
+        prediction_type: 'scan_outcomes',
+        model_version: response.model_version || 'v1.0',
+        predictions: response.predictions || [],
+        confidence_scores: response.confidence_scores || {},
+        prediction_horizon: response.prediction_horizon || '24h',
+        scenarios: response.scenarios || [],
+        model_accuracy: response.model_accuracy || 0,
+        generated_at: response.timestamp || new Date().toISOString()
+      } as PredictiveAnalytics;
+    } catch (error) {
+      console.error('Error predicting scan outcomes:', error);
+      throw new Error(`Failed to predict scan outcomes: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.include_automation_opportunities !== undefined) {
-      queryParams.append('include_automation_opportunities', params.include_automation_opportunities.toString());
+  }
+
+  /**
+   * Detect scan anomalies
+   */
+  async detectScanAnomalies(
+    request: {
+      anomaly_types?: string[];
+      detection_sensitivity?: string;
+      time_window?: string;
+      baseline_comparison?: boolean;
     }
-
-    const response = await fetch(`${this.baseUrl}/insights/operational?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== ANOMALY DETECTION ====================
-
-  /**
-   * Detect analytics anomalies
-   * Maps to: POST /scan-analytics/anomalies/detect
-   * Backend: scan_analytics_routes.py -> detect_anomalies
-   */
-  async detectAnomalies(request: {
-    detection_scope: AnalyticsScope;
-    sensitivity_level?: number;
-    anomaly_types?: string[];
-    time_range?: string;
-    baseline_period?: string;
-  }): Promise<{
-    anomalies: any[];
-    anomaly_patterns: any;
-    severity_distribution: any;
-    root_cause_analysis: any;
-    remediation_suggestions: string[];
-  }> {
-    const response = await fetch(`${this.baseUrl}/anomalies/detect`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get active anomalies
-   * Maps to: GET /scan-analytics/anomalies/active
-   * Backend: scan_analytics_routes.py -> get_active_anomalies
-   */
-  async getActiveAnomalies(params: {
-    severity_filter?: string[];
-    anomaly_types?: string[];
-    time_range?: string;
-  } = {}): Promise<{
-    active_anomalies: any[];
-    critical_anomalies: any[];
-    anomaly_trends: any;
-    impact_assessment: any;
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.severity_filter) {
-      params.severity_filter.forEach(severity => queryParams.append('severity_filter', severity));
+  ): Promise<AnalyticsInsight[]> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.DETECT_SCAN_ANOMALIES,
+        request
+      );
+      
+      return (response.detected_anomalies || []).map((anomaly: any) => ({
+        id: anomaly.anomaly_id || `anomaly_${Date.now()}`,
+        type: 'anomaly_detection',
+        priority: anomaly.severity || 'medium',
+        title: anomaly.title || 'Scan Anomaly Detected',
+        description: anomaly.description || '',
+        confidence_score: anomaly.confidence_score || 0,
+        anomaly_score: anomaly.anomaly_score || 0,
+        affected_components: anomaly.affected_components || [],
+        detection_method: anomaly.detection_method || 'statistical',
+        recommendations: anomaly.recommendations || [],
+        detected_at: anomaly.timestamp || new Date().toISOString()
+      })) as AnalyticsInsight[];
+    } catch (error) {
+      console.error('Error detecting scan anomalies:', error);
+      throw new Error(`Failed to detect scan anomalies: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.anomaly_types) {
-      params.anomaly_types.forEach(type => queryParams.append('anomaly_types', type));
+  }
+
+  /**
+   * Get performance insights from monitoring
+   */
+  async getPerformanceInsights(
+    request: {
+      insight_scope?: string;
+      metrics?: string[];
+      time_range?: { start: string; end: string };
+      analysis_depth?: string;
     }
-    if (params.time_range) queryParams.append('time_range', params.time_range);
-
-    const response = await fetch(`${this.baseUrl}/anomalies/active?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== ANALYTICS REPORTS ====================
-
-  /**
-   * Generate analytics report
-   * Maps to: POST /scan-analytics/reports/generate
-   * Backend: scan_analytics_routes.py -> generate_analytics_report
-   */
-  async generateAnalyticsReport(request: ReportRequest): Promise<{
-    report_id: string;
-    report: AnalyticsReport;
-    generation_status: string;
-    estimated_completion: string;
-  }> {
-    const response = await fetch(`${this.baseUrl}/reports/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get analytics report
-   * Maps to: GET /scan-analytics/reports/{report_id}
-   * Backend: scan_analytics_routes.py -> get_analytics_report
-   */
-  async getAnalyticsReport(reportId: string, format?: ReportFormat): Promise<AnalyticsReport | Blob> {
-    const queryParams = new URLSearchParams();
-    if (format) queryParams.append('format', format);
-
-    const response = await fetch(`${this.baseUrl}/reports/${reportId}?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    if (format === ReportFormat.PDF || format === ReportFormat.EXCEL) {
-      return response.blob();
+  ): Promise<PerformanceAnalytics> {
+    try {
+      const response = await this.apiClient.get<any>(
+        ENDPOINTS.GET_PERFORMANCE_INSIGHTS,
+        {
+          params: {
+            insight_scope: request.insight_scope || 'comprehensive',
+            metrics: request.metrics?.join(','),
+            start_time: request.time_range?.start,
+            end_time: request.time_range?.end,
+            analysis_depth: request.analysis_depth || 'standard'
+          }
+        }
+      );
+      
+      return {
+        analytics_id: response.insights_id || `perf_${Date.now()}`,
+        analytics_type: 'performance',
+        scope: request.insight_scope || 'comprehensive',
+        metrics: response.performance_metrics || {},
+        insights: response.insights || [],
+        bottlenecks: response.bottlenecks || [],
+        optimization_opportunities: response.optimization_opportunities || [],
+        performance_trends: response.performance_trends || [],
+        efficiency_score: response.efficiency_score || 0,
+        generated_at: response.timestamp || new Date().toISOString()
+      } as PerformanceAnalytics;
+    } catch (error) {
+      console.error('Error getting performance insights:', error);
+      throw new Error(`Failed to get performance insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    return this.handleResponse(response);
   }
 
   /**
-   * Get available reports
-   * Maps to: GET /scan-analytics/reports
-   * Backend: scan_analytics_routes.py -> list_analytics_reports
+   * Execute predictive analysis
    */
-  async getAvailableReports(params: {
-    report_type?: ReportType[];
-    date_range?: { start: string; end: string };
-    status?: string[];
-  } = {}): Promise<{
-    reports: AnalyticsReport[];
-    total: number;
-    report_categories: any;
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.report_type) {
-      params.report_type.forEach(type => queryParams.append('report_type', type));
+  async executePredictiveAnalysis(
+    request: {
+      analysis_type?: string;
+      prediction_models?: string[];
+      data_sources?: string[];
+      prediction_horizon?: string;
     }
-    if (params.date_range) {
-      queryParams.append('start_date', params.date_range.start);
-      queryParams.append('end_date', params.date_range.end);
+  ): Promise<PredictiveAnalytics> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.EXECUTE_PREDICTIVE_ANALYSIS,
+        request
+      );
+      
+      return {
+        prediction_id: response.analysis_id || `pred_analysis_${Date.now()}`,
+        prediction_type: request.analysis_type || 'comprehensive',
+        model_version: response.model_version || 'latest',
+        predictions: response.predictions || [],
+        confidence_scores: response.confidence_scores || {},
+        prediction_horizon: response.prediction_horizon || request.prediction_horizon || '24h',
+        model_accuracy: response.model_accuracy || 0,
+        data_quality_score: response.data_quality_score || 0,
+        generated_at: response.timestamp || new Date().toISOString()
+      } as PredictiveAnalytics;
+    } catch (error) {
+      console.error('Error executing predictive analysis:', error);
+      throw new Error(`Failed to execute predictive analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.status) {
-      params.status.forEach(status => queryParams.append('status', status));
+  }
+
+  /**
+   * Perform contextual analysis
+   */
+  async performContextualAnalysis(
+    request: {
+      context_dimensions?: string[];
+      analysis_depth?: string;
+      cross_reference?: boolean;
+      temporal_analysis?: boolean;
     }
-
-    const response = await fetch(`${this.baseUrl}/reports?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== COMPARATIVE ANALYTICS ====================
-
-  /**
-   * Perform comparative analysis
-   * Maps to: POST /scan-analytics/compare
-   * Backend: scan_analytics_routes.py -> perform_comparative_analysis
-   */
-  async performComparativeAnalysis(request: {
-    comparison_type: string;
-    baseline_period: string;
-    comparison_period: string;
-    metrics_to_compare: string[];
-    comparison_scope?: AnalyticsScope;
-  }): Promise<{
-    comparison_results: any;
-    variance_analysis: any;
-    significant_changes: any[];
-    trend_comparisons: any;
-    performance_deltas: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/compare`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    return this.handleResponse(response);
-  }
-
-  /**
-   * Get benchmark comparisons
-   * Maps to: GET /scan-analytics/compare/benchmarks
-   * Backend: scan_analytics_routes.py -> get_benchmark_comparisons
-   */
-  async getBenchmarkComparisons(params: {
-    benchmark_type?: string;
-    comparison_metrics?: string[];
-    industry_segment?: string;
-  } = {}): Promise<{
-    benchmark_results: any;
-    industry_percentiles: any;
-    competitive_positioning: any;
-    improvement_gaps: any[];
-  }> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.benchmark_type) queryParams.append('benchmark_type', params.benchmark_type);
-    if (params.comparison_metrics) {
-      params.comparison_metrics.forEach(metric => queryParams.append('comparison_metrics', metric));
+  ): Promise<AnalyticsReport> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.PERFORM_CONTEXTUAL_ANALYSIS,
+        request
+      );
+      
+      return {
+        report_id: response.analysis_id || `contextual_${Date.now()}`,
+        report_type: 'contextual_analysis',
+        scope: 'contextual',
+        analytics_data: response.contextual_analysis || {},
+        insights: response.contextual_insights || [],
+        correlations: response.correlations || [],
+        context_factors: response.context_factors || [],
+        temporal_patterns: response.temporal_patterns || [],
+        generated_at: response.timestamp || new Date().toISOString(),
+        report_format: 'json'
+      } as AnalyticsReport;
+    } catch (error) {
+      console.error('Error performing contextual analysis:', error);
+      throw new Error(`Failed to perform contextual analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    if (params.industry_segment) queryParams.append('industry_segment', params.industry_segment);
-
-    const response = await fetch(`${this.baseUrl}/compare/benchmarks?${queryParams}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
-  }
-
-  // ==================== REAL-TIME ANALYTICS ====================
-
-  /**
-   * Subscribe to real-time analytics updates
-   * Maps to: WebSocket /scan-analytics/ws/realtime
-   * Backend: scan_analytics_routes.py -> websocket_realtime_analytics
-   */
-  subscribeToRealtimeAnalytics(
-    params: { metric_types?: string[]; update_frequency?: number },
-    onUpdate: (data: any) => void,
-    onError?: (error: Event) => void
-  ): WebSocket {
-    const wsUrl = `${this.baseUrl.replace('http', 'ws')}/ws/realtime`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'subscribe', ...params }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onUpdate(data);
-      } catch (error) {
-        console.error('Failed to parse analytics update:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      if (onError) onError(error);
-    };
-
-    return ws;
   }
 
   /**
-   * Subscribe to analytics alerts
-   * Maps to: WebSocket /scan-analytics/ws/alerts
-   * Backend: scan_analytics_routes.py -> websocket_analytics_alerts
+   * Generate intelligence reports
    */
-  subscribeToAnalyticsAlerts(
-    onAlert: (alert: any) => void,
-    onError?: (error: Event) => void
-  ): WebSocket {
-    const wsUrl = `${this.baseUrl.replace('http', 'ws')}/ws/alerts`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onmessage = (event) => {
-      try {
-        const alert = JSON.parse(event.data);
-        onAlert(alert);
-      } catch (error) {
-        console.error('Failed to parse analytics alert:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      if (onError) onError(error);
-    };
-
-    return ws;
-  }
-
-  // ==================== ANALYTICS CONFIGURATION ====================
-
-  /**
-   * Get analytics configuration
-   * Maps to: GET /scan-analytics/config
-   * Backend: scan_analytics_routes.py -> get_analytics_configuration
-   */
-  async getAnalyticsConfiguration(): Promise<{
-    analytics_settings: any;
-    data_retention_policies: any;
-    processing_schedules: any;
-    alert_configurations: any;
-    integration_settings: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/config`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      }
-    });
-
-    return this.handleResponse(response);
+  async generateIntelligenceReports(
+    request: {
+      report_type?: string;
+      scope?: string;
+      include_predictions?: boolean;
+      include_recommendations?: boolean;
+      format?: string;
+    }
+  ): Promise<AnalyticsReport> {
+    try {
+      const response = await this.apiClient.post<any>(
+        ENDPOINTS.GENERATE_INTELLIGENCE_REPORTS,
+        request
+      );
+      
+      return {
+        report_id: response.report_id || `intel_report_${Date.now()}`,
+        report_type: request.report_type || 'intelligence',
+        scope: request.scope || 'comprehensive',
+        analytics_data: response.report_data || {},
+        insights: response.intelligence_insights || [],
+        recommendations: response.recommendations || [],
+        executive_summary: response.executive_summary || '',
+        detailed_findings: response.detailed_findings || [],
+        generated_at: response.timestamp || new Date().toISOString(),
+        report_format: request.format || 'json'
+      } as AnalyticsReport;
+    } catch (error) {
+      console.error('Error generating intelligence reports:', error);
+      throw new Error(`Failed to generate intelligence reports: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
-   * Update analytics configuration
-   * Maps to: PUT /scan-analytics/config
-   * Backend: scan_analytics_routes.py -> update_analytics_configuration
+   * Get monitoring analytics from monitoring service
    */
-  async updateAnalyticsConfiguration(config: {
-    analytics_settings?: any;
-    data_retention_policies?: any;
-    processing_schedules?: any;
-    alert_configurations?: any;
-  }): Promise<{
-    success: boolean;
-    message: string;
-    updated_config: any;
-  }> {
-    const response = await fetch(`${this.baseUrl}/config`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(config)
-    });
+  async getMonitoringAnalytics(
+    request: {
+      analytics_type?: string;
+      time_range?: { start: string; end: string };
+      aggregation_level?: string;
+    }
+  ): Promise<AnalyticsReport> {
+    try {
+      const response = await this.apiClient.get<any>(
+        ENDPOINTS.GET_MONITORING_ANALYTICS,
+        {
+          params: {
+            analytics_type: request.analytics_type || 'comprehensive',
+            start_time: request.time_range?.start,
+            end_time: request.time_range?.end,
+            aggregation_level: request.aggregation_level || 'detailed'
+          }
+        }
+      );
+      
+      return {
+        report_id: response.analytics_id || `monitoring_${Date.now()}`,
+        report_type: 'monitoring_analytics',
+        scope: 'monitoring',
+        analytics_data: response.analytics_data || {},
+        metrics: response.metrics || {},
+        trends: response.trends || [],
+        alerts: response.alerts || [],
+        generated_at: response.timestamp || new Date().toISOString(),
+        report_format: 'json'
+      } as AnalyticsReport;
+    } catch (error) {
+      console.error('Error getting monitoring analytics:', error);
+      throw new Error(`Failed to get monitoring analytics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 
-    return this.handleResponse(response);
+  /**
+   * Get trend analysis from monitoring service
+   */
+  async getTrendAnalysis(
+    request: {
+      metrics?: string[];
+      timeRange?: { start: string; end: string };
+      analysis_depth?: string;
+    }
+  ): Promise<TrendAnalysis> {
+    try {
+      const response = await this.apiClient.get<any>(
+        ENDPOINTS.GET_TREND_ANALYSIS,
+        {
+          params: {
+            metrics: request.metrics?.join(','),
+            start_time: request.timeRange?.start,
+            end_time: request.timeRange?.end,
+            analysis_depth: request.analysis_depth || 'comprehensive'
+          }
+        }
+      );
+      
+      return {
+        analysis_id: response.trend_analysis_id || `trend_${Date.now()}`,
+        analysis_type: 'trend_analysis',
+        metrics_analyzed: request.metrics || [],
+        time_range: request.timeRange || { start: '', end: '' },
+        trends: response.trends || [],
+        trend_direction: response.trend_direction || 'stable',
+        trend_strength: response.trend_strength || 0,
+        seasonality: response.seasonality || {},
+        forecasts: response.forecasts || [],
+        confidence_intervals: response.confidence_intervals || {},
+        generated_at: response.timestamp || new Date().toISOString()
+      } as TrendAnalysis;
+    } catch (error) {
+      console.error('Error getting trend analysis:', error);
+      throw new Error(`Failed to get trend analysis: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get performance metrics from monitoring service
+   */
+  async getPerformanceMetrics(
+    request: {
+      metrics?: string[];
+      time_range?: { start: string; end: string };
+      aggregation?: string;
+    }
+  ): Promise<PerformanceAnalytics> {
+    try {
+      const response = await this.apiClient.get<any>(
+        ENDPOINTS.GET_PERFORMANCE_METRICS,
+        {
+          params: {
+            metrics: request.metrics?.join(','),
+            start_time: request.time_range?.start,
+            end_time: request.time_range?.end,
+            aggregation: request.aggregation || 'average'
+          }
+        }
+      );
+      
+      return {
+        analytics_id: response.metrics_id || `perf_metrics_${Date.now()}`,
+        analytics_type: 'performance_metrics',
+        scope: 'performance',
+        metrics: response.metrics || {},
+        performance_scores: response.performance_scores || {},
+        efficiency_metrics: response.efficiency_metrics || {},
+        resource_utilization: response.resource_utilization || {},
+        throughput_analysis: response.throughput_analysis || {},
+        latency_analysis: response.latency_analysis || {},
+        generated_at: response.timestamp || new Date().toISOString()
+      } as PerformanceAnalytics;
+    } catch (error) {
+      console.error('Error getting performance metrics:', error);
+      throw new Error(`Failed to get performance metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 
-// Export singleton instance
-export const scanAnalyticsAPI = new ScanAnalyticsAPI();
+export const scanAnalyticsAPI = new ScanAnalyticsAPIService();
 export default scanAnalyticsAPI;
