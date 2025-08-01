@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-intelligence-apis.ts
-// Comprehensive scan intelligence API service aligned with backend routes
+/**
+ * 🧠 Scan Intelligence APIs - Advanced Scan Logic
+ * ==============================================
+ * 
+ * Comprehensive API integration for scan intelligence operations
+ * Maps to: backend/api/routes/scan_intelligence_routes.py
+ * 
+ * Features:
+ * - Advanced pattern recognition and analysis
+ * - AI-powered threat detection and behavioral analysis
+ * - Predictive intelligence and anomaly detection
+ * - Contextual intelligence and insights generation
+ * - Intelligence reporting and metrics
+ * - Real-time intelligence processing
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   ScanIntelligenceInsight,
   PatternRecognitionResult,
@@ -19,38 +36,77 @@ import {
   IntelligenceSeverity
 } from '../types/intelligence.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/api/v1/scan-intelligence';
 
-class ScanIntelligenceAPI {
-  private baseUrl: string;
+const ENDPOINTS = {
+  // Core intelligence operations
+  ANALYZE_SCAN_INTELLIGENCE: `${API_BASE}/analyze`,
+  GENERATE_INTELLIGENCE_INSIGHTS: `${API_BASE}/insights/generate`,
+  DETECT_PATTERNS: `${API_BASE}/patterns/detect`,
+  ANALYZE_BEHAVIOR: `${API_BASE}/behavior/analyze`,
+  
+  // Threat detection and security
+  DETECT_THREATS: `${API_BASE}/threats/detect`,
+  ANALYZE_SECURITY_PATTERNS: `${API_BASE}/security/patterns`,
+  VALIDATE_SECURITY_CONTEXT: `${API_BASE}/security/validate`,
+  
+  // Predictive analytics
+  PREDICT_SCAN_OUTCOMES: `${API_BASE}/predictions/outcomes`,
+  FORECAST_TRENDS: `${API_BASE}/predictions/trends`,
+  ANALYZE_PREDICTIVE_PATTERNS: `${API_BASE}/predictions/patterns`,
+  
+  // Anomaly detection
+  DETECT_ANOMALIES: `${API_BASE}/anomalies/detect`,
+  ANALYZE_ANOMALY_PATTERNS: `${API_BASE}/anomalies/patterns`,
+  CLASSIFY_ANOMALIES: `${API_BASE}/anomalies/classify`,
+  
+  // Contextual intelligence
+  ANALYZE_CONTEXT: `${API_BASE}/context/analyze`,
+  GENERATE_CONTEXTUAL_INSIGHTS: `${API_BASE}/context/insights`,
+  CORRELATE_CONTEXTUAL_DATA: `${API_BASE}/context/correlate`,
+  
+  // Intelligence reporting
+  GENERATE_INTELLIGENCE_REPORTS: `${API_BASE}/reports/generate`,
+  GET_INTELLIGENCE_METRICS: `${API_BASE}/metrics`,
+  GET_INTELLIGENCE_SUMMARY: `${API_BASE}/summary`,
+  
+  // Configuration and management
+  UPDATE_INTELLIGENCE_CONFIG: `${API_BASE}/configuration/update`,
+  GET_INTELLIGENCE_MODELS: `${API_BASE}/models`,
+  TRAIN_INTELLIGENCE_MODELS: `${API_BASE}/models/train`,
+  VALIDATE_INTELLIGENCE_SETUP: `${API_BASE}/validation/setup`
+} as const;
+
+/**
+ * Scan Intelligence API Service Class
+ * Provides comprehensive integration with scan intelligence backend
+ */
+export class ScanIntelligenceAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/scan-intelligence`;
+    this.apiClient = new ApiClient();
   }
 
   // ==================== INTELLIGENCE ANALYSIS ====================
 
   /**
    * Perform comprehensive intelligence analysis
-   * Maps to: POST /scan-intelligence/analyze
+   * Maps to: POST /api/v1/scan-intelligence/analyze
    * Backend: scan_intelligence_routes.py -> analyze_scan_intelligence
    */
   async performIntelligenceAnalysis(request: IntelligenceAnalysisRequest): Promise<IntelligenceAnalysisResponse> {
-    const response = await fetch(`${this.baseUrl}/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to perform intelligence analysis: ${response.statusText}`);
+    try {
+      return await this.apiClient.post<IntelligenceAnalysisResponse>(
+        ENDPOINTS.ANALYZE_SCAN_INTELLIGENCE,
+        request
+      );
+    } catch (error) {
+      throw new Error(`Failed to perform intelligence analysis: ${error}`);
     }
-
-    return response.json();
   }
 
   /**

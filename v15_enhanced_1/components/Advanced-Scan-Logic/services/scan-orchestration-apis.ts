@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-orchestration-apis.ts
-// Comprehensive scan orchestration API service aligned with backend routes
+/**
+ * 🎯 Scan Orchestration APIs - Advanced Scan Logic
+ * ===============================================
+ * 
+ * Comprehensive API integration for scan orchestration operations
+ * Maps to: backend/api/routes/enterprise_scan_orchestration_routes.py
+ * 
+ * Features:
+ * - Enterprise-grade scan orchestration and coordination
+ * - Advanced resource allocation and load balancing
+ * - Cross-system scan coordination and synchronization
+ * - Intelligent workflow orchestration and management
+ * - Real-time orchestration monitoring and analytics
+ * - Dynamic priority management and optimization
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   ScanOrchestrationJob,
   OrchestrationJobStatus,
@@ -19,39 +36,75 @@ import {
   CrossSystemCoordination
 } from '../types/orchestration.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/api/v1/scan-orchestration';
 
-// API client configuration
-class ScanOrchestrationAPI {
-  private baseUrl: string;
+const ENDPOINTS = {
+  // Core orchestration operations
+  CREATE_ORCHESTRATION_JOB: `${API_BASE}/jobs`,
+  GET_ORCHESTRATION_JOB: `${API_BASE}/jobs`,
+  UPDATE_ORCHESTRATION_JOB: `${API_BASE}/jobs`,
+  DELETE_ORCHESTRATION_JOB: `${API_BASE}/jobs`,
+  LIST_ORCHESTRATION_JOBS: `${API_BASE}/jobs/list`,
+  
+  // Job execution and control
+  START_ORCHESTRATION_JOB: `${API_BASE}/jobs/start`,
+  PAUSE_ORCHESTRATION_JOB: `${API_BASE}/jobs/pause`,
+  RESUME_ORCHESTRATION_JOB: `${API_BASE}/jobs/resume`,
+  CANCEL_ORCHESTRATION_JOB: `${API_BASE}/jobs/cancel`,
+  GET_JOB_STATUS: `${API_BASE}/jobs/status`,
+  
+  // Resource management
+  GET_RESOURCE_POOLS: `${API_BASE}/resources/pools`,
+  ALLOCATE_RESOURCES: `${API_BASE}/resources/allocate`,
+  DEALLOCATE_RESOURCES: `${API_BASE}/resources/deallocate`,
+  GET_RESOURCE_UTILIZATION: `${API_BASE}/resources/utilization`,
+  
+  // Workflow templates
+  GET_WORKFLOW_TEMPLATES: `${API_BASE}/templates`,
+  CREATE_WORKFLOW_TEMPLATE: `${API_BASE}/templates/create`,
+  UPDATE_WORKFLOW_TEMPLATE: `${API_BASE}/templates/update`,
+  
+  // Analytics and monitoring
+  GET_ORCHESTRATION_ANALYTICS: `${API_BASE}/analytics`,
+  GET_ORCHESTRATION_METRICS: `${API_BASE}/metrics`,
+  GET_PERFORMANCE_INSIGHTS: `${API_BASE}/insights`,
+  
+  // Cross-system coordination
+  COORDINATE_CROSS_SYSTEM: `${API_BASE}/coordination/cross-system`,
+  SYNCHRONIZE_SYSTEMS: `${API_BASE}/coordination/synchronize`,
+  GET_SYSTEM_STATUS: `${API_BASE}/coordination/status`
+} as const;
+
+/**
+ * Scan Orchestration API Service Class
+ * Provides comprehensive integration with scan orchestration backend
+ */
+export class ScanOrchestrationAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/scan-orchestration`;
+    this.apiClient = new ApiClient();
   }
 
   // ==================== CORE ORCHESTRATION JOBS ====================
   
   /**
    * Create a new scan orchestration job
-   * Maps to: POST /scan-orchestration/jobs
+   * Maps to: POST /api/v1/scan-orchestration/jobs
    * Backend: enterprise_scan_orchestration_routes.py -> create_orchestration_job
    */
   async createOrchestrationJob(request: CreateOrchestrationJobRequest): Promise<ScanOrchestrationJob> {
-    const response = await fetch(`${this.baseUrl}/jobs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to create orchestration job: ${response.statusText}`);
+    try {
+      return await this.apiClient.post<ScanOrchestrationJob>(
+        ENDPOINTS.CREATE_ORCHESTRATION_JOB,
+        request
+      );
+    } catch (error) {
+      throw new Error(`Failed to create orchestration job: ${error}`);
     }
-
-    return response.json();
   }
 
   /**

@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-workflow-apis.ts
-// Comprehensive scan workflow API service aligned with backend routes
+/**
+ * 🔄 Scan Workflow APIs - Advanced Scan Logic
+ * ==========================================
+ * 
+ * Comprehensive API integration for scan workflow operations
+ * Maps to: backend/api/routes/scan_workflow_routes.py
+ * 
+ * Features:
+ * - Advanced workflow definition and management
+ * - Dynamic workflow execution and monitoring
+ * - Intelligent workflow optimization
+ * - Cross-system workflow coordination
+ * - Enterprise workflow templates and versioning
+ * - Real-time workflow analytics and insights
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   WorkflowDefinition,
   WorkflowExecution,
@@ -21,8 +38,46 @@ import {
   WorkflowSchedule
 } from '../types/workflow.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/scan-workflows';
+
+const ENDPOINTS = {
+  // Core workflow operations
+  CREATE_WORKFLOW: `${API_BASE}/create`,
+  EXECUTE_WORKFLOW: `${API_BASE}/execute`,
+  GET_WORKFLOW: `${API_BASE}`,
+  UPDATE_WORKFLOW: `${API_BASE}/update`,
+  DELETE_WORKFLOW: `${API_BASE}/delete`,
+  
+  // Workflow templates
+  GET_WORKFLOW_TEMPLATES: `${API_BASE}/templates`,
+  CREATE_WORKFLOW_TEMPLATE: `${API_BASE}/templates/create`,
+  UPDATE_WORKFLOW_TEMPLATE: `${API_BASE}/templates/update`,
+  
+  // Workflow execution
+  START_WORKFLOW_EXECUTION: `${API_BASE}/executions/start`,
+  PAUSE_WORKFLOW_EXECUTION: `${API_BASE}/executions/pause`,
+  RESUME_WORKFLOW_EXECUTION: `${API_BASE}/executions/resume`,
+  CANCEL_WORKFLOW_EXECUTION: `${API_BASE}/executions/cancel`,
+  GET_EXECUTION_STATUS: `${API_BASE}/executions/status`,
+  
+  // Workflow monitoring
+  GET_WORKFLOW_METRICS: `${API_BASE}/metrics`,
+  GET_EXECUTION_LOGS: `${API_BASE}/executions/logs`,
+  GET_WORKFLOW_ANALYTICS: `${API_BASE}/analytics`,
+  
+  // Workflow optimization
+  OPTIMIZE_WORKFLOW: `${API_BASE}/optimize`,
+  ANALYZE_WORKFLOW_PERFORMANCE: `${API_BASE}/performance/analyze`,
+  GET_OPTIMIZATION_RECOMMENDATIONS: `${API_BASE}/optimization/recommendations`,
+  
+  // Workflow validation
+  VALIDATE_WORKFLOW: `${API_BASE}/validate`,
+  TEST_WORKFLOW: `${API_BASE}/test`,
+  SIMULATE_WORKFLOW_EXECUTION: `${API_BASE}/simulate`
+} as const;
 
 // Request/Response types
 interface WorkflowTemplateRequest {
