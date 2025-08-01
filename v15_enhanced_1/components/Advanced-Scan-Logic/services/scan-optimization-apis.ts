@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-optimization-apis.ts
-// Comprehensive scan optimization API service aligned with backend routes
+/**
+ * ⚡ Scan Optimization APIs - Advanced Scan Logic
+ * =============================================
+ * 
+ * Comprehensive API integration for scan optimization operations
+ * Maps to: backend/api/routes/scan_optimization_routes.py
+ * 
+ * Features:
+ * - Advanced scan performance optimization
+ * - Intelligent resource allocation and scheduling
+ * - AI-powered optimization algorithms and strategies
+ * - Real-time optimization monitoring and analytics
+ * - Enterprise optimization workflows and management
+ * - Predictive optimization and cost analysis
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   OptimizationRecommendation,
   OptimizationState,
@@ -17,8 +34,10 @@ import {
   OptimizationMetrics
 } from '../types/optimization.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/api/v1/scan-optimization';
 
 // Request types based on backend models
 interface OptimizationRequest {
@@ -53,11 +72,15 @@ interface OptimizationScheduleRequest {
   notification_settings: Record<string, boolean>;
 }
 
-class ScanOptimizationAPI {
-  private baseUrl: string;
+/**
+ * Scan Optimization API Service Class
+ * Provides comprehensive integration with scan optimization backend
+ */
+export class ScanOptimizationAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/v1/scan-optimization`;
+    this.apiClient = new ApiClient();
   }
 
   private getAuthToken(): string {

@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-coordination-apis.ts
-// Comprehensive scan coordination API service aligned with backend routes
+/**
+ * 🎯 Scan Coordination APIs - Advanced Scan Logic
+ * ==============================================
+ * 
+ * Comprehensive API integration for scan coordination operations
+ * Maps to: backend/api/routes/scan_coordination_routes.py
+ * 
+ * Features:
+ * - Advanced cross-system scan coordination
+ * - Intelligent resource allocation and load balancing
+ * - Real-time coordination monitoring and analytics
+ * - Multi-system synchronization and orchestration
+ * - Enterprise coordination workflows and management
+ * - Coordination conflict detection and resolution
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   ScanCoordination,
   CoordinatedScan,
@@ -17,8 +34,10 @@ import {
   LoadBalancing
 } from '../types/coordination.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/api/v1/scan-coordination';
 
 // Request types based on backend models
 interface CoordinationRequest {
@@ -53,11 +72,15 @@ interface ResourceCoordinationRequest {
   monitoring_interval?: number;
 }
 
-class ScanCoordinationAPI {
-  private baseUrl: string;
+/**
+ * Scan Coordination API Service Class
+ * Provides comprehensive integration with scan coordination backend
+ */
+export class ScanCoordinationAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/v1/scan-coordination`;
+    this.apiClient = new ApiClient();
   }
 
   private getAuthToken(): string {

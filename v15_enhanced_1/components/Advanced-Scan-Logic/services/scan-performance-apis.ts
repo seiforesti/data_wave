@@ -1,6 +1,23 @@
-// Advanced-Scan-Logic/services/scan-performance-apis.ts
-// Comprehensive scan performance API service aligned with backend routes
+/**
+ * ⚡ Scan Performance APIs - Advanced Scan Logic
+ * ============================================
+ * 
+ * Comprehensive API integration for scan performance operations
+ * Maps to: backend/api/routes/scan_performance_routes.py
+ * 
+ * Features:
+ * - Advanced performance monitoring and analytics
+ * - Real-time performance metrics and insights
+ * - Intelligent performance optimization
+ * - Resource utilization tracking and analysis
+ * - Performance bottleneck detection and resolution
+ * - Enterprise performance reporting and benchmarking
+ * 
+ * @author Enterprise Data Governance Team
+ * @version 1.0.0 - Production Ready
+ */
 
+import { ApiClient } from '@/lib/api-client';
 import {
   PerformanceMetric,
   PerformanceHistory,
@@ -27,14 +44,64 @@ import {
   CostOptimization
 } from '../types/performance.types';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+/**
+ * API endpoints configuration mapping to backend routes
+ */
+const API_BASE = '/api/v1/scan-performance';
 
-class ScanPerformanceAPI {
-  private baseUrl: string;
+const ENDPOINTS = {
+  // Core performance metrics
+  GET_PERFORMANCE_METRICS: `${API_BASE}/metrics`,
+  GET_REAL_TIME_METRICS: `${API_BASE}/metrics/real-time`,
+  GET_PERFORMANCE_HISTORY: `${API_BASE}/metrics/history`,
+  GET_PERFORMANCE_SUMMARY: `${API_BASE}/metrics/summary`,
+  
+  // Performance analytics
+  ANALYZE_PERFORMANCE: `${API_BASE}/analytics/analyze`,
+  GET_PERFORMANCE_INSIGHTS: `${API_BASE}/analytics/insights`,
+  GET_TREND_ANALYSIS: `${API_BASE}/analytics/trends`,
+  GET_COMPARATIVE_ANALYSIS: `${API_BASE}/analytics/compare`,
+  
+  // Bottleneck detection
+  DETECT_BOTTLENECKS: `${API_BASE}/bottlenecks/detect`,
+  ANALYZE_BOTTLENECKS: `${API_BASE}/bottlenecks/analyze`,
+  GET_BOTTLENECK_HISTORY: `${API_BASE}/bottlenecks/history`,
+  
+  // Performance optimization
+  OPTIMIZE_PERFORMANCE: `${API_BASE}/optimization/optimize`,
+  GET_OPTIMIZATION_RECOMMENDATIONS: `${API_BASE}/optimization/recommendations`,
+  APPLY_OPTIMIZATION: `${API_BASE}/optimization/apply`,
+  
+  // Resource utilization
+  GET_RESOURCE_UTILIZATION: `${API_BASE}/resources/utilization`,
+  GET_RESOURCE_TRENDS: `${API_BASE}/resources/trends`,
+  GET_CAPACITY_PLANNING: `${API_BASE}/resources/capacity`,
+  
+  // Performance alerts
+  GET_PERFORMANCE_ALERTS: `${API_BASE}/alerts`,
+  CREATE_PERFORMANCE_ALERT: `${API_BASE}/alerts/create`,
+  UPDATE_ALERT_THRESHOLDS: `${API_BASE}/alerts/thresholds`,
+  
+  // Benchmarking
+  GET_PERFORMANCE_BENCHMARKS: `${API_BASE}/benchmarks`,
+  CREATE_BENCHMARK: `${API_BASE}/benchmarks/create`,
+  COMPARE_BENCHMARKS: `${API_BASE}/benchmarks/compare`,
+  
+  // Reporting
+  GENERATE_PERFORMANCE_REPORT: `${API_BASE}/reports/generate`,
+  GET_PERFORMANCE_REPORTS: `${API_BASE}/reports`,
+  EXPORT_PERFORMANCE_DATA: `${API_BASE}/reports/export`
+} as const;
+
+/**
+ * Scan Performance API Service Class
+ * Provides comprehensive integration with scan performance backend
+ */
+export class ScanPerformanceAPIService {
+  private apiClient: ApiClient;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/v1/scan-performance`;
+    this.apiClient = new ApiClient();
   }
 
   private getAuthToken(): string {
