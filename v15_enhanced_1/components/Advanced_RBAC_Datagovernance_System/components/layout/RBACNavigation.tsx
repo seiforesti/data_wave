@@ -1,1721 +1,1420 @@
-// RBACNavigation.tsx - Enterprise-grade RBAC navigation component
-// Provides advanced navigation with dynamic permissions, intelligent search, and modern UI/UX
+// RBACNavigation.tsx - Enterprise-grade navigation component for RBAC system
+// Provides intelligent navigation with RBAC integration, dynamic routing, and advanced UX patterns
 
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Shield,
   Users,
   Database,
+  Settings,
   Activity,
   Eye,
   Lock,
   Unlock,
-  Settings,
-  Search,
-  ChevronDown,
-  ChevronRight,
-  Home,
-  FolderOpen,
   FileText,
-  BarChart3,
-  Globe,
-  Zap,
+  Folder,
+  Search,
   Bell,
   Star,
-  Heart,
   Bookmark,
+  Heart,
   Clock,
-  Calendar,
-  Mail,
-  Phone,
-  MapPin,
+  TrendingUp,
+  BarChart3,
+  PieChart,
+  LineChart,
+  Grid,
+  List,
+  Filter,
+  SortAsc,
+  SortDesc,
+  Plus,
+  Minus,
+  Edit,
+  Trash2,
+  Copy,
+  Download,
+  Upload,
+  RefreshCw,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  MoreHorizontal,
+  Home,
+  Archive,
+  Tag,
+  Globe,
   User,
   UserPlus,
   UserCheck,
   UserX,
-  Group,
-  Building,
-  Briefcase,
-  CreditCard,
-  ShoppingCart,
-  Package,
-  Truck,
-  Archive,
-  Download,
-  Upload,
-  Share,
+  Mail,
+  MessageSquare,
+  Phone,
+  Calendar,
+  MapPin,
   Link,
-  Copy,
-  Edit,
-  Trash2,
-  Plus,
-  Minus,
-  X,
-  Check,
-  AlertCircle,
-  Info,
-  HelpCircle,
   ExternalLink,
-  Maximize,
-  Minimize,
-  RefreshCw,
-  RotateCw,
-  Filter,
-  SortAsc,
-  SortDesc,
-  Grid,
-  List,
-  Layers,
-  Tag,
-  Flag,
-  Inbox,
-  Send,
-  FileCode,
+  Share,
+  Code,
   Terminal,
   Cpu,
   HardDrive,
-  Monitor,
-  Smartphone,
-  Tablet,
+  Server,
+  Cloud,
   Wifi,
-  Bluetooth,
-  Camera,
-  Mic,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
-  Square,
-  SkipBack,
-  SkipForward,
-  Repeat,
-  Shuffle,
-  ThumbsUp,
-  ThumbsDown,
-  MessageCircle,
-  MessageSquare,
-  AtSign,
-  Hash,
-  Percent,
-  DollarSign,
-  PoundSterling,
-  Euro,
-  Yen,
-  Bitcoin,
-  TrendingUp,
-  TrendingDown,
-  PieChart,
-  LineChart,
-  AreaChart,
-  Navigation,
-  Compass,
-  Map,
-  Route,
-  Car,
-  Bus,
-  Train,
-  Plane,
-  Ship,
-  Anchor,
-  Umbrella,
-  Sun,
-  Moon,
-  CloudRain,
-  CloudSnow,
-  CloudLightning,
-  CloudDrizzle,
-  Wind,
-  Thermometer,
-  Droplets,
-  Eye as EyeIcon,
-  EyeOff,
-  Palette,
-  Brush,
-  Scissors,
-  Ruler,
-  PenTool,
-  Type,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  Code,
-  Quote,
-  Heading,
-  Paragraph,
-  List as ListIcon,
-  Indent,
-  Outdent,
-  Image,
-  Video,
-  Music,
-  Headphones,
-  Mic2,
-  Radio,
-  Tv,
-  Monitor as MonitorIcon,
-  Projector,
-  Gamepad2,
-  Joystick,
-  Dices,
-  Puzzle,
+  WifiOff,
+  Zap,
   Target,
+  Gauge,
+  Layers,
+  GitBranch,
+  GitCommit,
+  GitMerge,
+  Package,
+  Truck,
+  Building,
+  Factory,
+  Briefcase,
+  GraduationCap,
   Award,
   Trophy,
   Medal,
+  Flag,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Info,
+  HelpCircle,
+  QuestionMark,
+  X,
+  Menu,
+  Sidebar,
+  PanelLeft,
+  Layout,
+  Maximize,
+  Minimize,
+  RotateCcw,
+  RotateCw,
+  FlipHorizontal,
+  FlipVertical,
+  Move,
+  MousePointer,
+  Hand,
+  Fingerprint,
+  Scan,
+  QrCode,
+  CreditCard,
+  Wallet,
+  DollarSign,
+  Euro,
+  Pound,
+  Yen,
+  Bitcoin,
+  ShoppingCart,
+  ShoppingBag,
   Gift,
-  PartyPopper,
-  Cake,
-  Coffee,
-  Wine,
-  Utensils,
-  ChefHat,
-  Apple,
-  Cherry,
-  Grape,
-  Banana,
-  Carrot,
-  Leaf,
-  TreePine,
-  Flower,
-  FlowerIcon as Flower2,
-  Sprout,
-  Seedling,
-  Bug,
-  Butterfly,
-  Bird,
-  Cat,
-  Dog,
-  Fish,
-  Rabbit,
-  Turtle,
-  Bear,
-  Lion,
-  Tiger,
-  Wolf,
-  Fox,
-  Squirrel,
-  Owl,
-  Eagle,
-  Dove,
-  Feather,
-  Paw,
-  Bone,
+  Percent,
+  Calculator,
+  Ruler,
+  Scissors,
+  Paperclip,
+  Pin,
+  Pushpin,
+  Magnet,
+  Key,
+  KeyRound,
+  LockKeyhole,
+  Unlock,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  ShieldOff,
+  Security,
+  Verified,
+  BadgeCheck,
+  UserCog,
+  UserShield,
   Crown,
   Gem,
   Diamond,
   Sparkles,
   Wand2,
-  MagicWand,
-  Crystal,
-  Zap as ZapIcon,
-  Lightning,
-  Flame,
-  Snowflake,
-  Droplet,
-  CloudIcon as Cloud,
-  Rainbow,
-  Sunset,
-  Sunrise,
-  MoonIcon as MoonIcon2,
-  Stars,
-  Planet,
-  Rocket,
-  Satellite,
-  Telescope,
-  Microscope,
-  FlaskConical,
-  TestTube,
-  Dna,
-  Atom,
-  Magnet,
-  Battery,
-  BatteryLow,
-  Plug,
-  Power,
-  Lightbulb,
-  Flashlight,
-  Candle,
-  Lamp,
-  LampDesk,
-  Sofa,
-  Bed,
-  Bath,
-  Toilet,
-  Shower,
-  Washing,
-  Refrigerator,
-  Microwave,
-  Oven,
-  Toaster,
-  Blender,
-  Scale,
-  Wrench,
-  Hammer,
-  Screwdriver,
-  Drill,
-  Saw,
-  Pliers,
-  Scissors as ScissorsIcon,
-  Paperclip,
-  Pin,
-  Pushpin,
-  Thumbtack,
-  Stapler,
-  Tape,
-  Glue,
-  Eraser,
-  Pencil,
-  Pen,
-  Marker,
-  Highlighter,
-  Crayon,
-  Paintbrush,
-  PaintBucket,
-  Palette as PaletteIcon,
-  Easel,
-  Frame,
-  Picture,
-  Gallery,
-  Museum,
-  Library,
-  Book,
-  BookOpen,
-  Notebook,
-  Journal,
-  Newspaper,
-  Magazine,
-  Scroll,
-  FileIcon,
-  Folder,
-  FolderIcon,
-  Archive as ArchiveIcon,
-  Box,
-  Package2,
-  Container,
-  Crate,
-  Basket,
-  ShoppingBag,
-  Handbag,
-  Backpack,
-  Luggage,
-  Briefcase as BriefcaseIcon,
-  HardHat,
-  Glasses,
-  Sunglasses,
-  Watch,
-  Clock as ClockIcon,
-  Timer,
-  Stopwatch,
-  Hourglass,
-  Calendar as CalendarIcon,
-  CalendarDays,
-  CalendarCheck,
-  CalendarX,
-  CalendarPlus,
-  CalendarMinus,
-  CalendarRange,
-  CalendarClock,
-  CalendarHeart,
-  Alarm,
-  AlarmCheck,
-  AlarmClock,
-  Bell as BellIcon,
-  BellRing,
-  BellOff,
-  Siren,
-  Volume,
-  VolumeIcon,
-  Speaker,
-  Headset,
-  MicIcon,
-  MicOff,
-  Radio as RadioIcon,
-  Signal,
-  SignalHigh,
-  SignalLow,
-  SignalZero,
-  WifiOff,
-  WifiIcon,
-  Bluetooth as BluetoothIcon,
-  BluetoothConnected,
-  BluetoothSearching,
-  Nfc,
-  Smartphone as SmartphoneIcon,
-  TabletIcon,
-  Laptop,
-  Desktop,
-  MonitorSpeaker,
-  Keyboard,
-  Mouse,
-  MousePointer,
-  MousePointer2,
-  Touchpad,
-  Fingerprint,
-  Scan,
-  QrCode,
-  Barcode,
-  CreditCardIcon,
-  Banknote,
-  Coins,
-  Wallet,
-  PiggyBank,
-  Safe,
-  Vault,
-  Calculator,
-  Abacus,
-  Scale as ScaleIcon,
-  Ruler as RulerIcon,
-  Gauge,
-  Speedometer,
-  Tachometer,
-  Fuel,
-  BatteryCharging,
-  PlugZap,
-  Plug2,
-  Cable,
-  Usb,
-  Ethernet,
-  Router,
-  Server,
-  Database as DatabaseIcon,
-  HardDriveIcon,
-  SsdIcon,
-  MemoryStick,
-  Disc,
-  Disc2,
-  Disc3,
-  Save,
-  FolderPlus,
-  FolderMinus,
-  FolderX,
-  FolderCheck,
-  FolderOpen as FolderOpenIcon,
-  FolderClosed,
-  FolderArchive,
-  FolderSync,
-  FolderKey,
-  FolderLock,
-  FolderHeart,
-  FolderStar,
-  FolderTree,
-  FolderRoot,
-  FolderInput,
-  FolderOutput,
-  FolderUp,
-  FolderDown,
-  FilePlus,
-  FileMinus,
-  FileX,
-  FileCheck,
-  FileSearch,
-  FileClock,
-  FileHeart,
-  FileStar,
-  FileKey,
-  FileLock,
-  FileInput,
-  FileOutput,
-  FileUp,
-  FileDown,
-  FileEdit,
-  FileType,
-  FileType2,
-  FileImage,
-  FileVideo,
-  FileAudio,
-  FileMusic,
-  FileText as FileTextIcon,
-  FileCode as FileCodeIcon,
-  FileSpreadsheet,
-  FileJson,
-  FileDigit,
-  FileBadge,
-  FileBadge2,
-  FileBarChart,
-  FileBarChart2,
-  FilePieChart,
-  FileLineChart,
-  FileAreaChart,
-  FileSliders,
-  FileQuestion,
-  FileWarning,
-  FileX2,
-  FileCheck2,
-  FileCog,
-  FileKey2,
-  FileLock2,
-  FileHeart2,
-  FileStar2,
-  FileSearch2,
-  FileClock2,
-  FileEdit2,
-  FileEdit3,
-  FileSignature,
-  FilePenLine,
-  FilePen,
-  FileTerminal,
-  FileCode2,
-  FileSpreadsheet2,
-  FileJson2,
-  FileDigit2,
-  FileBadge3,
-  FileBarChart3,
-  FilePieChart2,
-  FileLineChart2,
-  FileAreaChart2
+  Magic
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePermissionCheck } from '../../hooks/usePermissionCheck';
-import { useAuth } from '../../hooks/useAuth';
+import { useRBACWebSocket } from '../../hooks/useRBACWebSocket';
 import { LoadingSpinner, Skeleton } from '../shared/LoadingStates';
 
 // Navigation item interfaces
 export interface NavigationItem {
   id: string;
   label: string;
-  href?: string;
+  path?: string;
   icon?: React.ReactNode;
   badge?: string | number;
-  badgeVariant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'warning' | 'success';
+  badgeVariant?: 'default' | 'destructive' | 'warning' | 'success' | 'info';
+  description?: string;
+  shortcut?: string;
+  category?: string;
+  order?: number;
   
   // Permissions and visibility
   permission?: string;
   requiredRole?: string;
+  requiredPermissions?: string[];
   hidden?: boolean;
   disabled?: boolean;
+  beta?: boolean;
+  new?: boolean;
+  deprecated?: boolean;
   
   // Hierarchy
   children?: NavigationItem[];
   parent?: string;
-  order?: number;
+  level?: number;
   
   // Behavior
   external?: boolean;
+  openInNewTab?: boolean;
   onClick?: () => void;
-  exact?: boolean; // For route matching
   
-  // Appearance
-  variant?: 'default' | 'primary' | 'secondary' | 'ghost' | 'link';
+  // Styling
+  className?: string;
+  activeClassName?: string;
+  variant?: 'default' | 'ghost' | 'outline' | 'secondary';
   size?: 'sm' | 'md' | 'lg';
-  showInMobile?: boolean;
-  showInDesktop?: boolean;
   
   // Metadata
-  description?: string;
-  tooltip?: string;
-  keywords?: string[]; // For search
-  category?: string;
-  tags?: string[];
-  
-  // State
-  isNew?: boolean;
-  isBeta?: boolean;
-  isDeprecated?: boolean;
   lastAccessed?: Date;
   accessCount?: number;
+  isFavorite?: boolean;
+  isBookmarked?: boolean;
+  tags?: string[];
   
-  // Custom properties
-  customData?: Record<string, any>;
+  // Analytics
+  trackingId?: string;
+  eventCategory?: string;
+  eventAction?: string;
 }
 
 export interface NavigationGroup {
   id: string;
   label: string;
-  items: NavigationItem[];
-  collapsible?: boolean;
-  collapsed?: boolean;
   icon?: React.ReactNode;
+  order: number;
   permission?: string;
-  order?: number;
-  description?: string;
+  collapsed?: boolean;
+  items: NavigationItem[];
 }
 
 export interface NavigationConfig {
-  // Layout
-  width: number;
-  minWidth: number;
-  maxWidth: number;
-  collapsible: boolean;
-  position: 'left' | 'right';
-  
-  // Behavior
-  persistState: boolean;
-  autoCollapse: boolean;
-  showSearch: boolean;
-  showRecentItems: boolean;
-  showFavorites: boolean;
-  searchPlaceholder: string;
-  
-  // Appearance
-  showGroupLabels: boolean;
+  layout: 'sidebar' | 'topbar' | 'hybrid';
+  theme: 'light' | 'dark' | 'auto';
+  density: 'compact' | 'comfortable' | 'spacious';
   showIcons: boolean;
+  showLabels: boolean;
   showBadges: boolean;
   showTooltips: boolean;
-  compactMode: boolean;
-  theme: 'light' | 'dark' | 'auto';
-  
-  // Performance
-  virtualizedThreshold: number;
-  preloadRoutes: boolean;
-  lazy: boolean;
-  
-  // Analytics
-  trackNavigation: boolean;
-  trackSearch: boolean;
-  trackUsage: boolean;
+  showShortcuts: boolean;
+  enableSearch: boolean;
+  enableFavorites: boolean;
+  enableBookmarks: boolean;
+  enableRecents: boolean;
+  enableCollapse: boolean;
+  maxRecentItems: number;
+  collapsedByDefault: boolean;
+  persistState: boolean;
+  animationDuration: number;
+  hoverDelay: number;
 }
 
 export interface RBACNavigationProps {
   config?: Partial<NavigationConfig>;
   className?: string;
-  variant?: 'default' | 'minimal' | 'compact';
-  onNavigate?: (item: NavigationItem) => void;
+  variant?: 'full' | 'mini' | 'overlay';
+  position?: 'left' | 'right' | 'top' | 'bottom';
+  width?: number;
+  height?: number;
+  collapsible?: boolean;
+  collapsed?: boolean;
   onCollapse?: (collapsed: boolean) => void;
   customItems?: NavigationItem[];
-  hideGroups?: string[];
-  showOnlyGroups?: string[];
+  onNavigate?: (item: NavigationItem) => void;
+  onFavorite?: (item: NavigationItem) => void;
+  onBookmark?: (item: NavigationItem) => void;
+  showHeader?: boolean;
+  showFooter?: boolean;
+  showSearch?: boolean;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  loadingMessage?: string;
+  errorMessage?: string;
 }
 
-// Navigation search interface
-interface NavigationSearchProps {
-  items: NavigationItem[];
-  onSelect: (item: NavigationItem) => void;
-  placeholder?: string;
-  className?: string;
-}
+// Custom hooks for navigation
+const useNavigationConfig = () => {
+  const [config, setConfig] = useState<NavigationConfig>({
+    layout: 'sidebar',
+    theme: 'auto',
+    density: 'comfortable',
+    showIcons: true,
+    showLabels: true,
+    showBadges: true,
+    showTooltips: true,
+    showShortcuts: true,
+    enableSearch: true,
+    enableFavorites: true,
+    enableBookmarks: true,
+    enableRecents: true,
+    enableCollapse: true,
+    maxRecentItems: 10,
+    collapsedByDefault: false,
+    persistState: true,
+    animationDuration: 200,
+    hoverDelay: 300,
+  });
 
-// Recent items interface
-interface RecentItem {
-  item: NavigationItem;
-  timestamp: Date;
-  count: number;
-}
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('rbac-navigation-config');
+    if (savedConfig) {
+      try {
+        setConfig(prev => ({ ...prev, ...JSON.parse(savedConfig) }));
+      } catch (error) {
+        console.error('Failed to parse navigation config:', error);
+      }
+    }
+  }, []);
 
-// Favorites interface
-interface FavoriteItem {
-  item: NavigationItem;
-  addedAt: Date;
-  category?: string;
-}
+  const updateConfig = useCallback((updates: Partial<NavigationConfig>) => {
+    setConfig(prev => {
+      const newConfig = { ...prev, ...updates };
+      if (newConfig.persistState) {
+        localStorage.setItem('rbac-navigation-config', JSON.stringify(newConfig));
+      }
+      return newConfig;
+    });
+  }, []);
 
-// Custom hooks for navigation state
+  return { config, updateConfig };
+};
+
 const useNavigationState = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
-  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+  const [recentItems, setRecentItems] = useState<NavigationItem[]>([]);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  // Load state from localStorage
   useEffect(() => {
-    try {
-      const savedState = localStorage.getItem('rbac-navigation-state');
-      if (savedState) {
-        const state = JSON.parse(savedState);
-        setCollapsed(state.collapsed || false);
-        setExpandedGroups(new Set(state.expandedGroups || []));
-        setRecentItems(state.recentItems || []);
-        setFavoriteItems(state.favoriteItems || []);
+    const savedFavorites = localStorage.getItem('rbac-navigation-favorites');
+    if (savedFavorites) {
+      try {
+        setFavorites(new Set(JSON.parse(savedFavorites)));
+      } catch (error) {
+        console.error('Failed to parse favorites:', error);
       }
-    } catch (error) {
-      console.error('Failed to load navigation state:', error);
+    }
+
+    const savedBookmarks = localStorage.getItem('rbac-navigation-bookmarks');
+    if (savedBookmarks) {
+      try {
+        setBookmarks(new Set(JSON.parse(savedBookmarks)));
+      } catch (error) {
+        console.error('Failed to parse bookmarks:', error);
+      }
+    }
+
+    const savedRecents = localStorage.getItem('rbac-navigation-recents');
+    if (savedRecents) {
+      try {
+        setRecentItems(JSON.parse(savedRecents));
+      } catch (error) {
+        console.error('Failed to parse recent items:', error);
+      }
     }
   }, []);
 
-  // Save state to localStorage
-  const saveState = useCallback(() => {
-    try {
-      const state = {
-        collapsed,
-        expandedGroups: Array.from(expandedGroups),
-        recentItems: recentItems.slice(0, 10), // Keep only last 10
-        favoriteItems
-      };
-      localStorage.setItem('rbac-navigation-state', JSON.stringify(state));
-    } catch (error) {
-      console.error('Failed to save navigation state:', error);
-    }
-  }, [collapsed, expandedGroups, recentItems, favoriteItems]);
+  const toggleFavorite = useCallback((itemId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(itemId)) {
+        newFavorites.delete(itemId);
+      } else {
+        newFavorites.add(itemId);
+      }
+      localStorage.setItem('rbac-navigation-favorites', JSON.stringify([...newFavorites]));
+      return newFavorites;
+    });
+  }, []);
 
-  useEffect(() => {
-    saveState();
-  }, [saveState]);
+  const toggleBookmark = useCallback((itemId: string) => {
+    setBookmarks(prev => {
+      const newBookmarks = new Set(prev);
+      if (newBookmarks.has(itemId)) {
+        newBookmarks.delete(itemId);
+      } else {
+        newBookmarks.add(itemId);
+      }
+      localStorage.setItem('rbac-navigation-bookmarks', JSON.stringify([...newBookmarks]));
+      return newBookmarks;
+    });
+  }, []);
 
-  // Add recent item
-  const addRecentItem = useCallback((item: NavigationItem) => {
+  const addToRecents = useCallback((item: NavigationItem, maxItems: number = 10) => {
     setRecentItems(prev => {
-      const existing = prev.find(recent => recent.item.id === item.id);
-      if (existing) {
-        return prev.map(recent =>
-          recent.item.id === item.id
-            ? { ...recent, timestamp: new Date(), count: recent.count + 1 }
-            : recent
-        );
-      } else {
-        return [
-          { item, timestamp: new Date(), count: 1 },
-          ...prev.slice(0, 9)
-        ];
-      }
+      const filtered = prev.filter(i => i.id !== item.id);
+      const newRecents = [{ ...item, lastAccessed: new Date() }, ...filtered].slice(0, maxItems);
+      localStorage.setItem('rbac-navigation-recents', JSON.stringify(newRecents));
+      return newRecents;
     });
   }, []);
 
-  // Toggle favorite
-  const toggleFavorite = useCallback((item: NavigationItem) => {
-    setFavoriteItems(prev => {
-      const existing = prev.find(fav => fav.item.id === item.id);
-      if (existing) {
-        return prev.filter(fav => fav.item.id !== item.id);
+  const toggleGroupExpansion = useCallback((groupId: string) => {
+    setExpandedGroups(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(groupId)) {
+        newExpanded.delete(groupId);
       } else {
-        return [...prev, { item, addedAt: new Date() }];
+        newExpanded.add(groupId);
       }
+      return newExpanded;
     });
   }, []);
-
-  // Check if item is favorite
-  const isFavorite = useCallback((itemId: string) => {
-    return favoriteItems.some(fav => fav.item.id === itemId);
-  }, [favoriteItems]);
 
   return {
-    collapsed,
-    setCollapsed,
-    searchTerm,
-    setSearchTerm,
+    searchQuery,
+    setSearchQuery,
     expandedGroups,
     setExpandedGroups,
+    favorites,
+    bookmarks,
     recentItems,
-    favoriteItems,
-    selectedItem,
-    setSelectedItem,
-    addRecentItem,
+    hoveredItem,
+    setHoveredItem,
     toggleFavorite,
-    isFavorite
+    toggleBookmark,
+    addToRecents,
+    toggleGroupExpansion,
   };
 };
 
-// Default navigation configuration
-const defaultNavigationConfig: NavigationConfig = {
-  width: 280,
-  minWidth: 200,
-  maxWidth: 400,
-  collapsible: true,
-  position: 'left',
-  persistState: true,
-  autoCollapse: false,
-  showSearch: true,
-  showRecentItems: true,
-  showFavorites: true,
-  searchPlaceholder: 'Search navigation...',
-  showGroupLabels: true,
-  showIcons: true,
-  showBadges: true,
-  showTooltips: true,
-  compactMode: false,
-  theme: 'auto',
-  virtualizedThreshold: 100,
-  preloadRoutes: true,
-  lazy: false,
-  trackNavigation: true,
-  trackSearch: true,
-  trackUsage: true
-};
+const useNavigationItems = (customItems?: NavigationItem[]) => {
+  const { user, hasPermission } = useCurrentUser();
+  
+  const defaultNavigationGroups: NavigationGroup[] = useMemo(() => [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <Home className="w-4 h-4" />,
+      order: 1,
+      items: [
+        {
+          id: 'overview',
+          label: 'Overview',
+          path: '/rbac/dashboard',
+          icon: <BarChart3 className="w-4 h-4" />,
+          description: 'System overview and analytics',
+          permission: 'rbac.dashboard.read',
+        },
+        {
+          id: 'analytics',
+          label: 'Analytics',
+          path: '/rbac/analytics',
+          icon: <TrendingUp className="w-4 h-4" />,
+          description: 'Advanced analytics and insights',
+          permission: 'rbac.analytics.read',
+        },
+        {
+          id: 'reports',
+          label: 'Reports',
+          path: '/rbac/reports',
+          icon: <FileText className="w-4 h-4" />,
+          description: 'Generate and view reports',
+          permission: 'rbac.reports.read',
+          badge: 'New',
+          badgeVariant: 'success',
+        },
+      ],
+    },
+    {
+      id: 'identity',
+      label: 'Identity & Access',
+      icon: <Shield className="w-4 h-4" />,
+      order: 2,
+      permission: 'rbac.identity.read',
+      items: [
+        {
+          id: 'users',
+          label: 'Users',
+          path: '/rbac/users',
+          icon: <Users className="w-4 h-4" />,
+          description: 'Manage user accounts and profiles',
+          permission: 'rbac.users.read',
+          shortcut: 'U',
+        },
+        {
+          id: 'roles',
+          label: 'Roles',
+          path: '/rbac/roles',
+          icon: <UserShield className="w-4 h-4" />,
+          description: 'Define and manage user roles',
+          permission: 'rbac.roles.read',
+          shortcut: 'R',
+        },
+        {
+          id: 'permissions',
+          label: 'Permissions',
+          path: '/rbac/permissions',
+          icon: <Key className="w-4 h-4" />,
+          description: 'Configure access permissions',
+          permission: 'rbac.permissions.read',
+          shortcut: 'P',
+        },
+        {
+          id: 'groups',
+          label: 'Groups',
+          path: '/rbac/groups',
+          icon: <Users className="w-4 h-4" />,
+          description: 'Organize users into groups',
+          permission: 'rbac.groups.read',
+          shortcut: 'G',
+        },
+        {
+          id: 'access-requests',
+          label: 'Access Requests',
+          path: '/rbac/access-requests',
+          icon: <UserPlus className="w-4 h-4" />,
+          description: 'Review and approve access requests',
+          permission: 'rbac.access_requests.read',
+          badge: '3',
+          badgeVariant: 'warning',
+        },
+      ],
+    },
+    {
+      id: 'resources',
+      label: 'Resources',
+      icon: <Database className="w-4 h-4" />,
+      order: 3,
+      permission: 'rbac.resources.read',
+      items: [
+        {
+          id: 'data-sources',
+          label: 'Data Sources',
+          path: '/rbac/data-sources',
+          icon: <Database className="w-4 h-4" />,
+          description: 'Manage data source connections',
+          permission: 'rbac.data_sources.read',
+        },
+        {
+          id: 'catalog',
+          label: 'Data Catalog',
+          path: '/rbac/catalog',
+          icon: <Folder className="w-4 h-4" />,
+          description: 'Browse and discover data assets',
+          permission: 'rbac.catalog.read',
+        },
+        {
+          id: 'classifications',
+          label: 'Classifications',
+          path: '/rbac/classifications',
+          icon: <Tag className="w-4 h-4" />,
+          description: 'Data classification and labeling',
+          permission: 'rbac.classifications.read',
+        },
+        {
+          id: 'scan-rules',
+          label: 'Scan Rules',
+          path: '/rbac/scan-rules',
+          icon: <Scan className="w-4 h-4" />,
+          description: 'Configure data scanning rules',
+          permission: 'rbac.scan_rules.read',
+        },
+      ],
+    },
+    {
+      id: 'governance',
+      label: 'Governance',
+      icon: <ShieldCheck className="w-4 h-4" />,
+      order: 4,
+      permission: 'rbac.governance.read',
+      items: [
+        {
+          id: 'compliance',
+          label: 'Compliance',
+          path: '/rbac/compliance',
+          icon: <CheckCircle className="w-4 h-4" />,
+          description: 'Monitor compliance status',
+          permission: 'rbac.compliance.read',
+        },
+        {
+          id: 'policies',
+          label: 'Policies',
+          path: '/rbac/policies',
+          icon: <FileText className="w-4 h-4" />,
+          description: 'Manage governance policies',
+          permission: 'rbac.policies.read',
+        },
+        {
+          id: 'lineage',
+          label: 'Data Lineage',
+          path: '/rbac/lineage',
+          icon: <GitBranch className="w-4 h-4" />,
+          description: 'Track data lineage and dependencies',
+          permission: 'rbac.lineage.read',
+          beta: true,
+        },
+        {
+          id: 'quality',
+          label: 'Data Quality',
+          path: '/rbac/quality',
+          icon: <Award className="w-4 h-4" />,
+          description: 'Monitor data quality metrics',
+          permission: 'rbac.quality.read',
+        },
+      ],
+    },
+    {
+      id: 'monitoring',
+      label: 'Monitoring',
+      icon: <Activity className="w-4 h-4" />,
+      order: 5,
+      permission: 'rbac.monitoring.read',
+      items: [
+        {
+          id: 'audit-logs',
+          label: 'Audit Logs',
+          path: '/rbac/audit-logs',
+          icon: <FileText className="w-4 h-4" />,
+          description: 'View system audit trails',
+          permission: 'rbac.audit.read',
+        },
+        {
+          id: 'sessions',
+          label: 'Active Sessions',
+          path: '/rbac/sessions',
+          icon: <Activity className="w-4 h-4" />,
+          description: 'Monitor active user sessions',
+          permission: 'rbac.sessions.read',
+        },
+        {
+          id: 'security-events',
+          label: 'Security Events',
+          path: '/rbac/security-events',
+          icon: <AlertTriangle className="w-4 h-4" />,
+          description: 'Track security incidents',
+          permission: 'rbac.security.read',
+          badge: '!',
+          badgeVariant: 'destructive',
+        },
+        {
+          id: 'system-health',
+          label: 'System Health',
+          path: '/rbac/system-health',
+          icon: <Gauge className="w-4 h-4" />,
+          description: 'Monitor system performance',
+          permission: 'rbac.system.read',
+        },
+      ],
+    },
+    {
+      id: 'administration',
+      label: 'Administration',
+      icon: <Settings className="w-4 h-4" />,
+      order: 6,
+      permission: 'rbac.admin.read',
+      items: [
+        {
+          id: 'system-settings',
+          label: 'System Settings',
+          path: '/rbac/settings/system',
+          icon: <Settings className="w-4 h-4" />,
+          description: 'Configure system preferences',
+          permission: 'rbac.settings.read',
+        },
+        {
+          id: 'integrations',
+          label: 'Integrations',
+          path: '/rbac/integrations',
+          icon: <Link className="w-4 h-4" />,
+          description: 'Manage external integrations',
+          permission: 'rbac.integrations.read',
+        },
+        {
+          id: 'backup-restore',
+          label: 'Backup & Restore',
+          path: '/rbac/backup',
+          icon: <Archive className="w-4 h-4" />,
+          description: 'System backup and recovery',
+          permission: 'rbac.backup.read',
+        },
+        {
+          id: 'maintenance',
+          label: 'Maintenance',
+          path: '/rbac/maintenance',
+          icon: <Wrench className="w-4 h-4" />,
+          description: 'System maintenance tools',
+          permission: 'rbac.maintenance.read',
+          badge: 'Beta',
+          badgeVariant: 'info',
+        },
+      ],
+    },
+  ], []);
 
-// Default navigation items based on RBAC groups
-const getDefaultNavigationItems = (): NavigationGroup[] => [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: <Home className="w-4 h-4" />,
-    order: 1,
-    items: [
-      {
-        id: 'overview',
-        label: 'Overview',
-        href: '/rbac',
-        icon: <BarChart3 className="w-4 h-4" />,
-        description: 'System overview and metrics'
-      },
-      {
-        id: 'activity',
-        label: 'Activity Feed',
-        href: '/rbac/activity',
-        icon: <Activity className="w-4 h-4" />,
-        description: 'Recent system activity'
-      },
-      {
-        id: 'analytics',
-        label: 'Analytics',
-        href: '/rbac/analytics',
-        icon: <PieChart className="w-4 h-4" />,
-        permission: 'analytics:read',
-        description: 'System analytics and insights'
-      }
-    ]
-  },
-  {
-    id: 'user-management',
-    label: 'User Management',
-    icon: <Users className="w-4 h-4" />,
-    permission: 'users:read',
-    order: 2,
-    items: [
-      {
-        id: 'users',
-        label: 'Users',
-        href: '/rbac/users',
-        icon: <User className="w-4 h-4" />,
-        permission: 'users:read',
-        description: 'Manage system users'
-      },
-      {
-        id: 'groups',
-        label: 'Groups',
-        href: '/rbac/groups',
-        icon: <Group className="w-4 h-4" />,
-        permission: 'groups:read',
-        description: 'Manage user groups'
-      },
-      {
-        id: 'invitations',
-        label: 'Invitations',
-        href: '/rbac/invitations',
-        icon: <UserPlus className="w-4 h-4" />,
-        permission: 'users:invite',
-        badge: '2',
-        badgeVariant: 'primary',
-        description: 'Pending user invitations'
-      }
-    ]
-  },
-  {
-    id: 'rbac-core',
-    label: 'Access Control',
-    icon: <Shield className="w-4 h-4" />,
-    permission: 'rbac:read',
-    order: 3,
-    items: [
-      {
-        id: 'roles',
-        label: 'Roles',
-        href: '/rbac/roles',
-        icon: <Lock className="w-4 h-4" />,
-        permission: 'roles:read',
-        description: 'Manage system roles'
-      },
-      {
-        id: 'permissions',
-        label: 'Permissions',
-        href: '/rbac/permissions',
-        icon: <Key className="w-4 h-4" />,
-        permission: 'permissions:read',
-        description: 'Manage permissions'
-      },
-      {
-        id: 'resources',
-        label: 'Resources',
-        href: '/rbac/resources',
-        icon: <Database className="w-4 h-4" />,
-        permission: 'resources:read',
-        description: 'Manage protected resources'
-      },
-      {
-        id: 'access-requests',
-        label: 'Access Requests',
-        href: '/rbac/access-requests',
-        icon: <UserCheck className="w-4 h-4" />,
-        permission: 'access_requests:read',
-        badge: '5',
-        badgeVariant: 'warning',
-        description: 'Pending access requests'
-      }
-    ]
-  },
-  {
-    id: 'data-governance',
-    label: 'Data Governance',
-    icon: <Database className="w-4 h-4" />,
-    permission: 'data_governance:read',
-    order: 4,
-    items: [
-      {
-        id: 'data-sources',
-        label: 'Data Sources',
-        href: '/data-sources',
-        icon: <Database className="w-4 h-4" />,
-        permission: 'data_sources:read',
-        description: 'Manage data sources'
-      },
-      {
-        id: 'catalog',
-        label: 'Data Catalog',
-        href: '/catalog',
-        icon: <FolderOpen className="w-4 h-4" />,
-        permission: 'catalog:read',
-        description: 'Browse data catalog'
-      },
-      {
-        id: 'classifications',
-        label: 'Classifications',
-        href: '/classifications',
-        icon: <Tag className="w-4 h-4" />,
-        permission: 'classifications:read',
-        description: 'Data classifications'
-      },
-      {
-        id: 'compliance',
-        label: 'Compliance Rules',
-        href: '/compliance',
-        icon: <FileText className="w-4 h-4" />,
-        permission: 'compliance:read',
-        description: 'Compliance rules and policies'
-      },
-      {
-        id: 'scan-rules',
-        label: 'Scan Rule Sets',
-        href: '/scan-rule-sets',
-        icon: <Search className="w-4 h-4" />,
-        permission: 'scan_rules:read',
-        description: 'Data scanning rule sets'
-      },
-      {
-        id: 'scan-logic',
-        label: 'Scan Logic',
-        href: '/scan-logic',
-        icon: <Zap className="w-4 h-4" />,
-        permission: 'scan_logic:read',
-        description: 'Advanced scan logic'
-      }
-    ]
-  },
-  {
-    id: 'monitoring',
-    label: 'Monitoring & Audit',
-    icon: <Eye className="w-4 h-4" />,
-    permission: 'audit:read',
-    order: 5,
-    items: [
-      {
-        id: 'audit-logs',
-        label: 'Audit Logs',
-        href: '/rbac/audit',
-        icon: <FileText className="w-4 h-4" />,
-        permission: 'audit:read',
-        description: 'System audit logs'
-      },
-      {
-        id: 'sessions',
-        label: 'User Sessions',
-        href: '/rbac/sessions',
-        icon: <Clock className="w-4 h-4" />,
-        permission: 'sessions:read',
-        description: 'Active user sessions'
-      },
-      {
-        id: 'security-events',
-        label: 'Security Events',
-        href: '/rbac/security',
-        icon: <AlertCircle className="w-4 h-4" />,
-        permission: 'security:read',
-        badge: '3',
-        badgeVariant: 'destructive',
-        description: 'Security events and alerts'
-      }
-    ]
-  },
-  {
-    id: 'system',
-    label: 'System',
-    icon: <Settings className="w-4 h-4" />,
-    permission: 'system:read',
-    order: 6,
-    items: [
-      {
-        id: 'settings',
-        label: 'Settings',
-        href: '/rbac/settings',
-        icon: <Settings className="w-4 h-4" />,
-        permission: 'settings:read',
-        description: 'System settings'
-      },
-      {
-        id: 'integrations',
-        label: 'Integrations',
-        href: '/rbac/integrations',
-        icon: <Plug className="w-4 h-4" />,
-        permission: 'integrations:read',
-        description: 'External integrations'
-      },
-      {
-        id: 'backup',
-        label: 'Backup & Recovery',
-        href: '/rbac/backup',
-        icon: <Archive className="w-4 h-4" />,
-        permission: 'backup:read',
-        description: 'System backup and recovery'
-      },
-      {
-        id: 'health',
-        label: 'System Health',
-        href: '/rbac/health',
-        icon: <Activity className="w-4 h-4" />,
-        permission: 'health:read',
-        description: 'System health monitoring'
-      }
-    ]
-  }
-];
+  const filteredGroups = useMemo(() => {
+    return defaultNavigationGroups
+      .filter(group => !group.permission || hasPermission(group.permission))
+      .map(group => ({
+        ...group,
+        items: group.items.filter(item => !item.permission || hasPermission(item.permission))
+      }))
+      .filter(group => group.items.length > 0);
+  }, [defaultNavigationGroups, hasPermission]);
 
-// Navigation search component
-const NavigationSearch: React.FC<NavigationSearchProps> = ({
-  items,
-  onSelect,
-  placeholder = 'Search...',
-  className
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
+  const allItems = useMemo(() => {
+    const items: NavigationItem[] = [];
+    filteredGroups.forEach(group => {
+      items.push(...group.items);
+    });
+    if (customItems) {
+      items.push(...customItems);
+    }
+    return items;
+  }, [filteredGroups, customItems]);
 
-  // Filter items based on search term
-  const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-
-    const term = searchTerm.toLowerCase();
-    const results: NavigationItem[] = [];
-
-    const searchInItems = (itemList: NavigationItem[], parentPath = '') => {
-      itemList.forEach(item => {
-        const fullPath = parentPath ? `${parentPath} > ${item.label}` : item.label;
-        const searchableText = [
-          item.label,
-          item.description,
-          ...(item.keywords || []),
-          ...(item.tags || []),
-          fullPath
-        ].filter(Boolean).join(' ').toLowerCase();
-
-        if (searchableText.includes(term)) {
-          results.push({
-            ...item,
-            label: fullPath
-          });
-        }
-
-        if (item.children) {
-          searchInItems(item.children, fullPath);
-        }
-      });
-    };
-
-    searchInItems(items);
-    return results.slice(0, 10); // Limit results
-  }, [searchTerm, items]);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
-
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, filteredItems.length - 1));
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setSelectedIndex(prev => Math.max(prev - 1, 0));
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (filteredItems[selectedIndex]) {
-            onSelect(filteredItems[selectedIndex]);
-            setIsOpen(false);
-            setSearchTerm('');
-          }
-          break;
-        case 'Escape':
-          setIsOpen(false);
-          setSearchTerm('');
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filteredItems, onSelect]);
-
-  // Reset selected index when filtered items change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [filteredItems]);
-
-  return (
-    <div className={cn('relative', className)}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          ref={searchRef}
-          type="text"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2 text-sm border border-border rounded-md bg-background/50 backdrop-blur-sm focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
-        />
-      </div>
-
-      <AnimatePresence>
-        {isOpen && filteredItems.length > 0 && (
-          <motion.div
-            ref={resultsRef}
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-md shadow-lg z-50 max-h-64 overflow-y-auto"
-          >
-            {filteredItems.map((item, index) => (
-              <motion.button
-                key={`${item.id}-${index}`}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => {
-                  onSelect(item);
-                  setIsOpen(false);
-                  setSearchTerm('');
-                }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent transition-colors duration-150',
-                  selectedIndex === index && 'bg-accent'
-                )}
-              >
-                {item.icon}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.label}</div>
-                  {item.description && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {item.description}
-                    </div>
-                  )}
-                </div>
-                {item.badge && (
-                  <span className={cn(
-                    'px-2 py-0.5 text-xs rounded-full',
-                    item.badgeVariant === 'primary' && 'bg-primary text-primary-foreground',
-                    item.badgeVariant === 'secondary' && 'bg-secondary text-secondary-foreground',
-                    item.badgeVariant === 'destructive' && 'bg-destructive text-destructive-foreground',
-                    item.badgeVariant === 'warning' && 'bg-yellow-500 text-white',
-                    item.badgeVariant === 'success' && 'bg-green-500 text-white',
-                    (!item.badgeVariant || item.badgeVariant === 'default') && 'bg-muted text-muted-foreground'
-                  )}>
-                    {item.badge}
-                  </span>
-                )}
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  return { navigationGroups: filteredGroups, allItems };
 };
 
 // Navigation item component
-interface NavigationItemComponentProps {
+const NavigationItemComponent: React.FC<{
   item: NavigationItem;
-  level?: number;
-  isActive?: boolean;
-  isExpanded?: boolean;
-  onToggle?: () => void;
-  onNavigate?: (item: NavigationItem) => void;
-  onToggleFavorite?: (item: NavigationItem) => void;
-  isFavorite?: boolean;
+  isActive: boolean;
+  isCollapsed: boolean;
   config: NavigationConfig;
-  showTooltip?: boolean;
-}
-
-const NavigationItemComponent: React.FC<NavigationItemComponentProps> = ({
+  onNavigate: (item: NavigationItem) => void;
+  onFavorite: (itemId: string) => void;
+  onBookmark: (itemId: string) => void;
+  isFavorite: boolean;
+  isBookmarked: boolean;
+  onHover: (itemId: string | null) => void;
+}> = ({
   item,
-  level = 0,
-  isActive = false,
-  isExpanded = false,
-  onToggle,
-  onNavigate,
-  onToggleFavorite,
-  isFavorite = false,
+  isActive,
+  isCollapsed,
   config,
-  showTooltip = true
+  onNavigate,
+  onFavorite,
+  onBookmark,
+  isFavorite,
+  isBookmarked,
+  onHover,
 }) => {
-  const { hasPermission } = usePermissionCheck();
   const [isHovered, setIsHovered] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
-  // Check permissions
-  if (item.permission && !hasPermission(item.permission)) {
-    return null;
-  }
+  const handleMouseEnter = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsHovered(true);
+      onHover(item.id);
+    }, config.hoverDelay);
+  }, [item.id, config.hoverDelay, onHover]);
 
-  if (item.hidden || item.disabled) {
-    return null;
-  }
+  const handleMouseLeave = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsHovered(false);
+    onHover(null);
+  }, [onHover]);
 
-  const hasChildren = item.children && item.children.length > 0;
-  const paddingLeft = `${0.75 + level * 1.5}rem`;
-
-  const handleClick = () => {
-    if (hasChildren && onToggle) {
-      onToggle();
-    } else if (onNavigate) {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!item.disabled) {
       onNavigate(item);
     }
+  }, [item, onNavigate]);
+
+  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onFavorite(item.id);
+  }, [item.id, onFavorite]);
+
+  const handleBookmarkClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onBookmark(item.id);
+  }, [item.id, onBookmark]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const itemVariants = {
+    rest: { x: 0, scale: 1 },
+    hover: { x: 4, scale: 1.02 },
+    active: { x: 8, scale: 1.05 },
   };
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onToggleFavorite) {
-      onToggleFavorite(item);
-    }
+  const badgeVariants = {
+    default: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+    destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   };
 
   return (
-    <>
-      <motion.div
-        whileHover={{ scale: 1.02, x: 4 }}
-        whileTap={{ scale: 0.98 }}
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
-        className={cn(
-          'group relative flex items-center gap-3 px-3 py-2 mx-2 text-sm rounded-lg cursor-pointer transition-all duration-200',
-          isActive && 'bg-primary text-primary-foreground shadow-md',
-          !isActive && 'hover:bg-accent hover:text-accent-foreground',
-          config.compactMode && 'py-1.5 text-xs'
-        )}
-        style={{ paddingLeft }}
+    <motion.div
+      className={cn(
+        'relative group',
+        item.className
+      )}
+      variants={itemVariants}
+      animate={isActive ? 'active' : isHovered ? 'hover' : 'rest'}
+      transition={{ duration: config.animationDuration / 1000 }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <button
         onClick={handleClick}
-        title={showTooltip ? item.tooltip || item.description : undefined}
+        disabled={item.disabled}
+        className={cn(
+          'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
+          'hover:bg-gray-100 dark:hover:bg-gray-800',
+          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
+          {
+            'bg-blue-50 text-blue-700 border-r-2 border-blue-500 dark:bg-blue-900/20 dark:text-blue-400': isActive,
+            'text-gray-700 dark:text-gray-300': !isActive,
+            'justify-center': isCollapsed && config.showIcons,
+            'px-2': isCollapsed,
+          },
+          item.activeClassName && isActive ? item.activeClassName : ''
+        )}
+        title={isCollapsed ? item.label : item.description}
+        aria-label={item.label}
+        aria-current={isActive ? 'page' : undefined}
       >
         {/* Icon */}
         {config.showIcons && item.icon && (
-          <div className={cn(
-            'flex-shrink-0 transition-transform duration-200',
-            isActive && 'scale-110',
-            config.compactMode && 'w-3 h-3'
+          <span className={cn(
+            'flex-shrink-0 transition-colors duration-200',
+            {
+              'text-blue-600 dark:text-blue-400': isActive,
+              'text-gray-500 dark:text-gray-400': !isActive,
+            }
           )}>
             {item.icon}
-          </div>
+          </span>
         )}
 
-        {/* Label */}
-        <span className="flex-1 font-medium truncate">
-          {item.label}
-        </span>
+        {/* Label and badges */}
+        {!isCollapsed && (
+          <>
+            {config.showLabels && (
+              <span className="flex-1 text-left font-medium truncate">
+                {item.label}
+              </span>
+            )}
 
-        {/* Badges and indicators */}
-        <div className="flex items-center gap-1">
-          {/* New indicator */}
-          {item.isNew && (
-            <span className="px-1.5 py-0.5 text-xs font-semibold bg-blue-500 text-white rounded-full">
-              NEW
-            </span>
-          )}
-
-          {/* Beta indicator */}
-          {item.isBeta && (
-            <span className="px-1.5 py-0.5 text-xs font-semibold bg-orange-500 text-white rounded-full">
-              BETA
-            </span>
-          )}
-
-          {/* Badge */}
-          {config.showBadges && item.badge && (
-            <span className={cn(
-              'px-2 py-0.5 text-xs font-medium rounded-full',
-              item.badgeVariant === 'primary' && 'bg-primary text-primary-foreground',
-              item.badgeVariant === 'secondary' && 'bg-secondary text-secondary-foreground',
-              item.badgeVariant === 'destructive' && 'bg-destructive text-destructive-foreground',
-              item.badgeVariant === 'warning' && 'bg-yellow-500 text-white',
-              item.badgeVariant === 'success' && 'bg-green-500 text-white',
-              (!item.badgeVariant || item.badgeVariant === 'default') && 'bg-muted text-muted-foreground'
-            )}>
-              {item.badge}
-            </span>
-          )}
-
-          {/* Favorite button */}
-          {isHovered && onToggleFavorite && (
-            <motion.button
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleFavoriteClick}
-              className={cn(
-                'p-1 rounded transition-colors duration-150',
-                isFavorite ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground hover:text-foreground'
+            {/* Badges and indicators */}
+            <div className="flex items-center gap-1">
+              {/* New/Beta/Deprecated indicators */}
+              {item.new && (
+                <span className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                  badgeVariants.success
+                )}>
+                  New
+                </span>
               )}
-            >
-              <Star className={cn('w-3 h-3', isFavorite && 'fill-current')} />
-            </motion.button>
-          )}
+              {item.beta && (
+                <span className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                  badgeVariants.info
+                )}>
+                  Beta
+                </span>
+              )}
+              {item.deprecated && (
+                <span className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                  badgeVariants.warning
+                )}>
+                  Deprecated
+                </span>
+              )}
 
-          {/* Expand/collapse button for items with children */}
-          {hasChildren && (
-            <motion.div
-              animate={{ rotate: isExpanded ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-muted-foreground"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </motion.div>
-          )}
+              {/* Custom badge */}
+              {config.showBadges && item.badge && (
+                <span className={cn(
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                  badgeVariants[item.badgeVariant || 'default']
+                )}>
+                  {item.badge}
+                </span>
+              )}
 
-          {/* External link indicator */}
-          {item.external && (
-            <ExternalLink className="w-3 h-3 text-muted-foreground" />
-          )}
-        </div>
-      </motion.div>
+              {/* Keyboard shortcut */}
+              {config.showShortcuts && item.shortcut && (
+                <kbd className="hidden group-hover:inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                  {item.shortcut}
+                </kbd>
+              )}
+            </div>
+          </>
+        )}
 
-      {/* Children */}
+        {/* Action buttons (shown on hover) */}
+        {!isCollapsed && (config.enableFavorites || config.enableBookmarks) && (
+          <div className={cn(
+            'flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200',
+            { 'opacity-100': isFavorite || isBookmarked }
+          )}>
+            {config.enableFavorites && (
+              <button
+                onClick={handleFavoriteClick}
+                className={cn(
+                  'p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200',
+                  {
+                    'text-yellow-500': isFavorite,
+                    'text-gray-400': !isFavorite,
+                  }
+                )}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className="w-3 h-3" fill={isFavorite ? 'currentColor' : 'none'} />
+              </button>
+            )}
+            {config.enableBookmarks && (
+              <button
+                onClick={handleBookmarkClick}
+                className={cn(
+                  'p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200',
+                  {
+                    'text-blue-500': isBookmarked,
+                    'text-gray-400': !isBookmarked,
+                  }
+                )}
+                title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+              >
+                <Bookmark className="w-3 h-3" fill={isBookmarked ? 'currentColor' : 'none'} />
+              </button>
+            )}
+          </div>
+        )}
+      </button>
+
+      {/* Tooltip for collapsed state */}
+      {isCollapsed && config.showTooltips && isHovered && (
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 10 }}
+          className="absolute left-full top-0 ml-2 z-50 px-2 py-1 bg-gray-900 text-white text-sm rounded whitespace-nowrap"
+        >
+          {item.label}
+          {item.shortcut && (
+            <span className="ml-2 text-gray-400">
+              {item.shortcut}
+            </span>
+          )}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
+// Navigation group component
+const NavigationGroup: React.FC<{
+  group: NavigationGroup;
+  isCollapsed: boolean;
+  isExpanded: boolean;
+  config: NavigationConfig;
+  currentPath: string;
+  onToggleExpanded: (groupId: string) => void;
+  onNavigate: (item: NavigationItem) => void;
+  onFavorite: (itemId: string) => void;
+  onBookmark: (itemId: string) => void;
+  favorites: Set<string>;
+  bookmarks: Set<string>;
+  onHover: (itemId: string | null) => void;
+}> = ({
+  group,
+  isCollapsed,
+  isExpanded,
+  config,
+  currentPath,
+  onToggleExpanded,
+  onNavigate,
+  onFavorite,
+  onBookmark,
+  favorites,
+  bookmarks,
+  onHover,
+}) => {
+  const handleToggleExpanded = useCallback(() => {
+    if (config.enableCollapse) {
+      onToggleExpanded(group.id);
+    }
+  }, [group.id, config.enableCollapse, onToggleExpanded]);
+
+  return (
+    <div className="space-y-1">
+      {/* Group header */}
+      {!isCollapsed && (
+        <button
+          onClick={handleToggleExpanded}
+          className={cn(
+            'w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+            'hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded',
+            { 'cursor-default': !config.enableCollapse }
+          )}
+          disabled={!config.enableCollapse}
+        >
+          {group.icon && (
+            <span className="flex-shrink-0">
+              {group.icon}
+            </span>
+          )}
+          <span className="flex-1 text-left">{group.label}</span>
+          {config.enableCollapse && (
+            <span className="flex-shrink-0">
+              {isExpanded ? (
+                <ChevronDown className="w-3 h-3" />
+              ) : (
+                <ChevronRight className="w-3 h-3" />
+              )}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Group items */}
       <AnimatePresence>
-        {hasChildren && isExpanded && (
+        {(isCollapsed || isExpanded) && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="overflow-hidden"
+            initial={!isCollapsed ? { opacity: 0, height: 0 } : false}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: config.animationDuration / 1000 }}
+            className="space-y-0.5"
           >
-            {item.children!.map((child) => (
+            {group.items.map((item) => (
               <NavigationItemComponent
-                key={child.id}
-                item={child}
-                level={level + 1}
-                isActive={false} // TODO: Implement active state for children
-                onNavigate={onNavigate}
-                onToggleFavorite={onToggleFavorite}
-                isFavorite={false} // TODO: Check if child is favorite
+                key={item.id}
+                item={item}
+                isActive={currentPath === item.path}
+                isCollapsed={isCollapsed}
                 config={config}
-                showTooltip={showTooltip}
+                onNavigate={onNavigate}
+                onFavorite={handleFavorite}
+                onBookmark={handleBookmark}
+                isFavorite={favorites.has(item.id)}
+                isBookmarked={bookmarks.has(item.id)}
+                onHover={onHover}
               />
             ))}
           </motion.div>
         )}
       </AnimatePresence>
-    </>
-  );
-};
-
-// Navigation group component
-interface NavigationGroupComponentProps {
-  group: NavigationGroup;
-  expandedGroups: Set<string>;
-  onToggleGroup: (groupId: string) => void;
-  onNavigate?: (item: NavigationItem) => void;
-  onToggleFavorite?: (item: NavigationItem) => void;
-  favoriteItems: FavoriteItem[];
-  config: NavigationConfig;
-}
-
-const NavigationGroupComponent: React.FC<NavigationGroupComponentProps> = ({
-  group,
-  expandedGroups,
-  onToggleGroup,
-  onNavigate,
-  onToggleFavorite,
-  favoriteItems,
-  config
-}) => {
-  const { hasPermission } = usePermissionCheck();
-  const isExpanded = expandedGroups.has(group.id);
-
-  // Check permissions
-  if (group.permission && !hasPermission(group.permission)) {
-    return null;
-  }
-
-  // Filter items based on permissions
-  const visibleItems = group.items.filter(item => {
-    if (item.permission && !hasPermission(item.permission)) return false;
-    if (item.hidden) return false;
-    return true;
-  });
-
-  if (visibleItems.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="mb-4">
-      {/* Group header */}
-      {config.showGroupLabels && (
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onToggleGroup(group.id)}
-          className="w-full flex items-center gap-3 px-3 py-2 mx-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors duration-200"
-        >
-          {group.icon && (
-            <div className="flex-shrink-0">
-              {group.icon}
-            </div>
-          )}
-          <span className="flex-1 text-left">{group.label}</span>
-          {group.collapsible !== false && (
-            <motion.div
-              animate={{ rotate: isExpanded ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronRight className="w-3 h-3" />
-            </motion.div>
-          )}
-        </motion.button>
-      )}
-
-      {/* Group items */}
-      <AnimatePresence>
-        {(isExpanded || group.collapsible === false) && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            {visibleItems.map((item) => {
-              const isFavorite = favoriteItems.some(fav => fav.item.id === item.id);
-              return (
-                <NavigationItemComponent
-                  key={item.id}
-                  item={item}
-                  level={0}
-                  isActive={false} // TODO: Implement active state
-                  onNavigate={onNavigate}
-                  onToggleFavorite={onToggleFavorite}
-                  isFavorite={isFavorite}
-                  config={config}
-                />
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
-// Main RBAC Navigation component
+// Search component
+const NavigationSearch: React.FC<{
+  query: string;
+  onQueryChange: (query: string) => void;
+  placeholder?: string;
+  className?: string;
+}> = ({ query, onQueryChange, placeholder = 'Search navigation...', className }) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <div className={cn('relative', className)}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          placeholder={placeholder}
+          className={cn(
+            'w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+            'placeholder-gray-400 dark:placeholder-gray-500',
+            'transition-all duration-200',
+            {
+              'ring-2 ring-blue-500 border-transparent': isFocused,
+            }
+          )}
+        />
+        {query && (
+          <button
+            onClick={() => onQueryChange('')}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Main RBACNavigation component
 export const RBACNavigation: React.FC<RBACNavigationProps> = ({
-  config: userConfig = {},
+  config: configOverrides = {},
   className,
-  variant = 'default',
-  onNavigate,
+  variant = 'full',
+  position = 'left',
+  width = 280,
+  height,
+  collapsible = true,
+  collapsed: controlledCollapsed,
   onCollapse,
-  customItems = [],
-  hideGroups = [],
-  showOnlyGroups = []
+  customItems,
+  onNavigate: onNavigateProp,
+  onFavorite: onFavoriteProp,
+  onBookmark: onBookmarkProp,
+  showHeader = true,
+  showFooter = true,
+  showSearch = true,
+  searchPlaceholder = 'Search navigation...',
+  emptyMessage = 'No navigation items found',
+  loadingMessage = 'Loading navigation...',
+  errorMessage = 'Failed to load navigation',
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, isLoading } = useCurrentUser();
-  const { hasPermission } = usePermissionCheck();
-
-  // Merge configurations
-  const config = useMemo(() => ({
-    ...defaultNavigationConfig,
-    ...userConfig
-  }), [userConfig]);
-
-  // Navigation state
+  const { user, hasPermission, isLoading: userLoading } = useCurrentUser();
+  const { config, updateConfig } = useNavigationConfig();
   const {
-    collapsed,
-    setCollapsed,
-    searchTerm,
-    setSearchTerm,
+    searchQuery,
+    setSearchQuery,
     expandedGroups,
     setExpandedGroups,
+    favorites,
+    bookmarks,
     recentItems,
-    favoriteItems,
-    selectedItem,
-    setSelectedItem,
-    addRecentItem,
+    hoveredItem,
+    setHoveredItem,
     toggleFavorite,
-    isFavorite
+    toggleBookmark,
+    addToRecents,
+    toggleGroupExpansion,
   } = useNavigationState();
+  const { navigationGroups, allItems } = useNavigationItems(customItems);
 
-  // Get navigation groups
-  const navigationGroups = useMemo(() => {
-    let groups = getDefaultNavigationItems();
+  // Merge config with overrides
+  const finalConfig = useMemo(() => ({
+    ...config,
+    ...configOverrides,
+  }), [config, configOverrides]);
 
-    // Add custom items
-    if (customItems.length > 0) {
-      groups.push({
-        id: 'custom',
-        label: 'Custom',
-        items: customItems
-      });
-    }
+  // Handle collapse state
+  const [internalCollapsed, setInternalCollapsed] = useState(finalConfig.collapsedByDefault);
+  const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
 
-    // Filter groups
-    if (showOnlyGroups.length > 0) {
-      groups = groups.filter(group => showOnlyGroups.includes(group.id));
-    } else if (hideGroups.length > 0) {
-      groups = groups.filter(group => !hideGroups.includes(group.id));
-    }
-
-    // Sort by order
-    groups.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    return groups;
-  }, [customItems, hideGroups, showOnlyGroups]);
-
-  // Flatten all items for search
-  const allItems = useMemo(() => {
-    const items: NavigationItem[] = [];
-    const flattenItems = (itemList: NavigationItem[]) => {
-      itemList.forEach(item => {
-        items.push(item);
-        if (item.children) {
-          flattenItems(item.children);
-        }
-      });
-    };
-
-    navigationGroups.forEach(group => {
-      flattenItems(group.items);
-    });
-
-    return items;
-  }, [navigationGroups]);
-
-  // Handle navigation
-  const handleNavigate = useCallback((item: NavigationItem) => {
-    if (item.disabled) return;
-
-    // Add to recent items
-    addRecentItem(item);
-
-    // Call custom handler
-    if (onNavigate) {
-      onNavigate(item);
-    }
-
-    // Handle navigation
-    if (item.href) {
-      if (item.external) {
-        window.open(item.href, '_blank', 'noopener,noreferrer');
-      } else {
-        router.push(item.href);
-      }
-    } else if (item.onClick) {
-      item.onClick();
-    }
-
-    // Update selected item
-    setSelectedItem(item.id);
-  }, [addRecentItem, onNavigate, router, setSelectedItem]);
-
-  // Handle group toggle
-  const handleToggleGroup = useCallback((groupId: string) => {
-    setExpandedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
-  }, [setExpandedGroups]);
-
-  // Handle collapse toggle
-  const handleCollapseToggle = useCallback(() => {
-    const newCollapsed = !collapsed;
-    setCollapsed(newCollapsed);
-    if (onCollapse) {
-      onCollapse(newCollapsed);
-    }
-  }, [collapsed, setCollapsed, onCollapse]);
+  const handleToggleCollapse = useCallback(() => {
+    const newCollapsed = !isCollapsed;
+    setInternalCollapsed(newCollapsed);
+    onCollapse?.(newCollapsed);
+  }, [isCollapsed, onCollapse]);
 
   // Initialize expanded groups
   useEffect(() => {
-    if (expandedGroups.size === 0) {
-      const defaultExpanded = navigationGroups
-        .filter(group => group.collapsible !== false)
-        .map(group => group.id);
-      setExpandedGroups(new Set(defaultExpanded));
+    if (!finalConfig.enableCollapse) {
+      setExpandedGroups(new Set(navigationGroups.map(g => g.id)));
+    } else {
+      setExpandedGroups(new Set(navigationGroups.filter(g => !g.collapsed).map(g => g.id)));
     }
-  }, [navigationGroups, expandedGroups.size, setExpandedGroups]);
+  }, [navigationGroups, finalConfig.enableCollapse, setExpandedGroups]);
 
-  if (isLoading) {
+  // Filter items based on search query
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return navigationGroups;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return navigationGroups
+      .map(group => ({
+        ...group,
+        items: group.items.filter(item =>
+          item.label.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query) ||
+          item.tags?.some(tag => tag.toLowerCase().includes(query))
+        ),
+      }))
+      .filter(group => group.items.length > 0);
+  }, [navigationGroups, searchQuery]);
+
+  // Handle navigation
+  const handleNavigate = useCallback((item: NavigationItem) => {
+    if (item.onClick) {
+      item.onClick();
+    } else if (item.path) {
+      if (item.external) {
+        window.open(item.path, item.openInNewTab ? '_blank' : '_self');
+      } else {
+        router.push(item.path);
+      }
+    }
+
+    // Add to recent items
+    if (finalConfig.enableRecents) {
+      addToRecents(item, finalConfig.maxRecentItems);
+    }
+
+    // Call external handler
+    onNavigateProp?.(item);
+  }, [router, finalConfig.enableRecents, finalConfig.maxRecentItems, addToRecents, onNavigateProp]);
+
+  // Handle favorite toggle
+  const handleFavorite = useCallback((itemId: string) => {
+    toggleFavorite(itemId);
+    const item = allItems.find(i => i.id === itemId);
+    if (item) {
+      onFavoriteProp?.(item);
+    }
+  }, [toggleFavorite, allItems, onFavoriteProp]);
+
+  // Handle bookmark toggle
+  const handleBookmark = useCallback((itemId: string) => {
+    toggleBookmark(itemId);
+    const item = allItems.find(i => i.id === itemId);
+    if (item) {
+      onBookmarkProp?.(item);
+    }
+  }, [toggleBookmark, allItems, onBookmarkProp]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle collapse with Ctrl+B
+      if (e.ctrlKey && e.key === 'b' && collapsible) {
+        e.preventDefault();
+        handleToggleCollapse();
+      }
+
+      // Navigate with shortcuts
+      if (e.altKey) {
+        const item = allItems.find(i => i.shortcut?.toLowerCase() === e.key.toLowerCase());
+        if (item) {
+          e.preventDefault();
+          handleNavigate(item);
+        }
+      }
+
+      // Focus search with Ctrl+K
+      if (e.ctrlKey && e.key === 'k' && finalConfig.enableSearch) {
+        e.preventDefault();
+        const searchInput = document.querySelector('[data-navigation-search]') as HTMLInputElement;
+        searchInput?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleCollapse, handleNavigate, allItems, collapsible, finalConfig.enableSearch]);
+
+  if (userLoading) {
     return (
-      <div className={cn('flex flex-col space-y-4 p-4', className)}>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-8 w-3/4" />
-        <Skeleton className="h-8 w-1/2" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-2/3" />
+      <div className={cn('flex flex-col', className)} style={{ width: isCollapsed ? 60 : width }}>
+        <div className="p-4">
+          <LoadingSpinner size="sm" message={loadingMessage} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={cn('flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400', className)}>
+        <Lock className="w-8 h-8 mb-2" />
+        <p className="text-sm">{errorMessage}</p>
       </div>
     );
   }
 
   return (
     <motion.nav
-      initial={{ x: -300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      initial={false}
+      animate={{ width: isCollapsed ? 60 : width }}
+      transition={{ duration: finalConfig.animationDuration / 1000 }}
       className={cn(
-        'flex flex-col h-full bg-background border-r border-border transition-all duration-300',
-        collapsed ? 'w-16' : `w-[${config.width}px]`,
-        variant === 'minimal' && 'border-none shadow-none',
-        variant === 'compact' && 'text-sm',
+        'flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800',
+        'h-full overflow-hidden',
         className
       )}
-      style={{
-        width: collapsed ? 64 : config.width,
-        minWidth: collapsed ? 64 : config.minWidth,
-        maxWidth: collapsed ? 64 : config.maxWidth
-      }}
+      style={{ height }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center gap-3"
-          >
-            <Shield className="w-6 h-6 text-primary" />
-            <span className="font-semibold text-lg">RBAC System</span>
-          </motion.div>
-        )}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={handleCollapseToggle}
-          className="p-2 rounded-lg hover:bg-accent transition-colors duration-150"
-          title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
-        >
-          <Menu className="w-4 h-4" />
-        </motion.button>
-      </div>
+      {showHeader && (
+        <div className={cn(
+          'flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800',
+          { 'px-2': isCollapsed }
+        )}>
+          {!isCollapsed && (
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Navigation
+            </h2>
+          )}
+          {collapsible && (
+            <button
+              onClick={handleToggleCollapse}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+              title={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Search */}
-      {!collapsed && config.showSearch && (
-        <div className="p-4 border-b border-border">
+      {!isCollapsed && showSearch && finalConfig.enableSearch && (
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <NavigationSearch
-            items={allItems}
-            onSelect={handleNavigate}
-            placeholder={config.searchPlaceholder}
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            placeholder={searchPlaceholder}
           />
         </div>
       )}
 
-      {/* Recent Items */}
-      {!collapsed && config.showRecentItems && recentItems.length > 0 && (
-        <div className="px-4 py-2 border-b border-border">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Recent
-          </h4>
-          <div className="space-y-1">
-            {recentItems.slice(0, 3).map((recent) => (
-              <NavigationItemComponent
-                key={`recent-${recent.item.id}`}
-                item={recent.item}
-                level={0}
+      {/* Navigation content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
+        {filteredGroups.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 p-4">
+            <Search className="w-8 h-8 mb-2" />
+            <p className="text-sm">{emptyMessage}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Favorites section */}
+            {!isCollapsed && finalConfig.enableFavorites && favorites.size > 0 && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <Star className="w-3 h-3" />
+                  <span>Favorites</span>
+                </div>
+                <div className="space-y-0.5">
+                  {allItems
+                    .filter(item => favorites.has(item.id))
+                    .map(item => (
+                      <NavigationItemComponent
+                        key={`favorite-${item.id}`}
+                        item={item}
+                        isActive={pathname === item.path}
+                        isCollapsed={false}
+                        config={finalConfig}
+                        onNavigate={handleNavigate}
+                        onFavorite={handleFavorite}
+                        onBookmark={handleBookmark}
+                        isFavorite={favorites.has(item.id)}
+                        isBookmarked={bookmarks.has(item.id)}
+                        onHover={setHoveredItem}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent items section */}
+            {!isCollapsed && finalConfig.enableRecents && recentItems.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <Clock className="w-3 h-3" />
+                  <span>Recent</span>
+                </div>
+                <div className="space-y-0.5">
+                  {recentItems.slice(0, 5).map(item => (
+                    <NavigationItemComponent
+                      key={`recent-${item.id}`}
+                      item={item}
+                      isActive={pathname === item.path}
+                      isCollapsed={false}
+                      config={finalConfig}
+                      onNavigate={handleNavigate}
+                      onFavorite={handleFavorite}
+                      onBookmark={handleBookmark}
+                      isFavorite={favorites.has(item.id)}
+                      isBookmarked={bookmarks.has(item.id)}
+                      onHover={setHoveredItem}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Main navigation groups */}
+            {filteredGroups.map(group => (
+              <NavigationGroup
+                key={group.id}
+                group={group}
+                isCollapsed={isCollapsed}
+                isExpanded={expandedGroups.has(group.id)}
+                config={finalConfig}
+                currentPath={pathname}
+                onToggleExpanded={toggleGroupExpansion}
                 onNavigate={handleNavigate}
-                onToggleFavorite={toggleFavorite}
-                isFavorite={isFavorite(recent.item.id)}
-                config={config}
-                showTooltip={false}
+                onFavorite={handleFavorite}
+                onBookmark={handleBookmark}
+                favorites={favorites}
+                bookmarks={bookmarks}
+                onHover={setHoveredItem}
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Favorites */}
-      {!collapsed && config.showFavorites && favoriteItems.length > 0 && (
-        <div className="px-4 py-2 border-b border-border">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Favorites
-          </h4>
-          <div className="space-y-1">
-            {favoriteItems.slice(0, 5).map((favorite) => (
-              <NavigationItemComponent
-                key={`favorite-${favorite.item.id}`}
-                item={favorite.item}
-                level={0}
-                onNavigate={handleNavigate}
-                onToggleFavorite={toggleFavorite}
-                isFavorite={true}
-                config={config}
-                showTooltip={false}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Groups */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="py-4">
-          {navigationGroups.map((group) => (
-            <NavigationGroupComponent
-              key={group.id}
-              group={group}
-              expandedGroups={expandedGroups}
-              onToggleGroup={handleToggleGroup}
-              onNavigate={handleNavigate}
-              onToggleFavorite={toggleFavorite}
-              favoriteItems={favoriteItems}
-              config={config}
-            />
-          ))}
-        </div>
+        )}
       </div>
 
       {/* Footer */}
-      {!collapsed && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="p-4 border-t border-border"
-        >
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-4 h-4 text-primary" />
+      {showFooter && (
+        <div className={cn(
+          'p-4 border-t border-gray-200 dark:border-gray-800',
+          { 'px-2': isCollapsed }
+        )}>
+          {!isCollapsed ? (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              <p>RBAC Data Governance</p>
+              <p>v2.0.0</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-foreground truncate">
-                {currentUser?.username || 'User'}
-              </div>
-              <div className="text-xs truncate">
-                {currentUser?.email || 'user@example.com'}
-              </div>
+          ) : (
+            <div className="flex justify-center">
+              <Shield className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </div>
-          </div>
-        </motion.div>
+          )}
+        </div>
       )}
     </motion.nav>
   );

@@ -1,27 +1,47 @@
-// RBACBreadcrumb.tsx - Enterprise-grade RBAC breadcrumb navigation component
-// Provides intelligent path detection, dynamic navigation, and advanced RBAC integration
+// RBACBreadcrumb.tsx - Enterprise-grade breadcrumb navigation component for RBAC system
+// Provides intelligent breadcrumb navigation with RBAC integration, dynamic path resolution, and advanced UX patterns
 
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Home,
   Shield,
   Users,
   Database,
+  Settings,
   Activity,
   Eye,
   Lock,
   Unlock,
   Key,
-  Settings,
+  FileText,
+  Folder,
+  FolderOpen,
   Search,
   Filter,
+  Star,
+  Heart,
+  Bookmark,
+  Clock,
+  Calendar,
+  Globe,
+  MapPin,
+  Navigation,
+  Compass,
+  Route,
+  Map,
+  Layers,
+  Grid,
+  List,
   MoreHorizontal,
-  X,
+  MoreVertical,
   Plus,
   Minus,
   Edit,
@@ -31,2463 +51,821 @@ import {
   Download,
   Upload,
   RefreshCw,
-  RotateCw,
+  RotateCcw,
   Maximize,
   Minimize,
-  ExternalLink,
+  Maximize2,
+  Minimize2,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
   ArrowDown,
-  Menu,
-  Grid,
-  List,
-  Layers,
-  FolderOpen,
-  Folder,
-  File,
-  FileText,
-  Image,
-  Video,
-  Music,
-  Code,
-  Terminal,
-  Package,
-  Box,
-  Archive,
-  Tag,
-  Flag,
-  Bookmark,
-  Star,
-  Heart,
-  Clock,
-  Calendar,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ExternalLink,
+  Link,
+  Unlink,
+  LinkBreak,
+  Share2,
+  Send,
   Mail,
   Phone,
-  MapPin,
-  Globe,
-  Compass,
-  Navigation,
-  Route,
-  Map,
-  Target,
+  MessageSquare,
+  MessageCircle,
+  Bell,
+  BellOff,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Square,
+  SkipBack,
+  SkipForward,
+  FastForward,
+  Rewind,
+  Repeat,
+  Shuffle,
+  Music,
+  Video,
+  Image,
+  Camera,
+  Mic,
+  MicOff,
+  Headphones,
+  Speaker,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Laptop,
+  Desktop,
+  Watch,
+  Tv,
+  Radio,
+  Wifi,
+  WifiOff,
+  Bluetooth,
+  BluetoothConnected,
+  Signal,
+  SignalHigh,
+  SignalLow,
+  SignalZero,
+  Battery,
+  BatteryLow,
+  BatteryCharging,
+  Power,
+  PowerOff,
+  Plug,
+  PlugZap,
   Zap,
+  Flash,
+  Bolt,
   Lightning,
-  Flame,
-  Droplet,
-  Leaf,
-  Tree,
-  Flower,
   Sun,
   Moon,
-  Star as StarIcon,
   Cloud,
-  Rainbow,
-  Wind,
-  Snowflake,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
   Umbrella,
-  Mountain,
-  Wave,
-  Beach,
-  Forest,
-  Desert,
-  Volcano,
-  Island,
-  River,
-  Lake,
-  Ocean,
-  Sea,
-  Bay,
-  Harbor,
-  Port,
-  Bridge,
-  Road,
-  Path,
-  Trail,
-  Track,
-  Lane,
-  Street,
-  Avenue,
-  Boulevard,
-  Highway,
-  Freeway,
-  Tunnel,
-  Overpass,
-  Junction,
-  Intersection,
-  Roundabout,
-  Traffic,
-  Signal,
-  Stop,
-  Yield,
-  Parking,
-  Garage,
-  Station,
-  Platform,
-  Terminal as TerminalIcon,
-  Airport,
+  Droplets,
+  Wind,
+  Thermometer,
+  Snowflake,
+  Flame,
+  Fire,
+  Lightbulb,
+  Candle,
+  Lamp,
+  Flashlight,
+  Spotlight,
+  Target,
+  Crosshair,
+  Focus,
+  Scope,
+  Binoculars,
+  Telescope,
+  Microscope,
+  Scan,
+  QrCode,
+  Barcode,
+  Hash,
+  AtSign,
+  Percent,
+  DollarSign,
+  Euro,
+  Pound,
+  Yen,
+  Bitcoin,
+  CreditCard,
+  Banknote,
+  Coins,
+  Wallet,
+  PiggyBank,
+  Safe,
+  Vault,
+  Calculator,
+  Abacus,
+  Scale,
+  Ruler,
+  Scissors,
+  Paperclip,
+  Pin,
+  Pushpin,
+  Thumbtack,
+  Magnet,
+  Anchor,
+  Ship,
   Plane,
-  Train,
-  Bus,
   Car,
   Truck,
+  Bus,
+  Train,
   Bike,
   Motorcycle,
   Scooter,
   Skateboard,
-  Walking,
-  Running,
-  Hiking,
-  Climbing,
-  Swimming,
-  Surfing,
-  Skiing,
-  Snowboarding,
-  Ice,
-  Fire,
-  Water,
-  Earth,
-  Air,
-  Space,
-  Universe,
-  Galaxy,
-  Planet,
-  Satellite,
   Rocket,
-  Ufo,
-  Alien,
-  Robot,
-  Cyborg,
-  Android,
-  Humanoid,
-  Monster,
-  Ghost,
-  Zombie,
-  Vampire,
-  Werewolf,
-  Dragon,
-  Phoenix,
-  Unicorn,
-  Pegasus,
-  Griffin,
-  Centaur,
-  Minotaur,
-  Sphinx,
-  Kraken,
-  Leviathan,
-  Behemoth,
-  Titan,
-  Giant,
-  Dwarf,
-  Elf,
-  Fairy,
-  Pixie,
-  Sprite,
-  Nymph,
-  Dryad,
-  Naiad,
-  Oread,
-  Nereid,
-  Siren,
-  Mermaid,
-  Triton,
-  Poseidon,
-  Neptune,
-  Zeus,
-  Jupiter,
-  Thor,
-  Odin,
-  Loki,
-  Freya,
-  Frigg,
-  Balder,
-  Heimdall,
-  Tyr,
-  Vidar,
-  Vali,
-  Bragi,
-  Hoenir,
-  Vili,
-  Ve,
-  Buri,
-  Bor,
-  Bestla,
-  Ymir,
-  Audhumla,
-  Jormungandr,
-  Fenrir,
-  Sleipnir,
-  Hugin,
-  Munin,
-  Geri,
-  Freki,
-  Ratatoskr,
-  Nidhogg,
-  Fafnir,
-  Sigurd,
-  Siegfried,
-  Beowulf,
-  Grendel,
-  Hrothgar,
-  Wiglaf,
-  Unferth,
-  Wealtheow,
-  Freawaru,
-  Hygd,
-  Modthryth,
-  Hildeburh,
-  Finn,
-  Hengest,
-  Horsa,
-  Guthlac,
-  Caedmon,
-  Cynewulf,
-  Deor,
-  Widsith,
-  Wanderer,
-  Seafarer,
-  Ruin,
-  Dream,
-  Battle,
-  Elegy,
-  Riddle,
-  Charm,
-  Spell,
-  Incantation,
-  Invocation,
-  Prayer,
-  Hymn,
-  Psalm,
-  Song,
-  Ballad,
-  Epic,
-  Saga,
-  Chronicle,
-  History,
-  Biography,
-  Autobiography,
-  Memoir,
-  Diary,
-  Journal,
-  Log,
-  Record,
-  Report,
-  Account,
-  Story,
-  Tale,
-  Narrative,
-  Fiction,
-  Novel,
-  Novella,
-  Short,
-  Flash,
-  Micro,
-  Prose,
-  Poetry,
-  Verse,
-  Rhyme,
-  Meter,
-  Rhythm,
-  Beat,
-  Tempo,
-  Cadence,
-  Flow,
-  Style,
-  Tone,
-  Voice,
-  Mood,
-  Atmosphere,
-  Setting,
-  Scene,
-  Act,
-  Chapter,
-  Section,
-  Part,
-  Book,
-  Volume,
-  Series,
-  Collection,
-  Anthology,
-  Compilation,
-  Edition,
-  Version,
-  Revision,
-  Draft,
-  Manuscript,
-  Script,
-  Screenplay,
-  Play,
-  Drama,
-  Comedy,
-  Tragedy,
-  Romance,
-  Mystery,
-  Thriller,
-  Horror,
-  Fantasy,
-  Science,
-  Adventure,
-  Action,
-  Western,
-  Historical,
-  Contemporary,
-  Modern,
-  Classic,
-  Vintage,
-  Antique,
-  Ancient,
-  Medieval,
-  Renaissance,
-  Baroque,
-  Rococo,
-  Neoclassical,
-  Romantic,
-  Victorian,
-  Edwardian,
-  Art,
-  Nouveau,
-  Deco,
-  Modernist,
-  Postmodern,
-  Contemporary as ContemporaryIcon,
-  Abstract,
-  Realistic,
-  Impressionist,
-  Expressionist,
-  Cubist,
-  Surrealist,
-  Minimalist,
-  Maximalist,
-  Conceptual,
-  Performance,
-  Installation,
-  Digital,
-  Virtual,
-  Augmented,
-  Mixed,
-  Interactive,
-  Immersive,
-  Experiential,
-  Participatory,
-  Collaborative,
-  Community,
-  Social,
-  Cultural,
-  Political,
-  Economic,
-  Environmental,
-  Ecological,
-  Sustainable,
-  Renewable,
-  Clean,
-  Green,
-  Organic,
-  Natural,
-  Wild,
-  Free,
-  Open,
-  Public,
-  Private,
-  Personal,
-  Individual,
-  Collective,
-  Group,
-  Team,
-  Organization,
-  Institution,
-  Company,
-  Corporation,
-  Business,
-  Enterprise,
-  Startup,
-  Venture,
-  Project,
-  Initiative,
-  Program,
-  Campaign,
-  Movement,
-  Revolution,
-  Evolution,
-  Change,
-  Transformation,
-  Innovation,
-  Invention,
-  Discovery,
-  Breakthrough,
-  Achievement,
-  Success,
-  Victory,
-  Triumph,
-  Glory,
-  Honor,
-  Pride,
-  Dignity,
-  Respect,
-  Admiration,
-  Appreciation,
-  Gratitude,
-  Thanks,
-  Praise,
-  Congratulations,
-  Celebration,
-  Festival,
-  Party,
-  Event,
-  Occasion,
-  Ceremony,
-  Ritual,
-  Tradition,
-  Custom,
-  Culture,
-  Heritage,
-  Legacy,
-  History as HistoryIcon,
-  Memory,
-  Remembrance,
-  Commemoration,
-  Monument,
-  Memorial,
-  Tribute,
-  Dedication,
-  Devotion,
-  Commitment,
-  Loyalty,
-  Faithfulness,
-  Trust,
-  Belief,
-  Faith,
-  Hope,
-  Love,
-  Compassion,
-  Kindness,
-  Generosity,
-  Charity,
-  Giving,
-  Sharing,
-  Caring,
-  Helping,
-  Supporting,
-  Encouraging,
-  Inspiring,
-  Motivating,
-  Empowering,
-  Enabling,
-  Facilitating,
-  Assisting,
-  Aiding,
-  Serving,
-  Contributing,
-  Participating,
-  Engaging,
-  Involving,
-  Including,
-  Welcoming,
-  Embracing,
-  Accepting,
-  Understanding,
-  Knowing,
-  Learning,
-  Teaching,
-  Education,
-  Training,
-  Development,
-  Growth,
-  Progress,
-  Advancement,
-  Improvement,
-  Enhancement,
-  Upgrade,
-  Update,
-  Refresh,
-  Renewal,
-  Revival,
-  Restoration,
-  Recovery,
-  Healing,
-  Wellness,
-  Health,
-  Fitness,
-  Strength,
-  Power,
-  Energy,
-  Vitality,
-  Life,
-  Living,
-  Being,
-  Existence,
-  Reality,
-  Truth,
-  Fact,
-  Evidence,
-  Proof,
-  Verification,
-  Validation,
-  Confirmation,
-  Approval,
-  Authorization,
-  Permission,
-  Access,
-  Entry,
-  Entrance,
-  Gateway,
-  Portal,
-  Door,
-  Window,
-  Opening,
-  Passage,
-  Corridor,
-  Hallway,
-  Room,
-  Space,
-  Area,
-  Zone,
-  Region,
-  Territory,
-  Domain,
-  Realm,
-  Kingdom,
-  Empire,
-  Nation,
-  Country,
-  State,
-  Province,
-  County,
-  City,
-  Town,
-  Village,
-  Hamlet,
-  Settlement,
-  Community as CommunityIcon,
-  Neighborhood,
-  District,
-  Quarter,
-  Ward,
-  Block,
-  Street as StreetIcon,
-  Address,
-  Location,
-  Position,
-  Place,
-  Spot,
-  Point,
-  Coordinates,
-  Latitude,
-  Longitude,
-  Altitude,
-  Elevation,
-  Height,
-  Depth,
-  Width,
-  Length,
-  Distance,
-  Range,
-  Scope,
-  Scale,
-  Size,
-  Dimension,
-  Measurement,
-  Unit,
-  Quantity,
-  Amount,
-  Number,
-  Count,
-  Total,
-  Sum,
-  Average,
-  Mean,
-  Median,
-  Mode,
-  Standard,
-  Deviation,
-  Variance,
-  Distribution,
-  Probability,
-  Statistics,
-  Data,
-  Information,
-  Knowledge,
-  Wisdom,
-  Intelligence,
-  Smart,
-  Clever,
-  Brilliant,
-  Genius,
-  Expert,
-  Professional,
-  Specialist,
-  Master,
-  Advanced,
-  Intermediate,
-  Beginner,
-  Novice,
-  Amateur,
-  Student,
-  Learner,
-  Trainee,
-  Apprentice,
-  Intern,
-  Junior,
-  Senior,
-  Lead,
-  Principal,
-  Chief,
-  Head,
-  Director,
-  Manager,
-  Supervisor,
-  Coordinator,
-  Administrator,
-  Operator,
-  Technician,
-  Engineer,
-  Developer,
-  Programmer,
-  Coder,
-  Designer,
-  Artist,
-  Creator,
-  Maker,
-  Builder,
-  Constructor,
-  Architect,
-  Planner,
-  Organizer,
-  Coordinator as CoordinatorIcon,
-  Facilitator,
-  Mediator,
-  Negotiator,
-  Arbitrator,
-  Judge,
-  Jury,
-  Lawyer,
-  Attorney,
-  Counsel,
-  Advocate,
-  Representative,
-  Agent,
-  Broker,
-  Dealer,
-  Trader,
-  Seller,
-  Buyer,
-  Customer,
-  Client,
-  Patron,
-  Guest,
-  Visitor,
-  Tourist,
-  Traveler,
-  Explorer,
-  Adventurer,
-  Pioneer,
-  Settler,
-  Colonist,
-  Immigrant,
-  Refugee,
-  Exile,
-  Nomad,
-  Wanderer as WandererIcon,
-  Drifter,
-  Vagabond,
-  Hobo,
-  Homeless,
-  Displaced,
-  Lost,
-  Found,
-  Discovered,
-  Revealed,
-  Exposed,
-  Hidden,
-  Secret,
-  Mysterious,
-  Unknown,
-  Uncertain,
-  Unclear,
-  Ambiguous,
-  Vague,
-  Confusing,
-  Complex,
-  Complicated,
-  Difficult,
-  Hard,
-  Challenging,
-  Tough,
-  Rough,
-  Harsh,
-  Severe,
-  Strict,
-  Rigid,
-  Firm,
-  Solid,
-  Strong,
-  Powerful,
-  Mighty,
-  Great,
-  Grand,
-  Magnificent,
-  Spectacular,
-  Amazing,
-  Incredible,
-  Fantastic,
-  Wonderful,
-  Marvelous,
-  Extraordinary,
-  Exceptional,
-  Outstanding,
-  Excellent,
-  Perfect,
-  Ideal,
-  Optimal,
-  Best,
-  Top,
-  Premium,
-  Superior,
-  High,
-  Upper,
-  Above,
-  Over,
-  Beyond,
-  Past,
-  Future,
-  Present,
-  Now,
-  Today,
-  Tomorrow,
-  Yesterday,
-  Week,
-  Month,
-  Year,
-  Decade,
-  Century,
-  Millennium,
-  Era,
-  Age,
-  Period,
-  Time as TimeIcon,
-  Moment,
-  Instant,
-  Second,
-  Minute,
-  Hour,
-  Day,
-  Night,
-  Dawn,
-  Dusk,
-  Twilight,
-  Sunrise,
-  Sunset,
-  Morning,
-  Afternoon,
-  Evening,
-  Midnight,
-  Noon,
-  Spring,
-  Summer,
-  Autumn,
-  Winter,
-  Season,
-  Weather,
-  Climate,
-  Temperature,
-  Hot,
-  Cold,
-  Warm,
-  Cool,
-  Mild,
-  Extreme,
-  Intense,
-  Gentle,
-  Soft,
-  Hard as HardIcon,
-  Smooth,
-  Rough as RoughIcon,
-  Sharp,
-  Dull,
-  Bright,
-  Dark,
-  Light,
-  Heavy,
-  Fast,
-  Slow,
-  Quick,
-  Swift,
-  Rapid,
-  Speedy,
-  Urgent,
-  Immediate,
-  Instant as InstantIcon,
-  Delayed,
-  Late,
-  Early,
-  Soon,
-  Eventually,
-  Finally,
-  Ultimately,
-  Completely,
-  Totally,
-  Fully,
-  Entirely,
-  Wholly,
-  Partially,
-  Partly,
-  Half,
-  Quarter,
-  Third,
-  Fraction,
-  Percentage,
-  Ratio,
-  Proportion,
-  Balance,
-  Equilibrium,
-  Stability,
-  Consistency,
-  Reliability,
-  Dependability,
-  Trustworthiness,
-  Credibility,
-  Authenticity,
-  Genuineness,
-  Originality,
-  Uniqueness,
-  Rarity,
-  Scarcity,
-  Abundance,
-  Plenty,
-  Wealth,
-  Riches,
-  Fortune,
-  Treasure,
-  Gold,
-  Silver,
-  Bronze,
-  Copper,
-  Iron,
-  Steel,
-  Metal,
-  Stone,
-  Rock,
-  Sand,
-  Soil,
-  Clay,
-  Mud,
-  Dust,
-  Ash,
-  Smoke,
-  Steam,
-  Gas,
-  Liquid,
-  Solid,
-  Plasma,
-  Matter,
-  Material,
-  Substance,
-  Element,
-  Compound,
-  Mixture,
-  Solution,
-  Chemical,
-  Formula,
-  Equation,
-  Calculation,
-  Mathematics,
-  Algebra,
-  Geometry,
-  Trigonometry,
-  Calculus,
-  Logic,
-  Reasoning,
-  Thinking,
-  Analysis,
-  Synthesis,
-  Evaluation,
-  Assessment,
-  Testing,
-  Examination,
-  Investigation,
-  Research,
-  Study,
-  Survey,
-  Interview,
-  Questionnaire,
-  Poll,
-  Vote,
-  Election,
-  Democracy,
-  Republic,
-  Monarchy,
-  Dictatorship,
-  Autocracy,
-  Oligarchy,
-  Aristocracy,
-  Meritocracy,
-  Technocracy,
-  Bureaucracy,
-  Government,
-  Politics,
-  Policy,
-  Law,
-  Rule,
-  Regulation,
-  Standard as StandardIcon,
-  Guideline,
-  Principle,
-  Ethics,
-  Morality,
-  Values,
-  Beliefs,
-  Philosophy,
-  Religion,
-  Spirituality,
-  Meditation,
-  Prayer as PrayerIcon,
-  Worship,
-  Devotion as DevotionIcon,
-  Reverence,
-  Awe,
-  Wonder,
-  Curiosity,
-  Interest,
-  Attention,
-  Focus,
-  Concentration,
-  Dedication as DedicationIcon,
-  Commitment as CommitmentIcon,
-  Determination,
-  Persistence,
-  Perseverance,
-  Endurance,
-  Patience,
-  Tolerance,
-  Acceptance,
-  Forgiveness,
-  Mercy,
-  Grace,
-  Blessing,
-  Gift,
-  Present as PresentIcon,
-  Surprise,
-  Shock,
-  Amazement,
-  Astonishment,
-  Bewilderment,
-  Confusion,
-  Perplexity,
-  Puzzlement,
-  Mystery as MysteryIcon,
-  Enigma,
-  Riddle as RiddleIcon,
-  Puzzle,
-  Problem,
-  Issue,
-  Concern,
-  Worry,
-  Anxiety,
-  Fear,
-  Terror,
-  Horror,
-  Dread,
-  Panic,
-  Alarm,
-  Alert,
-  Warning,
-  Caution,
-  Care,
-  Safety,
-  Security,
-  Protection,
-  Defense,
-  Guard,
-  Shield as ShieldIcon,
-  Armor,
-  Weapon,
-  Sword,
-  Knife,
-  Blade,
-  Arrow,
-  Bow,
-  Gun,
-  Rifle,
-  Pistol,
-  Cannon,
-  Bomb,
-  Explosive,
-  Ammunition,
-  Battle as BattleIcon,
-  War,
-  Conflict,
-  Fight,
-  Combat,
-  Struggle,
-  Contest,
-  Competition,
-  Game,
-  Sport,
-  Play,
-  Fun,
-  Entertainment,
-  Amusement,
-  Recreation,
-  Leisure,
-  Relaxation,
-  Rest,
-  Sleep,
-  Dream as DreamIcon,
-  Nightmare,
-  Fantasy as FantasyIcon,
-  Imagination,
-  Creativity,
-  Innovation as InnovationIcon,
-  Invention as InventionIcon,
-  Discovery as DiscoveryIcon,
-  Exploration,
-  Adventure as AdventureIcon,
-  Journey,
-  Trip,
-  Travel as TravelIcon,
-  Vacation,
-  Holiday,
-  Break,
-  Pause,
-  Stop as StopIcon,
-  Start,
-  Begin,
-  End,
-  Finish,
-  Complete,
-  Done,
-  Ready,
-  Prepared,
-  Set,
-  Go,
-  Move,
-  Action as ActionIcon,
-  Activity,
-  Motion,
-  Movement,
-  Dance,
-  Music as MusicIcon,
-  Sound,
-  Noise,
-  Silence,
-  Quiet,
-  Calm,
-  Peace,
-  Harmony,
-  Unity,
-  Together,
-  Apart,
-  Separate,
-  Individual as IndividualIcon,
-  Personal as PersonalIcon,
-  Private as PrivateIcon,
-  Public as PublicIcon,
-  Open as OpenIcon,
-  Closed,
-  Locked as LockedIcon,
-  Unlocked as UnlockedIcon,
-  Free as FreeIcon,
-  Bound,
-  Tied,
-  Connected,
-  Linked,
-  Joined,
-  United,
-  Combined,
-  Merged,
-  Mixed as MixedIcon,
-  Blended,
-  Fused,
-  Integrated,
-  Unified,
-  Consolidated,
-  Centralized,
-  Distributed,
-  Spread,
-  Scattered,
-  Dispersed,
-  Divided,
-  Split,
-  Broken,
-  Damaged,
-  Ruined,
-  Wrecked,
-  Demolished,
-  Collapsed,
-  Fallen,
-  Lost as LostIcon,
-  Missing,
-  Gone,
-  Disappeared,
-  Vanished,
-  Invisible,
-  Hidden as HiddenIcon,
-  Concealed,
-  Covered,
-  Masked,
-  Disguised,
-  Camouflaged,
-  Stealthy,
-  Sneaky,
-  Sly,
-  Cunning,
-  Clever as CleverIcon,
-  Smart as SmartIcon,
-  Intelligent as IntelligentIcon,
-  Wise,
-  Knowledgeable,
-  Educated,
-  Learned,
-  Scholarly,
-  Academic,
-  Scientific,
-  Technical,
-  Professional as ProfessionalIcon,
-  Expert as ExpertIcon,
-  Skilled,
-  Talented,
-  Gifted,
-  Capable,
-  Competent,
-  Qualified,
-  Certified,
-  Licensed,
-  Authorized,
-  Approved,
-  Accepted,
-  Verified,
-  Validated,
-  Confirmed,
-  Proven,
-  Tested,
-  Examined,
-  Inspected,
-  Checked,
-  Reviewed,
-  Evaluated,
-  Assessed,
-  Measured,
-  Calculated,
-  Estimated,
-  Predicted,
-  Forecasted,
-  Projected,
-  Planned,
-  Scheduled,
-  Organized,
-  Arranged,
-  Prepared as PreparedIcon,
-  Ready as ReadyIcon,
-  Available,
-  Accessible,
-  Reachable,
-  Attainable,
-  Achievable,
-  Possible,
-  Feasible,
-  Viable,
-  Practical,
-  Realistic,
-  Reasonable,
-  Logical,
-  Sensible,
-  Rational,
-  Coherent,
-  Consistent as ConsistentIcon,
-  Compatible,
-  Suitable,
-  Appropriate,
-  Proper,
-  Correct,
-  Right,
-  True as TrueIcon,
-  Accurate,
-  Precise,
-  Exact,
-  Perfect as PerfectIcon,
-  Ideal as IdealIcon,
-  Optimal as OptimalIcon,
-  Best as BestIcon,
-  Excellent as ExcellentIcon,
-  Outstanding as OutstandingIcon,
-  Exceptional as ExceptionalIcon,
-  Extraordinary as ExtraordinaryIcon,
-  Remarkable,
-  Notable,
-  Significant,
-  Important,
-  Critical,
-  Essential,
-  Vital,
-  Necessary,
-  Required,
-  Mandatory,
-  Compulsory,
-  Obligatory,
-  Optional,
-  Voluntary,
-  Willing,
-  Eager,
-  Enthusiastic,
-  Passionate,
-  Devoted,
-  Committed as CommittedIcon,
-  Dedicated as DedicatedIcon,
-  Loyal,
-  Faithful,
-  Trustworthy,
-  Reliable as ReliableIcon,
-  Dependable,
-  Stable as StableIcon,
-  Steady,
-  Constant,
-  Continuous,
-  Ongoing,
-  Persistent as PersistentIcon,
-  Lasting,
-  Enduring,
-  Permanent,
-  Temporary,
-  Brief,
-  Short,
-  Long,
-  Extended,
-  Prolonged,
-  Stretched,
-  Expanded,
-  Enlarged,
-  Increased,
-  Decreased,
-  Reduced,
-  Minimized,
-  Maximized,
-  Optimized,
-  Improved,
-  Enhanced,
-  Upgraded,
-  Updated,
-  Refreshed,
-  Renewed,
-  Restored,
-  Repaired,
-  Fixed,
-  Solved,
-  Resolved,
-  Settled,
-  Completed as CompletedIcon,
-  Finished as FinishedIcon,
-  Done as DoneIcon,
-  Accomplished,
-  Achieved,
-  Successful,
-  Victorious,
-  Triumphant,
-  Winning,
-  Leading,
-  First,
-  Primary,
-  Main,
-  Principal as PrincipalIcon,
-  Central,
-  Core,
-  Heart,
-  Center,
-  Middle,
-  Inner,
-  Outer,
-  External,
-  Internal,
-  Inside,
-  Outside,
-  Within,
-  Beyond as BeyondIcon,
-  Above as AboveIcon,
-  Below,
-  Under,
-  Over as OverIcon,
-  Through,
-  Around,
-  Across,
-  Along,
-  Between,
-  Among,
-  Amid,
-  Beside,
-  Next,
-  Near,
-  Close,
-  Far,
-  Distant,
-  Remote,
-  Isolated,
-  Alone,
-  Solo,
-  Single,
-  Double,
-  Triple,
-  Multiple,
-  Many,
-  Few,
-  Several,
-  Some,
-  All,
-  Every,
-  Each,
-  Any,
-  No,
-  None,
-  Nothing,
-  Everything,
-  Something,
-  Anything,
-  Anyone,
-  Someone,
-  Everyone,
-  Everybody,
-  Nobody,
-  Somebody,
-  Anybody,
-  Wherever,
-  Somewhere,
-  Anywhere,
-  Nowhere,
-  Everywhere,
-  Whenever,
-  Sometime,
-  Anytime,
-  Never,
-  Always,
-  Forever,
-  Eternal,
-  Infinite,
-  Endless,
-  Limitless,
-  Boundless,
-  Unlimited,
-  Unrestricted,
-  Unconstrained,
-  Unfettered,
-  Unbound,
-  Uncontrolled,
-  Unmanaged,
-  Unorganized,
-  Unstructured,
-  Unplanned,
-  Unscheduled,
-  Unexpected,
-  Unpredictable,
-  Uncertain as UncertainIcon,
-  Unknown as UnknownIcon,
-  Unclear as UnclearIcon,
-  Undefined,
-  Unspecified,
-  Unidentified,
-  Unnamed,
-  Untitled,
-  Unlabeled,
-  Unmarked,
-  Unsigned,
-  Unsigned as UnsignedIcon,
-  Unverified,
-  Unvalidated,
-  Unconfirmed,
-  Unproven,
-  Untested,
-  Unexamined,
-  Uninspected,
-  Unchecked,
-  Unreviewed,
-  Unevaluated,
-  Unassessed,
-  Unmeasured,
-  Uncalculated,
-  Unestimated,
-  Unpredicted,
-  Unforecasted,
-  Unprojected,
-  Unplanned as UnplannedIcon,
-  Unscheduled as UnscheduledIcon,
-  Unorganized as UnorganizedIcon,
-  Unarranged,
-  Unprepared,
-  Unready,
-  Unavailable,
-  Inaccessible,
-  Unreachable,
-  Unattainable,
-  Unachievable,
-  Impossible,
-  Infeasible,
-  Unviable,
-  Impractical,
-  Unrealistic,
-  Unreasonable,
-  Illogical,
-  Nonsensical,
-  Irrational,
-  Incoherent,
-  Inconsistent,
-  Incompatible,
-  Unsuitable,
-  Inappropriate,
-  Improper,
-  Incorrect,
-  Wrong,
-  False,
-  Inaccurate,
-  Imprecise,
-  Inexact,
-  Imperfect,
-  Flawed,
-  Defective,
-  Faulty,
-  Broken as BrokenIcon,
-  Damaged as DamagedIcon,
-  Corrupted,
-  Compromised,
-  Vulnerable,
-  Insecure,
-  Unsafe,
-  Dangerous,
-  Risky,
-  Hazardous,
-  Harmful,
-  Destructive,
-  Negative,
-  Bad,
-  Worse,
-  Worst,
-  Poor,
-  Low as LowIcon,
-  Inferior,
-  Substandard,
-  Below,
-  Bottom,
-  Minimum,
-  Least,
-  Smallest,
-  Tiniest,
-  Shortest,
-  Narrowest,
-  Thinnest,
-  Lightest,
-  Softest,
-  Weakest,
-  Slowest,
-  Latest,
-  Newest,
-  Most,
-  Recent,
-  Current,
-  Updated as UpdatedIcon,
-  Fresh,
-  New,
-  Original as OriginalIcon,
-  First as FirstIcon,
-  Initial,
-  Starting,
-  Beginning,
-  Opening,
-  Introductory,
-  Basic,
-  Elementary,
-  Simple,
-  Easy,
-  Effortless,
-  Smooth as SmoothIcon,
-  Gentle as GentleIcon,
-  Mild as MildIcon,
-  Soft as SoftIcon,
-  Tender,
-  Delicate,
-  Fragile,
-  Brittle,
-  Breakable,
-  Fragmented,
-  Shattered,
-  Cracked,
-  Split as SplitIcon,
-  Torn,
-  Ripped,
-  Cut,
-  Sliced,
-  Chopped,
-  Diced,
-  Minced,
-  Crushed,
-  Squeezed,
-  Pressed,
-  Compressed,
-  Condensed,
-  Concentrated,
-  Focused as FocusedIcon,
-  Centered as CenteredIcon,
-  Balanced as BalancedIcon,
-  Aligned,
-  Straight,
-  Direct,
-  Forward,
-  Ahead,
-  Onward,
-  Upward,
-  Downward,
-  Leftward,
-  Rightward,
-  Backward,
-  Reverse,
-  Opposite,
-  Contrary,
-  Different,
-  Distinct,
-  Separate as SeparateIcon,
-  Independent,
-  Autonomous,
-  Self,
-  Auto,
-  Manual,
-  Handheld,
-  Portable,
-  Mobile,
-  Movable,
-  Flexible,
-  Adaptable,
-  Adjustable,
-  Customizable,
-  Configurable,
-  Programmable,
-  Controllable,
-  Manageable,
-  Operable,
-  Functional,
-  Working,
-  Active as ActiveIcon,
-  Live,
-  Running as RunningIcon,
-  Operating,
-  Functioning,
-  Performing,
-  Executing,
-  Processing,
-  Computing,
-  Calculating as CalculatingIcon,
-  Analyzing,
-  Evaluating as EvaluatingIcon,
-  Testing as TestingIcon,
-  Checking as CheckingIcon,
-  Verifying,
-  Validating,
-  Confirming,
-  Approving,
-  Authorizing,
-  Permitting,
-  Allowing,
-  Enabling,
-  Activating,
-  Starting as StartingIcon,
-  Launching,
-  Initiating,
-  Beginning as BeginningIcon,
-  Opening as OpeningIcon,
-  Creating as CreatingIcon,
-  Making as MakingIcon,
-  Building as BuildingIcon,
-  Constructing,
-  Developing,
-  Designing,
-  Planning as PlanningIcon,
-  Organizing as OrganizingIcon,
-  Arranging,
-  Preparing as PreparingIcon,
-  Setting,
-  Configuring,
-  Installing,
-  Deploying,
-  Implementing,
-  Executing as ExecutingIcon,
-  Running as Running2Icon,
-  Operating as OperatingIcon,
-  Managing as ManagingIcon,
-  Controlling,
-  Monitoring,
-  Tracking,
-  Following,
-  Watching,
-  Observing,
-  Viewing,
-  Seeing,
-  Looking,
-  Searching as SearchingIcon,
-  Finding,
-  Discovering as DiscoveringIcon,
-  Exploring as ExploringIcon,
-  Investigating,
-  Researching,
-  Studying,
-  Learning as LearningIcon,
-  Understanding as UnderstandingIcon,
-  Knowing,
-  Recognizing,
-  Identifying,
-  Classifying,
-  Categorizing,
-  Grouping,
-  Sorting,
-  Ordering,
-  Ranking,
-  Rating,
-  Scoring,
-  Grading,
-  Measuring as MeasuringIcon,
-  Weighing,
-  Counting,
-  Numbering,
-  Listing,
-  Indexing,
-  Cataloging,
-  Recording,
-  Logging,
-  Documenting,
-  Writing,
-  Typing,
-  Editing as EditingIcon,
-  Revising,
-  Updating as UpdatingIcon,
-  Modifying,
-  Changing,
-  Altering,
-  Adjusting,
-  Tuning,
-  Calibrating,
-  Balancing as BalancingIcon,
-  Stabilizing,
-  Securing,
-  Protecting as ProtectingIcon,
-  Defending,
-  Guarding,
-  Watching as WatchingIcon,
-  Monitoring as MonitoringIcon,
-  Supervising,
-  Overseeing,
-  Managing as Managing2Icon,
-  Administering,
-  Governing,
-  Ruling,
-  Leading as LeadingIcon,
-  Directing,
-  Guiding,
-  Instructing,
-  Teaching as TeachingIcon,
-  Training,
-  Educating,
-  Informing,
-  Notifying,
-  Alerting,
-  Warning as WarningIcon,
-  Reminding,
-  Suggesting,
-  Recommending,
-  Advising,
-  Counseling,
-  Coaching,
-  Mentoring,
-  Supporting as SupportingIcon,
-  Helping as HelpingIcon,
-  Assisting as AssistingIcon,
-  Serving as ServingIcon,
-  Providing,
-  Supplying,
-  Delivering,
-  Distributing,
-  Sharing as SharingIcon,
-  Giving as GivingIcon,
-  Offering,
-  Contributing,
-  Donating,
-  Investing,
-  Spending,
-  Buying as BuyingIcon,
-  Purchasing,
-  Acquiring,
-  Obtaining,
-  Getting,
-  Receiving,
-  Taking,
-  Accepting as AcceptingIcon,
-  Agreeing,
-  Approving as ApprovingIcon,
-  Confirming as ConfirmingIcon,
-  Validating as ValidatingIcon,
-  Verifying as VerifyingIcon,
-  Checking as Checking2Icon,
-  Testing as Testing2Icon,
-  Evaluating as Evaluating2Icon,
-  Assessing,
-  Reviewing,
-  Examining,
-  Inspecting,
-  Auditing,
-  Analyzing as AnalyzingIcon,
-  Processing as ProcessingIcon,
-  Computing as ComputingIcon,
-  Calculating as Calculating2Icon,
-  Estimating,
-  Predicting,
-  Forecasting,
-  Projecting,
-  Planning as Planning2Icon,
-  Scheduling,
-  Organizing as Organizing2Icon,
-  Arranging as ArrangingIcon,
-  Preparing as Preparing2Icon,
-  Setting as SettingIcon,
-  Configuring as ConfiguringIcon,
-  Installing as InstallingIcon,
-  Deploying as DeployingIcon,
-  Implementing as ImplementingIcon,
-  Executing as Executing2Icon,
-  Running as Running3Icon,
-  Operating as Operating2Icon,
-  Managing as Managing3Icon,
-  Controlling as ControllingIcon,
-  Monitoring as Monitoring2Icon,
-  Tracking as TrackingIcon,
-  Following as FollowingIcon,
-  Watching as Watching2Icon,
-  Observing as ObservingIcon,
-  Viewing as ViewingIcon,
-  Seeing as SeeingIcon,
-  Looking as LookingIcon,
-  Searching as Searching2Icon,
-  Finding as FindingIcon,
-  Discovering as Discovering2Icon,
-  Exploring as Exploring2Icon,
-  Investigating as InvestigatingIcon,
-  Researching as ResearchingIcon,
-  Studying as StudyingIcon,
-  Learning as Learning2Icon,
-  Understanding as Understanding2Icon,
-  Knowing as KnowingIcon,
-  Recognizing as RecognizingIcon,
-  Identifying as IdentifyingIcon,
-  Classifying as ClassifyingIcon,
-  Categorizing as CategorizingIcon,
-  Grouping as GroupingIcon,
-  Sorting as SortingIcon,
-  Ordering as OrderingIcon,
-  Ranking as RankingIcon,
-  Rating as RatingIcon,
-  Scoring as ScoringIcon,
-  Grading as GradingIcon,
-  Measuring as Measuring2Icon,
-  Weighing as WeighingIcon,
-  Counting as CountingIcon,
-  Numbering as NumberingIcon,
-  Listing as ListingIcon,
-  Indexing as IndexingIcon,
-  Cataloging as CatalogingIcon,
-  Recording as RecordingIcon,
-  Logging as LoggingIcon,
-  Documenting as DocumentingIcon,
-  Writing as WritingIcon,
-  Typing as TypingIcon,
-  Editing as Editing2Icon,
-  Revising as RevisingIcon,
-  Updating as Updating2Icon,
-  Modifying as ModifyingIcon,
-  Changing as ChangingIcon,
-  Altering as AlteringIcon,
-  Adjusting as AdjustingIcon,
-  Tuning as TuningIcon,
-  Calibrating as CalibratingIcon,
-  Balancing as Balancing2Icon,
-  Stabilizing as StabilizingIcon,
-  Securing as SecuringIcon,
-  Protecting as Protecting2Icon,
-  Defending as DefendingIcon,
-  Guarding as GuardingIcon,
-  Watching as Watching3Icon,
-  Monitoring as Monitoring3Icon,
-  Supervising as SupervisingIcon,
-  Overseeing as OverseeingIcon,
-  Managing as Managing4Icon,
-  Administering as AdministeringIcon,
-  Governing as GoverningIcon,
-  Ruling as RulingIcon,
-  Leading as Leading2Icon,
-  Directing as DirectingIcon,
-  Guiding as GuidingIcon,
-  Instructing as InstructingIcon,
-  Teaching as Teaching2Icon,
-  Training as TrainingIcon,
-  Educating as EducatingIcon,
-  Informing as InformingIcon,
-  Notifying as NotifyingIcon,
-  Alerting as AlertingIcon,
-  Warning as Warning2Icon,
-  Reminding as RemindingIcon,
-  Suggesting as SuggestingIcon,
-  Recommending as RecommendingIcon,
-  Advising as AdvisingIcon,
-  Counseling as CounselingIcon,
-  Coaching as CoachingIcon,
-  Mentoring as MentoringIcon,
-  Supporting as Supporting2Icon,
-  Helping as Helping2Icon,
-  Assisting as Assisting2Icon,
-  Serving as Serving2Icon,
-  Providing as ProvidingIcon,
-  Supplying as SupplyingIcon,
-  Delivering as DeliveringIcon,
-  Distributing as DistributingIcon,
-  Sharing as Sharing2Icon,
-  Giving as Giving2Icon,
-  Offering as OfferingIcon,
-  Contributing as ContributingIcon,
-  Donating as DonatingIcon,
-  Investing as InvestingIcon,
-  Spending as SpendingIcon,
-  Buying as Buying2Icon,
-  Purchasing as PurchasingIcon,
-  Acquiring as AcquiringIcon,
-  Obtaining as ObtainingIcon,
-  Getting as GettingIcon,
-  Receiving as ReceivingIcon,
-  Taking as TakingIcon,
-  Accepting as Accepting2Icon,
-  Agreeing as AgreeingIcon,
-  Approving as Approving2Icon,
-  Confirming as Confirming2Icon,
-  Validating as Validating2Icon,
-  Verifying as Verifying2Icon,
-  Checking as Checking3Icon,
-  Testing as Testing3Icon,
-  Evaluating as Evaluating3Icon,
-  Assessing as AssessingIcon,
-  Reviewing as ReviewingIcon,
-  Examining as ExaminingIcon,
-  Inspecting as InspectingIcon,
-  Auditing as AuditingIcon
+  Satellite,
+  Earth,
+  Globe2,
+  World,
+  Continent,
+  Mountain,
+  Hill,
+  Volcano,
+  Desert,
+  Forest,
+  Tree,
+  TreePine,
+  TreeDeciduous,
+  PalmTree,
+  Cactus,
+  Flower,
+  Rose,
+  Tulip,
+  Sunflower,
+  Cherry,
+  Apple,
+  Banana,
+  Grape,
+  Orange,
+  Lemon,
+  Lime,
+  Strawberry,
+  Watermelon,
+  Pineapple,
+  Coconut,
+  Avocado,
+  Carrot,
+  Corn,
+  Potato,
+  Tomato,
+  Pepper,
+  Cucumber,
+  Lettuce,
+  Broccoli,
+  Onion,
+  Garlic,
+  Mushroom,
+  Herb,
+  Leaf,
+  Seed,
+  Sprout,
+  Seedling,
+  Plant,
+  Pot,
+  Watering,
+  Garden,
+  Park,
+  Beach,
+  Ocean,
+  Lake,
+  River,
+  Waterfall,
+  Bridge,
+  Building,
+  House,
+  Castle,
+  Church,
+  Mosque,
+  Temple,
+  School,
+  University,
+  Library,
+  Museum,
+  Theater,
+  Cinema,
+  Stadium,
+  Hospital,
+  Pharmacy,
+  Store,
+  Shop,
+  Mall,
+  Market,
+  Restaurant,
+  Cafe,
+  Bar,
+  Hotel,
+  Bank,
+  Office,
+  Factory,
+  Warehouse,
+  Construction,
+  Crane,
+  Hammer,
+  Wrench,
+  Screwdriver,
+  Drill,
+  Saw,
+  Pliers,
+  Toolbox,
+  Toolkit,
+  Gear,
+  Cog,
+  Settings2,
+  Sliders,
+  Knob,
+  Switch,
+  Toggle,
+  Button,
+  Joystick,
+  Gamepad,
+  Controller,
+  Keyboard,
+  Mouse,
+  Touchpad,
+  Stylus,
+  Pen,
+  Pencil,
+  Brush,
+  Paintbrush,
+  Palette,
+  Canvas,
+  Frame,
+  Picture,
+  Photo,
+  Gallery,
+  Album,
+  Collage,
+  Mosaic,
+  Pattern,
+  Texture,
+  Gradient,
+  Rainbow,
+  Prism,
+  Crystal,
+  Diamond,
+  Gem,
+  Ring,
+  Necklace,
+  Bracelet,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePermissionCheck } from '../../hooks/usePermissionCheck';
+import { LoadingSpinner, Skeleton } from '../shared/LoadingStates';
 
-// Breadcrumb configuration interfaces
-export interface BreadcrumbConfig {
-  // Appearance
-  showIcons: boolean;
-  showSeparators: boolean;
-  showHome: boolean;
-  maxItems: number;
-  maxLength: number;
-  
-  // Behavior
-  autoGenerate: boolean;
-  clickable: boolean;
-  collapsible: boolean;
-  
-  // Styling
-  variant: 'default' | 'compact' | 'minimal' | 'pills' | 'underline';
-  size: 'sm' | 'md' | 'lg';
-  separator: 'chevron' | 'slash' | 'arrow' | 'dot' | 'pipe';
-  
-  // Features
-  enableTooltips: boolean;
-  enableAnimations: boolean;
-  enableKeyboardNav: boolean;
-  enableContextMenu: boolean;
-  
-  // Responsive
-  hideOnMobile: boolean;
-  compactOnTablet: boolean;
-  
-  // Accessibility
-  ariaLabel: string;
-  skipToContent: boolean;
-}
-
+// Breadcrumb interfaces
 export interface BreadcrumbItem {
   id: string;
   label: string;
-  href?: string;
+  path?: string;
   icon?: React.ReactNode;
-  isActive?: boolean;
-  isDisabled?: boolean;
-  permission?: string;
-  onClick?: () => void;
-  
-  // Metadata
   description?: string;
-  tooltip?: string;
   category?: string;
-  level?: number;
-  
-  // State
-  isLoading?: boolean;
-  hasError?: boolean;
-  isNew?: boolean;
-  
-  // Custom
-  customData?: Record<string, any>;
+  permission?: string;
+  isActive?: boolean;
+  isClickable?: boolean;
+  isDropdown?: boolean;
+  children?: BreadcrumbItem[];
+  metadata?: Record<string, any>;
+  lastAccessed?: Date;
+  accessCount?: number;
+  isFavorite?: boolean;
+  isProtected?: boolean;
+  isExternal?: boolean;
+  tooltip?: string;
+  badge?: string | number;
+  badgeVariant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'warning' | 'success' | 'info';
 }
 
-export interface PathSegment {
-  path: string;
+export interface BreadcrumbConfig {
+  maxItems: number;
+  showHome: boolean;
+  showIcons: boolean;
+  showTooltips: boolean;
+  showDropdowns: boolean;
+  showCollapseButton: boolean;
+  enableKeyboardNavigation: boolean;
+  enableContextMenu: boolean;
+  separatorIcon: React.ReactNode;
+  collapseIcon: React.ReactNode;
+  homeIcon: React.ReactNode;
+  variant: 'default' | 'minimal' | 'pill' | 'underline';
+  size: 'sm' | 'md' | 'lg';
+  theme: 'light' | 'dark' | 'auto';
+  animationDuration: number;
+  hoverDelay: number;
+}
+
+export interface NavigationPath {
+  segments: BreadcrumbItem[];
+  totalDepth: number;
+  currentIndex: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface BreadcrumbAction {
+  id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
+  action: () => void;
   permission?: string;
-  isRoot?: boolean;
-  isDynamic?: boolean;
-  params?: Record<string, string>;
+  shortcut?: string;
+  tooltip?: string;
+  variant?: 'default' | 'primary' | 'secondary' | 'destructive';
 }
 
 export interface RBACBreadcrumbProps {
   config?: Partial<BreadcrumbConfig>;
   items?: BreadcrumbItem[];
+  onNavigate?: (item: BreadcrumbItem) => void;
+  onFavorite?: (item: BreadcrumbItem) => void;
+  actions?: BreadcrumbAction[];
   className?: string;
-  onItemClick?: (item: BreadcrumbItem) => void;
-  onPathChange?: (path: string) => void;
-  showContextMenu?: boolean;
-  customSegments?: PathSegment[];
-  hideSegments?: string[];
-  maxDisplayItems?: number;
+  variant?: 'default' | 'minimal' | 'compact';
+  showActions?: boolean;
+  showFavorites?: boolean;
+  showHistory?: boolean;
+  maxVisibleItems?: number;
+  autoCollapse?: boolean;
+  enableSearch?: boolean;
+  searchPlaceholder?: string;
+  customSeparator?: React.ReactNode;
+  emptyMessage?: string;
+  loadingMessage?: string;
 }
 
-// Default configuration
-const defaultBreadcrumbConfig: BreadcrumbConfig = {
-  showIcons: true,
-  showSeparators: true,
-  showHome: true,
-  maxItems: 10,
-  maxLength: 50,
-  autoGenerate: true,
-  clickable: true,
-  collapsible: true,
-  variant: 'default',
-  size: 'md',
-  separator: 'chevron',
-  enableTooltips: true,
-  enableAnimations: true,
-  enableKeyboardNav: true,
-  enableContextMenu: false,
-  hideOnMobile: false,
-  compactOnTablet: true,
-  ariaLabel: 'Breadcrumb navigation',
-  skipToContent: true
-};
-
-// Path to breadcrumb mapping for RBAC system
-const pathToBreadcrumbMap: Record<string, PathSegment> = {
-  '/': {
-    path: '/',
-    label: 'Home',
-    icon: <Home className="w-4 h-4" />,
-    isRoot: true
-  },
-  '/rbac': {
-    path: '/rbac',
-    label: 'RBAC Dashboard',
-    icon: <Shield className="w-4 h-4" />,
-    permission: 'rbac:read'
-  },
-  '/rbac/users': {
-    path: '/rbac/users',
-    label: 'User Management',
-    icon: <Users className="w-4 h-4" />,
-    permission: 'users:read'
-  },
-  '/rbac/users/create': {
-    path: '/rbac/users/create',
-    label: 'Create User',
-    icon: <Plus className="w-4 h-4" />,
-    permission: 'users:create'
-  },
-  '/rbac/users/[id]': {
-    path: '/rbac/users/[id]',
-    label: 'User Details',
-    icon: <User className="w-4 h-4" />,
-    permission: 'users:read',
-    isDynamic: true
-  },
-  '/rbac/users/[id]/edit': {
-    path: '/rbac/users/[id]/edit',
-    label: 'Edit User',
-    icon: <Edit className="w-4 h-4" />,
-    permission: 'users:update',
-    isDynamic: true
-  },
-  '/rbac/roles': {
-    path: '/rbac/roles',
-    label: 'Role Management',
-    icon: <Lock className="w-4 h-4" />,
-    permission: 'roles:read'
-  },
-  '/rbac/roles/create': {
-    path: '/rbac/roles/create',
-    label: 'Create Role',
-    icon: <Plus className="w-4 h-4" />,
-    permission: 'roles:create'
-  },
-  '/rbac/roles/[id]': {
-    path: '/rbac/roles/[id]',
-    label: 'Role Details',
-    icon: <Lock className="w-4 h-4" />,
-    permission: 'roles:read',
-    isDynamic: true
-  },
-  '/rbac/permissions': {
-    path: '/rbac/permissions',
-    label: 'Permissions',
-    icon: <Key className="w-4 h-4" />,
-    permission: 'permissions:read'
-  },
-  '/rbac/resources': {
-    path: '/rbac/resources',
-    label: 'Resources',
-    icon: <Database className="w-4 h-4" />,
-    permission: 'resources:read'
-  },
-  '/rbac/groups': {
-    path: '/rbac/groups',
-    label: 'Groups',
-    icon: <Users className="w-4 h-4" />,
-    permission: 'groups:read'
-  },
-  '/rbac/audit': {
-    path: '/rbac/audit',
-    label: 'Audit Logs',
-    icon: <FileText className="w-4 h-4" />,
-    permission: 'audit:read'
-  },
-  '/rbac/access-requests': {
-    path: '/rbac/access-requests',
-    label: 'Access Requests',
-    icon: <UserCheck className="w-4 h-4" />,
-    permission: 'access_requests:read'
-  },
-  '/rbac/settings': {
-    path: '/rbac/settings',
-    label: 'Settings',
-    icon: <Settings className="w-4 h-4" />,
-    permission: 'settings:read'
-  },
-  '/data-sources': {
-    path: '/data-sources',
-    label: 'Data Sources',
-    icon: <Database className="w-4 h-4" />,
-    permission: 'data_sources:read'
-  },
-  '/catalog': {
-    path: '/catalog',
-    label: 'Data Catalog',
-    icon: <FolderOpen className="w-4 h-4" />,
-    permission: 'catalog:read'
-  },
-  '/classifications': {
-    path: '/classifications',
-    label: 'Classifications',
-    icon: <Tag className="w-4 h-4" />,
-    permission: 'classifications:read'
-  },
-  '/compliance': {
-    path: '/compliance',
-    label: 'Compliance Rules',
-    icon: <FileText className="w-4 h-4" />,
-    permission: 'compliance:read'
-  },
-  '/scan-rule-sets': {
-    path: '/scan-rule-sets',
-    label: 'Scan Rule Sets',
-    icon: <Search className="w-4 h-4" />,
-    permission: 'scan_rules:read'
-  },
-  '/scan-logic': {
-    path: '/scan-logic',
-    label: 'Scan Logic',
-    icon: <Zap className="w-4 h-4" />,
-    permission: 'scan_logic:read'
-  }
-};
-
 // Custom hooks
-const useBreadcrumbGeneration = (
-  pathname: string,
-  searchParams: URLSearchParams,
-  customSegments: PathSegment[] = []
-) => {
+const useBreadcrumbConfig = () => {
+  const [config, setConfig] = useState<BreadcrumbConfig>({
+    maxItems: 8,
+    showHome: true,
+    showIcons: true,
+    showTooltips: true,
+    showDropdowns: true,
+    showCollapseButton: true,
+    enableKeyboardNavigation: true,
+    enableContextMenu: true,
+    separatorIcon: <ChevronRight className="w-4 h-4" />,
+    collapseIcon: <MoreHorizontal className="w-4 h-4" />,
+    homeIcon: <Home className="w-4 h-4" />,
+    variant: 'default',
+    size: 'md',
+    theme: 'auto',
+    animationDuration: 200,
+    hoverDelay: 300,
+  });
+
+  const updateConfig = useCallback((updates: Partial<BreadcrumbConfig>) => {
+    setConfig(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  return { config, updateConfig };
+};
+
+const usePathResolution = () => {
+  const pathname = usePathname();
   const { hasPermission } = usePermissionCheck();
 
-  return useMemo(() => {
-    const segments = pathname.split('/').filter(Boolean);
+  const resolvePath = useCallback((currentPath: string): BreadcrumbItem[] => {
+    const segments = currentPath.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [];
 
-    // Add home if configured
-    const homeSegment = pathToBreadcrumbMap['/'];
-    if (homeSegment) {
-      breadcrumbs.push({
-        id: 'home',
-        label: homeSegment.label,
-        href: homeSegment.path,
-        icon: homeSegment.icon,
-        isActive: pathname === '/'
-      });
-    }
+    // Add home
+    breadcrumbs.push({
+      id: 'home',
+      label: 'Home',
+      path: '/',
+      icon: <Home className="w-4 h-4" />,
+      description: 'Dashboard home',
+      isClickable: true,
+    });
 
-    // Build path progressively
-    let currentPath = '';
+    // Map path segments to breadcrumb items
+    let currentSegmentPath = '';
     segments.forEach((segment, index) => {
-      currentPath += `/${segment}`;
+      currentSegmentPath += `/${segment}`;
       
-      // Check for exact match
-      let pathSegment = pathToBreadcrumbMap[currentPath];
+      const breadcrumbItem = mapSegmentToBreadcrumb(segment, currentSegmentPath, index === segments.length - 1);
       
-      // Check for dynamic routes
-      if (!pathSegment) {
-        // Try to find a dynamic route pattern
-        const dynamicPath = currentPath.replace(/\/[^/]+$/, '/[id]');
-        pathSegment = pathToBreadcrumbMap[dynamicPath];
-      }
-
-      // Check custom segments
-      if (!pathSegment) {
-        pathSegment = customSegments.find(cs => cs.path === currentPath);
-      }
-
-      // Fall back to segment name
-      if (!pathSegment) {
-        pathSegment = {
-          path: currentPath,
-          label: segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
-          icon: <Folder className="w-4 h-4" />
-        };
-      }
-
       // Check permissions
-      if (pathSegment.permission && !hasPermission(pathSegment.permission)) {
-        return;
+      if (!breadcrumbItem.permission || hasPermission(breadcrumbItem.permission)) {
+        breadcrumbs.push(breadcrumbItem);
       }
-
-      const isActive = index === segments.length - 1;
-      
-      breadcrumbs.push({
-        id: `segment-${index}`,
-        label: pathSegment.label,
-        href: isActive ? undefined : pathSegment.path,
-        icon: pathSegment.icon,
-        isActive,
-        level: index + 1
-      });
     });
 
     return breadcrumbs;
-  }, [pathname, searchParams, customSegments, hasPermission]);
-};
+  }, [hasPermission]);
 
-const useBreadcrumbKeyboardNav = (items: BreadcrumbItem[], enabled: boolean = true) => {
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!containerRef.current) return;
-
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          setFocusedIndex(prev => Math.max(0, prev - 1));
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          setFocusedIndex(prev => Math.min(items.length - 1, prev + 1));
-          break;
-        case 'Home':
-          e.preventDefault();
-          setFocusedIndex(0);
-          break;
-        case 'End':
-          e.preventDefault();
-          setFocusedIndex(items.length - 1);
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          if (focusedIndex >= 0 && items[focusedIndex]) {
-            const item = items[focusedIndex];
-            if (item.onClick) {
-              item.onClick();
-            }
-          }
-          break;
-        case 'Escape':
-          setFocusedIndex(-1);
-          break;
-      }
+  const mapSegmentToBreadcrumb = useCallback((segment: string, fullPath: string, isLast: boolean): BreadcrumbItem => {
+    const segmentMappings: Record<string, Partial<BreadcrumbItem>> = {
+      'rbac': {
+        label: 'RBAC System',
+        icon: <Shield className="w-4 h-4" />,
+        description: 'Role-Based Access Control system',
+        permission: 'rbac.read',
+      },
+      'dashboard': {
+        label: 'Dashboard',
+        icon: <Activity className="w-4 h-4" />,
+        description: 'System dashboard and analytics',
+        permission: 'rbac.dashboard.read',
+      },
+      'users': {
+        label: 'Users',
+        icon: <Users className="w-4 h-4" />,
+        description: 'User management',
+        permission: 'rbac.users.read',
+      },
+      'roles': {
+        label: 'Roles',
+        icon: <Shield className="w-4 h-4" />,
+        description: 'Role management',
+        permission: 'rbac.roles.read',
+      },
+      'permissions': {
+        label: 'Permissions',
+        icon: <Key className="w-4 h-4" />,
+        description: 'Permission management',
+        permission: 'rbac.permissions.read',
+      },
+      'groups': {
+        label: 'Groups',
+        icon: <Users className="w-4 h-4" />,
+        description: 'Group management',
+        permission: 'rbac.groups.read',
+      },
+      'resources': {
+        label: 'Resources',
+        icon: <Database className="w-4 h-4" />,
+        description: 'Resource management',
+        permission: 'rbac.resources.read',
+      },
+      'audit': {
+        label: 'Audit Logs',
+        icon: <FileText className="w-4 h-4" />,
+        description: 'System audit logs',
+        permission: 'rbac.audit.read',
+      },
+      'audit-logs': {
+        label: 'Audit Logs',
+        icon: <FileText className="w-4 h-4" />,
+        description: 'System audit logs',
+        permission: 'rbac.audit.read',
+      },
+      'sessions': {
+        label: 'Sessions',
+        icon: <Activity className="w-4 h-4" />,
+        description: 'Active user sessions',
+        permission: 'rbac.sessions.read',
+      },
+      'access-requests': {
+        label: 'Access Requests',
+        icon: <Key className="w-4 h-4" />,
+        description: 'Access request management',
+        permission: 'rbac.access_requests.read',
+      },
+      'settings': {
+        label: 'Settings',
+        icon: <Settings className="w-4 h-4" />,
+        description: 'System settings',
+        permission: 'rbac.settings.read',
+      },
+      'data-sources': {
+        label: 'Data Sources',
+        icon: <Database className="w-4 h-4" />,
+        description: 'Data source management',
+        permission: 'data_sources.read',
+      },
+      'catalog': {
+        label: 'Data Catalog',
+        icon: <Folder className="w-4 h-4" />,
+        description: 'Data catalog browser',
+        permission: 'catalog.read',
+      },
+      'classifications': {
+        label: 'Classifications',
+        icon: <FileText className="w-4 h-4" />,
+        description: 'Data classifications',
+        permission: 'classifications.read',
+      },
+      'compliance': {
+        label: 'Compliance',
+        icon: <Shield className="w-4 h-4" />,
+        description: 'Compliance management',
+        permission: 'compliance.read',
+      },
+      'scan-rule-sets': {
+        label: 'Scan Rule Sets',
+        icon: <Search className="w-4 h-4" />,
+        description: 'Data scanning rule sets',
+        permission: 'scan_rules.read',
+      },
+      'scan-logic': {
+        label: 'Scan Logic',
+        icon: <Search className="w-4 h-4" />,
+        description: 'Advanced scan logic',
+        permission: 'scan_logic.read',
+      },
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, items, focusedIndex]);
+    const mapping = segmentMappings[segment] || {};
+    
+    return {
+      id: segment,
+      label: mapping.label || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '),
+      path: fullPath,
+      icon: mapping.icon || <Folder className="w-4 h-4" />,
+      description: mapping.description,
+      permission: mapping.permission,
+      isActive: isLast,
+      isClickable: !isLast,
+      category: 'navigation',
+      ...mapping,
+    };
+  }, []);
 
-  return { focusedIndex, setFocusedIndex, containerRef };
+  return { resolvePath, pathname };
 };
 
-// Separator component
-interface SeparatorProps {
-  type: BreadcrumbConfig['separator'];
-  className?: string;
-}
+const useBreadcrumbHistory = () => {
+  const [history, setHistory] = useState<BreadcrumbItem[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
-const Separator: React.FC<SeparatorProps> = ({ type, className }) => {
-  const separatorMap = {
-    chevron: <ChevronRight className="w-4 h-4" />,
-    slash: <span className="text-muted-foreground">/</span>,
-    arrow: <ArrowRight className="w-4 h-4" />,
-    dot: <span className="text-muted-foreground">•</span>,
-    pipe: <span className="text-muted-foreground">|</span>
+  const addToHistory = useCallback((item: BreadcrumbItem) => {
+    setHistory(prev => {
+      const filtered = prev.filter(h => h.path !== item.path);
+      const newHistory = [{ ...item, lastAccessed: new Date() }, ...filtered].slice(0, 20);
+      return newHistory;
+    });
+  }, []);
+
+  const navigateHistory = useCallback((direction: 'back' | 'forward') => {
+    if (direction === 'back' && historyIndex < history.length - 1) {
+      setHistoryIndex(prev => prev + 1);
+      return history[historyIndex + 1];
+    } else if (direction === 'forward' && historyIndex > 0) {
+      setHistoryIndex(prev => prev - 1);
+      return history[historyIndex - 1];
+    }
+    return null;
+  }, [history, historyIndex]);
+
+  const canGoBack = historyIndex < history.length - 1;
+  const canGoForward = historyIndex > 0;
+
+  return {
+    history,
+    historyIndex,
+    addToHistory,
+    navigateHistory,
+    canGoBack,
+    canGoForward,
   };
-
-  return (
-    <span className={cn('flex items-center text-muted-foreground', className)}>
-      {separatorMap[type]}
-    </span>
-  );
 };
 
-// Breadcrumb item component
-interface BreadcrumbItemComponentProps {
+const useFavorites = () => {
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem('rbac-breadcrumb-favorites');
+    if (savedFavorites) {
+      try {
+        setFavorites(new Set(JSON.parse(savedFavorites)));
+      } catch (error) {
+        console.error('Failed to parse favorites:', error);
+      }
+    }
+  }, []);
+
+  const toggleFavorite = useCallback((itemId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(itemId)) {
+        newFavorites.delete(itemId);
+      } else {
+        newFavorites.add(itemId);
+      }
+      localStorage.setItem('rbac-breadcrumb-favorites', JSON.stringify([...newFavorites]));
+      return newFavorites;
+    });
+  }, []);
+
+  return { favorites, toggleFavorite };
+};
+
+// Component: Breadcrumb Item
+const BreadcrumbItemComponent: React.FC<{
   item: BreadcrumbItem;
   config: BreadcrumbConfig;
-  isFocused?: boolean;
-  onItemClick?: (item: BreadcrumbItem) => void;
-  showTooltip?: boolean;
-}
-
-const BreadcrumbItemComponent: React.FC<BreadcrumbItemComponentProps> = ({
-  item,
-  config,
-  isFocused = false,
-  onItemClick,
-  showTooltip = true
-}) => {
-  const router = useRouter();
+  isLast: boolean;
+  onNavigate: (item: BreadcrumbItem) => void;
+  onFavorite?: (item: BreadcrumbItem) => void;
+  isFavorite: boolean;
+  showActions?: boolean;
+}> = ({ item, config, isLast, onNavigate, onFavorite, isFavorite, showActions = true }) => {
   const [isHovered, setIsHovered] = useState(false);
-
-  const handleClick = useCallback(() => {
-    if (item.isDisabled) return;
-
-    if (item.onClick) {
-      item.onClick();
-    } else if (item.href && config.clickable) {
-      router.push(item.href);
-    }
-
-    if (onItemClick) {
-      onItemClick(item);
-    }
-  }, [item, config.clickable, router, onItemClick]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleClick();
-    }
-  }, [handleClick]);
-
-  const truncateLabel = (label: string, maxLength: number) => {
-    if (label.length <= maxLength) return label;
-    return `${label.substring(0, maxLength - 3)}...`;
-  };
-
-  const getVariantClasses = () => {
-    const base = 'inline-flex items-center gap-2 transition-all duration-200';
-    
-    switch (config.variant) {
-      case 'pills':
-        return cn(
-          base,
-          'px-3 py-1.5 rounded-full',
-          item.isActive 
-            ? 'bg-primary text-primary-foreground' 
-            : 'hover:bg-accent hover:text-accent-foreground'
-        );
-      case 'underline':
-        return cn(
-          base,
-          'pb-1 border-b-2 border-transparent',
-          item.isActive 
-            ? 'border-primary text-primary' 
-            : 'hover:border-muted-foreground hover:text-foreground'
-        );
-      case 'minimal':
-        return cn(
-          base,
-          item.isActive 
-            ? 'text-primary font-medium' 
-            : 'text-muted-foreground hover:text-foreground'
-        );
-      case 'compact':
-        return cn(
-          base,
-          'text-sm',
-          item.isActive 
-            ? 'text-foreground font-medium' 
-            : 'text-muted-foreground hover:text-foreground'
-        );
-      default:
-        return cn(
-          base,
-          item.isActive 
-            ? 'text-foreground font-medium' 
-            : 'text-muted-foreground hover:text-foreground'
-        );
-    }
-  };
-
-  const getSizeClasses = () => {
-    switch (config.size) {
-      case 'sm':
-        return 'text-xs';
-      case 'lg':
-        return 'text-base';
-      default:
-        return 'text-sm';
-    }
-  };
-
-  const itemElement = (
-    <motion.span
-      className={cn(
-        getVariantClasses(),
-        getSizeClasses(),
-        config.clickable && !item.isActive && !item.isDisabled && 'cursor-pointer',
-        item.isDisabled && 'opacity-50 cursor-not-allowed',
-        isFocused && 'ring-2 ring-primary/50 rounded',
-        config.enableAnimations && 'transform'
-      )}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      whileHover={config.enableAnimations && !item.isDisabled ? { scale: 1.05 } : undefined}
-      whileTap={config.enableAnimations && !item.isDisabled ? { scale: 0.95 } : undefined}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={config.enableKeyboardNav ? 0 : -1}
-      role="button"
-      aria-current={item.isActive ? 'page' : undefined}
-      aria-disabled={item.isDisabled}
-      title={showTooltip ? (item.tooltip || item.description) : undefined}
-    >
-      {/* Loading state */}
-      {item.isLoading && (
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-3 h-3"
-        >
-          <RefreshCw className="w-3 h-3" />
-        </motion.div>
-      )}
-
-      {/* Icon */}
-      {config.showIcons && item.icon && !item.isLoading && (
-        <span className="flex-shrink-0">
-          {item.icon}
-        </span>
-      )}
-
-      {/* Label */}
-      <span className="min-w-0 flex-1">
-        {truncateLabel(item.label, config.maxLength)}
-      </span>
-
-      {/* Status indicators */}
-      {item.isNew && (
-        <span className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded-full">
-          New
-        </span>
-      )}
-
-      {/* Error indicator */}
-      {item.hasError && (
-        <span className="text-destructive">
-          <AlertCircle className="w-3 h-3" />
-        </span>
-      )}
-    </motion.span>
-  );
-
-  return itemElement;
-};
-
-// Collapsed items component
-interface CollapsedItemsProps {
-  items: BreadcrumbItem[];
-  config: BreadcrumbConfig;
-  onItemClick?: (item: BreadcrumbItem) => void;
-}
-
-const CollapsedItems: React.FC<CollapsedItemsProps> = ({
-  items,
-  config,
-  onItemClick
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle clicks outside
+  const handleClick = useCallback(() => {
+    if (item.isClickable && item.path) {
+      onNavigate(item);
+    }
+  }, [item, onNavigate]);
+
+  const handleFavoriteClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onFavorite?.(item);
+  }, [item, onFavorite]);
+
+  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setShowDropdown(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, []);
+
+  const itemVariants = {
+    rest: { scale: 1 },
+    hover: { scale: 1.05 },
+    tap: { scale: 0.95 },
+  };
+
+  const badgeVariants = {
+    default: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+    primary: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    secondary: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+    destructive: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  };
 
   return (
-    <div ref={dropdownRef} className="relative">
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-1 px-2 py-1 text-sm text-muted-foreground hover:text-foreground rounded transition-colors"
-        title={`Show ${items.length} hidden items`}
+    <div ref={dropdownRef} className="relative flex items-center">
+      <motion.div
+        variants={itemVariants}
+        animate={isHovered ? 'hover' : 'rest'}
+        whileTap={item.isClickable ? 'tap' : 'rest'}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        className={cn(
+          'group relative flex items-center gap-2 transition-all duration-200',
+          config.size === 'sm' && 'text-sm py-1 px-2',
+          config.size === 'md' && 'text-sm py-1.5 px-3',
+          config.size === 'lg' && 'text-base py-2 px-4',
+          config.variant === 'pill' && 'rounded-full',
+          config.variant === 'underline' && 'border-b-2 border-transparent',
+          item.isClickable && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg',
+          item.isActive && config.variant === 'underline' && 'border-blue-500',
+          item.isActive && config.variant !== 'underline' && 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
+          !item.isClickable && 'text-gray-900 dark:text-white font-medium',
+          item.isClickable && !item.isActive && 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white',
+          item.isProtected && 'border border-yellow-200 dark:border-yellow-800'
+        )}
+        onClick={handleClick}
+        title={config.showTooltips ? item.tooltip || item.description : undefined}
       >
-        <MoreHorizontal className="w-4 h-4" />
-        <span className="text-xs">({items.length})</span>
-      </motion.button>
+        {/* Icon */}
+        {config.showIcons && item.icon && (
+          <span className="flex-shrink-0">
+            {item.icon}
+          </span>
+        )}
 
+        {/* Label */}
+        <span className="truncate font-medium">
+          {item.label}
+        </span>
+
+        {/* Badge */}
+        {item.badge && (
+          <span className={cn(
+            'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+            badgeVariants[item.badgeVariant || 'default']
+          )}>
+            {item.badge}
+          </span>
+        )}
+
+        {/* Indicators */}
+        <div className="flex items-center gap-1">
+          {item.isProtected && (
+            <Lock className="w-3 h-3 text-yellow-500" title="Protected resource" />
+          )}
+          {item.isExternal && (
+            <ExternalLink className="w-3 h-3 text-gray-400" title="External link" />
+          )}
+          {isFavorite && (
+            <Star className="w-3 h-3 text-yellow-500" fill="currentColor" title="Favorited" />
+          )}
+        </div>
+
+        {/* Dropdown indicator */}
+        {config.showDropdowns && item.children && item.children.length > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDropdown(!showDropdown);
+            }}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+          >
+            <ChevronDown className={cn(
+              'w-3 h-3 transition-transform duration-200',
+              showDropdown && 'rotate-180'
+            )} />
+          </button>
+        )}
+
+        {/* Action buttons (shown on hover) */}
+        {showActions && isHovered && !isLast && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {onFavorite && (
+              <button
+                onClick={handleFavoriteClick}
+                className={cn(
+                  'p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200',
+                  isFavorite ? 'text-yellow-500' : 'text-gray-400'
+                )}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className="w-3 h-3" fill={isFavorite ? 'currentColor' : 'none'} />
+              </button>
+            )}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Dropdown menu */}
       <AnimatePresence>
-        {isOpen && (
+        {showDropdown && item.children && item.children.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute top-full left-0 mt-1 bg-background border border-border rounded-lg shadow-lg z-50 min-w-48"
+            transition={{ duration: config.animationDuration / 1000 }}
+            className="absolute top-full left-0 right-0 mt-2 min-w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
           >
             <div className="py-2">
-              {items.map((item, index) => (
+              {item.children.map((child, index) => (
                 <motion.button
-                  key={item.id}
+                  key={child.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => {
-                    if (onItemClick) {
-                      onItemClick(item);
-                    }
-                    setIsOpen(false);
+                    onNavigate(child);
+                    setShowDropdown(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm hover:bg-accent transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150"
                 >
-                  {config.showIcons && item.icon}
-                  <span className="flex-1 truncate">{item.label}</span>
+                  {child.icon && (
+                    <span className="flex-shrink-0 text-gray-500 dark:text-gray-400">
+                      {child.icon}
+                    </span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {child.label}
+                    </span>
+                    {child.description && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {child.description}
+                      </div>
+                    )}
+                  </div>
+                  {child.badge && (
+                    <span className={cn(
+                      'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
+                      badgeVariants[child.badgeVariant || 'default']
+                    )}>
+                      {child.badge}
+                    </span>
+                  )}
                 </motion.button>
               ))}
             </div>
@@ -2498,288 +876,542 @@ const CollapsedItems: React.FC<CollapsedItemsProps> = ({
   );
 };
 
-// Context menu component
-interface ContextMenuProps {
-  item: BreadcrumbItem;
-  isOpen: boolean;
-  onClose: () => void;
-  position: { x: number; y: number };
-}
+// Component: Breadcrumb Actions
+const BreadcrumbActions: React.FC<{
+  actions: BreadcrumbAction[];
+  history: BreadcrumbItem[];
+  canGoBack: boolean;
+  canGoForward: boolean;
+  onNavigateHistory: (direction: 'back' | 'forward') => void;
+  onAction: (action: BreadcrumbAction) => void;
+}> = ({ actions, history, canGoBack, canGoForward, onNavigateHistory, onAction }) => {
+  const { hasPermission } = usePermissionCheck();
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const historyRef = useRef<HTMLDivElement>(null);
 
-const ContextMenu: React.FC<ContextMenuProps> = ({
-  item,
-  isOpen,
-  onClose,
-  position
-}) => {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const visibleActions = actions.filter(action => 
+    !action.permission || hasPermission(action.permission)
+  );
 
+  // Close history dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
+      if (historyRef.current && !historyRef.current.contains(event.target as Node)) {
+        setShowHistoryDropdown(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
-
-  const handleCopyPath = () => {
-    if (item.href) {
-      navigator.clipboard.writeText(item.href);
-    }
-    onClose();
-  };
-
-  const handleOpenInNewTab = () => {
-    if (item.href) {
-      window.open(item.href, '_blank');
-    }
-    onClose();
-  };
-
-  if (!isOpen) return null;
+  }, []);
 
   return (
-    <motion.div
-      ref={menuRef}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed bg-background border border-border rounded-lg shadow-lg z-50 py-2 min-w-48"
-      style={{
-        left: position.x,
-        top: position.y
-      }}
-    >
-      <button
-        onClick={handleCopyPath}
-        className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm hover:bg-accent transition-colors"
-      >
-        <Copy className="w-4 h-4" />
-        Copy Path
-      </button>
-      
-      {item.href && (
+    <div className="flex items-center gap-1">
+      {/* Navigation history buttons */}
+      <div className="flex items-center gap-1">
         <button
-          onClick={handleOpenInNewTab}
-          className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm hover:bg-accent transition-colors"
+          onClick={() => onNavigateHistory('back')}
+          disabled={!canGoBack}
+          className={cn(
+            'p-2 rounded-lg transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            canGoBack
+              ? 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+              : 'opacity-50 cursor-not-allowed text-gray-400'
+          )}
+          title="Go back"
         >
-          <ExternalLink className="w-4 h-4" />
-          Open in New Tab
+          <ArrowLeft className="w-4 h-4" />
         </button>
-      )}
-      
-      <div className="border-t border-border my-1" />
-      
-      <div className="px-4 py-2 text-xs text-muted-foreground">
-        <div>Level: {item.level || 0}</div>
-        {item.category && <div>Category: {item.category}</div>}
+        <button
+          onClick={() => onNavigateHistory('forward')}
+          disabled={!canGoForward}
+          className={cn(
+            'p-2 rounded-lg transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            canGoForward
+              ? 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+              : 'opacity-50 cursor-not-allowed text-gray-400'
+          )}
+          title="Go forward"
+        >
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
-    </motion.div>
+
+      {/* History dropdown */}
+      {history.length > 0 && (
+        <div ref={historyRef} className="relative">
+          <button
+            onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            title="Navigation history"
+          >
+            <Clock className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+          </button>
+
+          <AnimatePresence>
+            {showHistoryDropdown && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
+              >
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Navigation History
+                  </h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto py-2">
+                  {history.slice(0, 10).map((item, index) => (
+                    <motion.div
+                      key={`${item.path}-${index}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center gap-3 px-4 py-2"
+                    >
+                      {item.icon && (
+                        <span className="flex-shrink-0 text-gray-500 dark:text-gray-400">
+                          {item.icon}
+                        </span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {item.label}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {item.path}
+                        </div>
+                      </div>
+                      {item.lastAccessed && (
+                        <span className="text-xs text-gray-400">
+                          {new Date(item.lastAccessed).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Separator */}
+      {visibleActions.length > 0 && (
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+      )}
+
+      {/* Custom actions */}
+      {visibleActions.map((action) => (
+        <button
+          key={action.id}
+          onClick={() => onAction(action)}
+          className={cn(
+            'p-2 rounded-lg transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            action.variant === 'primary' && 'bg-blue-600 text-white hover:bg-blue-700',
+            action.variant === 'secondary' && 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600',
+            action.variant === 'destructive' && 'bg-red-600 text-white hover:bg-red-700',
+            (!action.variant || action.variant === 'default') && 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
+          )}
+          title={action.tooltip || action.label}
+        >
+          {action.icon}
+        </button>
+      ))}
+    </div>
   );
 };
 
-// Main RBAC Breadcrumb component
-export const RBACBreadcrumb: React.FC<RBACBreadcrumbProps> = ({
-  config: userConfig = {},
-  items: customItems,
-  className,
-  onItemClick,
-  onPathChange,
-  showContextMenu = false,
-  customSegments = [],
-  hideSegments = [],
-  maxDisplayItems
-}) => {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+// Component: Breadcrumb Search
+const BreadcrumbSearch: React.FC<{
+  items: BreadcrumbItem[];
+  onSelect: (item: BreadcrumbItem) => void;
+  placeholder?: string;
+  className?: string;
+}> = ({ items, onSelect, placeholder = 'Search navigation...', className }) => {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  // Merge configurations
-  const config = useMemo(() => ({
-    ...defaultBreadcrumbConfig,
-    ...userConfig
-  }), [userConfig]);
-
-  // Generate breadcrumbs
-  const generatedItems = useBreadcrumbGeneration(
-    pathname,
-    searchParams,
-    customSegments
-  );
-
-  // Use custom items or generated items
-  const allItems = customItems || generatedItems;
-
-  // Filter hidden segments
   const filteredItems = useMemo(() => {
-    return allItems.filter(item => 
-      !hideSegments.includes(item.id) && 
-      !hideSegments.includes(item.label.toLowerCase())
-    );
-  }, [allItems, hideSegments]);
-
-  // Handle collapsing items
-  const { visibleItems, collapsedItems } = useMemo(() => {
-    const maxItems = maxDisplayItems || config.maxItems;
+    if (!query.trim()) return [];
     
-    if (!config.collapsible || filteredItems.length <= maxItems) {
-      return { visibleItems: filteredItems, collapsedItems: [] };
-    }
+    const searchTerm = query.toLowerCase();
+    return items.filter(item =>
+      item.label.toLowerCase().includes(searchTerm) ||
+      item.description?.toLowerCase().includes(searchTerm) ||
+      item.path?.toLowerCase().includes(searchTerm)
+    ).slice(0, 8);
+  }, [items, query]);
 
-    // Always show first and last items
-    const firstItem = filteredItems[0];
-    const lastItems = filteredItems.slice(-2); // Last 2 items
-    const middleItems = filteredItems.slice(1, -2);
-    
-    if (middleItems.length === 0) {
-      return { visibleItems: filteredItems, collapsedItems: [] };
-    }
-
-    return {
-      visibleItems: [firstItem, ...lastItems],
-      collapsedItems: middleItems
+  // Close search on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
     };
-  }, [filteredItems, config.collapsible, config.maxItems, maxDisplayItems]);
 
-  // Keyboard navigation
-  const { focusedIndex, setFocusedIndex, containerRef } = useBreadcrumbKeyboardNav(
-    visibleItems,
-    config.enableKeyboardNav
-  );
-
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
-    item: BreadcrumbItem;
-    position: { x: number; y: number };
-  } | null>(null);
-
-  // Handle item click
-  const handleItemClick = useCallback((item: BreadcrumbItem) => {
-    if (onItemClick) {
-      onItemClick(item);
-    }
-
-    if (onPathChange && item.href) {
-      onPathChange(item.href);
-    }
-  }, [onItemClick, onPathChange]);
-
-  // Handle context menu
-  const handleContextMenu = useCallback((
-    e: React.MouseEvent,
-    item: BreadcrumbItem
-  ) => {
-    if (!showContextMenu || !config.enableContextMenu) return;
-    
-    e.preventDefault();
-    setContextMenu({
-      item,
-      position: { x: e.clientX, y: e.clientY }
-    });
-  }, [showContextMenu, config.enableContextMenu]);
-
-  // Skip to content functionality
-  const handleSkipToContent = useCallback(() => {
-    const mainContent = document.querySelector('main, [role="main"], #main-content');
-    if (mainContent) {
-      (mainContent as HTMLElement).focus();
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Hide on mobile if configured
-  if (config.hideOnMobile && window.innerWidth < 768) {
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, filteredItems.length - 1));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (filteredItems[selectedIndex]) {
+            onSelect(filteredItems[selectedIndex]);
+            setIsOpen(false);
+            setQuery('');
+          }
+          break;
+        case 'Escape':
+          setIsOpen(false);
+          setQuery('');
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, filteredItems, selectedIndex, onSelect]);
+
+  // Reset selected index when filtered items change
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filteredItems]);
+
+  const handleSelect = useCallback((item: BreadcrumbItem) => {
+    onSelect(item);
+    setIsOpen(false);
+    setQuery('');
+  }, [onSelect]);
+
+  return (
+    <div ref={searchRef} className={cn('relative', className)}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className={cn(
+            'w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+            'placeholder-gray-400 dark:placeholder-gray-500',
+            'transition-all duration-200'
+          )}
+        />
+        {query && (
+          <button
+            onClick={() => {
+              setQuery('');
+              setIsOpen(false);
+            }}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {isOpen && filteredItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
+          >
+            <div className="py-2">
+              {filteredItems.map((item, index) => (
+                <motion.button
+                  key={item.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => handleSelect(item)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150',
+                    selectedIndex === index && 'bg-gray-50 dark:bg-gray-800'
+                  )}
+                >
+                  {item.icon && (
+                    <span className="flex-shrink-0 text-gray-500 dark:text-gray-400">
+                      {item.icon}
+                    </span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-white truncate">
+                      {item.label}
+                    </div>
+                    {item.path && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {item.path}
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// Main RBACBreadcrumb component
+export const RBACBreadcrumb: React.FC<RBACBreadcrumbProps> = ({
+  config: configOverrides = {},
+  items: customItems,
+  onNavigate: onNavigateProp,
+  onFavorite: onFavoriteProp,
+  actions = [],
+  className,
+  variant = 'default',
+  showActions = true,
+  showFavorites = true,
+  showHistory = true,
+  maxVisibleItems,
+  autoCollapse = true,
+  enableSearch = false,
+  searchPlaceholder = 'Search navigation...',
+  customSeparator,
+  emptyMessage = 'No navigation path available',
+  loadingMessage = 'Loading navigation...',
+}) => {
+  const router = useRouter();
+  const { config, updateConfig } = useBreadcrumbConfig();
+  const { resolvePath, pathname } = usePathResolution();
+  const { history, addToHistory, navigateHistory, canGoBack, canGoForward } = useBreadcrumbHistory();
+  const { favorites, toggleFavorite } = useFavorites();
+  const { user, isLoading: userLoading } = useCurrentUser();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Merge config with overrides
+  const finalConfig = useMemo(() => ({
+    ...config,
+    ...configOverrides,
+  }), [config, configOverrides]);
+
+  // Resolve breadcrumb items
+  const breadcrumbItems = useMemo(() => {
+    if (customItems) {
+      return customItems;
+    }
+    return resolvePath(pathname);
+  }, [customItems, resolvePath, pathname]);
+
+  // Handle navigation
+  const handleNavigate = useCallback((item: BreadcrumbItem) => {
+    if (item.path) {
+      if (item.isExternal) {
+        window.open(item.path, '_blank');
+      } else {
+        router.push(item.path);
+      }
+      addToHistory(item);
+    }
+    onNavigateProp?.(item);
+  }, [router, addToHistory, onNavigateProp]);
+
+  // Handle favorite toggle
+  const handleFavorite = useCallback((item: BreadcrumbItem) => {
+    toggleFavorite(item.id);
+    onFavoriteProp?.(item);
+  }, [toggleFavorite, onFavoriteProp]);
+
+  // Handle history navigation
+  const handleHistoryNavigation = useCallback((direction: 'back' | 'forward') => {
+    const item = navigateHistory(direction);
+    if (item && item.path) {
+      router.push(item.path);
+    }
+  }, [navigateHistory, router]);
+
+  // Handle action clicks
+  const handleAction = useCallback((action: BreadcrumbAction) => {
+    action.action();
+  }, []);
+
+  // Determine visible items based on collapse state and max items
+  const visibleItems = useMemo(() => {
+    const maxItems = maxVisibleItems || finalConfig.maxItems;
+    
+    if (breadcrumbItems.length <= maxItems || !autoCollapse) {
+      return breadcrumbItems;
+    }
+
+    if (isCollapsed) {
+      // Show first item, ellipsis, and last few items
+      const firstItem = breadcrumbItems[0];
+      const lastItems = breadcrumbItems.slice(-2);
+      return [firstItem, { id: 'ellipsis', label: '...', isClickable: false }, ...lastItems];
+    }
+
+    return breadcrumbItems.slice(0, maxItems);
+  }, [breadcrumbItems, maxVisibleItems, finalConfig.maxItems, autoCollapse, isCollapsed]);
+
+  // Auto-collapse logic
+  useEffect(() => {
+    if (autoCollapse && breadcrumbItems.length > (maxVisibleItems || finalConfig.maxItems)) {
+      setIsCollapsed(true);
+    } else {
+      setIsCollapsed(false);
+    }
+  }, [breadcrumbItems.length, autoCollapse, maxVisibleItems, finalConfig.maxItems]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!finalConfig.enableKeyboardNavigation) return;
+
+      // Navigate with Alt + Arrow keys
+      if (e.altKey) {
+        if (e.key === 'ArrowLeft' && canGoBack) {
+          e.preventDefault();
+          handleHistoryNavigation('back');
+        } else if (e.key === 'ArrowRight' && canGoForward) {
+          e.preventDefault();
+          handleHistoryNavigation('forward');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [finalConfig.enableKeyboardNavigation, canGoBack, canGoForward, handleHistoryNavigation]);
+
+  if (userLoading) {
+    return (
+      <div className={cn('flex items-center gap-2', className)}>
+        <Skeleton className="w-6 h-6 rounded" />
+        <Skeleton className="w-20 h-6 rounded" />
+        <Skeleton className="w-4 h-4 rounded" />
+        <Skeleton className="w-24 h-6 rounded" />
+      </div>
+    );
+  }
+
+  if (!user) {
     return null;
   }
 
+  if (breadcrumbItems.length === 0) {
+    return (
+      <div className={cn('flex items-center text-sm text-gray-500 dark:text-gray-400', className)}>
+        <Navigation className="w-4 h-4 mr-2" />
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  const separator = customSeparator || finalConfig.separatorIcon;
+
   return (
-    <>
-      {/* Skip to content link */}
-      {config.skipToContent && (
-        <button
-          onClick={handleSkipToContent}
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-primary text-primary-foreground px-4 py-2 rounded z-50"
-        >
-          Skip to content
-        </button>
+    <nav
+      className={cn(
+        'flex items-center gap-1 text-sm',
+        variant === 'minimal' && 'text-xs',
+        variant === 'compact' && 'gap-0.5',
+        className
+      )}
+      aria-label="Breadcrumb navigation"
+    >
+      {/* Navigation actions */}
+      {showActions && (showHistory || actions.length > 0) && (
+        <BreadcrumbActions
+          actions={actions}
+          history={history}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          onNavigateHistory={handleHistoryNavigation}
+          onAction={handleAction}
+        />
       )}
 
-      <nav
-        ref={containerRef}
-        aria-label={config.ariaLabel}
-        className={cn(
-          'flex items-center space-x-1',
-          config.size === 'sm' && 'text-xs',
-          config.size === 'lg' && 'text-base',
-          config.hideOnMobile && 'hidden md:flex',
-          config.compactOnTablet && 'md:text-sm lg:text-base',
-          className
+      {/* Search */}
+      {enableSearch && (
+        <BreadcrumbSearch
+          items={breadcrumbItems}
+          onSelect={handleNavigate}
+          placeholder={searchPlaceholder}
+          className="min-w-48"
+        />
+      )}
+
+      {/* Breadcrumb items */}
+      <div className="flex items-center gap-1 overflow-hidden">
+        {visibleItems.map((item, index) => (
+          <React.Fragment key={item.id}>
+            {/* Separator */}
+            {index > 0 && (
+              <span className="flex-shrink-0 text-gray-400 dark:text-gray-500 mx-1">
+                {separator}
+              </span>
+            )}
+
+            {/* Breadcrumb item */}
+            {item.id === 'ellipsis' ? (
+              <button
+                onClick={() => setIsCollapsed(false)}
+                className="px-2 py-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded transition-colors duration-200"
+                title="Show all items"
+              >
+                {finalConfig.collapseIcon}
+              </button>
+            ) : (
+              <BreadcrumbItemComponent
+                item={item}
+                config={finalConfig}
+                isLast={index === visibleItems.length - 1}
+                onNavigate={handleNavigate}
+                onFavorite={showFavorites ? handleFavorite : undefined}
+                isFavorite={favorites.has(item.id)}
+                showActions={showActions}
+              />
+            )}
+          </React.Fragment>
+        ))}
+
+        {/* Collapse button */}
+        {finalConfig.showCollapseButton && autoCollapse && breadcrumbItems.length > (maxVisibleItems || finalConfig.maxItems) && !isCollapsed && (
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="ml-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors duration-200"
+            title="Collapse breadcrumbs"
+          >
+            <Minimize2 className="w-4 h-4" />
+          </button>
         )}
-      >
-        <ol className="flex items-center space-x-1" role="list">
-          {visibleItems.map((item, index) => {
-            const isLast = index === visibleItems.length - 1;
-            const showCollapsedBefore = 
-              config.collapsible && 
-              collapsedItems.length > 0 && 
-              index === 1; // After first item
-
-            return (
-              <li key={item.id} className="flex items-center space-x-1">
-                {/* Show collapsed items indicator */}
-                {showCollapsedBefore && (
-                  <>
-                    {config.showSeparators && (
-                      <Separator type={config.separator} />
-                    )}
-                    <CollapsedItems
-                      items={collapsedItems}
-                      config={config}
-                      onItemClick={handleItemClick}
-                    />
-                  </>
-                )}
-
-                {/* Separator */}
-                {index > 0 && config.showSeparators && !showCollapsedBefore && (
-                  <Separator type={config.separator} />
-                )}
-
-                {/* Breadcrumb item */}
-                <div
-                  onContextMenu={(e) => handleContextMenu(e, item)}
-                >
-                  <BreadcrumbItemComponent
-                    item={item}
-                    config={config}
-                    isFocused={focusedIndex === index}
-                    onItemClick={handleItemClick}
-                    showTooltip={config.enableTooltips}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-
-      {/* Context menu */}
-      <AnimatePresence>
-        {contextMenu && (
-          <ContextMenu
-            item={contextMenu.item}
-            isOpen={true}
-            onClose={() => setContextMenu(null)}
-            position={contextMenu.position}
-          />
-        )}
-      </AnimatePresence>
-    </>
+      </div>
+    </nav>
   );
 };
 
