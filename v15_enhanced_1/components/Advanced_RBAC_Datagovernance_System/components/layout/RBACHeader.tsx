@@ -1,190 +1,752 @@
-// RBACHeader.tsx - Enterprise-grade header component for RBAC system
-// Provides user context, notifications, search, settings, and advanced RBAC features
+// RBACHeader.tsx - Enterprise-grade RBAC header component
+// Provides user context, notifications, search, settings, and advanced navigation features
 
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  Search,
   Bell,
+  Search,
   Settings,
   User,
   LogOut,
   Shield,
-  Crown,
-  Key,
-  Users,
-  Database,
-  Activity,
-  Eye,
-  EyeOff,
-  Moon,
+  Menu,
+  X,
+  ChevronDown,
+  ChevronUp,
   Sun,
+  Moon,
   Monitor,
   Globe,
   HelpCircle,
   MessageCircle,
-  Mail,
-  Phone,
-  Calendar,
-  Clock,
-  MapPin,
-  Star,
-  Heart,
   Bookmark,
+  Star,
+  Clock,
+  Activity,
+  Eye,
+  Lock,
+  Unlock,
+  Key,
+  UserCheck,
+  UserX,
+  Users,
+  Database,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  AlertTriangle,
+  Plus,
+  Minus,
+  Edit,
+  Trash2,
+  Copy,
   Share,
   Download,
   Upload,
-  RefreshCw,
   Maximize,
   Minimize,
-  X,
-  Plus,
-  Minus,
-  MoreHorizontal,
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown,
-  Menu,
-  Grid,
-  List,
-  Layout,
-  Sidebar,
-  PanelLeft,
-  PanelRight,
+  RefreshCw,
+  RotateCw,
   Zap,
-  Gauge,
   Target,
-  Flag,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Info,
-  AlertTriangle,
-  Lock,
-  Unlock,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldX,
-  UserCheck,
-  UserX,
-  UserPlus,
-  UserMinus,
-  Group,
-  Fingerprint,
-  Scan,
-  ScanLine,
-  Code,
-  Terminal,
-  Server,
-  Cloud,
-  HardDrive,
-  Cpu,
-  Memory,
-  Network,
-  Wifi,
-  WifiOff,
-  Bluetooth,
-  Radio,
-  Satellite,
-  Radar,
-  Navigation,
-  Compass,
-  Map,
-  Route,
-  Tag,
-  Hash,
-  At,
   Filter,
   SortAsc,
   SortDesc,
-  ArrowUpDown,
-  Copy,
+  MoreHorizontal,
   ExternalLink,
-  FileText,
-  File,
-  Folder,
-  FolderOpen,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Tag,
+  Flag,
   Archive,
-  Package,
-  Box,
-  Layers,
-  Component,
-  Workflow,
-  GitBranch,
-  GitCommit,
-  GitMerge,
-  Truck,
-  Plane,
-  Ship,
-  Car,
-  Bike,
-  Bus,
-  Train,
-  Rocket,
-  Earth,
-  Sparkles,
-  Flame,
-  Droplet,
-  Leaf,
-  Flower,
-  Tree,
-  Mountain,
-  Waves,
-  Wind,
-  Snowflake,
-  Umbrella,
-  Rainbow,
+  Folder,
+  File,
+  Image,
+  Video,
+  Music,
+  Code,
+  Terminal,
   Palette,
   Brush,
-  Pen,
-  Pencil,
-  PenTool,
   Type,
-  Bold,
-  Italic,
-  Underline,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  ListOrdered,
-  CheckSquare,
-  Square,
-  Circle,
-  Triangle,
-  Hexagon,
-  Octagon,
-  Diamond,
+  Layout,
+  Grid,
+  List,
+  Layers,
+  Package,
+  Truck,
+  Plane,
+  Car,
+  Home,
+  Building,
+  Factory,
+  Store,
+  Hospital,
+  School,
+  Library,
+  Museum,
+  Park,
+  Beach,
+  Mountain,
+  Tree,
+  Flower,
+  Leaf,
+  Sun as SunIcon,
+  Moon as MoonIcon,
+  Star as StarIcon,
+  Heart,
   Smile,
-  Frown,
-  Meh
+  ThumbsUp,
+  Award,
+  Trophy,
+  Medal,
+  Gift,
+  Coffee,
+  Pizza,
+  Gamepad2,
+  Music2,
+  Headphones,
+  Camera,
+  Smartphone,
+  Laptop,
+  Monitor as MonitorIcon,
+  Tv,
+  Radio,
+  Wifi,
+  Bluetooth,
+  Battery,
+  Plug,
+  Lightbulb,
+  Flashlight,
+  Candle,
+  Flame,
+  Droplet,
+  Cloud,
+  Rainbow,
+  Snowflake,
+  Wind,
+  Umbrella,
+  Thermometer,
+  Compass,
+  Map,
+  Route,
+  Navigation,
+  Anchor,
+  Ship,
+  Train,
+  Bus,
+  Bike,
+  Rocket,
+  Satellite,
+  Earth,
+  Planet,
+  Galaxy,
+  Telescope,
+  Microscope,
+  Atom,
+  Dna,
+  FlaskConical,
+  TestTube,
+  Pill,
+  Stethoscope,
+  Syringe,
+  Bandage,
+  FirstAid,
+  CrossIcon,
+  ShieldIcon,
+  SwordIcon,
+  BowIcon,
+  ZapIcon,
+  FireIcon,
+  IceIcon,
+  LeafIcon,
+  RockIcon,
+  WaterIcon,
+  AirIcon,
+  EarthIcon,
+  LightIcon,
+  DarkIcon,
+  MagicIcon,
+  SpellIcon,
+  PotionIcon,
+  ScrollIcon,
+  BookIcon,
+  LibraryIcon,
+  ArchiveIcon,
+  FolderIcon,
+  FileIcon,
+  DocumentIcon,
+  PaperIcon,
+  NoteIcon,
+  PenIcon,
+  PencilIcon,
+  MarkerIcon,
+  HighlighterIcon,
+  EraserIcon,
+  RulerIcon,
+  ScissorsIcon,
+  GlueIcon,
+  TapeIcon,
+  PinIcon,
+  ClipIcon,
+  StapleIcon,
+  HoleIcon,
+  CutIcon,
+  PasteIcon,
+  UndoIcon,
+  RedoIcon,
+  SaveIcon,
+  LoadIcon,
+  ImportIcon,
+  ExportIcon,
+  PrintIcon,
+  ScanIcon,
+  FaxIcon,
+  EmailIcon,
+  PhoneIcon,
+  MessageIcon,
+  ChatIcon,
+  VideoIcon,
+  CallIcon,
+  ContactIcon,
+  AddressIcon,
+  LocationIcon,
+  DirectionIcon,
+  DistanceIcon,
+  SpeedIcon,
+  TimeIcon,
+  DateIcon,
+  ClockIcon,
+  TimerIcon,
+  AlarmIcon,
+  StopwatchIcon,
+  HourglassIcon,
+  CalendarIcon,
+  ScheduleIcon,
+  EventIcon,
+  TaskIcon,
+  TodoIcon,
+  CheckIcon,
+  UncheckIcon,
+  CompleteIcon,
+  IncompleteIcon,
+  ProgressIcon,
+  StatusIcon,
+  LevelIcon,
+  RankIcon,
+  ScoreIcon,
+  PointIcon,
+  CoinIcon,
+  DollarIcon,
+  EuroIcon,
+  PoundIcon,
+  YenIcon,
+  BitcoinIcon,
+  MoneyIcon,
+  WalletIcon,
+  CardIcon,
+  PaymentIcon,
+  PurchaseIcon,
+  SaleIcon,
+  DiscountIcon,
+  CouponIcon,
+  VoucherIcon,
+  TicketIcon,
+  PassIcon,
+  BadgeIcon,
+  CertificateIcon,
+  DiplomaIcon,
+  LicenseIcon,
+  PermitIcon,
+  ApprovalIcon,
+  RejectIcon,
+  PendingIcon,
+  WaitingIcon,
+  LoadingIcon,
+  ProcessingIcon,
+  UploadingIcon,
+  DownloadingIcon,
+  SyncingIcon,
+  ConnectingIcon,
+  DisconnectedIcon,
+  OnlineIcon,
+  OfflineIcon,
+  AvailableIcon,
+  BusyIcon,
+  AwayIcon,
+  IdleIcon,
+  ActiveIcon,
+  InactiveIcon,
+  EnabledIcon,
+  DisabledIcon,
+  VisibleIcon,
+  HiddenIcon,
+  PublicIcon,
+  PrivateIcon,
+  SecureIcon,
+  UnsecureIcon,
+  LockedIcon,
+  UnlockedIcon,
+  ProtectedIcon,
+  UnprotectedIcon,
+  EncryptedIcon,
+  DecryptedIcon,
+  SignedIcon,
+  UnsignedIcon,
+  VerifiedIcon,
+  UnverifiedIcon,
+  TrustedIcon,
+  UntrustedIcon,
+  ValidIcon,
+  InvalidIcon,
+  CorrectIcon,
+  IncorrectIcon,
+  AcceptedIcon,
+  RejectedIcon,
+  ApprovedIcon,
+  DeniedIcon,
+  AllowedIcon,
+  BlockedIcon,
+  PermittedIcon,
+  ForbiddenIcon,
+  AuthorizedIcon,
+  UnauthorizedIcon,
+  AuthenticatedIcon,
+  UnauthenticatedIcon,
+  LoggedInIcon,
+  LoggedOutIcon,
+  SignedInIcon,
+  SignedOutIcon,
+  RegisteredIcon,
+  UnregisteredIcon,
+  MemberIcon,
+  NonMemberIcon,
+  GuestIcon,
+  HostIcon,
+  AdminIcon,
+  ModeratorIcon,
+  UserIcon,
+  OwnerIcon,
+  CreatorIcon,
+  EditorIcon,
+  ViewerIcon,
+  ContributorIcon,
+  CollaboratorIcon,
+  PartnerIcon,
+  ClientIcon,
+  CustomerIcon,
+  SupplierIcon,
+  VendorIcon,
+  ProviderIcon,
+  ServiceIcon,
+  ProductIcon,
+  CategoryIcon,
+  BrandIcon,
+  CompanyIcon,
+  OrganizationIcon,
+  TeamIcon,
+  GroupIcon,
+  DepartmentIcon,
+  DivisionIcon,
+  BranchIcon,
+  OfficeIcon,
+  HeadquartersIcon,
+  LocationsIcon,
+  SitesIcon,
+  FacilitiesIcon,
+  BuildingsIcon,
+  RoomsIcon,
+  FloorsIcon,
+  AreasIcon,
+  ZonesIcon,
+  RegionsIcon,
+  CountriesIcon,
+  StatesIcon,
+  CitiesIcon,
+  StreetsIcon,
+  AddressesIcon,
+  CoordinatesIcon,
+  LatitudeIcon,
+  LongitudeIcon,
+  ElevationIcon,
+  AltitudeIcon,
+  DepthIcon,
+  WidthIcon,
+  HeightIcon,
+  LengthIcon,
+  SizeIcon,
+  WeightIcon,
+  VolumeIcon,
+  AreaIcon,
+  PerimeterIcon,
+  DiameterIcon,
+  RadiusIcon,
+  CircumferenceIcon,
+  AngleIcon,
+  DegreesIcon,
+  RadiansIcon,
+  PercentageIcon,
+  FractionIcon,
+  DecimalIcon,
+  IntegerIcon,
+  FloatIcon,
+  NumberIcon,
+  DigitIcon,
+  CountIcon,
+  QuantityIcon,
+  AmountIcon,
+  TotalIcon,
+  SumIcon,
+  AverageIcon,
+  MedianIcon,
+  ModeIcon,
+  RangeIcon,
+  MinimumIcon,
+  MaximumIcon,
+  VarianceIcon,
+  DeviationIcon,
+  DistributionIcon,
+  ProbabilityIcon,
+  StatisticsIcon,
+  AnalyticsIcon,
+  MetricsIcon,
+  KPIIcon,
+  DashboardIcon,
+  ReportIcon,
+  ChartIcon,
+  GraphIcon,
+  PlotIcon,
+  DiagramIcon,
+  FlowchartIcon,
+  SchemaIcon,
+  ModelIcon,
+  FrameworkIcon,
+  ArchitectureIcon,
+  StructureIcon,
+  LayoutIcon,
+  DesignIcon,
+  PatternIcon,
+  TemplateIcon,
+  ThemeIcon,
+  StyleIcon,
+  FormatIcon,
+  AppearanceIcon,
+  LookIcon,
+  FeelIcon,
+  ExperienceIcon,
+  InterfaceIcon,
+  InteractionIcon,
+  UsabilityIcon,
+  AccessibilityIcon,
+  ResponsivenessIcon,
+  PerformanceIcon,
+  SpeedIcon2,
+  EfficiencyIcon,
+  OptimizationIcon,
+  QualityIcon,
+  ReliabilityIcon,
+  StabilityIcon,
+  DurabilityIcon,
+  RobustnessIcon,
+  ScalabilityIcon,
+  FlexibilityIcon,
+  AdaptabilityIcon,
+  ExtensibilityIcon,
+  ModularityIcon,
+  ReusabilityIcon,
+  MaintainabilityIcon,
+  TestabilityIcon,
+  DebuggabilityIcon,
+  MonitorabilityIcon,
+  ObservabilityIcon,
+  TraceabilityIcon,
+  AuditabilityIcon,
+  ComplianceIcon,
+  GovernanceIcon,
+  PolicyIcon,
+  RuleIcon,
+  RegulationIcon,
+  StandardIcon,
+  GuidelineIcon,
+  ProcedureIcon,
+  ProcessIcon,
+  WorkflowIcon,
+  PipelineIcon,
+  JobIcon,
+  TasksIcon,
+  StepsIcon,
+  PhasesIcon,
+  StagesIcon,
+  MilestonesIcon,
+  DeadlinesIcon,
+  DueDatesIcon,
+  RemindersIcon,
+  NotificationsIcon,
+  AlertsIcon,
+  WarningsIcon,
+  ErrorsIcon,
+  IssuesIcon,
+  ProblemsIcon,
+  BugsIcon,
+  DefectsIcon,
+  FlawsIcon,
+  FaultsIcon,
+  FailuresIcon,
+  CrashesIcon,
+  OutagesIcon,
+  DowntimeIcon,
+  UptimeIcon,
+  AvailabilityIcon2,
+  RedundancyIcon,
+  BackupIcon,
+  RestoreIcon,
+  RecoveryIcon,
+  DisasterIcon,
+  EmergencyIcon,
+  CrisisIcon,
+  IncidentIcon,
+  AccidentIcon,
+  EventsIcon,
+  LogsIcon,
+  RecordsIcon,
+  HistoryIcon,
+  TimelineIcon,
+  ChronologyIcon,
+  SequenceIcon,
+  OrderIcon,
+  PriorityIcon,
+  ImportanceIcon,
+  UrgencyIcon,
+  CriticalIcon,
+  HighIcon,
+  MediumIcon,
+  LowIcon,
+  SeverityIcon,
+  ImpactIcon,
+  RiskIcon,
+  ThreatIcon,
+  VulnerabilityIcon,
+  AttackIcon,
+  DefenseIcon,
+  ProtectionIcon,
+  SecurityIcon2,
+  SafetyIcon,
+  PrivacyIcon2,
+  ConfidentialityIcon,
+  IntegrityIcon,
+  AvailabilityIcon3,
+  NonRepudiationIcon,
+  AuthenticationIcon2,
+  AuthorizationIcon2,
+  AccountabilityIcon,
+  TrustIcon,
+  ReputationIcon,
+  CredibilityIcon,
+  ValidityIcon,
+  AccuracyIcon,
+  PrecisionIcon,
+  CorrectnessIcon,
+  CompletenessIcon,
+  ConsistencyIcon,
+  CoherenceIcon,
+  ClarityIcon,
+  SimplilictyIcon,
+  ComplexityIcon,
+  DifficultyIcon,
+  EaseIcon,
+  ConvenienceIcon,
+  ComfortIcon,
+  SatisfactionIcon,
+  HappinessIcon,
+  JoyIcon,
+  PleasureIcon,
+  EnjoymentIcon,
+  FunIcon,
+  EntertainmentIcon,
+  AmusementIcon,
+  RecreationIcon,
+  LeisureIcon,
+  RelaxationIcon,
+  RestIcon,
+  SleepIcon,
+  DreamIcon,
+  WakeIcon,
+  AliveIcon,
+  HealthIcon,
+  WellnessIcon,
+  FitnessIcon,
+  StrengthIcon,
+  PowerIcon,
+  EnergyIcon,
+  VitalityIcon,
+  VigorIcon,
+  EnduranceIcon,
+  StaminaIcon,
+  ResilienceIcon,
+  CourageIcon,
+  BraveryIcon,
+  FearlessnessIcon,
+  ConfidenceIcon,
+  DeterminationIcon,
+  PersistenceIcon,
+  PatienceIcon,
+  ToleranceIcon,
+  UnderstandingIcon,
+  EmpathyIcon,
+  CompassionIcon,
+  KindnessIcon,
+  GenerosityIcon,
+  CharityIcon,
+  LoveIcon,
+  AffectionIcon,
+  CaringIcon,
+  SupportIcon,
+  HelpIcon,
+  AssistanceIcon,
+  ServiceIcon2,
+  CooperationIcon,
+  CollaborationIcon2,
+  PartnershipIcon,
+  TeamworkIcon,
+  UnityIcon,
+  HarmonyIcon,
+  BalanceIcon,
+  EquilibriumIcon,
+  StabilityIcon2,
+  OrderIcon2,
+  OrganizationIcon2,
+  StructureIcon2,
+  SystemIcon,
+  NetworkIcon,
+  ConnectionIcon,
+  RelationshipIcon,
+  LinkIcon2,
+  BondIcon,
+  TieIcon,
+  ChainIcon,
+  BridgeIcon,
+  PathIcon,
+  RouteIcon2,
+  JourneyIcon,
+  TripIcon,
+  TravelIcon,
+  VoyageIcon,
+  AdventureIcon,
+  ExplorationIcon,
+  DiscoveryIcon,
+  FindingIcon,
+  SearchingIcon,
+  LookingIcon,
+  SeeingIcon,
+  WatchingIcon,
+  ObservingIcon,
+  MonitoringIcon2,
+  TrackingIcon,
+  FollowingIcon,
+  ChasingIcon,
+  HuntingIcon,
+  CatchingIcon,
+  CapturingIcon,
+  GraspingIcon,
+  HoldingIcon,
+  KeepingIcon,
+  StoringIcon,
+  SavingIcon2,
+  PreservingIcon,
+  MaintainingIcon,
+  SustainningIcon,
+  ContinuingIcon,
+  PersistingIcon,
+  LastingIcon,
+  EndurringIcon,
+  SurvivingIcon,
+  ThrivingIcon,
+  FlourishingIcon,
+  BloomingIcon,
+  GrowingIcon,
+  DevelopingIcon,
+  EvolvingIcon,
+  ProgressingIcon,
+  AdvancingIcon,
+  ImprovingIcon,
+  EnhancingIcon,
+  UpgradingIcon,
+  ModernizingIcon,
+  InnovatingIcon,
+  CreatingIcon,
+  BuildingIcon2,
+  ConstructingIcon,
+  FormingIcon,
+  ShapingIcon,
+  MoldingIcon,
+  CraftingIcon,
+  MakingIcon,
+  ProducingIcon,
+  ManufacturingIcon,
+  GeneratingIcon,
+  CreatingIcon2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePermissionCheck } from '../../hooks/usePermissionCheck';
+import { useAuth } from '../../hooks/useAuth';
 import { useRBACWebSocket } from '../../hooks/useRBACWebSocket';
-import { LoadingSpinner, WebSocketConnectionLoading } from '../shared/LoadingStates';
+import { LoadingSpinner } from '../shared/LoadingStates';
 
-// Header types and interfaces
+// Header configuration interfaces
+export interface HeaderConfig {
+  // Layout
+  height: number;
+  sticky: boolean;
+  backdrop: boolean;
+  
+  // Visibility
+  showSearch: boolean;
+  showNotifications: boolean;
+  showUserMenu: boolean;
+  showBreadcrumbs: boolean;
+  showQuickActions: boolean;
+  showSystemStatus: boolean;
+  
+  // Behavior
+  autoHideOnScroll: boolean;
+  searchOnType: boolean;
+  maxSearchResults: number;
+  
+  // Appearance
+  theme: 'light' | 'dark' | 'auto';
+  variant: 'default' | 'minimal' | 'compact' | 'expanded';
+  showBorder: boolean;
+  showShadow: boolean;
+  
+  // Features
+  enableShortcuts: boolean;
+  enableTooltips: boolean;
+  enableAnimations: boolean;
+  enableRealTimeUpdates: boolean;
+}
+
 export interface Notification {
   id: string;
-  type: 'info' | 'warning' | 'error' | 'success' | 'security';
   title: string;
   message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
   timestamp: Date;
   read: boolean;
-  urgent: boolean;
-  actionUrl?: string;
-  actionText?: string;
-  category?: string;
+  actionable: boolean;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
   userId?: number;
   metadata?: Record<string, any>;
 }
@@ -193,370 +755,475 @@ export interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  href?: string;
-  onClick?: () => void;
+  onClick: () => void;
   permission?: string;
-  category?: string;
   shortcut?: string;
-  description?: string;
-  badge?: {
-    text: string;
-    variant?: 'default' | 'primary' | 'secondary' | 'destructive' | 'warning' | 'success';
-  };
+  tooltip?: string;
+  badge?: string | number;
+  category?: string;
+  order?: number;
+  disabled?: boolean;
+  variant?: 'default' | 'primary' | 'secondary' | 'destructive';
 }
 
-export interface UserProfile {
-  id: number;
-  username: string;
-  email: string;
-  fullName: string;
-  avatar?: string;
-  role: string;
-  department?: string;
-  lastLogin?: Date;
-  status: 'active' | 'inactive' | 'suspended';
-  preferences?: {
-    theme: 'light' | 'dark' | 'system';
-    language: string;
-    timezone: string;
-    notifications: {
-      email: boolean;
-      push: boolean;
-      desktop: boolean;
-    };
-  };
+export interface BreadcrumbItem {
+  id: string;
+  label: string;
+  href?: string;
+  icon?: React.ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
 }
 
-export interface HeaderConfig {
-  layout: 'fixed' | 'sticky' | 'static';
-  height: number;
-  showBreadcrumbs: boolean;
-  showSearch: boolean;
-  showNotifications: boolean;
-  showQuickActions: boolean;
-  showUserMenu: boolean;
-  showThemeToggle: boolean;
-  showConnectionStatus: boolean;
-  maxNotifications: number;
-  searchPlaceholder: string;
-  theme: {
-    variant: 'default' | 'compact' | 'spacious';
-    background: 'solid' | 'blur' | 'transparent';
-  };
-  animations: {
-    enabled: boolean;
-    duration: number;
-  };
+export interface SystemStatus {
+  id: string;
+  label: string;
+  status: 'online' | 'offline' | 'degraded' | 'maintenance';
+  lastChecked: Date;
+  responseTime?: number;
+  uptime?: number;
+  icon?: React.ReactNode;
+  details?: string;
 }
 
 export interface RBACHeaderProps {
   config?: Partial<HeaderConfig>;
+  className?: string;
   onMenuToggle?: () => void;
   onSearch?: (query: string) => void;
-  onNotificationClick?: (notification: Notification) => void;
-  onQuickActionClick?: (action: QuickAction) => void;
-  className?: string;
-  children?: React.ReactNode;
-  customActions?: React.ReactNode;
-  title?: string;
-  subtitle?: string;
-  showMenuButton?: boolean;
+  customActions?: QuickAction[];
+  breadcrumbs?: BreadcrumbItem[];
+  hideElements?: string[];
+  showOnlyElements?: string[];
 }
 
-// Custom hooks for header functionality
-const useTheme = () => {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+// Search result interface
+interface SearchResult {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'page' | 'user' | 'role' | 'resource' | 'action';
+  href?: string;
+  icon?: React.ReactNode;
+  category?: string;
+  relevance?: number;
+  lastAccessed?: Date;
+  metadata?: Record<string, any>;
+}
 
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => {
-      const newTheme = prev === 'light' ? 'dark' : prev === 'dark' ? 'system' : 'light';
-      // In a real app, this would update the theme in the document or context
-      return newTheme;
-    });
-  }, []);
+// User menu item interface
+interface UserMenuItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  separator?: boolean;
+  disabled?: boolean;
+  permission?: string;
+  badge?: string | number;
+  shortcut?: string;
+  variant?: 'default' | 'destructive';
+}
 
-  return { theme, setTheme, toggleTheme };
+// Theme configuration
+interface ThemeConfig {
+  mode: 'light' | 'dark' | 'system';
+  primaryColor: string;
+  accentColor: string;
+  borderRadius: number;
+  animations: boolean;
+}
+
+// Default configuration
+const defaultHeaderConfig: HeaderConfig = {
+  height: 64,
+  sticky: true,
+  backdrop: true,
+  showSearch: true,
+  showNotifications: true,
+  showUserMenu: true,
+  showBreadcrumbs: true,
+  showQuickActions: true,
+  showSystemStatus: true,
+  autoHideOnScroll: false,
+  searchOnType: true,
+  maxSearchResults: 10,
+  theme: 'auto',
+  variant: 'default',
+  showBorder: true,
+  showShadow: true,
+  enableShortcuts: true,
+  enableTooltips: true,
+  enableAnimations: true,
+  enableRealTimeUpdates: true
 };
 
-const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+// Mock data generators (replace with real API calls)
+const getMockNotifications = (): Notification[] => [
+  {
+    id: '1',
+    title: 'New Access Request',
+    message: 'John Doe requested access to Production Database',
+    type: 'info',
+    timestamp: new Date(Date.now() - 1000 * 60 * 5),
+    read: false,
+    actionable: true,
+    action: {
+      label: 'Review',
+      onClick: () => console.log('Review access request')
+    },
+    priority: 'high',
+    category: 'access_requests'
+  },
+  {
+    id: '2',
+    title: 'Security Alert',
+    message: 'Unusual login activity detected',
+    type: 'warning',
+    timestamp: new Date(Date.now() - 1000 * 60 * 15),
+    read: false,
+    actionable: true,
+    priority: 'critical',
+    category: 'security'
+  },
+  {
+    id: '3',
+    title: 'System Maintenance',
+    message: 'Scheduled maintenance completed successfully',
+    type: 'success',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60),
+    read: true,
+    actionable: false,
+    priority: 'low',
+    category: 'system'
+  }
+];
 
-  // Mock notifications - in real app, this would come from backend
-  useEffect(() => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'security',
-        title: 'Security Alert',
-        message: 'Multiple failed login attempts detected for your account',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-        read: false,
-        urgent: true,
-        actionUrl: '/rbac/security/alerts',
-        actionText: 'View Details',
-        category: 'security'
-      },
-      {
-        id: '2',
-        type: 'info',
-        title: 'Access Request',
-        message: 'New access request from John Doe for Data Sources module',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000),
-        read: false,
-        urgent: false,
-        actionUrl: '/rbac/access-requests',
-        actionText: 'Review Request',
-        category: 'access'
-      },
-      {
-        id: '3',
-        type: 'warning',
-        title: 'Policy Violation',
-        message: 'Data export performed outside business hours',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        read: false,
-        urgent: false,
-        actionUrl: '/rbac/violations',
-        actionText: 'Investigate',
-        category: 'compliance'
-      },
-      {
-        id: '4',
-        type: 'success',
-        title: 'Backup Completed',
-        message: 'Daily system backup completed successfully',
-        timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
-        read: true,
-        urgent: false,
-        category: 'system'
-      }
-    ];
+const getDefaultQuickActions = (): QuickAction[] => [
+  {
+    id: 'new-user',
+    label: 'New User',
+    icon: <UserCheck className="w-4 h-4" />,
+    onClick: () => console.log('Create new user'),
+    permission: 'users:create',
+    shortcut: 'Ctrl+N',
+    tooltip: 'Create a new user account',
+    category: 'users',
+    order: 1
+  },
+  {
+    id: 'access-review',
+    label: 'Access Review',
+    icon: <Shield className="w-4 h-4" />,
+    onClick: () => console.log('Start access review'),
+    permission: 'audit:review',
+    badge: '3',
+    tooltip: 'Review pending access requests',
+    category: 'security',
+    order: 2
+  },
+  {
+    id: 'system-health',
+    label: 'Health Check',
+    icon: <Activity className="w-4 h-4" />,
+    onClick: () => console.log('Check system health'),
+    permission: 'system:monitor',
+    tooltip: 'View system health status',
+    category: 'monitoring',
+    order: 3
+  }
+];
 
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
+const getUserMenuItems = (): UserMenuItem[] => [
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: <User className="w-4 h-4" />,
+    href: '/profile'
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: <Settings className="w-4 h-4" />,
+    href: '/settings'
+  },
+  {
+    id: 'help',
+    label: 'Help & Support',
+    icon: <HelpCircle className="w-4 h-4" />,
+    href: '/help'
+  },
+  {
+    id: 'separator1',
+    label: '',
+    icon: <></>,
+    separator: true
+  },
+  {
+    id: 'theme',
+    label: 'Toggle Theme',
+    icon: <Moon className="w-4 h-4" />,
+    onClick: () => console.log('Toggle theme'),
+    shortcut: 'Ctrl+Shift+T'
+  },
+  {
+    id: 'feedback',
+    label: 'Feedback',
+    icon: <MessageCircle className="w-4 h-4" />,
+    onClick: () => console.log('Open feedback')
+  },
+  {
+    id: 'separator2',
+    label: '',
+    icon: <></>,
+    separator: true
+  },
+  {
+    id: 'logout',
+    label: 'Sign Out',
+    icon: <LogOut className="w-4 h-4" />,
+    onClick: () => console.log('Sign out'),
+    variant: 'destructive',
+    shortcut: 'Ctrl+Shift+Q'
+  }
+];
+
+// Custom hooks
+const useHeaderState = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(getMockNotifications());
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+
+  // Search functionality
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    // TODO: Implement real search API call
+    if (query.trim()) {
+      setSearchResults([
+        {
+          id: '1',
+          title: 'User Management',
+          description: 'Manage system users and permissions',
+          type: 'page',
+          href: '/rbac/users',
+          icon: <Users className="w-4 h-4" />,
+          category: 'Navigation'
+        },
+        {
+          id: '2',
+          title: 'John Doe',
+          description: 'Administrator - john.doe@company.com',
+          type: 'user',
+          href: '/rbac/users/123',
+          icon: <User className="w-4 h-4" />,
+          category: 'Users'
+        }
+      ]);
+    } else {
+      setSearchResults([]);
+    }
   }, []);
 
-  const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === notificationId ? { ...n, read: true } : n
-    ));
-    setUnreadCount(prev => Math.max(0, prev - 1));
+  // Mark notification as read
+  const markNotificationAsRead = useCallback((notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === notificationId
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
   }, []);
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
+  // Mark all notifications as read
+  const markAllNotificationsAsRead = useCallback(() => {
+    setNotifications(prev =>
+      prev.map(notification => ({ ...notification, read: true }))
+    );
   }, []);
 
-  const deleteNotification = useCallback((notificationId: string) => {
-    setNotifications(prev => {
-      const filtered = prev.filter(n => n.id !== notificationId);
-      const wasUnread = prev.find(n => n.id === notificationId && !n.read);
-      if (wasUnread) {
-        setUnreadCount(count => Math.max(0, count - 1));
-      }
-      return filtered;
-    });
+  // Clear notification
+  const clearNotification = useCallback((notificationId: string) => {
+    setNotifications(prev =>
+      prev.filter(notification => notification.id !== notificationId)
+    );
   }, []);
 
   return {
+    searchQuery,
+    searchResults,
+    isSearchOpen,
+    setIsSearchOpen,
+    isNotificationsOpen,
+    setIsNotificationsOpen,
+    isUserMenuOpen,
+    setIsUserMenuOpen,
     notifications,
-    unreadCount,
-    isOpen,
-    setIsOpen,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
+    theme,
+    setTheme,
+    handleSearch,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    clearNotification
   };
 };
 
-const useQuickActions = () => {
-  const { hasPermission } = usePermissionCheck();
-
-  const quickActions: QuickAction[] = useMemo(() => [
-    {
-      id: 'create-user',
-      label: 'Create User',
-      icon: <UserPlus className="w-4 h-4" />,
-      href: '/rbac/users/create',
-      permission: 'users:create',
-      category: 'identity',
-      shortcut: 'Ctrl+U',
-      description: 'Create a new user account'
-    },
-    {
-      id: 'create-role',
-      label: 'Create Role',
-      icon: <Crown className="w-4 h-4" />,
-      href: '/rbac/roles/create',
-      permission: 'roles:create',
-      category: 'identity',
-      shortcut: 'Ctrl+R',
-      description: 'Define a new role'
-    },
-    {
-      id: 'scan-data',
-      label: 'Run Scan',
-      icon: <Scan className="w-4 h-4" />,
-      href: '/scan-logic/run',
-      permission: 'scan:execute',
-      category: 'governance',
-      description: 'Execute data scanning'
-    },
-    {
-      id: 'export-data',
-      label: 'Export Data',
-      icon: <Download className="w-4 h-4" />,
-      onClick: () => {
-        // Trigger export dialog
-      },
-      permission: 'data:export',
-      category: 'data',
-      description: 'Export system data'
-    },
-    {
-      id: 'system-health',
-      label: 'System Health',
-      icon: <Activity className="w-4 h-4" />,
-      href: '/rbac/monitoring',
-      permission: 'monitoring:read',
-      category: 'monitoring',
-      description: 'View system health status'
-    }
-  ], []);
-
-  const filteredActions = useMemo(() => 
-    quickActions.filter(action => !action.permission || hasPermission(action.permission))
-  , [quickActions, hasPermission]);
-
-  return { quickActions: filteredActions };
-};
-
-// Search component
-const GlobalSearch: React.FC<{
+// Header search component
+interface HeaderSearchProps {
+  searchQuery: string;
+  searchResults: SearchResult[];
+  isOpen: boolean;
+  onSearch: (query: string) => void;
+  onToggle: () => void;
+  onClose: () => void;
   placeholder?: string;
-  onSearch?: (query: string) => void;
+  maxResults?: number;
   className?: string;
-}> = ({ placeholder = "Search everything...", onSearch, className }) => {
-  const [query, setQuery] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+}
+
+const HeaderSearch: React.FC<HeaderSearchProps> = ({
+  searchQuery,
+  searchResults,
+  isOpen,
+  onSearch,
+  onToggle,
+  onClose,
+  placeholder = 'Search...',
+  maxResults = 10,
+  className
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleSearch = useCallback((searchQuery: string) => {
-    setQuery(searchQuery);
-    if (onSearch) {
-      onSearch(searchQuery);
-    }
-    
-    // Mock search results - in real app, this would call search API
-    if (searchQuery.trim()) {
-      setResults([
-        { id: '1', type: 'user', title: 'John Doe', subtitle: 'Administrator', href: '/rbac/users/1' },
-        { id: '2', type: 'role', title: 'Data Analyst', subtitle: 'Role', href: '/rbac/roles/data-analyst' },
-        { id: '3', type: 'permission', title: 'data:read', subtitle: 'Permission', href: '/rbac/permissions/data-read' },
-        { id: '4', type: 'resource', title: 'Customer Database', subtitle: 'Data Source', href: '/data-sources/customer-db' }
-      ]);
-    } else {
-      setResults([]);
-    }
-  }, [onSearch]);
-
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        searchRef.current?.focus();
-        setIsOpen(true);
+        onToggle();
+        if (searchRef.current) {
+          searchRef.current.focus();
+        }
       }
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-        searchRef.current?.blur();
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen, onToggle, onClose]);
+
+  // Handle clicks outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
 
   return (
-    <div className={cn("relative", className)}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          ref={searchRef}
-          type="text"
-          value={query}
-          onChange={(e) => handleSearch(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-          placeholder={placeholder}
-          className={cn(
-            "w-full pl-10 pr-20 py-2 bg-muted/50 border border-border rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent focus:bg-background",
-            "placeholder:text-muted-foreground transition-all duration-200"
-          )}
-        />
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 text-xs bg-muted border border-border rounded font-mono">
-            ⌘K
-          </kbd>
+    <div ref={containerRef} className={cn('relative', className)}>
+      <motion.div
+        className="relative"
+        initial={false}
+        animate={{
+          width: isOpen ? 400 : 280,
+          transition: { duration: 0.2, ease: 'easeInOut' }
+        }}
+      >
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearch(e.target.value)}
+            onFocus={() => {
+              setIsFocused(true);
+              if (!isOpen) onToggle();
+            }}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            className="w-full pl-10 pr-12 py-2 text-sm border border-border rounded-lg bg-background/80 backdrop-blur-sm focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+          />
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted text-muted-foreground rounded border">
+              ⌘K
+            </kbd>
+            {isOpen && searchQuery && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={() => {
+                  onSearch('');
+                  searchRef.current?.focus();
+                }}
+                className="p-1 hover:bg-accent rounded transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </motion.button>
+            )}
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Search Results */}
       <AnimatePresence>
-        {isOpen && (query || results.length > 0) && (
+        {isOpen && (searchResults.length > 0 || searchQuery) && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
           >
-            {results.length > 0 ? (
-              <div className="p-2">
-                {results.map((result) => (
-                  <motion.div
+            {searchResults.length > 0 ? (
+              <div className="py-2">
+                {searchResults.slice(0, maxResults).map((result, index) => (
+                  <motion.a
                     key={result.id}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent/10 cursor-pointer transition-colors"
-                    whileHover={{ backgroundColor: 'rgba(var(--accent), 0.1)' }}
+                    href={result.href}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors cursor-pointer"
+                    onClick={onClose}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                      {result.type === 'user' && <User className="w-4 h-4" />}
-                      {result.type === 'role' && <Crown className="w-4 h-4" />}
-                      {result.type === 'permission' && <Key className="w-4 h-4" />}
-                      {result.type === 'resource' && <Database className="w-4 h-4" />}
-                    </div>
+                    {result.icon}
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{result.title}</div>
-                      <div className="text-sm text-muted-foreground truncate">{result.subtitle}</div>
+                      <div className="font-medium text-sm truncate">{result.title}</div>
+                      {result.description && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {result.description}
+                        </div>
+                      )}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </motion.div>
+                    <div className="text-xs text-muted-foreground">
+                      {result.category}
+                    </div>
+                  </motion.a>
                 ))}
               </div>
-            ) : query ? (
-              <div className="p-8 text-center text-muted-foreground">
+            ) : searchQuery ? (
+              <div className="py-8 text-center text-muted-foreground">
                 <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No results found for "{query}"</p>
+                <p className="text-sm">No results found for "{searchQuery}"</p>
               </div>
-            ) : (
-              <div className="p-4 text-sm text-muted-foreground">
-                <div className="mb-3 font-medium">Quick Actions</div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 px-2 py-1 rounded text-xs">
-                    <kbd className="px-1 py-0.5 bg-muted border rounded">Ctrl+U</kbd>
-                    <span>Create User</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-2 py-1 rounded text-xs">
-                    <kbd className="px-1 py-0.5 bg-muted border rounded">Ctrl+R</kbd>
-                    <span>Create Role</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
@@ -564,44 +1231,62 @@ const GlobalSearch: React.FC<{
   );
 };
 
-// Notifications panel
-const NotificationsPanel: React.FC<{
+// Notifications dropdown component
+interface NotificationsDropdownProps {
   notifications: Notification[];
-  unreadCount: number;
   isOpen: boolean;
   onToggle: () => void;
-  onNotificationClick?: (notification: Notification) => void;
+  onClose: () => void;
   onMarkAsRead: (id: string) => void;
   onMarkAllAsRead: () => void;
-  onDelete: (id: string) => void;
-}> = ({
+  onClear: (id: string) => void;
+  className?: string;
+}
+
+const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   notifications,
-  unreadCount,
   isOpen,
   onToggle,
-  onNotificationClick,
+  onClose,
   onMarkAsRead,
   onMarkAllAsRead,
-  onDelete
+  onClear,
+  className
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Handle clicks outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
       case 'success':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'security':
-        return <ShieldAlert className="w-4 h-4 text-red-500" />;
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       default:
         return <Info className="w-4 h-4 text-blue-500" />;
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimeAgo = (date: Date) => {
     const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
+    const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -613,26 +1298,23 @@ const NotificationsPanel: React.FC<{
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className={cn('relative', className)}>
       <motion.button
-        className={cn(
-          "relative p-2 rounded-lg hover:bg-accent/10 transition-colors",
-          isOpen && "bg-accent/10"
-        )}
-        onClick={onToggle}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        onClick={onToggle}
+        className="relative p-2 rounded-lg hover:bg-accent transition-colors"
+        title="Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <motion.div
-            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+          <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
-          </motion.div>
+          </motion.span>
         )}
       </motion.button>
 
@@ -642,112 +1324,87 @@ const NotificationsPanel: React.FC<{
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-full right-0 mt-2 w-96 bg-popover border border-border rounded-lg shadow-lg z-50"
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute top-full right-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-lg z-50"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold">Notifications</h3>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {unreadCount > 0 && (
-                  <motion.button
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={onMarkAllAsRead}
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    Mark all read
-                  </motion.button>
-                )}
+              <h3 className="font-semibold text-sm">Notifications</h3>
+              {unreadCount > 0 && (
                 <button
-                  className="p-1 hover:bg-accent/20 rounded"
-                  onClick={onToggle}
+                  onClick={onMarkAllAsRead}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  Mark all as read
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Notifications List */}
-            <div className="max-h-96 overflow-y-auto">
+            {/* Notifications list */}
+            <div className="max-h-80 overflow-y-auto">
               {notifications.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {notifications.map((notification) => (
-                    <motion.div
-                      key={notification.id}
-                      className={cn(
-                        "p-4 hover:bg-accent/5 transition-colors cursor-pointer",
-                        !notification.read && "bg-accent/5"
-                      )}
-                      onClick={() => {
-                        if (!notification.read) {
-                          onMarkAsRead(notification.id);
-                        }
-                        if (onNotificationClick) {
-                          onNotificationClick(notification);
-                        }
-                      }}
-                      whileHover={{ backgroundColor: 'rgba(var(--accent), 0.05)' }}
-                    >
-                      <div className="flex gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          {getNotificationIcon(notification.type)}
+                notifications.map((notification, index) => (
+                  <motion.div
+                    key={notification.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={cn(
+                      'p-4 border-b border-border last:border-b-0 hover:bg-accent/50 transition-colors cursor-pointer',
+                      !notification.read && 'bg-primary/5'
+                    )}
+                    onClick={() => !notification.read && onMarkAsRead(notification.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className={cn(
+                            'text-sm font-medium truncate',
+                            !notification.read && 'text-foreground'
+                          )}>
+                            {notification.title}
+                          </h4>
+                          {!notification.read && (
+                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className={cn(
-                                "font-medium text-sm",
-                                !notification.read && "font-semibold"
-                              )}>
-                                {notification.title}
-                                {notification.urgent && (
-                                  <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
-                                    Urgent
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                {notification.message}
-                              </div>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-muted-foreground">
-                                  {formatTimestamp(notification.timestamp)}
-                                </span>
-                                {notification.actionText && (
-                                  <span className="text-xs text-accent hover:underline">
-                                    {notification.actionText}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-accent rounded-full" />
-                              )}
-                              <button
-                                className="p-1 hover:bg-accent/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDelete(notification.id);
-                                }}
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimeAgo(notification.timestamp)}
+                          </span>
+                          {notification.actionable && notification.action && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                notification.action?.onClick();
+                              }}
+                              className="text-xs text-primary hover:text-primary/80 transition-colors"
+                            >
+                              {notification.action.label}
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClear(notification.id);
+                        }}
+                        className="p-1 hover:bg-accent rounded transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
               ) : (
-                <div className="p-8 text-center text-muted-foreground">
+                <div className="py-8 text-center text-muted-foreground">
                   <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No notifications</p>
                 </div>
@@ -756,8 +1413,8 @@ const NotificationsPanel: React.FC<{
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="p-3 border-t border-border text-center">
-                <button className="text-sm text-accent hover:underline">
+              <div className="p-3 border-t border-border">
+                <button className="w-full text-xs text-center text-primary hover:text-primary/80 transition-colors">
                   View all notifications
                 </button>
               </div>
@@ -769,141 +1426,81 @@ const NotificationsPanel: React.FC<{
   );
 };
 
-// Quick actions panel
-const QuickActionsPanel: React.FC<{
-  actions: QuickAction[];
-  onActionClick?: (action: QuickAction) => void;
-}> = ({ actions, onActionClick }) => {
-  const [isOpen, setIsOpen] = useState(false);
+// User menu dropdown component
+interface UserMenuDropdownProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  menuItems: UserMenuItem[];
+  className?: string;
+}
+
+const UserMenuDropdown: React.FC<UserMenuDropdownProps> = ({
+  isOpen,
+  onToggle,
+  onClose,
+  menuItems,
+  className
+}) => {
+  const { currentUser, isLoading } = useCurrentUser();
+  const { logout } = useAuth();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle clicks outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
+  const handleMenuItemClick = (item: UserMenuItem) => {
+    if (item.onClick) {
+      item.onClick();
+    }
+    if (item.id === 'logout') {
+      logout();
+    }
+    onClose();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-2">
+        <LoadingSpinner size="sm" />
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className={cn('relative', className)}>
       <motion.button
-        className={cn(
-          "p-2 rounded-lg hover:bg-accent/10 transition-colors",
-          isOpen && "bg-accent/10"
-        )}
-        onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        onClick={onToggle}
+        className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors"
       >
-        <Plus className="w-5 h-5" />
-      </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-full right-0 mt-2 w-80 bg-popover border border-border rounded-lg shadow-lg z-50"
-          >
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold">Quick Actions</h3>
-            </div>
-            <div className="p-2 grid grid-cols-2 gap-2">
-              {actions.map((action) => (
-                <motion.button
-                  key={action.id}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-accent/10 transition-colors text-center"
-                  onClick={() => {
-                    if (onActionClick) {
-                      onActionClick(action);
-                    }
-                    setIsOpen(false);
-                  }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                    {action.icon}
-                  </div>
-                  <span className="text-sm font-medium">{action.label}</span>
-                  {action.shortcut && (
-                    <kbd className="text-xs bg-muted px-1 py-0.5 rounded">
-                      {action.shortcut}
-                    </kbd>
-                  )}
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// User menu
-const UserMenu: React.FC<{
-  user: UserProfile;
-  onLogout: () => void;
-}> = ({ user, onLogout }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
-
-  const menuItems = [
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: <User className="w-4 h-4" />,
-      href: '/rbac/profile'
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings className="w-4 h-4" />,
-      href: '/rbac/settings'
-    },
-    {
-      id: 'security',
-      label: 'Security',
-      icon: <Shield className="w-4 h-4" />,
-      href: '/rbac/security'
-    },
-    {
-      id: 'theme',
-      label: `Theme: ${theme}`,
-      icon: theme === 'light' ? <Sun className="w-4 h-4" /> : theme === 'dark' ? <Moon className="w-4 h-4" /> : <Monitor className="w-4 h-4" />,
-      onClick: toggleTheme
-    },
-    { id: 'divider' },
-    {
-      id: 'help',
-      label: 'Help & Support',
-      icon: <HelpCircle className="w-4 h-4" />,
-      href: '/help'
-    },
-    {
-      id: 'logout',
-      label: 'Sign Out',
-      icon: <LogOut className="w-4 h-4" />,
-      onClick: onLogout,
-      variant: 'destructive' as const
-    }
-  ];
-
-  return (
-    <div className="relative">
-      <motion.button
-        className={cn(
-          "flex items-center gap-2 p-2 rounded-lg hover:bg-accent/10 transition-colors",
-          isOpen && "bg-accent/10"
-        )}
-        onClick={() => setIsOpen(!isOpen)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <div className="w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-semibold text-sm">
-          {user.fullName?.split(' ').map(n => n[0]).join('') || user.username[0].toUpperCase()}
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+          <User className="w-4 h-4 text-primary" />
         </div>
         <div className="hidden md:block text-left">
-          <div className="text-sm font-medium">{user.fullName || user.username}</div>
-          <div className="text-xs text-muted-foreground">{user.role}</div>
+          <div className="text-sm font-medium truncate max-w-32">
+            {currentUser?.username || 'User'}
+          </div>
+          <div className="text-xs text-muted-foreground truncate max-w-32">
+            {currentUser?.email || 'user@example.com'}
+          </div>
         </div>
         <ChevronDown className={cn(
-          "w-4 h-4 transition-transform",
-          isOpen && "rotate-180"
+          'w-4 h-4 transition-transform duration-200',
+          isOpen && 'rotate-180'
         )} />
       </motion.button>
 
@@ -913,49 +1510,63 @@ const UserMenu: React.FC<{
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            className="absolute top-full right-0 mt-2 w-64 bg-popover border border-border rounded-lg shadow-lg z-50"
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute top-full right-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg z-50"
           >
-            {/* User Info */}
+            {/* User info header */}
             <div className="p-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-semibold">
-                  {user.fullName?.split(' ').map(n => n[0]).join('') || user.username[0].toUpperCase()}
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{user.fullName || user.username}</div>
-                  <div className="text-sm text-muted-foreground truncate">{user.email}</div>
-                  <div className="text-xs text-muted-foreground">{user.role}</div>
+                  <div className="font-medium text-sm truncate">
+                    {currentUser?.username || 'User'}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {currentUser?.email || 'user@example.com'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      {currentUser?.roles?.[0]?.name || 'User'}
+                    </span>
+                  </div>
                 </div>
               </div>
-              {user.lastLogin && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Last login: {user.lastLogin.toLocaleDateString()}
-                </div>
-              )}
             </div>
 
-            {/* Menu Items */}
-            <div className="p-2">
-              {menuItems.map((item) => (
-                item.id === 'divider' ? (
-                  <div key="divider" className="my-2 border-t border-border" />
+            {/* Menu items */}
+            <div className="py-2">
+              {menuItems.map((item, index) => (
+                item.separator ? (
+                  <div key={item.id} className="my-1 border-t border-border" />
                 ) : (
                   <motion.button
                     key={item.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleMenuItemClick(item)}
+                    disabled={item.disabled}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-accent/10 transition-colors",
-                      item.variant === 'destructive' && "text-red-600 hover:bg-red-50"
+                      'w-full flex items-center gap-3 px-4 py-2 text-left text-sm hover:bg-accent transition-colors',
+                      item.variant === 'destructive' && 'text-destructive hover:bg-destructive/10',
+                      item.disabled && 'opacity-50 cursor-not-allowed'
                     )}
-                    onClick={() => {
-                      if (item.onClick) {
-                        item.onClick();
-                      }
-                      setIsOpen(false);
-                    }}
-                    whileHover={{ backgroundColor: item.variant === 'destructive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(var(--accent), 0.1)' }}
                   >
                     {item.icon}
-                    <span className="text-sm">{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && (
+                      <span className="px-1.5 py-0.5 text-xs bg-muted text-muted-foreground rounded">
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.shortcut && (
+                      <kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted text-muted-foreground rounded border">
+                        {item.shortcut}
+                      </kbd>
+                    )}
                   </motion.button>
                 )
               ))}
@@ -967,218 +1578,302 @@ const UserMenu: React.FC<{
   );
 };
 
-// Main RBACHeader component
+// Quick actions component
+interface QuickActionsProps {
+  actions: QuickAction[];
+  className?: string;
+}
+
+const QuickActions: React.FC<QuickActionsProps> = ({ actions, className }) => {
+  const { hasPermission } = usePermissionCheck();
+
+  const visibleActions = actions.filter(action => 
+    !action.disabled && (!action.permission || hasPermission(action.permission))
+  ).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  if (visibleActions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      {visibleActions.map((action, index) => (
+        <motion.button
+          key={action.id}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={action.onClick}
+          title={action.tooltip}
+          className={cn(
+            'relative flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+            action.variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
+            action.variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+            action.variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+            (!action.variant || action.variant === 'default') && 'bg-accent text-accent-foreground hover:bg-accent/80'
+          )}
+        >
+          {action.icon}
+          <span className="hidden sm:inline">{action.label}</span>
+          {action.badge && (
+            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+              {action.badge}
+            </span>
+          )}
+        </motion.button>
+      ))}
+    </div>
+  );
+};
+
+// Breadcrumbs component
+interface BreadcrumbsProps {
+  items: BreadcrumbItem[];
+  className?: string;
+}
+
+const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className }) => {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <nav className={cn('flex items-center space-x-1 text-sm', className)}>
+      {items.map((item, index) => (
+        <React.Fragment key={item.id}>
+          {index > 0 && (
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          )}
+          {item.active ? (
+            <span className="flex items-center gap-1 font-medium text-foreground">
+              {item.icon}
+              {item.label}
+            </span>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={item.onClick}
+              disabled={item.disabled}
+              className={cn(
+                'flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors',
+                item.disabled && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </motion.button>
+          )}
+        </React.Fragment>
+      ))}
+    </nav>
+  );
+};
+
+// System status component
+interface SystemStatusProps {
+  className?: string;
+}
+
+const SystemStatus: React.FC<SystemStatusProps> = ({ className }) => {
+  const { isConnected, connectionState, lastPing } = useRBACWebSocket();
+
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      <div className="flex items-center gap-1">
+        <div className={cn(
+          'w-2 h-2 rounded-full',
+          isConnected ? 'bg-green-500' : 'bg-red-500'
+        )} />
+        <span className="text-xs text-muted-foreground">
+          {isConnected ? 'Connected' : 'Disconnected'}
+        </span>
+      </div>
+      {lastPing && (
+        <span className="text-xs text-muted-foreground">
+          {lastPing}ms
+        </span>
+      )}
+    </div>
+  );
+};
+
+// Main RBAC Header component
 export const RBACHeader: React.FC<RBACHeaderProps> = ({
-  config: configOverrides = {},
+  config: userConfig = {},
+  className,
   onMenuToggle,
   onSearch,
-  onNotificationClick,
-  onQuickActionClick,
-  className,
-  children,
-  customActions,
-  title,
-  subtitle,
-  showMenuButton = true
+  customActions = [],
+  breadcrumbs = [],
+  hideElements = [],
+  showOnlyElements = []
 }) => {
-  const { currentUser, isLoading: userLoading, logout } = useCurrentUser();
-  const { isConnected, connectionState } = useRBACWebSocket();
-  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Merge configurations
+  const config = useMemo(() => ({
+    ...defaultHeaderConfig,
+    ...userConfig
+  }), [userConfig]);
 
-  // Header configuration
-  const config: HeaderConfig = useMemo(() => ({
-    layout: 'sticky',
-    height: 64,
-    showBreadcrumbs: true,
-    showSearch: true,
-    showNotifications: true,
-    showQuickActions: true,
-    showUserMenu: true,
-    showThemeToggle: true,
-    showConnectionStatus: true,
-    maxNotifications: 50,
-    searchPlaceholder: 'Search users, roles, permissions...',
-    theme: {
-      variant: 'default',
-      background: 'blur'
-    },
-    animations: {
-      enabled: true,
-      duration: 200
-    },
-    ...configOverrides
-  }), [configOverrides]);
+  // Header state
+  const {
+    searchQuery,
+    searchResults,
+    isSearchOpen,
+    setIsSearchOpen,
+    isNotificationsOpen,
+    setIsNotificationsOpen,
+    isUserMenuOpen,
+    setIsUserMenuOpen,
+    notifications,
+    theme,
+    setTheme,
+    handleSearch,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    clearNotification
+  } = useHeaderState();
 
-  // Hooks
-  const notifications = useNotifications();
-  const { quickActions } = useQuickActions();
+  // Quick actions
+  const quickActions = useMemo(() => [
+    ...getDefaultQuickActions(),
+    ...customActions
+  ], [customActions]);
 
-  // Handle menu toggle
-  const handleMenuToggle = useCallback(() => {
-    if (onMenuToggle) {
-      onMenuToggle();
+  // User menu items
+  const userMenuItems = useMemo(() => getUserMenuItems(), []);
+
+  // Handle search
+  const handleSearchWrapper = useCallback((query: string) => {
+    handleSearch(query);
+    if (onSearch) {
+      onSearch(query);
     }
-  }, [onMenuToggle]);
+  }, [handleSearch, onSearch]);
 
-  // Handle logout
-  const handleLogout = useCallback(async () => {
-    try {
-      await logout();
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  }, [logout, router]);
+  // Auto-hide on scroll
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
-  // Handle quick action click
-  const handleQuickActionClick = useCallback((action: QuickAction) => {
-    if (action.href) {
-      router.push(action.href);
-    }
-    if (action.onClick) {
-      action.onClick();
-    }
-    if (onQuickActionClick) {
-      onQuickActionClick(action);
-    }
-  }, [router, onQuickActionClick]);
+  useEffect(() => {
+    if (!config.autoHideOnScroll) return;
 
-  const headerVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: config.animations.duration / 1000,
-        ease: 'easeOut'
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const isScrollingDown = currentScrollY > lastScrollY.current;
+
+      if (isScrollingDown && currentScrollY > 100) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
       }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [config.autoHideOnScroll]);
+
+  const shouldShowElement = (elementName: string) => {
+    if (showOnlyElements.length > 0) {
+      return showOnlyElements.includes(elementName);
     }
+    return !hideElements.includes(elementName);
   };
 
   return (
     <motion.header
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: isVisible ? 0 : -100, opacity: isVisible ? 1 : 0 }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
       className={cn(
-        "w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        config.layout === 'fixed' && "fixed top-0 z-50",
-        config.layout === 'sticky' && "sticky top-0 z-40",
-        config.theme.background === 'solid' && "bg-background",
-        config.theme.background === 'transparent' && "bg-transparent",
-        config.theme.variant === 'compact' && "h-12",
-        config.theme.variant === 'spacious' && "h-20",
+        'flex items-center justify-between gap-4 px-6 py-3 bg-background/95 backdrop-blur-sm transition-all duration-200',
+        config.sticky && 'sticky top-0 z-40',
+        config.showBorder && 'border-b border-border',
+        config.showShadow && 'shadow-sm',
+        config.variant === 'compact' && 'py-2',
+        config.variant === 'expanded' && 'py-4',
         className
       )}
       style={{ height: config.height }}
-      variants={headerVariants}
-      initial="hidden"
-      animate="visible"
     >
-      <div className="flex items-center h-full px-4 lg:px-6">
-        {/* Menu Button */}
-        {showMenuButton && (
+      {/* Left section */}
+      <div className="flex items-center gap-4">
+        {/* Menu toggle */}
+        {shouldShowElement('menuToggle') && onMenuToggle && (
           <motion.button
-            className="p-2 rounded-lg hover:bg-accent/10 transition-colors mr-2 lg:hidden"
-            onClick={handleMenuToggle}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onMenuToggle}
+            className="p-2 rounded-lg hover:bg-accent transition-colors lg:hidden"
+            title="Toggle menu"
           >
             <Menu className="w-5 h-5" />
           </motion.button>
         )}
 
-        {/* Title Section */}
-        {(title || subtitle) && (
-          <div className="flex-1 min-w-0 mr-4">
-            {title && (
-              <h1 className="text-lg font-semibold truncate">{title}</h1>
-            )}
-            {subtitle && (
-              <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
-            )}
-          </div>
+        {/* Breadcrumbs */}
+        {shouldShowElement('breadcrumbs') && config.showBreadcrumbs && breadcrumbs.length > 0 && (
+          <Breadcrumbs items={breadcrumbs} className="hidden md:flex" />
         )}
+      </div>
 
-        {/* Connection Status */}
-        {config.showConnectionStatus && !isConnected && (
-          <motion.div
-            className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg mr-4"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-            <span className="text-xs text-yellow-800">Reconnecting...</span>
-          </motion.div>
-        )}
-
+      {/* Center section */}
+      <div className="flex items-center gap-4 flex-1 justify-center">
         {/* Search */}
-        {config.showSearch && (
-          <div className="hidden md:block flex-1 max-w-lg mr-4">
-            <GlobalSearch
-              placeholder={config.searchPlaceholder}
-              onSearch={onSearch}
-            />
-          </div>
+        {shouldShowElement('search') && config.showSearch && (
+          <HeaderSearch
+            searchQuery={searchQuery}
+            searchResults={searchResults}
+            isOpen={isSearchOpen}
+            onSearch={handleSearchWrapper}
+            onToggle={() => setIsSearchOpen(!isSearchOpen)}
+            onClose={() => setIsSearchOpen(false)}
+            placeholder="Search RBAC system..."
+            maxResults={config.maxSearchResults}
+          />
+        )}
+      </div>
+
+      {/* Right section */}
+      <div className="flex items-center gap-3">
+        {/* Quick actions */}
+        {shouldShowElement('quickActions') && config.showQuickActions && (
+          <QuickActions actions={quickActions} className="hidden lg:flex" />
         )}
 
-        {/* Custom Actions */}
-        {customActions && (
-          <div className="flex items-center gap-2 mr-4">
-            {customActions}
-          </div>
+        {/* System status */}
+        {shouldShowElement('systemStatus') && config.showSystemStatus && (
+          <SystemStatus className="hidden xl:flex" />
         )}
 
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-2">
-          {/* Mobile Search */}
-          {config.showSearch && (
-            <motion.button
-              className="p-2 rounded-lg hover:bg-accent/10 transition-colors md:hidden"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Search className="w-5 h-5" />
-            </motion.button>
-          )}
+        {/* Notifications */}
+        {shouldShowElement('notifications') && config.showNotifications && (
+          <NotificationsDropdown
+            notifications={notifications}
+            isOpen={isNotificationsOpen}
+            onToggle={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            onClose={() => setIsNotificationsOpen(false)}
+            onMarkAsRead={markNotificationAsRead}
+            onMarkAllAsRead={markAllNotificationsAsRead}
+            onClear={clearNotification}
+          />
+        )}
 
-          {/* Quick Actions */}
-          {config.showQuickActions && quickActions.length > 0 && (
-            <QuickActionsPanel
-              actions={quickActions}
-              onActionClick={handleQuickActionClick}
-            />
-          )}
-
-          {/* Notifications */}
-          {config.showNotifications && (
-            <NotificationsPanel
-              notifications={notifications.notifications}
-              unreadCount={notifications.unreadCount}
-              isOpen={notifications.isOpen}
-              onToggle={() => notifications.setIsOpen(!notifications.isOpen)}
-              onNotificationClick={onNotificationClick}
-              onMarkAsRead={notifications.markAsRead}
-              onMarkAllAsRead={notifications.markAllAsRead}
-              onDelete={notifications.deleteNotification}
-            />
-          )}
-
-          {/* User Menu */}
-          {config.showUserMenu && currentUser && (
-            <UserMenu
-              user={currentUser}
-              onLogout={handleLogout}
-            />
-          )}
-
-          {/* Loading State */}
-          {userLoading && (
-            <div className="p-2">
-              <LoadingSpinner size="sm" />
-            </div>
-          )}
-        </div>
-
-        {/* Children */}
-        {children}
+        {/* User menu */}
+        {shouldShowElement('userMenu') && config.showUserMenu && (
+          <UserMenuDropdown
+            isOpen={isUserMenuOpen}
+            onToggle={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            onClose={() => setIsUserMenuOpen(false)}
+            menuItems={userMenuItems}
+          />
+        )}
       </div>
     </motion.header>
   );
