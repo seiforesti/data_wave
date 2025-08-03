@@ -1516,7 +1516,11 @@ PREBUILT_CONDITION_TEMPLATES = [
 # =====================
 # Resource Ancestor/Descendant API Endpoints (Efficient, CTE-backed)
 # =====================
-from app.services.resource_service import get_resource_ancestors, get_resource_descendants
+from app.services.resource_service import (
+    get_resource_ancestors, get_resource_descendants, sync_data_sources_to_resources,
+    get_resource_by_data_source, create_schema_resources_for_data_source,
+    create_table_resources_for_schema, get_resources_by_data_source_hierarchy
+)
 
 # --- Get all ancestors of a resource (up to root) ---
 @router.get("/resources/{resource_id}/ancestors")
@@ -1535,6 +1539,91 @@ def api_get_resource_descendants(resource_id: int, db: Session = Depends(get_ses
     Uses recursive CTE if supported by the DB, otherwise falls back to Python recursion.
     """
     return [r.dict() for r in get_resource_descendants(db, resource_id)]
+
+# --- Data Source Integration Endpoints ---
+@router.post("/resources/sync-data-sources")
+def sync_data_sources_endpoint(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    """
+    Synchronize data sources to RBAC resources for production-ready resource management.
+    Creates hierarchical resource structure based on real data sources.
+    """
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    try:
+        result = sync_data_sources_to_resources(db)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to sync data sources: {str(e)}")
+
+@router.get("/resources/data-source/{data_source_id}")
+def get_resource_by_data_source_endpoint(data_source_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    """Get the RBAC resource associated with a specific data source."""
+    resource = get_resource_by_data_source(db, data_source_id)
+    if not resource:
+        raise HTTPException(status_code=404, detail="No resource found for this data source")
+    return resource.dict()
+
+@router.get("/resources/data-source/{data_source_id}/hierarchy")
+def get_data_source_hierarchy_endpoint(data_source_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    """Get all resources in the hierarchy for a specific data source."""
+    hierarchy = get_resources_by_data_source_hierarchy(db, data_source_id)
+    return {
+        "data_source": [r.dict() for r in hierarchy["data_source"]],
+        "databases": [r.dict() for r in hierarchy["databases"]],
+        "schemas": [r.dict() for r in hierarchy["schemas"]],
+        "tables": [r.dict() for r in hierarchy["tables"]]
+    }
+
+class CreateSchemaResourcesRequest(BaseModel):
+    schemas: List[str]
+
+@router.post("/resources/data-source/{data_source_id}/schemas")
+def create_schema_resources_endpoint(
+    data_source_id: int, 
+    request: CreateSchemaResourcesRequest,
+    db: Session = Depends(get_session), 
+    current_user: User = Depends(get_current_user)
+):
+    """Create schema resources under a data source resource."""
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    try:
+        resources = create_schema_resources_for_data_source(db, data_source_id, request.schemas)
+        return {
+            "created_count": len(resources),
+            "resources": [r.dict() for r in resources]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create schema resources: {str(e)}")
+
+class CreateTableResourcesRequest(BaseModel):
+    tables: List[str]
+
+@router.post("/resources/schema/{schema_resource_id}/tables")
+def create_table_resources_endpoint(
+    schema_resource_id: int,
+    request: CreateTableResourcesRequest,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Create table resources under a schema resource."""
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    try:
+        resources = create_table_resources_for_schema(db, schema_resource_id, request.tables)
+        return {
+            "created_count": len(resources),
+            "resources": [r.dict() for r in resources]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create table resources: {str(e)}")
 
 
 # =====================
