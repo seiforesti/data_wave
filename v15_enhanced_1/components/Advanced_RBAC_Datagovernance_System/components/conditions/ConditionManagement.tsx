@@ -13,8 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,116 +48,105 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DataTable } from '../shared/DataTable';
 import {
-  Settings,
   Plus,
-  Search,
-  Filter,
-  MoreVertical,
+  Settings,
+  Code,
+  Eye,
+  EyeOff,
   Edit,
   Trash2,
   Copy,
-  Eye,
-  EyeOff,
   Download,
   Upload,
   RefreshCw,
+  Search,
+  Filter,
+  MoreVertical,
+  Play,
+  Pause,
+  Square,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Info,
   Clock,
+  Zap,
+  Target,
   Activity,
   BarChart3,
-  PieChart,
   TrendingUp,
   TrendingDown,
-  Target,
-  Shield,
-  Key,
-  Lock,
-  Unlock,
   FileText,
-  Code,
   Database,
-  Server,
   Network,
-  Globe,
   Users,
   User,
-  Crown,
-  Tag,
+  Shield,
+  Lock,
+  Key,
+  Globe,
+  MapPin,
   Calendar,
+  Loader2,
+  Save,
+  Share,
   Star,
   Heart,
   Bookmark,
-  Share,
-  ArrowLeft,
-  GitBranch,
-  Layers,
-  Workflow,
-  Zap,
+  Tag,
   Bell,
   Mail,
   Phone,
-  MapPin,
   Home,
   Building,
+  Crown,
   Archive,
   BookOpen,
   Terminal,
   Monitor,
   Cpu,
-  Play,
-  Pause,
-  Square,
-  RotateCcw,
-  Save,
-  Loader2,
+  HelpCircle,
+  ArrowLeft,
+  GitBranch,
+  Layers,
+  Workflow,
 } from 'lucide-react';
-
-// Hooks and Services
-import { useConditions } from '../../hooks/useConditions';
-import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { usePermissions } from '../../hooks/usePermissions';
-import { useAuditLogs } from '../../hooks/useAuditLogs';
-import { useRBACWebSocket } from '../../hooks/useRBACWebSocket';
-
-// Types
-import type { 
-  Condition, 
-  ConditionTemplate, 
-  ConditionValidationResult,
-  ConditionTest,
-  ConditionAnalytics 
-} from '../../types/condition.types';
-
-// Utils
-import { hasPermission } from '../../utils/permission.utils';
-import { formatDate, formatDateTime } from '../../utils/format.utils';
 
 // Sub-components
 import ConditionBuilder from './ConditionBuilder';
 import ConditionTemplates from './ConditionTemplates';
 import ConditionValidator from './ConditionValidator';
 
+// Hooks and Services
+import { useConditions } from '../../hooks/useConditions';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { usePermissions } from '../../hooks/usePermissions';
+import { useRBACWebSocket } from '../../hooks/useRBACWebSocket';
+
+// Types
+import type { 
+  Condition,
+  ConditionTemplate,
+  ConditionValidationResult,
+  ConditionStats,
+  ConditionFilter
+} from '../../types/condition.types';
+
+// Utils
+import { hasPermission } from '../../utils/permission.utils';
+import { formatDate, formatDuration } from '../../utils/format.utils';
+
 interface ConditionManagementProps {
   className?: string;
 }
 
-interface ConditionStats {
-  total: number;
-  active: number;
-  inactive: number;
-  templates: number;
-  policies: number;
-  avgComplexity: number;
-  recentlyCreated: number;
-  validationErrors: number;
-}
-
-interface ViewMode {
-  type: 'list' | 'builder' | 'templates' | 'validator' | 'details';
-  data?: any;
+interface ConditionWithDetails extends Condition {
+  template?: ConditionTemplate;
+  validation?: ConditionValidationResult;
+  usage_count?: number;
+  last_tested?: string;
+  performance_score?: number;
+  security_score?: number;
 }
 
 const CONDITION_TYPES = [
@@ -172,114 +159,134 @@ const CONDITION_TYPES = [
   { value: 'custom', label: 'Custom', icon: Settings, color: 'bg-gray-100 text-gray-800' },
 ];
 
-const CONDITION_OPERATORS = [
-  { value: 'equals', label: 'Equals', symbol: '=' },
-  { value: 'not_equals', label: 'Not Equals', symbol: '!=' },
-  { value: 'greater_than', label: 'Greater Than', symbol: '>' },
-  { value: 'less_than', label: 'Less Than', symbol: '<' },
-  { value: 'greater_equal', label: 'Greater or Equal', symbol: '>=' },
-  { value: 'less_equal', label: 'Less or Equal', symbol: '<=' },
-  { value: 'contains', label: 'Contains', symbol: 'CONTAINS' },
-  { value: 'starts_with', label: 'Starts With', symbol: 'STARTS_WITH' },
-  { value: 'ends_with', label: 'Ends With', symbol: 'ENDS_WITH' },
-  { value: 'in', label: 'In List', symbol: 'IN' },
-  { value: 'not_in', label: 'Not In List', symbol: 'NOT_IN' },
-  { value: 'between', label: 'Between', symbol: 'BETWEEN' },
-  { value: 'regex', label: 'Regex Match', symbol: 'REGEX' },
+const CONDITION_STATUSES = [
+  { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },
+  { value: 'inactive', label: 'Inactive', color: 'bg-gray-100 text-gray-800' },
+  { value: 'draft', label: 'Draft', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'deprecated', label: 'Deprecated', color: 'bg-red-100 text-red-800' },
 ];
 
-const CONDITION_STATUSES = [
-  { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  { value: 'inactive', label: 'Inactive', color: 'bg-gray-100 text-gray-800', icon: XCircle },
-  { value: 'draft', label: 'Draft', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  { value: 'error', label: 'Error', color: 'bg-red-100 text-red-800', icon: AlertTriangle },
-];
+const DEFAULT_FILTERS: ConditionFilter = {
+  search: '',
+  type: 'all',
+  status: 'all',
+  complexity: 'all',
+  performance: 'all',
+  tags: [],
+  dateRange: {
+    start: null,
+    end: null
+  }
+};
 
 const ConditionManagement: React.FC<ConditionManagementProps> = ({
   className = ''
 }) => {
   // State Management
-  const [conditions, setConditions] = useState<Condition[]>([]);
+  const [conditions, setConditions] = useState<ConditionWithDetails[]>([]);
   const [templates, setTemplates] = useState<ConditionTemplate[]>([]);
-  const [analytics, setAnalytics] = useState<ConditionAnalytics | null>(null);
-  const [stats, setStats] = useState<ConditionStats | null>(null);
+  const [selectedCondition, setSelectedCondition] = useState<ConditionWithDetails | null>(null);
+  const [conditionStats, setConditionStats] = useState<ConditionStats | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  
-  // View Management
-  const [currentView, setCurrentView] = useState<ViewMode>({ type: 'list' });
-  const [selectedCondition, setSelectedCondition] = useState<Condition | null>(null);
+  const [activeView, setActiveView] = useState<'list' | 'builder' | 'templates' | 'validator'>('list');
+  const [activeTab, setActiveTab] = useState('conditions');
   
   // Filters and Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState<ConditionFilter>(DEFAULT_FILTERS);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [sortBy, setSortBy] = useState<string>('updated_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Dialog State
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   
-  // Bulk Operations
-  const [selectedConditions, setSelectedConditions] = useState<Set<string>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
-  
+  // Builder State
+  const [builderCondition, setBuilderCondition] = useState<Condition | null>(null);
+  const [validatorExpression, setValidatorExpression] = useState<string>('');
+
   // Hooks
   const { user: currentUser } = useCurrentUser();
-  const {
-    getConditions,
+  const { 
+    getConditions, 
     getConditionTemplates,
-    getConditionAnalytics,
+    getConditionStats,
     createCondition,
     updateCondition,
     deleteCondition,
-    duplicateCondition,
-    validateCondition,
-    testCondition,
     exportConditions,
-    importConditions
+    importConditions,
+    validateCondition
   } = useConditions();
   const { checkPermission } = usePermissions();
   const { subscribe, unsubscribe } = useRBACWebSocket();
 
   // Computed Properties
-  const canManageConditions = useMemo(() => {
-    return currentUser && hasPermission(currentUser, 'condition:manage');
-  }, [currentUser]);
+  const canManageConditions = currentUser && hasPermission(currentUser, 'condition:manage');
+  const canCreateConditions = currentUser && hasPermission(currentUser, 'condition:create');
+  const canDeleteConditions = currentUser && hasPermission(currentUser, 'condition:delete');
 
-  const canCreateConditions = useMemo(() => {
-    return currentUser && hasPermission(currentUser, 'condition:create');
-  }, [currentUser]);
-
-  const canDeleteConditions = useMemo(() => {
-    return currentUser && hasPermission(currentUser, 'condition:delete');
-  }, [currentUser]);
-
+  // Filtered and Sorted Conditions
   const filteredConditions = useMemo(() => {
     let filtered = conditions;
 
     // Search filter
-    if (searchTerm) {
+    if (filters.search) {
       filtered = filtered.filter(condition =>
-        condition.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        condition.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        condition.expression.toLowerCase().includes(searchTerm.toLowerCase())
+        condition.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        condition.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        condition.expression.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
 
     // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(condition => condition.type === typeFilter);
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(condition => condition.type === filters.type);
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(condition => condition.status === statusFilter);
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(condition => condition.status === filters.status);
+    }
+
+    // Complexity filter
+    if (filters.complexity !== 'all') {
+      const complexity = parseInt(filters.complexity);
+      filtered = filtered.filter(condition => 
+        Math.floor((condition.metadata?.complexity || 0) / 2) === Math.floor(complexity / 2)
+      );
+    }
+
+    // Performance filter
+    if (filters.performance !== 'all') {
+      const performance = parseInt(filters.performance);
+      filtered = filtered.filter(condition => 
+        (condition.performance_score || 0) >= performance
+      );
+    }
+
+    // Tags filter
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter(condition =>
+        filters.tags.some(tag => condition.metadata?.tags?.includes(tag))
+      );
+    }
+
+    // Date range filter
+    if (filters.dateRange.start || filters.dateRange.end) {
+      filtered = filtered.filter(condition => {
+        const date = new Date(condition.updated_at || condition.created_at);
+        const start = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
+        const end = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
+        
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+        return true;
+      });
     }
 
     // Sort
@@ -300,21 +307,23 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
           aValue = a.status;
           bValue = b.status;
           break;
-        case 'created_at':
-          aValue = a.created_at;
-          bValue = b.created_at;
+        case 'complexity':
+          aValue = a.metadata?.complexity || 0;
+          bValue = b.metadata?.complexity || 0;
+          break;
+        case 'performance':
+          aValue = a.performance_score || 0;
+          bValue = b.performance_score || 0;
+          break;
+        case 'usage':
+          aValue = a.usage_count || 0;
+          bValue = b.usage_count || 0;
           break;
         case 'updated_at':
-          aValue = a.updated_at;
-          bValue = b.updated_at;
-          break;
-        case 'complexity':
-          aValue = a.complexity || 0;
-          bValue = b.complexity || 0;
-          break;
         default:
-          aValue = a.name;
-          bValue = b.name;
+          aValue = a.updated_at || a.created_at;
+          bValue = b.updated_at || b.created_at;
+          break;
       }
 
       if (sortOrder === 'asc') {
@@ -325,63 +334,41 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
     });
 
     return filtered;
-  }, [conditions, searchTerm, typeFilter, statusFilter, sortBy, sortOrder]);
-
-  const conditionStats = useMemo(() => {
-    if (!conditions.length) return null;
-
-    const total = conditions.length;
-    const active = conditions.filter(c => c.status === 'active').length;
-    const inactive = conditions.filter(c => c.status === 'inactive').length;
-    const templateCount = templates.length;
-    const avgComplexity = conditions.reduce((sum, c) => sum + (c.complexity || 0), 0) / total;
-    const recentlyCreated = conditions.filter(c => 
-      new Date(c.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    ).length;
-    const validationErrors = conditions.filter(c => c.status === 'error').length;
-
-    return {
-      total,
-      active,
-      inactive,
-      templates: templateCount,
-      policies: conditions.filter(c => c.is_policy).length,
-      avgComplexity,
-      recentlyCreated,
-      validationErrors
-    };
-  }, [conditions, templates]);
+  }, [conditions, filters, sortBy, sortOrder]);
 
   // Data Loading
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError(null);
+
     try {
-      const [conditionsData, templatesData, analyticsData] = await Promise.all([
+      const [conditionsData, templatesData, statsData] = await Promise.all([
         getConditions(),
         getConditionTemplates(),
-        getConditionAnalytics()
+        getConditionStats()
       ]);
 
       setConditions(conditionsData.items);
       setTemplates(templatesData.items);
-      setAnalytics(analyticsData);
-
+      setConditionStats(statsData);
     } catch (err) {
-      console.error('Error loading condition data:', err);
-      setError('Failed to load condition data');
+      console.error('Error loading conditions:', err);
+      setError('Failed to load conditions data');
     } finally {
       setLoading(false);
     }
-  }, [getConditions, getConditionTemplates, getConditionAnalytics]);
+  }, [getConditions, getConditionTemplates, getConditionStats]);
 
   // Real-time Updates
   useEffect(() => {
     const handleConditionUpdate = (data: any) => {
-      loadData();
+      if (data.type === 'condition_updated') {
+        loadData();
+      }
     };
 
     subscribe('conditions', handleConditionUpdate);
-    
+
     return () => {
       unsubscribe('conditions', handleConditionUpdate);
     };
@@ -392,93 +379,93 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
     loadData();
   }, [loadData]);
 
-  // Effect for bulk actions visibility
-  useEffect(() => {
-    setShowBulkActions(selectedConditions.size > 0);
-  }, [selectedConditions.size]);
-
-  // Action Handlers
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await loadData();
-    } catch (err) {
-      console.error('Error refreshing data:', err);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadData]);
-
-  const handleCreateCondition = useCallback(() => {
-    setCurrentView({ type: 'builder', data: null });
-  }, []);
-
-  const handleEditCondition = useCallback((condition: Condition) => {
-    setCurrentView({ type: 'builder', data: condition });
-  }, []);
-
-  const handleViewCondition = useCallback((condition: Condition) => {
-    setCurrentView({ type: 'details', data: condition });
-  }, []);
-
-  const handleDuplicateCondition = useCallback(async (condition: Condition) => {
+  // Event Handlers
+  const handleCreateCondition = useCallback(async (conditionData: Partial<Condition>) => {
     if (!canCreateConditions) return;
 
     try {
-      await duplicateCondition(condition.id);
-      await loadData();
+      const newCondition = await createCondition(conditionData);
+      setConditions(prev => [newCondition, ...prev]);
+      setActiveView('list');
     } catch (err) {
-      console.error('Error duplicating condition:', err);
-      setError('Failed to duplicate condition');
+      console.error('Error creating condition:', err);
+      setError('Failed to create condition');
     }
-  }, [canCreateConditions, duplicateCondition, loadData]);
+  }, [canCreateConditions, createCondition]);
 
-  const handleDeleteCondition = useCallback(async (conditionId: string) => {
+  const handleUpdateCondition = useCallback(async (id: string, conditionData: Partial<Condition>) => {
+    if (!canManageConditions) return;
+
+    try {
+      const updatedCondition = await updateCondition(id, conditionData);
+      setConditions(prev => prev.map(c => c.id === id ? updatedCondition : c));
+      setActiveView('list');
+    } catch (err) {
+      console.error('Error updating condition:', err);
+      setError('Failed to update condition');
+    }
+  }, [canManageConditions, updateCondition]);
+
+  const handleDeleteCondition = useCallback(async (condition: ConditionWithDetails) => {
     if (!canDeleteConditions) return;
 
     try {
-      await deleteCondition(conditionId);
-      setShowDeleteDialog(false);
+      await deleteCondition(condition.id);
+      setConditions(prev => prev.filter(c => c.id !== condition.id));
+      setShowDeleteConfirm(false);
       setSelectedCondition(null);
-      await loadData();
     } catch (err) {
       console.error('Error deleting condition:', err);
       setError('Failed to delete condition');
     }
-  }, [canDeleteConditions, deleteCondition, loadData]);
+  }, [canDeleteConditions, deleteCondition]);
 
-  const handleSaveCondition = useCallback(async (conditionData: Partial<Condition>) => {
+  const handleDuplicateCondition = useCallback(async (condition: ConditionWithDetails) => {
+    if (!canCreateConditions) return;
+
     try {
-      if (currentView.data?.id) {
-        await updateCondition(currentView.data.id, conditionData);
-      } else {
-        await createCondition(conditionData);
-      }
-      setCurrentView({ type: 'list' });
-      await loadData();
+      const duplicateData = {
+        ...condition,
+        name: `${condition.name} (Copy)`,
+        id: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      };
+      
+      await handleCreateCondition(duplicateData);
     } catch (err) {
-      console.error('Error saving condition:', err);
-      setError('Failed to save condition');
+      console.error('Error duplicating condition:', err);
     }
-  }, [currentView.data, updateCondition, createCondition, loadData]);
+  }, [canCreateConditions, handleCreateCondition]);
 
-  const handleTestCondition = useCallback(async (condition: Condition, testData: any) => {
+  const handleValidateCondition = useCallback(async (condition: ConditionWithDetails) => {
     try {
-      const result = await testCondition(condition.id, testData);
-      return result;
+      const result = await validateCondition({
+        expression: condition.expression,
+        type: condition.type,
+        metadata: condition.metadata
+      });
+
+      setConditions(prev => prev.map(c => 
+        c.id === condition.id ? { ...c, validation: result } : c
+      ));
     } catch (err) {
-      console.error('Error testing condition:', err);
-      throw err;
+      console.error('Error validating condition:', err);
     }
-  }, [testCondition]);
+  }, [validateCondition]);
 
-  const handleExportConditions = useCallback(async (format: 'json' | 'yaml' | 'csv') => {
+  const handleExportConditions = useCallback(async (format: 'json' | 'csv' | 'yaml') => {
     try {
-      const data = await exportConditions(format, Array.from(selectedConditions));
+      const data = await exportConditions({
+        conditions: filteredConditions.map(c => c.id),
+        format,
+        includeTemplates: true
+      });
+
       // Trigger download
-      const blob = new Blob([data], { 
-        type: format === 'json' ? 'application/json' : 
-              format === 'yaml' ? 'text/yaml' : 'text/csv' 
+      const blob = new Blob([data], {
+        type: format === 'json' ? 'application/json' :
+              format === 'csv' ? 'text/csv' : 'text/yaml'
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -491,120 +478,70 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
       console.error('Error exporting conditions:', err);
       setError('Failed to export conditions');
     }
-  }, [exportConditions, selectedConditions]);
+  }, [filteredConditions, exportConditions]);
 
   const handleImportConditions = useCallback(async (file: File) => {
     try {
-      await importConditions(file);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const result = await importConditions(formData);
+      
+      setConditions(prev => [...result.conditions, ...prev]);
+      setTemplates(prev => [...result.templates, ...prev]);
       setShowImportDialog(false);
-      await loadData();
     } catch (err) {
       console.error('Error importing conditions:', err);
       setError('Failed to import conditions');
     }
-  }, [importConditions, loadData]);
-
-  // Selection Handlers
-  const handleSelectCondition = useCallback((conditionId: string, selected: boolean) => {
-    setSelectedConditions(prev => {
-      const newSet = new Set(prev);
-      if (selected) {
-        newSet.add(conditionId);
-      } else {
-        newSet.delete(conditionId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const handleSelectAll = useCallback((selected: boolean) => {
-    if (selected) {
-      setSelectedConditions(new Set(filteredConditions.map(c => c.id)));
-    } else {
-      setSelectedConditions(new Set());
-    }
-  }, [filteredConditions]);
+  }, [importConditions]);
 
   // Render Methods
   const renderHeader = () => (
     <div className="flex items-start justify-between mb-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Condition Management
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Manage ABAC conditions, templates, and policies for advanced access control
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Create, manage, and validate ABAC conditions for access control policies
         </p>
         {conditionStats && (
           <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500">
             <span>{conditionStats.total} total conditions</span>
             <span>{conditionStats.active} active</span>
             <span>{conditionStats.templates} templates</span>
-            <span>{conditionStats.validationErrors} validation errors</span>
           </div>
         )}
       </div>
-
+      
       <div className="flex items-center space-x-3">
-        {currentView.type !== 'list' && (
+        {canCreateConditions && activeView === 'list' && (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setActiveView('templates')}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Templates
+            </Button>
+            
+            <Button onClick={() => setActiveView('builder')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Condition
+            </Button>
+          </>
+        )}
+        
+        {activeView !== 'list' && (
           <Button
             variant="outline"
-            onClick={() => setCurrentView({ type: 'list' })}
+            onClick={() => setActiveView('list')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to List
           </Button>
         )}
-        
-        {canCreateConditions && currentView.type === 'list' && (
-          <Button onClick={handleCreateCondition}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Condition
-          </Button>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setCurrentView({ type: 'templates' })}>
-              <FileText className="h-4 w-4 mr-2" />
-              View Templates
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setCurrentView({ type: 'validator' })}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Condition Validator
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import Conditions
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowExportDialog(true)}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Conditions
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Refresh data</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       </div>
     </div>
   );
@@ -613,14 +550,14 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
     if (!conditionStats) return null;
 
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Settings className="h-5 w-5 text-blue-500" />
+              <Code className="h-5 w-5 text-blue-500" />
               <div>
                 <div className="text-2xl font-bold">{conditionStats.total}</div>
-                <div className="text-sm text-gray-500">Total Conditions</div>
+                <div className="text-sm text-gray-500">Total</div>
               </div>
             </div>
           </CardContent>
@@ -653,10 +590,22 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <Activity className="h-5 w-5 text-yellow-500" />
               <div>
-                <div className="text-2xl font-bold">{conditionStats.validationErrors}</div>
-                <div className="text-sm text-gray-500">Errors</div>
+                <div className="text-2xl font-bold">{conditionStats.usage_count}</div>
+                <div className="text-sm text-gray-500">Executions</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-5 w-5 text-red-500" />
+              <div>
+                <div className="text-2xl font-bold">{conditionStats.avg_performance?.toFixed(1)}ms</div>
+                <div className="text-sm text-gray-500">Avg Performance</div>
               </div>
             </div>
           </CardContent>
@@ -665,402 +614,391 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
     );
   };
 
-  const renderFiltersAndSearch = () => (
+  const renderFilters = () => (
     <Card className="mb-6">
       <CardContent className="p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-64">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search conditions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search conditions..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  className="pl-10"
+                />
+              </div>
             </div>
+
+            <Select 
+              value={filters.type} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {CONDITION_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={filters.status} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {CONDITION_STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select 
+              value={sortBy} 
+              onValueChange={setSortBy}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated_at">Updated</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+                <SelectItem value="complexity">Complexity</SelectItem>
+                <SelectItem value="performance">Performance</SelectItem>
+                <SelectItem value="usage">Usage</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+            </Button>
           </div>
 
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {CONDITION_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {CONDITION_STATUSES.map((status) => (
-                <SelectItem key={status.value} value={status.value}>
-                  {status.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="type">Type</SelectItem>
-              <SelectItem value="status">Status</SelectItem>
-              <SelectItem value="created_at">Created</SelectItem>
-              <SelectItem value="updated_at">Updated</SelectItem>
-              <SelectItem value="complexity">Complexity</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-          >
-            {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const renderConditionsList = () => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-5 w-5" />
-            <span>Conditions ({filteredConditions.length})</span>
-          </CardTitle>
-          
-          {selectedConditions.size > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Showing {filteredConditions.length} of {conditions.length} conditions
+            </div>
+            
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500">
-                {selectedConditions.size} selected
-              </span>
-              <Button size="sm" variant="outline">
-                Bulk Actions
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportDialog(true)}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowExportDialog(true)}
+                disabled={filteredConditions.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveView('validator')}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Validator
               </Button>
             </div>
-          )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <DataTable
-          data={filteredConditions}
-          columns={[
-            {
-              id: 'select',
-              header: ({ table }) => (
-                <input
-                  type="checkbox"
-                  checked={table.getIsAllPageRowsSelected()}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                />
-              ),
-              cell: ({ row }) => (
-                <input
-                  type="checkbox"
-                  checked={selectedConditions.has(row.original.id)}
-                  onChange={(e) => 
-                    handleSelectCondition(row.original.id, e.target.checked)
-                  }
-                />
-              ),
-            },
-            {
-              accessorKey: 'name',
-              header: 'Name',
-              cell: ({ row }) => {
-                const condition = row.original;
-                const typeConfig = CONDITION_TYPES.find(t => t.value === condition.type);
-                const TypeIcon = typeConfig?.icon || Settings;
-                
-                return (
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded ${typeConfig?.color || 'bg-gray-100'}`}>
-                      <TypeIcon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{condition.name}</div>
-                      <div className="text-sm text-gray-500">
-                        {condition.description?.substring(0, 50)}...
-                      </div>
-                    </div>
-                  </div>
-                );
-              },
-            },
-            {
-              accessorKey: 'type',
-              header: 'Type',
-              cell: ({ row }) => {
-                const typeConfig = CONDITION_TYPES.find(t => t.value === row.getValue('type'));
-                return (
-                  <Badge className={typeConfig?.color}>
-                    {typeConfig?.label || row.getValue('type')}
-                  </Badge>
-                );
-              },
-            },
-            {
-              accessorKey: 'status',
-              header: 'Status',
-              cell: ({ row }) => {
-                const statusConfig = CONDITION_STATUSES.find(s => s.value === row.getValue('status'));
-                const StatusIcon = statusConfig?.icon || Info;
-                return (
-                  <Badge className={statusConfig?.color} variant="secondary">
-                    <StatusIcon className="h-3 w-3 mr-1" />
-                    {statusConfig?.label || row.getValue('status')}
-                  </Badge>
-                );
-              },
-            },
-            {
-              accessorKey: 'complexity',
-              header: 'Complexity',
-              cell: ({ row }) => {
-                const complexity = row.getValue('complexity') as number || 0;
-                return (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${Math.min(complexity * 10, 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-gray-600">{complexity.toFixed(1)}</span>
-                  </div>
-                );
-              },
-            },
-            {
-              accessorKey: 'updated_at',
-              header: 'Last Updated',
-              cell: ({ row }) => formatDate(row.getValue('updated_at')),
-            },
-            {
-              id: 'actions',
-              header: 'Actions',
-              cell: ({ row }) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleViewCondition(row.original)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </DropdownMenuItem>
-                    {canManageConditions && (
-                      <>
-                        <DropdownMenuItem onClick={() => handleEditCondition(row.original)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateCondition(row.original)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedCondition(row.original);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ),
-            },
-          ]}
-        />
       </CardContent>
     </Card>
   );
 
-  const renderConditionDetails = () => {
-    const condition = currentView.data as Condition;
-    if (!condition) return null;
-
-    const typeConfig = CONDITION_TYPES.find(t => t.value === condition.type);
-    const statusConfig = CONDITION_STATUSES.find(s => s.value === condition.status);
-    const TypeIcon = typeConfig?.icon || Settings;
-    const StatusIcon = statusConfig?.icon || Info;
-
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className={`p-4 rounded-lg ${typeConfig?.color || 'bg-gray-100'}`}>
-                  <TypeIcon className="h-8 w-8" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold">{condition.name}</h2>
-                  <p className="text-gray-600 mt-1">{condition.description}</p>
-                  <div className="flex items-center space-x-3 mt-2">
-                    <Badge className={typeConfig?.color}>
-                      {typeConfig?.label}
-                    </Badge>
-                    <Badge className={statusConfig?.color} variant="secondary">
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {statusConfig?.label}
-                    </Badge>
-                  </div>
+  const renderConditionsTable = () => {
+    const columns = [
+      {
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }: any) => {
+          const condition = row.original;
+          const typeConfig = CONDITION_TYPES.find(t => t.value === condition.type);
+          const TypeIcon = typeConfig?.icon || Settings;
+          
+          return (
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-lg ${typeConfig?.color || 'bg-gray-100'}`}>
+                <TypeIcon className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="font-medium">{condition.name}</div>
+                <div className="text-sm text-gray-500 max-w-md truncate">
+                  {condition.description}
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-2">
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: ({ row }: any) => {
+          const typeConfig = CONDITION_TYPES.find(t => t.value === row.getValue('type'));
+          return (
+            <Badge className={typeConfig?.color}>
+              {typeConfig?.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }: any) => {
+          const statusConfig = CONDITION_STATUSES.find(s => s.value === row.getValue('status'));
+          return (
+            <Badge className={statusConfig?.color}>
+              {statusConfig?.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: 'complexity',
+        header: 'Complexity',
+        cell: ({ row }: any) => {
+          const complexity = row.original.metadata?.complexity || 0;
+          const level = complexity <= 2 ? 'Low' : complexity <= 4 ? 'Medium' : complexity <= 6 ? 'High' : 'Very High';
+          const color = complexity <= 2 ? 'bg-green-100 text-green-800' : 
+                      complexity <= 4 ? 'bg-yellow-100 text-yellow-800' : 
+                      complexity <= 6 ? 'bg-orange-100 text-orange-800' : 
+                      'bg-red-100 text-red-800';
+          
+          return <Badge className={color}>{level}</Badge>;
+        },
+      },
+      {
+        accessorKey: 'usage_count',
+        header: 'Usage',
+        cell: ({ row }: any) => (
+          <div className="text-sm">
+            {row.getValue('usage_count') || 0} executions
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'updated_at',
+        header: 'Updated',
+        cell: ({ row }: any) => (
+          <div className="text-sm text-gray-500">
+            {formatDate(row.getValue('updated_at'))}
+          </div>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }: any) => {
+          const condition = row.original;
+          
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setValidatorExpression(condition.expression);
+                    setActiveView('validator');
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Validate
+                </DropdownMenuItem>
+                
                 {canManageConditions && (
-                  <Button onClick={() => handleEditCondition(condition)}>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setBuilderCondition(condition);
+                      setActiveView('builder');
+                    }}
+                  >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
-                  </Button>
+                  </DropdownMenuItem>
                 )}
-                <Button 
-                  variant="outline"
-                  onClick={() => setCurrentView({ type: 'validator', data: condition })}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Test
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+                
+                <DropdownMenuItem onClick={() => handleDuplicateCondition(condition)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                {canDeleteConditions && (
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setSelectedCondition(condition);
+                      setShowDeleteConfirm(true);
+                    }}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+      },
+    ];
 
-        {/* Expression Details */}
+    return (
+      <Card>
+        <CardContent className="p-0">
+          <DataTable 
+            data={filteredConditions} 
+            columns={columns}
+            searchable={false}
+          />
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderConditionsList = () => (
+    <div className="space-y-6">
+      {renderStatsCards()}
+      {renderFilters()}
+      
+      {loading ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Condition Expression</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-              <code className="text-sm">{condition.expression}</code>
-            </div>
-            {condition.metadata?.parsed_expression && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Parsed Structure</h4>
-                <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">
-                  {JSON.stringify(condition.metadata.parsed_expression, null, 2)}
-                </pre>
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading conditions...</p>
+          </CardContent>
+        </Card>
+      ) : filteredConditions.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Code className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No conditions found
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {conditions.length === 0 
+                ? "Get started by creating your first condition or using a template."
+                : "Try adjusting your search criteria or filters."
+              }
+            </p>
+            {canCreateConditions && (
+              <div className="flex items-center justify-center space-x-3">
+                <Button onClick={() => setActiveView('builder')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Condition
+                </Button>
+                <Button variant="outline" onClick={() => setActiveView('templates')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Browse Templates
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
+      ) : (
+        renderConditionsTable()
+      )}
+    </div>
+  );
 
-        {/* Metadata and Properties */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Properties</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Complexity</Label>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${Math.min((condition.complexity || 0) * 10, 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-sm">{(condition.complexity || 0).toFixed(1)}</span>
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Created</Label>
-                <div className="text-sm mt-1">{formatDateTime(condition.created_at)}</div>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Last Updated</Label>
-                <div className="text-sm mt-1">{formatDateTime(condition.updated_at)}</div>
-              </div>
-              
-              {condition.tags && condition.tags.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Tags</Label>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {condition.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+  const renderBuilder = () => (
+    <ConditionBuilder
+      condition={builderCondition}
+      templates={templates}
+      onSave={builderCondition ? 
+        (data) => handleUpdateCondition(builderCondition.id, data) :
+        handleCreateCondition
+      }
+      onCancel={() => {
+        setActiveView('list');
+        setBuilderCondition(null);
+      }}
+    />
+  );
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Usage Statistics</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-2xl font-bold">{condition.usage_count || 0}</div>
-                  <div className="text-sm text-gray-500">Times Used</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{condition.policy_count || 0}</div>
-                  <div className="text-sm text-gray-500">In Policies</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{condition.success_rate || 0}%</div>
-                  <div className="text-sm text-gray-500">Success Rate</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{condition.avg_execution_time || 0}ms</div>
-                  <div className="text-sm text-gray-500">Avg Execution</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  };
+  const renderTemplates = () => (
+    <ConditionTemplates
+      templates={templates}
+      onUseTemplate={(template) => {
+        setBuilderCondition({
+          id: '',
+          name: template.name,
+          description: template.description,
+          type: template.type,
+          expression: template.expression,
+          status: 'draft',
+          metadata: template.metadata,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        setActiveView('builder');
+      }}
+      onEditTemplate={(template) => {
+        // Convert template to condition for editing
+        setBuilderCondition({
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          type: template.type,
+          expression: template.expression,
+          status: 'draft',
+          metadata: template.metadata,
+          created_at: template.created_at,
+          updated_at: template.updated_at || template.created_at
+        });
+        setActiveView('builder');
+      }}
+    />
+  );
 
-  if (loading) {
+  const renderValidator = () => (
+    <ConditionValidator
+      expression={validatorExpression}
+      onValidationComplete={(result) => {
+        console.log('Validation completed:', result);
+      }}
+    />
+  );
+
+  if (!canManageConditions) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
+      <Alert>
         <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
+        <AlertTitle>Access Denied</AlertTitle>
+        <AlertDescription>
+          You don't have permission to manage conditions.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -1074,47 +1012,67 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
     >
       {renderHeader()}
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Main Content */}
-      {currentView.type === 'list' && (
-        <>
-          {renderStatsCards()}
-          {renderFiltersAndSearch()}
-          {renderConditionsList()}
-        </>
-      )}
+      <AnimatePresence mode="wait">
+        {activeView === 'list' && (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderConditionsList()}
+          </motion.div>
+        )}
 
-      {currentView.type === 'builder' && (
-        <ConditionBuilder
-          condition={currentView.data}
-          onSave={handleSaveCondition}
-          onCancel={() => setCurrentView({ type: 'list' })}
-          templates={templates}
-        />
-      )}
+        {activeView === 'builder' && (
+          <motion.div
+            key="builder"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderBuilder()}
+          </motion.div>
+        )}
 
-      {currentView.type === 'templates' && (
-        <ConditionTemplates
-          templates={templates}
-          onUseTemplate={(template) => 
-            setCurrentView({ type: 'builder', data: { template } })
-          }
-          onEditTemplate={(template) => 
-            setCurrentView({ type: 'builder', data: template })
-          }
-        />
-      )}
+        {activeView === 'templates' && (
+          <motion.div
+            key="templates"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderTemplates()}
+          </motion.div>
+        )}
 
-      {currentView.type === 'validator' && (
-        <ConditionValidator
-          condition={currentView.data}
-          onTest={handleTestCondition}
-        />
-      )}
-
-      {currentView.type === 'details' && renderConditionDetails()}
+        {activeView === 'validator' && (
+          <motion.div
+            key="validator"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderValidator()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Condition</DialogTitle>
@@ -1123,14 +1081,14 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => selectedCondition && handleDeleteCondition(selectedCondition.id)}
+            <Button 
+              variant="destructive" 
+              onClick={() => selectedCondition && handleDeleteCondition(selectedCondition)}
             >
-              Delete Condition
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1142,7 +1100,7 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
           <DialogHeader>
             <DialogTitle>Export Conditions</DialogTitle>
             <DialogDescription>
-              Choose the format to export selected conditions.
+              Choose the format to export your conditions.
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-4">
@@ -1151,8 +1109,16 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
               className="h-20 flex flex-col"
               onClick={() => handleExportConditions('json')}
             >
-              <Code className="h-6 w-6 mb-2" />
+              <FileText className="h-6 w-6 mb-2" />
               JSON
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex flex-col"
+              onClick={() => handleExportConditions('csv')}
+            >
+              <FileText className="h-6 w-6 mb-2" />
+              CSV
             </Button>
             <Button
               variant="outline"
@@ -1162,14 +1128,6 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
               <FileText className="h-6 w-6 mb-2" />
               YAML
             </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex flex-col"
-              onClick={() => handleExportConditions('csv')}
-            >
-              <Database className="h-6 w-6 mb-2" />
-              CSV
-            </Button>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowExportDialog(false)}>
@@ -1178,81 +1136,6 @@ const ConditionManagement: React.FC<ConditionManagementProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Import Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Conditions</DialogTitle>
-            <DialogDescription>
-              Upload a file to import conditions from JSON, YAML, or CSV format.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-sm text-gray-600">
-                Drag and drop a file here, or click to select
-              </p>
-              <input
-                type="file"
-                accept=".json,.yaml,.yml,.csv"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleImportConditions(file);
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowImportDialog(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Floating Bulk Actions */}
-      <AnimatePresence>
-        {showBulkActions && (
-          <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
-          >
-            <Card className="shadow-lg">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm font-medium">
-                    {selectedConditions.size} condition{selectedConditions.size !== 1 ? 's' : ''} selected
-                  </span>
-                  <Separator orientation="vertical" className="h-6" />
-                  <Button size="sm" variant="outline">
-                    Enable
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    Disable
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    Export
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedConditions(new Set())}
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 };
