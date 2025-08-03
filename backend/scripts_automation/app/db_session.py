@@ -17,16 +17,15 @@ if os.environ.get("PYTEST_CURRENT_TEST"):
 else:
     DATABASE_URL = os.environ.get("DB_URL", "postgresql://admin:admin@metadata-db:5432/schema_metadata")
 
+# Create single SQLAlchemy engine with proper configuration
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
+    echo=os.environ.get("DB_ECHO", "false").lower() == "true",
     pool_size=20,        # Number of persistent connections
     max_overflow=40,     # Extra connections allowed beyond pool_size
-    pool_timeout=30      # Seconds to wait before giving up on a connection
+    pool_timeout=30,     # Seconds to wait before giving up on a connection
+    pool_recycle=3600    # Recycle connections every hour for stability
 )
-
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL, echo=False)
 
 
 def init_db():
