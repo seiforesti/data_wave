@@ -52,3 +52,13 @@ def get_session():
 def get_db():
     with get_session() as session:
         yield session
+
+def get_session_sync():
+    """
+    Synchronous database session generator for startup initialization
+    """
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
