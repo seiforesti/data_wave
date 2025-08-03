@@ -37,6 +37,20 @@ class User(SQLModel, table=True):
     mfa_enabled: bool = Field(default=False)
     mfa_secret: Optional[str] = Field(default=None)
     role: str = Field(default="user", nullable=False)  # NEW: user, admin, steward, etc.
+    
+    # Enhanced profile fields
+    first_name: Optional[str] = Field(default=None)
+    last_name: Optional[str] = Field(default=None)
+    display_name: Optional[str] = Field(default=None)
+    profile_picture_url: Optional[str] = Field(default=None)
+    birthday: Optional[str] = Field(default=None)  # Store as ISO date string
+    phone_number: Optional[str] = Field(default=None)
+    department: Optional[str] = Field(default=None)
+    region: Optional[str] = Field(default=None)
+    oauth_provider: Optional[str] = Field(default=None)  # google, microsoft, email
+    oauth_id: Optional[str] = Field(default=None)  # OAuth provider user ID
+    last_login: Optional[datetime] = Field(default=None)
+    timezone: Optional[str] = Field(default=None)
 
     # sessions: List["Session"] = relationship(back_populates="user")
     # roles: List[Role] = relationship(back_populates="users", link_model=UserRole)

@@ -17,12 +17,47 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_user(db: Session, email: str, password: Optional[str] = None, role: str = "user") -> User:
+def create_user(
+    db: Session, 
+    email: str, 
+    password: Optional[str] = None, 
+    role: str = "user",
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    display_name: Optional[str] = None,
+    profile_picture_url: Optional[str] = None,
+    birthday: Optional[str] = None,
+    phone_number: Optional[str] = None,
+    department: Optional[str] = None,
+    region: Optional[str] = None,
+    oauth_provider: Optional[str] = None,
+    oauth_id: Optional[str] = None,
+    timezone: Optional[str] = None
+) -> User:
     # Bootstrap: first user is always admin
     if db.query(User).count() == 0:
         role = "admin"
     hashed_password = get_password_hash(password) if password else None
-    user = User(email=email, hashed_password=hashed_password, is_active=True, is_verified=False, role=role)
+    
+    user = User(
+        email=email, 
+        hashed_password=hashed_password, 
+        is_active=True, 
+        is_verified=True if oauth_provider else False, 
+        role=role,
+        first_name=first_name,
+        last_name=last_name,
+        display_name=display_name or f"{first_name} {last_name}".strip() if first_name or last_name else None,
+        profile_picture_url=profile_picture_url,
+        birthday=birthday,
+        phone_number=phone_number,
+        department=department,
+        region=region,
+        oauth_provider=oauth_provider,
+        oauth_id=oauth_id,
+        last_login=datetime.utcnow(),
+        timezone=timezone
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
