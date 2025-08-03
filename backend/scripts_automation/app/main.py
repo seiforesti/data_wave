@@ -49,27 +49,29 @@ from app.api.routes.ai_routes import router as ai_routes
 # ========================================
 # ENTERPRISE DATA GOVERNANCE CORE ROUTES
 # ========================================
-# Import the three missing enterprise route groups per ADVANCED_ENTERPRISE_DATA_GOVERNANCE_PLAN.md
+# Import the new unified enterprise API router system
 
-# 1. SCAN-RULE-SETS GROUP - Enterprise Routes
+# UNIFIED ENTERPRISE API ROUTER - Production-Grade API Management
+from app.api.routes.enterprise_unified_api_router import (
+    get_unified_enterprise_router, 
+    initialize_enterprise_router,
+    get_all_enterprise_routers
+)
+
+# Import individual group API modules for proper initialization
+from app.api.routes.enterprise_data_sources_api import get_data_sources_router
+
+# Keep existing legacy routes for backward compatibility during transition
 from app.api.routes.enterprise_scan_rules_routes import router as enterprise_scan_rules_router
-
-# 1. SCAN-RULE-SETS COMPLETED ROUTES - Imports Moved to Main Section Below
-
-# 2. DATA CATALOG GROUP - Enterprise Routes  
 from app.api.routes.enterprise_catalog_routes import router as enterprise_catalog_router
 from app.api.routes.intelligent_discovery_routes import router as intelligent_discovery_router
 from app.api.routes.advanced_lineage_routes import router as advanced_lineage_router
 from app.api.routes.semantic_search_routes import router as semantic_search_router
 from app.api.routes.catalog_quality_routes import router as catalog_quality_router
-
-# 3. SCAN LOGIC GROUP - Enterprise Routes
 from app.api.routes.enterprise_scan_orchestration_routes import router as enterprise_scan_orchestration_router
 from app.api.routes.scan_intelligence_routes import router as scan_intelligence_router
 from app.api.routes.scan_workflow_routes import router as scan_workflow_router
 from app.api.routes.scan_performance_routes import router as scan_performance_router
-
-# UNIFIED ENTERPRISE INTEGRATION - Cross-System Coordination
 from app.api.routes.enterprise_integration_routes import router as enterprise_integration_router
 
 # Additional missing routes for the three groups
@@ -133,7 +135,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
+# ========================================
+# ENTERPRISE UNIFIED API ROUTER SETUP
+# ========================================
+
+# Initialize the enterprise unified API router
+@app.on_event("startup")
+async def startup_event():
+    """Initialize enterprise services on startup"""
+    try:
+        # Initialize the enterprise router with database connection
+        from app.db_session import get_session_sync
+        db = next(get_session_sync())
+        await initialize_enterprise_router(db)
+        
+        logger.info("Enterprise unified API router initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize enterprise router: {e}")
+
+# Include the unified enterprise router first (highest priority)
+try:
+    unified_router = get_unified_enterprise_router()
+    app.include_router(unified_router, prefix="", tags=["Enterprise Data Governance"])
+    logger.info("Unified enterprise router included successfully")
+except Exception as e:
+    logger.error(f"Failed to include unified enterprise router: {e}")
+
+# Include legacy routers for backward compatibility
 app.include_router(oauth_auth_router)
 app.include_router(auth_router, tags=["auth"])
 app.include_router(extract.router)
