@@ -63,6 +63,56 @@ class User(SQLModel, table=True):
         lazy="selectin"
     )
     groups: ClassVar[Any] = relationship("Group", secondary="user_groups", back_populates="users")
+    
+    # RACINE ORCHESTRATION RELATIONSHIPS - Added for integration with Racine Main Manager
+    created_orchestrations: ClassVar[Any] = relationship(
+        "RacineOrchestrationMaster",
+        foreign_keys="[RacineOrchestrationMaster.created_by]",
+        back_populates="creator"
+    )
+    modified_orchestrations: ClassVar[Any] = relationship(
+        "RacineOrchestrationMaster", 
+        foreign_keys="[RacineOrchestrationMaster.last_modified_by]",
+        back_populates="modifier"
+    )
+    triggered_workflow_executions: ClassVar[Any] = relationship(
+        "RacineWorkflowExecution",
+        foreign_keys="[RacineWorkflowExecution.triggered_by]",
+        back_populates="triggered_by_user"
+    )
+    created_integrations: ClassVar[Any] = relationship(
+        "RacineCrossGroupIntegration",
+        foreign_keys="[RacineCrossGroupIntegration.created_by]",
+        back_populates="creator"
+    )
+    
+    # RACINE WORKSPACE RELATIONSHIPS - Added for workspace management integration
+    owned_workspaces: ClassVar[Any] = relationship(
+        "RacineWorkspace",
+        foreign_keys="[RacineWorkspace.owner_id]",
+        back_populates="owner"
+    )
+    workspace_memberships: ClassVar[Any] = relationship(
+        "RacineWorkspaceMember",
+        foreign_keys="[RacineWorkspaceMember.user_id]",
+        back_populates="user"
+    )
+    sent_workspace_invitations: ClassVar[Any] = relationship(
+        "RacineWorkspaceMember",
+        foreign_keys="[RacineWorkspaceMember.invited_by]",
+        back_populates="inviter"
+    )
+    added_workspace_resources: ClassVar[Any] = relationship(
+        "RacineWorkspaceResource",
+        foreign_keys="[RacineWorkspaceResource.added_by]",
+        back_populates="added_by_user"
+    )
+    last_accessed_workspace_resources: ClassVar[Any] = relationship(
+        "RacineWorkspaceResource",
+        foreign_keys="[RacineWorkspaceResource.last_accessed_by]",
+        back_populates="last_accessed_by_user"
+    )
+
 # --- Group and Deny Assignment Models ---
 
 class Group(SQLModel, table=True):
