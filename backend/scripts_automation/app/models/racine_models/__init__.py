@@ -50,8 +50,8 @@ from .racine_workflow_models import (
     RacineWorkflowTemplate,
     RacineWorkflowSchedule,
     RacineWorkflowStep,
-    RacineWorkflowDependency,
-    RacineWorkflowVersion,
+    RacineStepExecution,
+    RacineWorkflowMetrics,
     RacineWorkflowAudit
 )
 
@@ -59,11 +59,11 @@ from .racine_pipeline_models import (
     RacinePipeline,
     RacinePipelineExecution,
     RacinePipelineStage,
+    RacineStageExecution,
     RacinePipelineTemplate,
-    RacinePipelineVersion,
+    RacinePipelineOptimization,
     RacinePipelineMetrics,
-    RacinePipelineAlert,
-    RacinePipelineOptimization
+    RacinePipelineAudit
 )
 
 from .racine_ai_models import (
@@ -72,53 +72,57 @@ from .racine_ai_models import (
     RacineAIRecommendation,
     RacineAIInsight,
     RacineAILearning,
-    RacineAIContext,
-    RacineAIModel,
-    RacineAIAnalytics
+    RacineAIKnowledge,
+    RacineAIMetrics
 )
 
 from .racine_activity_models import (
     RacineActivity,
-    RacineAuditTrail,
-    RacineActivityPattern,
-    RacineActivityAlert,
-    RacineActivityReport,
+    RacineActivityLog,
+    RacineActivityStream,
+    RacineActivityStreamEvent,
+    RacineActivityCorrelation,
+    RacineActivityAnalytics,
     RacineActivityMetrics,
-    RacineComplianceActivity,
-    RacineActivitySearch
+    RacineActivityAlert,
+    RacineActivityAudit
 )
 
 from .racine_dashboard_models import (
     RacineDashboard,
-    RacineWidget,
-    RacineDashboardTemplate,
-    RacineDashboardShare,
+    RacineDashboardWidget,
+    RacineDashboardLayout,
+    RacineDashboardPersonalization,
+    RacineDashboardAnalytics,
+    RacineDashboardWidgetData,
     RacineDashboardAlert,
-    RacineDashboardMetrics,
-    RacineDashboardFilter,
-    RacineDashboardExport
+    RacineDashboardTemplate,
+    RacineDashboardAudit
 )
 
 from .racine_collaboration_models import (
     RacineCollaboration,
+    RacineCollaborationParticipant,
     RacineCollaborationSession,
     RacineCollaborationMessage,
     RacineCollaborationDocument,
-    RacineCollaborationWorkspace,
-    RacineCollaborationPermission,
-    RacineCollaborationAudit,
-    RacineCollaborationNotification
+    RacineCollaborationDocumentEdit,
+    RacineExpertConsultation,
+    RacineKnowledgeSharing,
+    RacineCollaborationAnalytics,
+    RacineCollaborationAudit
 )
 
 from .racine_integration_models import (
+    RacineIntegration,
     RacineIntegrationEndpoint,
-    RacineIntegrationMapping,
-    RacineIntegrationSync,
-    RacineIntegrationLog,
-    RacineIntegrationMetrics,
-    RacineIntegrationAlert,
-    RacineIntegrationHealth,
-    RacineIntegrationConfig
+    RacineDataFlow,
+    RacineDataFlowExecution,
+    RacineIntegrationMessage,
+    RacineIntegrationHealthCheck,
+    RacineServiceMesh,
+    RacineAPIGateway,
+    RacineIntegrationAudit
 )
 
 __all__ = [
@@ -148,19 +152,19 @@ __all__ = [
     "RacineWorkflowTemplate",
     "RacineWorkflowSchedule",
     "RacineWorkflowStep",
-    "RacineWorkflowDependency",
-    "RacineWorkflowVersion",
+    "RacineStepExecution",
+    "RacineWorkflowMetrics",
     "RacineWorkflowAudit",
     
     # Pipeline Models
     "RacinePipeline",
     "RacinePipelineExecution",
     "RacinePipelineStage",
+    "RacineStageExecution",
     "RacinePipelineTemplate",
-    "RacinePipelineVersion",
-    "RacinePipelineMetrics",
-    "RacinePipelineAlert",
     "RacinePipelineOptimization",
+    "RacinePipelineMetrics",
+    "RacinePipelineAudit",
     
     # AI Models
     "RacineAIConversation",
@@ -168,47 +172,51 @@ __all__ = [
     "RacineAIRecommendation",
     "RacineAIInsight",
     "RacineAILearning",
-    "RacineAIContext",
-    "RacineAIModel",
-    "RacineAIAnalytics",
+    "RacineAIKnowledge",
+    "RacineAIMetrics",
     
     # Activity Models
     "RacineActivity",
-    "RacineAuditTrail",
-    "RacineActivityPattern",
-    "RacineActivityAlert",
-    "RacineActivityReport",
+    "RacineActivityLog",
+    "RacineActivityStream",
+    "RacineActivityStreamEvent",
+    "RacineActivityCorrelation",
+    "RacineActivityAnalytics",
     "RacineActivityMetrics",
-    "RacineComplianceActivity",
-    "RacineActivitySearch",
+    "RacineActivityAlert",
+    "RacineActivityAudit",
     
     # Dashboard Models
     "RacineDashboard",
-    "RacineWidget",
-    "RacineDashboardTemplate",
-    "RacineDashboardShare",
+    "RacineDashboardWidget",
+    "RacineDashboardLayout",
+    "RacineDashboardPersonalization",
+    "RacineDashboardAnalytics",
+    "RacineDashboardWidgetData",
     "RacineDashboardAlert",
-    "RacineDashboardMetrics",
-    "RacineDashboardFilter",
-    "RacineDashboardExport",
+    "RacineDashboardTemplate",
+    "RacineDashboardAudit",
     
     # Collaboration Models
     "RacineCollaboration",
+    "RacineCollaborationParticipant",
     "RacineCollaborationSession",
     "RacineCollaborationMessage",
     "RacineCollaborationDocument",
-    "RacineCollaborationWorkspace",
-    "RacineCollaborationPermission",
+    "RacineCollaborationDocumentEdit",
+    "RacineExpertConsultation",
+    "RacineKnowledgeSharing",
+    "RacineCollaborationAnalytics",
     "RacineCollaborationAudit",
-    "RacineCollaborationNotification",
     
     # Integration Models
+    "RacineIntegration",
     "RacineIntegrationEndpoint",
-    "RacineIntegrationMapping",
-    "RacineIntegrationSync",
-    "RacineIntegrationLog",
-    "RacineIntegrationMetrics",
-    "RacineIntegrationAlert",
-    "RacineIntegrationHealth",
-    "RacineIntegrationConfig"
+    "RacineDataFlow",
+    "RacineDataFlowExecution",
+    "RacineIntegrationMessage",
+    "RacineIntegrationHealthCheck",
+    "RacineServiceMesh",
+    "RacineAPIGateway",
+    "RacineIntegrationAudit"
 ]
