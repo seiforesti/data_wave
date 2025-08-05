@@ -1,1016 +1,1727 @@
-import { 
-  UserProfile,
+/**
+ * Advanced Security Utilities
+ * Provides comprehensive security utilities for the Racine Main Manager system
+ */
+
+import {
   RBACRole,
   RBACPermission,
+  RBACPolicy,
   SecurityAuditLog,
-  APIKeyConfiguration,
-  MFAConfiguration,
-  SecurityPreferences,
-  AccessRequest,
+  SecurityThreat,
+  ComplianceCheck,
+  AccessControlList,
+  SecurityConfiguration,
+  ThreatDetection,
   SecurityAlert,
-  UUID,
-  ISODateString 
-} from '../types/racine-core.types';
+  AuthenticationEvent,
+  AuthorizationEvent,
+  SecurityMetrics,
+  DataClassification,
+  EncryptionConfig
+} from '../types/security.types';
 
-/**
- * Access Control and Permission Management Utilities
- * Handles RBAC validation, permission checking, and access control logic
- */
-export class AccessControlManager {
+import { UUID, ISODateString } from '../types/racine-core.types';
+
+// ============================================================================
+// RBAC MANAGEMENT UTILITIES
+// ============================================================================
+
+export class RBACManager {
+  private roles: Map<UUID, RBACRole> = new Map();
+  private permissions: Map<UUID, RBACPermission> = new Map();
+  private policies: Map<UUID, RBACPolicy> = new Map();
+  private userRoles: Map<UUID, UUID[]> = new Map();
+
   /**
-   * Check if user has specific permission
+   * Create new RBAC role
    */
-  static hasPermission(
-    userRoles: RBACRole[],
-    requiredPermission: string,
-    resourceType?: string,
-    resourceId?: UUID
-  ): boolean {
-    // Check if user has any roles
-    if (!userRoles || userRoles.length === 0) {
-      return false;
+  createRole(
+    name: string,
+    description: string,
+    permissions: UUID[],
+    config: {
+      level: 'system' | 'group' | 'resource';
+      priority: number;
+      inheritsFrom?: UUID[];
+      constraints?: Record<string, any>;
+      isActive?: boolean;
     }
-
-    // Check each role for the required permission
-    return userRoles.some(role => {
-      if (!role.permissions || role.permissions.length === 0) {
-        return false;
-      }
-
-      return role.permissions.some(permission => {
-        // Check basic permission match
-        if (permission.permission_name !== requiredPermission) {
-          return false;
-        }
-
-        // Check if permission is active
-        if (!permission.is_active) {
-          return false;
-        }
-
-        // Check resource type if specified
-        if (resourceType && permission.resource_type && permission.resource_type !== resourceType) {
-          return false;
-        }
-
-        // Check resource ID if specified
-        if (resourceId && permission.resource_id && permission.resource_id !== resourceId) {
-          return false;
-        }
-
-        // Check permission expiry
-        if (permission.expires_at && new Date(permission.expires_at) < new Date()) {
-          return false;
-        }
-
-        return true;
-      });
-    });
-  }
-
-  /**
-   * Check if user has any of the specified permissions
-   */
-  static hasAnyPermission(
-    userRoles: RBACRole[],
-    permissions: string[],
-    resourceType?: string
-  ): boolean {
-    return permissions.some(permission => 
-      this.hasPermission(userRoles, permission, resourceType)
-    );
-  }
-
-  /**
-   * Check if user has all of the specified permissions
-   */
-  static hasAllPermissions(
-    userRoles: RBACRole[],
-    permissions: string[],
-    resourceType?: string
-  ): boolean {
-    return permissions.every(permission => 
-      this.hasPermission(userRoles, permission, resourceType)
-    );
-  }
-
-  /**
-   * Get all permissions for a user across all roles
-   */
-  static getUserPermissions(userRoles: RBACRole[]): {
-    permissions: string[];
-    rolePermissions: { [roleName: string]: string[] };
-    resourcePermissions: { [resourceType: string]: string[] };
-  } {
-    const allPermissions = new Set<string>();
-    const rolePermissions: { [roleName: string]: string[] } = {};
-    const resourcePermissions: { [resourceType: string]: string[] } = {};
-
-    userRoles.forEach(role => {
-      const rolePerms: string[] = [];
-      
-      role.permissions?.forEach(permission => {
-        if (permission.is_active && (!permission.expires_at || new Date(permission.expires_at) > new Date())) {
-          allPermissions.add(permission.permission_name);
-          rolePerms.push(permission.permission_name);
-
-          // Group by resource type
-          const resourceType = permission.resource_type || 'global';
-          if (!resourcePermissions[resourceType]) {
-            resourcePermissions[resourceType] = [];
-          }
-          if (!resourcePermissions[resourceType].includes(permission.permission_name)) {
-            resourcePermissions[resourceType].push(permission.permission_name);
-          }
-        }
-      });
-
-      rolePermissions[role.role_name] = rolePerms;
-    });
-
-    return {
-      permissions: Array.from(allPermissions),
-      rolePermissions,
-      resourcePermissions
+  ): RBACRole {
+    const roleId = this.generateRoleId();
+    
+    const role: RBACRole = {
+      id: roleId,
+      name,
+      description,
+      permissions,
+      level: config.level,
+      priority: config.priority,
+      inheritsFrom: config.inheritsFrom || [],
+      constraints: config.constraints || {},
+      isActive: config.isActive !== false,
+      metadata: {
+        createdBy: 'system',
+        approvedBy: 'system',
+        lastReviewed: new Date().toISOString() as ISODateString,
+        reviewFrequency: 90, // days
+        usageCount: 0,
+        riskLevel: this.calculateRoleRiskLevel(permissions)
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
+
+    this.roles.set(roleId, role);
+    return role;
   }
 
   /**
-   * Validate access request against user permissions
+   * Create new permission
    */
-  static validateAccessRequest(
-    userRoles: RBACRole[],
-    accessRequest: {
-      action: string;
-      resource: string;
-      resourceId?: UUID;
-      context?: any;
+  createPermission(
+    name: string,
+    resource: string,
+    actions: string[],
+    config: {
+      scope: 'global' | 'group' | 'resource' | 'user';
+      conditions?: Record<string, any>;
+      constraints?: Record<string, any>;
+      riskLevel?: 'low' | 'medium' | 'high' | 'critical';
     }
+  ): RBACPermission {
+    const permissionId = this.generatePermissionId();
+    
+    const permission: RBACPermission = {
+      id: permissionId,
+      name,
+      resource,
+      actions,
+      scope: config.scope,
+      conditions: config.conditions || {},
+      constraints: config.constraints || {},
+      riskLevel: config.riskLevel || 'medium',
+      isActive: true,
+      metadata: {
+        category: this.categorizePermission(resource, actions),
+        dependencies: [],
+        conflicts: [],
+        usageCount: 0,
+        lastUsed: null
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.permissions.set(permissionId, permission);
+    return permission;
+  }
+
+  /**
+   * Assign role to user
+   */
+  assignRole(userId: UUID, roleId: UUID, config?: {
+    expiresAt?: Date;
+    conditions?: Record<string, any>;
+    approvedBy?: UUID;
+  }): boolean {
+    const role = this.roles.get(roleId);
+    if (!role || !role.isActive) {
+      throw new Error('Role not found or inactive');
+    }
+
+    const userRoles = this.userRoles.get(userId) || [];
+    if (!userRoles.includes(roleId)) {
+      userRoles.push(roleId);
+      this.userRoles.set(userId, userRoles);
+      
+      // Update role usage
+      role.metadata.usageCount++;
+      role.updatedAt = new Date();
+      
+      return true;
+    }
+
+    return false; // Role already assigned
+  }
+
+  /**
+   * Check if user has permission
+   */
+  hasPermission(
+    userId: UUID,
+    resource: string,
+    action: string,
+    context?: Record<string, any>
   ): {
     granted: boolean;
-    reason?: string;
-    requiredPermissions: string[];
-    missingPermissions: string[];
+    reason: string;
+    roles: UUID[];
+    permissions: UUID[];
   } {
-    const requiredPermissions = this.getRequiredPermissions(accessRequest.action, accessRequest.resource);
-    const missingPermissions: string[] = [];
+    const userRoles = this.userRoles.get(userId) || [];
+    const grantedRoles: UUID[] = [];
+    const grantedPermissions: UUID[] = [];
 
-    requiredPermissions.forEach(permission => {
-      if (!this.hasPermission(userRoles, permission, accessRequest.resource, accessRequest.resourceId)) {
-        missingPermissions.push(permission);
+    // Check each role
+    for (const roleId of userRoles) {
+      const role = this.roles.get(roleId);
+      if (!role || !role.isActive) continue;
+
+      // Check role constraints
+      if (!this.evaluateConstraints(role.constraints, context)) continue;
+
+      // Check permissions in role
+      for (const permissionId of role.permissions) {
+        const permission = this.permissions.get(permissionId);
+        if (!permission || !permission.isActive) continue;
+
+        // Check if permission matches resource and action
+        if (this.matchesPermission(permission, resource, action, context)) {
+          grantedRoles.push(roleId);
+          grantedPermissions.push(permissionId);
+          
+          // Update usage tracking
+          permission.metadata.usageCount++;
+          permission.metadata.lastUsed = new Date().toISOString() as ISODateString;
+          
+          return {
+            granted: true,
+            reason: `Granted via role '${role.name}' with permission '${permission.name}'`,
+            roles: grantedRoles,
+            permissions: grantedPermissions
+          };
+        }
       }
-    });
-
-    const granted = missingPermissions.length === 0;
+    }
 
     return {
-      granted,
-      reason: granted ? undefined : `Missing permissions: ${missingPermissions.join(', ')}`,
-      requiredPermissions,
-      missingPermissions
+      granted: false,
+      reason: `No matching permissions found for ${action} on ${resource}`,
+      roles: [],
+      permissions: []
     };
   }
 
   /**
-   * Get required permissions for a specific action and resource
+   * Get effective permissions for user
    */
-  private static getRequiredPermissions(action: string, resource: string): string[] {
-    const permissionMap: { [key: string]: string[] } = {
-      // Data Sources
-      'data_sources:read': ['data_sources:view'],
-      'data_sources:create': ['data_sources:create'],
-      'data_sources:update': ['data_sources:edit'],
-      'data_sources:delete': ['data_sources:delete'],
-      
-      // Scan Rules
-      'scan_rules:read': ['scan_rules:view'],
-      'scan_rules:create': ['scan_rules:create'],
-      'scan_rules:update': ['scan_rules:edit'],
-      'scan_rules:delete': ['scan_rules:delete'],
-      
-      // Classifications
-      'classifications:read': ['classifications:view'],
-      'classifications:create': ['classifications:create'],
-      'classifications:update': ['classifications:edit'],
-      'classifications:delete': ['classifications:delete'],
-      
-      // Compliance
-      'compliance:read': ['compliance:view'],
-      'compliance:create': ['compliance:create'],
-      'compliance:update': ['compliance:edit'],
-      'compliance:delete': ['compliance:delete'],
-      
-      // Catalog
-      'catalog:read': ['catalog:view'],
-      'catalog:create': ['catalog:create'],
-      'catalog:update': ['catalog:edit'],
-      'catalog:delete': ['catalog:delete'],
-      
-      // Scan Logic
-      'scan_logic:read': ['scan_logic:view'],
-      'scan_logic:create': ['scan_logic:create'],
-      'scan_logic:update': ['scan_logic:edit'],
-      'scan_logic:delete': ['scan_logic:delete'],
-      
-      // RBAC
-      'rbac:read': ['rbac:view'],
-      'rbac:create': ['rbac:create'],
-      'rbac:update': ['rbac:edit'],
-      'rbac:delete': ['rbac:delete'],
-      
-      // Racine System
-      'racine:orchestrate': ['racine:orchestration'],
-      'racine:workspace': ['racine:workspace_management'],
-      'racine:workflow': ['racine:workflow_management'],
-      'racine:pipeline': ['racine:pipeline_management'],
-      'racine:ai': ['racine:ai_assistant'],
-      'racine:collaboration': ['racine:collaboration'],
-      'racine:dashboard': ['racine:dashboard'],
-      'racine:admin': ['racine:system_admin']
-    };
+  getEffectivePermissions(userId: UUID): {
+    permissions: RBACPermission[];
+    roles: RBACRole[];
+    inheritanceChain: Record<UUID, UUID[]>;
+  } {
+    const userRoles = this.userRoles.get(userId) || [];
+    const effectivePermissions: RBACPermission[] = [];
+    const effectiveRoles: RBACRole[] = [];
+    const inheritanceChain: Record<UUID, UUID[]> = {};
 
-    const key = `${resource}:${action}`;
-    return permissionMap[key] || [`${resource}:${action}`];
-  }
+    // Process each role and its inheritance
+    for (const roleId of userRoles) {
+      const role = this.roles.get(roleId);
+      if (!role || !role.isActive) continue;
 
-  /**
-   * Check if user can access cross-group resources
-   */
-  static canAccessCrossGroup(
-    userRoles: RBACRole[],
-    sourceGroup: string,
-    targetGroup: string
-  ): boolean {
-    // Check for cross-group permissions
-    const crossGroupPermissions = [
-      'cross_group:access',
-      'racine:orchestration',
-      'system:admin'
-    ];
+      const roleChain = this.resolveRoleInheritance(roleId);
+      inheritanceChain[roleId] = roleChain;
 
-    return this.hasAnyPermission(userRoles, crossGroupPermissions) ||
-           (this.hasPermission(userRoles, `${sourceGroup}:access`) && 
-            this.hasPermission(userRoles, `${targetGroup}:access`));
-  }
-}
+      for (const chainRoleId of roleChain) {
+        const chainRole = this.roles.get(chainRoleId);
+        if (!chainRole) continue;
 
-/**
- * Security Auditing and Logging Utilities
- * Handles security event logging, audit trail management, and compliance reporting
- */
-export class SecurityAuditManager {
-  /**
-   * Create security audit log entry
-   */
-  static createAuditLog(
-    userId: UUID,
-    action: string,
-    resource: string,
-    resourceId?: UUID,
-    context?: any,
-    result: 'success' | 'failure' | 'denied' = 'success',
-    details?: string
-  ): SecurityAuditLog {
+        if (!effectiveRoles.find(r => r.id === chainRoleId)) {
+          effectiveRoles.push(chainRole);
+        }
+
+        // Add permissions from this role
+        for (const permissionId of chainRole.permissions) {
+          const permission = this.permissions.get(permissionId);
+          if (permission && permission.isActive && 
+              !effectivePermissions.find(p => p.id === permissionId)) {
+            effectivePermissions.push(permission);
+          }
+        }
+      }
+    }
+
     return {
-      id: crypto.randomUUID() as UUID,
-      user_id: userId,
-      action,
-      resource,
-      resource_id: resourceId,
-      result,
-      details,
-      ip_address: this.getCurrentIPAddress(),
-      user_agent: this.getCurrentUserAgent(),
-      session_id: this.getCurrentSessionId(),
-      timestamp: new Date().toISOString() as ISODateString,
-      context: context ? JSON.stringify(context) : undefined,
-      risk_level: this.calculateRiskLevel(action, resource, result),
-      compliance_tags: this.getComplianceTags(action, resource)
+      permissions: effectivePermissions,
+      roles: effectiveRoles,
+      inheritanceChain
     };
   }
 
   /**
-   * Log authentication event
+   * Validate role assignment
    */
-  static logAuthenticationEvent(
+  validateRoleAssignment(
     userId: UUID,
-    eventType: 'login' | 'logout' | 'failed_login' | 'password_change' | 'mfa_challenge' | 'mfa_success' | 'mfa_failure',
-    details?: string,
-    metadata?: any
-  ): SecurityAuditLog {
-    return this.createAuditLog(
-      userId,
-      eventType,
-      'authentication',
-      undefined,
-      metadata,
-      eventType.includes('failed') || eventType.includes('failure') ? 'failure' : 'success',
-      details
-    );
-  }
-
-  /**
-   * Log permission change event
-   */
-  static logPermissionChange(
-    adminUserId: UUID,
-    targetUserId: UUID,
-    action: 'grant' | 'revoke' | 'modify',
-    permission: string,
-    resourceType?: string,
-    resourceId?: UUID
-  ): SecurityAuditLog {
-    return this.createAuditLog(
-      adminUserId,
-      `permission_${action}`,
-      'rbac',
-      targetUserId,
-      {
-        permission,
-        resourceType,
-        resourceId,
-        targetUser: targetUserId
-      },
-      'success',
-      `${action.charAt(0).toUpperCase() + action.slice(1)} permission ${permission} for user ${targetUserId}`
-    );
-  }
-
-  /**
-   * Log data access event
-   */
-  static logDataAccess(
-    userId: UUID,
-    dataType: string,
-    operation: 'read' | 'write' | 'delete' | 'export',
-    recordCount?: number,
-    sensitivityLevel?: 'public' | 'internal' | 'confidential' | 'restricted'
-  ): SecurityAuditLog {
-    return this.createAuditLog(
-      userId,
-      `data_${operation}`,
-      dataType,
-      undefined,
-      {
-        recordCount,
-        sensitivityLevel,
-        operation
-      },
-      'success',
-      `${operation.charAt(0).toUpperCase() + operation.slice(1)} ${recordCount || 'unknown'} records from ${dataType}`
-    );
-  }
-
-  /**
-   * Calculate risk level for audit event
-   */
-  private static calculateRiskLevel(
-    action: string,
-    resource: string,
-    result: string
-  ): 'low' | 'medium' | 'high' | 'critical' {
-    // High-risk actions
-    const highRiskActions = ['delete', 'export', 'admin', 'permission_grant', 'permission_revoke'];
-    const criticalResources = ['rbac', 'authentication', 'system'];
-    const failureEvents = ['failure', 'denied'];
-
-    if (failureEvents.includes(result) && criticalResources.includes(resource)) {
-      return 'critical';
-    }
-
-    if (highRiskActions.some(riskAction => action.includes(riskAction))) {
-      return 'high';
-    }
-
-    if (criticalResources.includes(resource)) {
-      return 'medium';
-    }
-
-    return 'low';
-  }
-
-  /**
-   * Get compliance tags for audit event
-   */
-  private static getComplianceTags(action: string, resource: string): string[] {
-    const tags: string[] = [];
-
-    // GDPR compliance
-    if (action.includes('export') || action.includes('delete') || resource.includes('personal')) {
-      tags.push('GDPR');
-    }
-
-    // SOX compliance
-    if (resource.includes('financial') || action.includes('audit')) {
-      tags.push('SOX');
-    }
-
-    // HIPAA compliance
-    if (resource.includes('health') || resource.includes('medical')) {
-      tags.push('HIPAA');
-    }
-
-    // PCI compliance
-    if (resource.includes('payment') || resource.includes('card')) {
-      tags.push('PCI');
-    }
-
-    // General data governance
-    tags.push('DATA_GOVERNANCE');
-
-    return tags;
-  }
-
-  /**
-   * Generate compliance report
-   */
-  static generateComplianceReport(
-    auditLogs: SecurityAuditLog[],
-    timeframe: { start: ISODateString; end: ISODateString },
-    complianceStandard: 'GDPR' | 'SOX' | 'HIPAA' | 'PCI' | 'ALL'
+    roleId: UUID,
+    context?: Record<string, any>
   ): {
-    summary: {
-      totalEvents: number;
-      riskDistribution: { [risk: string]: number };
-      complianceViolations: number;
-      topUsers: Array<{ userId: UUID; eventCount: number }>;
-    };
-    violations: SecurityAuditLog[];
+    valid: boolean;
+    issues: string[];
     recommendations: string[];
   } {
-    // Filter logs by timeframe and compliance standard
-    const filteredLogs = auditLogs.filter(log => {
-      const logDate = new Date(log.timestamp);
-      const inTimeframe = logDate >= new Date(timeframe.start) && logDate <= new Date(timeframe.end);
-      const matchesStandard = complianceStandard === 'ALL' || 
-                             (log.compliance_tags && log.compliance_tags.includes(complianceStandard));
-      return inTimeframe && matchesStandard;
-    });
-
-    // Calculate risk distribution
-    const riskDistribution: { [risk: string]: number } = {};
-    filteredLogs.forEach(log => {
-      riskDistribution[log.risk_level] = (riskDistribution[log.risk_level] || 0) + 1;
-    });
-
-    // Identify violations (failed/denied events with high/critical risk)
-    const violations = filteredLogs.filter(log => 
-      (log.result === 'failure' || log.result === 'denied') &&
-      (log.risk_level === 'high' || log.risk_level === 'critical')
-    );
-
-    // Calculate top users by event count
-    const userEventCounts: { [userId: string]: number } = {};
-    filteredLogs.forEach(log => {
-      userEventCounts[log.user_id] = (userEventCounts[log.user_id] || 0) + 1;
-    });
-
-    const topUsers = Object.entries(userEventCounts)
-      .map(([userId, count]) => ({ userId: userId as UUID, eventCount: count }))
-      .sort((a, b) => b.eventCount - a.eventCount)
-      .slice(0, 10);
-
-    // Generate recommendations
+    const issues: string[] = [];
     const recommendations: string[] = [];
-    if (violations.length > 0) {
-      recommendations.push(`${violations.length} compliance violations detected - review and address immediately`);
+
+    const role = this.roles.get(roleId);
+    if (!role) {
+      issues.push('Role does not exist');
+      return { valid: false, issues, recommendations };
     }
-    if (riskDistribution.critical > 0) {
-      recommendations.push('Critical risk events detected - implement additional security measures');
+
+    if (!role.isActive) {
+      issues.push('Role is inactive');
+      return { valid: false, issues, recommendations };
     }
-    if (riskDistribution.high > filteredLogs.length * 0.1) {
-      recommendations.push('High number of high-risk events - review access controls and permissions');
+
+    // Check for conflicts with existing roles
+    const userRoles = this.userRoles.get(userId) || [];
+    for (const existingRoleId of userRoles) {
+      const existingRole = this.roles.get(existingRoleId);
+      if (existingRole && this.hasRoleConflict(role, existingRole)) {
+        issues.push(`Conflicts with existing role: ${existingRole.name}`);
+      }
+    }
+
+    // Check for excessive permissions
+    const riskLevel = role.metadata.riskLevel;
+    if (riskLevel === 'critical' || riskLevel === 'high') {
+      recommendations.push('Consider using a role with lower privileges');
+      recommendations.push('Ensure proper approval process is followed');
+    }
+
+    // Check constraints
+    if (!this.evaluateConstraints(role.constraints, context)) {
+      issues.push('Role constraints not satisfied');
     }
 
     return {
-      summary: {
-        totalEvents: filteredLogs.length,
-        riskDistribution,
-        complianceViolations: violations.length,
-        topUsers
-      },
-      violations,
+      valid: issues.length === 0,
+      issues,
       recommendations
     };
   }
 
-  // Helper methods for getting current context
-  private static getCurrentIPAddress(): string {
-    // In a real implementation, this would get the actual IP address
-    return 'unknown';
+  private generateRoleId(): UUID {
+    return `role_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
   }
 
-  private static getCurrentUserAgent(): string {
-    // In a real implementation, this would get the actual user agent
-    return typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
+  private generatePermissionId(): UUID {
+    return `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
   }
 
-  private static getCurrentSessionId(): string {
-    // In a real implementation, this would get the actual session ID
-    return 'unknown';
-  }
-}
-
-/**
- * Authentication and Token Management Utilities
- * Handles JWT tokens, session management, and authentication validation
- */
-export class AuthenticationManager {
-  /**
-   * Validate JWT token structure and expiry
-   */
-  static validateToken(token: string): {
-    isValid: boolean;
-    payload?: any;
-    error?: string;
-    expiresAt?: Date;
-  } {
-    try {
-      // Basic JWT structure validation
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        return { isValid: false, error: 'Invalid token structure' };
-      }
-
-      // Decode payload (in production, use proper JWT library with signature verification)
-      const payload = JSON.parse(atob(parts[1]));
-      
-      // Check expiry
-      if (payload.exp) {
-        const expiresAt = new Date(payload.exp * 1000);
-        if (expiresAt < new Date()) {
-          return { isValid: false, error: 'Token expired', expiresAt };
+  private calculateRoleRiskLevel(permissions: UUID[]): 'low' | 'medium' | 'high' | 'critical' {
+    let riskScore = 0;
+    
+    for (const permissionId of permissions) {
+      const permission = this.permissions.get(permissionId);
+      if (permission) {
+        switch (permission.riskLevel) {
+          case 'critical': riskScore += 4; break;
+          case 'high': riskScore += 3; break;
+          case 'medium': riskScore += 2; break;
+          case 'low': riskScore += 1; break;
         }
-        return { isValid: true, payload, expiresAt };
       }
-
-      return { isValid: true, payload };
-    } catch (error) {
-      return { isValid: false, error: 'Invalid token format' };
     }
+
+    if (riskScore >= 10) return 'critical';
+    if (riskScore >= 6) return 'high';
+    if (riskScore >= 3) return 'medium';
+    return 'low';
   }
 
-  /**
-   * Generate API key with specific permissions
-   */
-  static generateAPIKey(
-    userId: UUID,
-    name: string,
-    permissions: string[],
-    expiresIn?: number // days
-  ): APIKeyConfiguration {
-    const keyId = crypto.randomUUID() as UUID;
-    const apiKey = this.generateSecureKey();
-    const hashedKey = this.hashAPIKey(apiKey);
+  private categorizePermission(resource: string, actions: string[]): string {
+    if (actions.includes('delete') || actions.includes('admin')) return 'administrative';
+    if (actions.includes('write') || actions.includes('update')) return 'modification';
+    if (actions.includes('read') || actions.includes('view')) return 'read-only';
+    return 'other';
+  }
 
-    return {
-      id: keyId,
-      user_id: userId,
-      name,
-      key_hash: hashedKey,
-      permissions,
-      is_active: true,
-      last_used: null,
-      usage_count: 0,
-      created_at: new Date().toISOString() as ISODateString,
-      expires_at: expiresIn 
-        ? new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000).toISOString() as ISODateString
-        : null,
-      rate_limit: {
-        requests_per_minute: 100,
-        requests_per_hour: 1000,
-        requests_per_day: 10000
-      },
-      allowed_ips: [],
-      metadata: {
-        plainKey: apiKey // Only return this once during creation
+  private evaluateConstraints(constraints: Record<string, any>, context?: Record<string, any>): boolean {
+    if (!context || Object.keys(constraints).length === 0) return true;
+
+    return Object.entries(constraints).every(([key, value]) => {
+      const contextValue = context[key];
+      
+      if (Array.isArray(value)) {
+        return value.includes(contextValue);
       }
-    };
+      
+      if (typeof value === 'object' && value !== null) {
+        if (value.min !== undefined && contextValue < value.min) return false;
+        if (value.max !== undefined && contextValue > value.max) return false;
+        return true;
+      }
+      
+      return contextValue === value;
+    });
   }
 
-  /**
-   * Validate API key and check permissions
-   */
-  static validateAPIKey(
-    apiKey: string,
-    apiKeyConfig: APIKeyConfiguration,
-    requiredPermission?: string
-  ): {
-    isValid: boolean;
-    error?: string;
-    canProceed: boolean;
-  } {
-    // Check if key is active
-    if (!apiKeyConfig.is_active) {
-      return { isValid: false, error: 'API key is inactive', canProceed: false };
-    }
-
-    // Check expiry
-    if (apiKeyConfig.expires_at && new Date(apiKeyConfig.expires_at) < new Date()) {
-      return { isValid: false, error: 'API key expired', canProceed: false };
-    }
-
-    // Validate key hash
-    const hashedKey = this.hashAPIKey(apiKey);
-    if (hashedKey !== apiKeyConfig.key_hash) {
-      return { isValid: false, error: 'Invalid API key', canProceed: false };
-    }
-
-    // Check permissions if required
-    if (requiredPermission && !apiKeyConfig.permissions.includes(requiredPermission)) {
-      return { isValid: true, error: 'Insufficient permissions', canProceed: false };
-    }
-
-    // Check rate limits (simplified)
-    if (this.isRateLimited(apiKeyConfig)) {
-      return { isValid: true, error: 'Rate limit exceeded', canProceed: false };
-    }
-
-    return { isValid: true, canProceed: true };
-  }
-
-  /**
-   * Generate MFA configuration for user
-   */
-  static generateMFAConfiguration(
-    userId: UUID,
-    method: 'totp' | 'sms' | 'email' | 'backup_codes'
-  ): MFAConfiguration {
-    const config: MFAConfiguration = {
-      id: crypto.randomUUID() as UUID,
-      user_id: userId,
-      method,
-      is_enabled: false,
-      is_verified: false,
-      created_at: new Date().toISOString() as ISODateString,
-      last_used: null,
-      backup_codes_used: 0
-    };
-
-    switch (method) {
-      case 'totp':
-        config.secret = this.generateTOTPSecret();
-        config.qr_code = this.generateQRCode(userId, config.secret);
-        break;
-      case 'sms':
-      case 'email':
-        // Configuration would be handled by external service
-        break;
-      case 'backup_codes':
-        config.backup_codes = this.generateBackupCodes();
-        break;
-    }
-
-    return config;
-  }
-
-  /**
-   * Verify MFA token
-   */
-  static verifyMFAToken(
-    token: string,
-    mfaConfig: MFAConfiguration,
-    windowSize: number = 1
+  private matchesPermission(
+    permission: RBACPermission,
+    resource: string,
+    action: string,
+    context?: Record<string, any>
   ): boolean {
-    if (!mfaConfig.is_enabled || !mfaConfig.is_verified) {
+    // Check resource match (exact or wildcard)
+    if (permission.resource !== '*' && permission.resource !== resource) {
+      // Check for pattern matching
+      if (!this.matchesPattern(permission.resource, resource)) {
+        return false;
+      }
+    }
+
+    // Check action match
+    if (!permission.actions.includes('*') && !permission.actions.includes(action)) {
       return false;
     }
 
-    switch (mfaConfig.method) {
-      case 'totp':
-        return this.verifyTOTPToken(token, mfaConfig.secret!, windowSize);
-      case 'backup_codes':
-        return this.verifyBackupCode(token, mfaConfig.backup_codes!);
-      case 'sms':
-      case 'email':
-        // Would integrate with external verification service
-        return false;
-      default:
-        return false;
+    // Check conditions
+    if (!this.evaluateConstraints(permission.conditions, context)) {
+      return false;
     }
+
+    return true;
   }
 
-  // Helper methods for key generation and validation
-  private static generateSecureKey(): string {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  private matchesPattern(pattern: string, value: string): boolean {
+    // Simple wildcard matching
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    return regex.test(value);
   }
 
-  private static hashAPIKey(apiKey: string): string {
-    // In production, use proper cryptographic hashing
-    return btoa(apiKey); // Simplified for demo
-  }
-
-  private static isRateLimited(apiKeyConfig: APIKeyConfiguration): boolean {
-    // Simplified rate limiting check - in production, use Redis or similar
-    return false;
-  }
-
-  private static generateTOTPSecret(): string {
-    const array = new Uint8Array(20);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  private static generateQRCode(userId: UUID, secret: string): string {
-    // In production, generate actual QR code
-    return `otpauth://totp/RacineSystem:${userId}?secret=${secret}&issuer=RacineSystem`;
-  }
-
-  private static generateBackupCodes(): string[] {
-    const codes: string[] = [];
-    for (let i = 0; i < 10; i++) {
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      codes.push(code);
+  private resolveRoleInheritance(roleId: UUID, visited: Set<UUID> = new Set()): UUID[] {
+    if (visited.has(roleId)) {
+      return []; // Circular dependency
     }
-    return codes;
+
+    visited.add(roleId);
+    const role = this.roles.get(roleId);
+    if (!role) return [];
+
+    const chain = [roleId];
+    
+    for (const parentRoleId of role.inheritsFrom) {
+      const parentChain = this.resolveRoleInheritance(parentRoleId, new Set(visited));
+      chain.push(...parentChain);
+    }
+
+    return chain;
   }
 
-  private static verifyTOTPToken(token: string, secret: string, windowSize: number): boolean {
-    // Simplified TOTP verification - in production, use proper TOTP library
-    return token.length === 6 && /^\d{6}$/.test(token);
-  }
+  private hasRoleConflict(role1: RBACRole, role2: RBACRole): boolean {
+    // Check for mutually exclusive roles
+    const conflictingPairs = [
+      ['admin', 'user'],
+      ['read-only', 'write'],
+      ['system', 'guest']
+    ];
 
-  private static verifyBackupCode(code: string, backupCodes: string[]): boolean {
-    return backupCodes.includes(code.toUpperCase());
+    return conflictingPairs.some(([type1, type2]) =>
+      (role1.name.toLowerCase().includes(type1) && role2.name.toLowerCase().includes(type2)) ||
+      (role1.name.toLowerCase().includes(type2) && role2.name.toLowerCase().includes(type1))
+    );
   }
 }
 
-/**
- * Data Encryption and Security Utilities
- * Handles data encryption, hashing, and secure data handling
- */
-export class DataSecurityManager {
+// ============================================================================
+// ACCESS CONTROL UTILITIES
+// ============================================================================
+
+export class AccessControlManager {
+  private acls: Map<string, AccessControlList> = new Map();
+  private accessHistory: Map<UUID, AuthorizationEvent[]> = new Map();
+
   /**
-   * Encrypt sensitive data
+   * Create access control list for resource
    */
-  static encryptSensitiveData(data: string, key?: string): {
-    encrypted: string;
-    iv: string;
-    algorithm: string;
+  createACL(
+    resourceId: string,
+    resourceType: string,
+    ownerId: UUID,
+    config: {
+      inheritFrom?: string;
+      defaultPermissions?: Record<string, string[]>;
+      restrictions?: Record<string, any>;
+    }
+  ): AccessControlList {
+    const acl: AccessControlList = {
+      resourceId,
+      resourceType,
+      ownerId,
+      permissions: {
+        read: [ownerId],
+        write: [ownerId],
+        delete: [ownerId],
+        admin: [ownerId]
+      },
+      inheritFrom: config.inheritFrom,
+      restrictions: config.restrictions || {},
+      metadata: {
+        createdBy: ownerId,
+        lastModified: new Date().toISOString() as ISODateString,
+        version: 1,
+        accessCount: 0,
+        lastAccessed: null
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Apply default permissions
+    if (config.defaultPermissions) {
+      Object.entries(config.defaultPermissions).forEach(([permission, users]) => {
+        acl.permissions[permission] = [...new Set([...acl.permissions[permission] || [], ...users])];
+      });
+    }
+
+    this.acls.set(resourceId, acl);
+    return acl;
+  }
+
+  /**
+   * Check resource access
+   */
+  checkAccess(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): {
+    granted: boolean;
+    reason: string;
+    effectivePermissions: string[];
+    inheritanceChain?: string[];
   } {
-    // Simplified encryption - in production, use proper encryption library
-    const iv = crypto.randomUUID();
-    const encrypted = btoa(data + iv); // Simplified
-    
+    const acl = this.acls.get(resourceId);
+    if (!acl) {
+      return {
+        granted: false,
+        reason: 'Resource not found',
+        effectivePermissions: []
+      };
+    }
+
+    // Check direct permissions
+    const directPermissions = this.getDirectPermissions(acl, userId);
+    if (directPermissions.includes(permission)) {
+      this.logAccess(resourceId, userId, permission, true, 'Direct permission');
+      return {
+        granted: true,
+        reason: 'Direct permission granted',
+        effectivePermissions: directPermissions
+      };
+    }
+
+    // Check inherited permissions
+    if (acl.inheritFrom) {
+      const inheritedResult = this.checkInheritedAccess(acl.inheritFrom, userId, permission, context);
+      if (inheritedResult.granted) {
+        this.logAccess(resourceId, userId, permission, true, 'Inherited permission');
+        return {
+          granted: true,
+          reason: 'Inherited permission granted',
+          effectivePermissions: [...directPermissions, ...inheritedResult.effectivePermissions],
+          inheritanceChain: [acl.inheritFrom, ...(inheritedResult.inheritanceChain || [])]
+        };
+      }
+    }
+
+    // Check restrictions
+    if (this.hasRestriction(acl, userId, permission, context)) {
+      this.logAccess(resourceId, userId, permission, false, 'Access restricted');
+      return {
+        granted: false,
+        reason: 'Access restricted by policy',
+        effectivePermissions: directPermissions
+      };
+    }
+
+    this.logAccess(resourceId, userId, permission, false, 'Permission not found');
     return {
-      encrypted,
-      iv,
-      algorithm: 'AES-256-GCM'
+      granted: false,
+      reason: 'Permission not granted',
+      effectivePermissions: directPermissions
     };
   }
 
   /**
-   * Decrypt sensitive data
+   * Grant permission to user
    */
-  static decryptSensitiveData(
-    encryptedData: string,
-    iv: string,
-    key?: string
-  ): string {
-    // Simplified decryption - in production, use proper decryption
-    try {
-      const decoded = atob(encryptedData);
-      return decoded.replace(iv, '');
-    } catch {
-      throw new Error('Decryption failed');
+  grantPermission(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    grantedBy: UUID,
+    config?: {
+      expiresAt?: Date;
+      conditions?: Record<string, any>;
+    }
+  ): boolean {
+    const acl = this.acls.get(resourceId);
+    if (!acl) throw new Error('Resource not found');
+
+    if (!acl.permissions[permission]) {
+      acl.permissions[permission] = [];
+    }
+
+    if (!acl.permissions[permission].includes(userId)) {
+      acl.permissions[permission].push(userId);
+      acl.metadata.lastModified = new Date().toISOString() as ISODateString;
+      acl.metadata.version++;
+      acl.updatedAt = new Date();
+      
+      this.logAccess(resourceId, grantedBy, 'grant_permission', true, `Granted ${permission} to ${userId}`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Revoke permission from user
+   */
+  revokePermission(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    revokedBy: UUID
+  ): boolean {
+    const acl = this.acls.get(resourceId);
+    if (!acl) throw new Error('Resource not found');
+
+    if (acl.permissions[permission]) {
+      const index = acl.permissions[permission].indexOf(userId);
+      if (index > -1) {
+        acl.permissions[permission].splice(index, 1);
+        acl.metadata.lastModified = new Date().toISOString() as ISODateString;
+        acl.metadata.version++;
+        acl.updatedAt = new Date();
+        
+        this.logAccess(resourceId, revokedBy, 'revoke_permission', true, `Revoked ${permission} from ${userId}`);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get user's access summary
+   */
+  getUserAccessSummary(userId: UUID): {
+    resources: Array<{
+      resourceId: string;
+      resourceType: string;
+      permissions: string[];
+      source: 'direct' | 'inherited';
+    }>;
+    totalResources: number;
+    permissionCounts: Record<string, number>;
+    recentAccess: AuthorizationEvent[];
+  } {
+    const resources: Array<{
+      resourceId: string;
+      resourceType: string;
+      permissions: string[];
+      source: 'direct' | 'inherited';
+    }> = [];
+
+    const permissionCounts: Record<string, number> = {};
+
+    // Check all ACLs
+    this.acls.forEach((acl, resourceId) => {
+      const directPermissions = this.getDirectPermissions(acl, userId);
+      
+      if (directPermissions.length > 0) {
+        resources.push({
+          resourceId,
+          resourceType: acl.resourceType,
+          permissions: directPermissions,
+          source: 'direct'
+        });
+
+        directPermissions.forEach(permission => {
+          permissionCounts[permission] = (permissionCounts[permission] || 0) + 1;
+        });
+      }
+    });
+
+    const recentAccess = this.accessHistory.get(userId) || [];
+
+    return {
+      resources,
+      totalResources: resources.length,
+      permissionCounts,
+      recentAccess: recentAccess.slice(-50) // Last 50 access events
+    };
+  }
+
+  private getDirectPermissions(acl: AccessControlList, userId: UUID): string[] {
+    const permissions: string[] = [];
+    
+    Object.entries(acl.permissions).forEach(([permission, users]) => {
+      if (users.includes(userId)) {
+        permissions.push(permission);
+      }
+    });
+
+    return permissions;
+  }
+
+  private checkInheritedAccess(
+    parentResourceId: string,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): {
+    granted: boolean;
+    effectivePermissions: string[];
+    inheritanceChain?: string[];
+  } {
+    const parentResult = this.checkAccess(parentResourceId, userId, permission, context);
+    return {
+      granted: parentResult.granted,
+      effectivePermissions: parentResult.effectivePermissions,
+      inheritanceChain: parentResult.inheritanceChain
+    };
+  }
+
+  private hasRestriction(
+    acl: AccessControlList,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): boolean {
+    if (!acl.restrictions || Object.keys(acl.restrictions).length === 0) {
+      return false;
+    }
+
+    // Check time-based restrictions
+    if (acl.restrictions.timeRestrictions) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDay = now.getDay();
+      
+      const timeRestrictions = acl.restrictions.timeRestrictions;
+      if (timeRestrictions.allowedHours && !timeRestrictions.allowedHours.includes(currentHour)) {
+        return true;
+      }
+      if (timeRestrictions.allowedDays && !timeRestrictions.allowedDays.includes(currentDay)) {
+        return true;
+      }
+    }
+
+    // Check IP-based restrictions
+    if (acl.restrictions.ipRestrictions && context?.clientIP) {
+      const allowedIPs = acl.restrictions.ipRestrictions.allowedIPs || [];
+      const blockedIPs = acl.restrictions.ipRestrictions.blockedIPs || [];
+      
+      if (blockedIPs.includes(context.clientIP)) {
+        return true;
+      }
+      if (allowedIPs.length > 0 && !allowedIPs.includes(context.clientIP)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private logAccess(
+    resourceId: string,
+    userId: UUID,
+    action: string,
+    granted: boolean,
+    reason: string
+  ): void {
+    const event: AuthorizationEvent = {
+      id: `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+      userId,
+      resourceId,
+      action,
+      granted,
+      reason,
+      timestamp: new Date().toISOString() as ISODateString,
+      metadata: {
+        userAgent: 'system',
+        ipAddress: 'unknown',
+        sessionId: 'system'
+      }
+    };
+
+    const userHistory = this.accessHistory.get(userId) || [];
+    userHistory.push(event);
+    
+    // Keep only last 1000 events per user
+    if (userHistory.length > 1000) {
+      userHistory.splice(0, userHistory.length - 1000);
+    }
+    
+    this.accessHistory.set(userId, userHistory);
+
+    // Update ACL access tracking
+    const acl = this.acls.get(resourceId);
+    if (acl) {
+      acl.metadata.accessCount++;
+      acl.metadata.lastAccessed = new Date().toISOString() as ISODateString;
     }
   }
+}
+
+// ============================================================================
+// SECURITY AUDIT UTILITIES
+// ============================================================================
+
+export class SecurityAuditManager {
+  private auditLogs: Map<UUID, SecurityAuditLog> = new Map();
+  private auditConfig: Record<string, any> = {};
 
   /**
-   * Hash password with salt
+   * Log security event
    */
-  static hashPassword(password: string, salt?: string): {
-    hash: string;
-    salt: string;
-    algorithm: string;
-  } {
-    const usedSalt = salt || crypto.randomUUID();
-    // Simplified hashing - in production, use bcrypt or similar
-    const hash = btoa(password + usedSalt);
+  logSecurityEvent(
+    eventType: 'authentication' | 'authorization' | 'data_access' | 'configuration_change' | 'security_violation',
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    description: string,
+    config: {
+      userId?: UUID;
+      resourceId?: string;
+      action?: string;
+      outcome: 'success' | 'failure' | 'warning';
+      metadata?: Record<string, any>;
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): SecurityAuditLog {
+    const logId = this.generateAuditId();
     
+    const auditLog: SecurityAuditLog = {
+      id: logId,
+      eventType,
+      severity,
+      description,
+      userId: config.userId,
+      resourceId: config.resourceId,
+      action: config.action,
+      outcome: config.outcome,
+      timestamp: new Date().toISOString() as ISODateString,
+      ipAddress: config.ipAddress || 'unknown',
+      userAgent: config.userAgent || 'unknown',
+      metadata: config.metadata || {},
+      tags: this.generateTags(eventType, severity, config.outcome),
+      retention: this.calculateRetention(severity, eventType),
+      indexed: true,
+      processed: false
+    };
+
+    this.auditLogs.set(logId, auditLog);
+    
+    // Trigger alerts for high-severity events
+    if (severity === 'critical' || severity === 'high') {
+      this.triggerSecurityAlert(auditLog);
+    }
+
+    return auditLog;
+  }
+
+  /**
+   * Query audit logs
+   */
+  queryAuditLogs(
+    filters: {
+      eventType?: string[];
+      severity?: string[];
+      userId?: UUID;
+      resourceId?: string;
+      outcome?: string[];
+      dateRange?: { start: Date; end: Date };
+      ipAddress?: string;
+      tags?: string[];
+    },
+    options: {
+      limit?: number;
+      offset?: number;
+      sortBy?: 'timestamp' | 'severity';
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ): {
+    logs: SecurityAuditLog[];
+    total: number;
+    aggregations: {
+      eventTypes: Record<string, number>;
+      severities: Record<string, number>;
+      outcomes: Record<string, number>;
+      topUsers: Array<{ userId: UUID; count: number }>;
+    };
+  } {
+    let filteredLogs = Array.from(this.auditLogs.values());
+
+    // Apply filters
+    if (filters.eventType) {
+      filteredLogs = filteredLogs.filter(log => filters.eventType!.includes(log.eventType));
+    }
+    
+    if (filters.severity) {
+      filteredLogs = filteredLogs.filter(log => filters.severity!.includes(log.severity));
+    }
+    
+    if (filters.userId) {
+      filteredLogs = filteredLogs.filter(log => log.userId === filters.userId);
+    }
+    
+    if (filters.resourceId) {
+      filteredLogs = filteredLogs.filter(log => log.resourceId === filters.resourceId);
+    }
+    
+    if (filters.outcome) {
+      filteredLogs = filteredLogs.filter(log => filters.outcome!.includes(log.outcome));
+    }
+    
+    if (filters.dateRange) {
+      filteredLogs = filteredLogs.filter(log => {
+        const logDate = new Date(log.timestamp);
+        return logDate >= filters.dateRange!.start && logDate <= filters.dateRange!.end;
+      });
+    }
+    
+    if (filters.ipAddress) {
+      filteredLogs = filteredLogs.filter(log => log.ipAddress === filters.ipAddress);
+    }
+    
+    if (filters.tags) {
+      filteredLogs = filteredLogs.filter(log => 
+        filters.tags!.some(tag => log.tags.includes(tag))
+      );
+    }
+
+    // Sort logs
+    const sortBy = options.sortBy || 'timestamp';
+    const sortOrder = options.sortOrder || 'desc';
+    
+    filteredLogs.sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'timestamp') {
+        comparison = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      } else if (sortBy === 'severity') {
+        const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
+        comparison = severityOrder[a.severity] - severityOrder[b.severity];
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    // Calculate aggregations
+    const aggregations = this.calculateAggregations(filteredLogs);
+
+    // Apply pagination
+    const offset = options.offset || 0;
+    const limit = options.limit || 100;
+    const paginatedLogs = filteredLogs.slice(offset, offset + limit);
+
     return {
-      hash,
-      salt: usedSalt,
-      algorithm: 'bcrypt'
+      logs: paginatedLogs,
+      total: filteredLogs.length,
+      aggregations
     };
   }
 
   /**
-   * Verify password against hash
+   * Generate security report
    */
-  static verifyPassword(password: string, hash: string, salt: string): boolean {
-    const computed = this.hashPassword(password, salt);
-    return computed.hash === hash;
-  }
-
-  /**
-   * Sanitize input data to prevent injection attacks
-   */
-  static sanitizeInput(input: string): string {
-    return input
-      .replace(/[<>]/g, '') // Remove potential HTML tags
-      .replace(/['"]/g, '') // Remove quotes
-      .replace(/[;]/g, '') // Remove semicolons
-      .trim();
-  }
-
-  /**
-   * Validate data against security patterns
-   */
-  static validateSecureData(data: any, rules: {
-    maxLength?: number;
-    minLength?: number;
-    allowedChars?: RegExp;
-    forbiddenPatterns?: RegExp[];
-    requireEncryption?: boolean;
-  }): {
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
+  generateSecurityReport(
+    timeframe: { start: Date; end: Date },
+    config: {
+      includeMetrics?: boolean;
+      includeTrends?: boolean;
+      includeRecommendations?: boolean;
+      format?: 'summary' | 'detailed';
+    } = {}
+  ): {
+    summary: {
+      totalEvents: number;
+      criticalEvents: number;
+      failureRate: number;
+      topThreats: string[];
+      affectedUsers: number;
+      affectedResources: number;
+    };
+    metrics?: SecurityMetrics;
+    trends?: Array<{
+      metric: string;
+      trend: 'increasing' | 'decreasing' | 'stable';
+      change: number;
+    }>;
+    recommendations?: string[];
+    details?: {
+      eventBreakdown: Record<string, number>;
+      severityDistribution: Record<string, number>;
+      timelineAnalysis: Array<{ date: string; events: number; failures: number }>;
+    };
   } {
-    const errors: string[] = [];
-    const warnings: string[] = [];
+    const logs = this.queryAuditLogs({
+      dateRange: timeframe
+    }, { limit: 10000 });
 
-    if (typeof data === 'string') {
-      // Length validation
-      if (rules.maxLength && data.length > rules.maxLength) {
-        errors.push(`Data exceeds maximum length of ${rules.maxLength}`);
-      }
-      if (rules.minLength && data.length < rules.minLength) {
-        errors.push(`Data is below minimum length of ${rules.minLength}`);
-      }
+    const summary = {
+      totalEvents: logs.total,
+      criticalEvents: logs.logs.filter(log => log.severity === 'critical').length,
+      failureRate: logs.total > 0 ? 
+        logs.logs.filter(log => log.outcome === 'failure').length / logs.total * 100 : 0,
+      topThreats: this.identifyTopThreats(logs.logs),
+      affectedUsers: new Set(logs.logs.map(log => log.userId).filter(Boolean)).size,
+      affectedResources: new Set(logs.logs.map(log => log.resourceId).filter(Boolean)).size
+    };
 
-      // Character validation
-      if (rules.allowedChars && !rules.allowedChars.test(data)) {
-        errors.push('Data contains invalid characters');
-      }
+    const result: any = { summary };
 
-      // Forbidden patterns
-      if (rules.forbiddenPatterns) {
-        rules.forbiddenPatterns.forEach(pattern => {
-          if (pattern.test(data)) {
-            errors.push('Data contains forbidden patterns');
+    if (config.includeMetrics) {
+      result.metrics = this.calculateSecurityMetrics(logs.logs);
+    }
+
+    if (config.includeTrends) {
+      result.trends = this.analyzeTrends(logs.logs, timeframe);
+    }
+
+    if (config.includeRecommendations) {
+      result.recommendations = this.generateRecommendations(logs.logs, summary);
+    }
+
+    if (config.format === 'detailed') {
+      result.details = {
+        eventBreakdown: logs.aggregations.eventTypes,
+        severityDistribution: logs.aggregations.severities,
+        timelineAnalysis: this.generateTimelineAnalysis(logs.logs, timeframe)
+      };
+    }
+
+    return result;
+  }
+
+  private generateAuditId(): UUID {
+    return `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+
+  private generateTags(
+    eventType: string,
+    severity: string,
+    outcome: string
+  ): string[] {
+    const tags = [eventType, severity, outcome];
+    
+    // Add contextual tags
+    if (severity === 'critical' || severity === 'high') {
+      tags.push('high-priority');
+    }
+    
+    if (outcome === 'failure') {
+      tags.push('security-incident');
+    }
+    
+    if (eventType === 'authentication' && outcome === 'failure') {
+      tags.push('auth-failure');
+    }
+
+    return tags;
+  }
+
+  private calculateRetention(severity: string, eventType: string): number {
+    // Retention in days
+    const retentionPolicies: Record<string, number> = {
+      critical: 2555, // 7 years
+      high: 1825,     // 5 years
+      medium: 1095,   // 3 years
+      low: 365        // 1 year
+    };
+
+    return retentionPolicies[severity] || 365;
+  }
+
+  private triggerSecurityAlert(auditLog: SecurityAuditLog): void {
+    // Implementation would trigger real-time alerts
+    console.warn(`SECURITY ALERT: ${auditLog.severity.toUpperCase()} - ${auditLog.description}`);
+  }
+
+  private calculateAggregations(logs: SecurityAuditLog[]): {
+    eventTypes: Record<string, number>;
+    severities: Record<string, number>;
+    outcomes: Record<string, number>;
+    topUsers: Array<{ userId: UUID; count: number }>;
+  } {
+    const eventTypes: Record<string, number> = {};
+    const severities: Record<string, number> = {};
+    const outcomes: Record<string, number> = {};
+    const userCounts: Record<string, number> = {};
+
+    logs.forEach(log => {
+      eventTypes[log.eventType] = (eventTypes[log.eventType] || 0) + 1;
+      severities[log.severity] = (severities[log.severity] || 0) + 1;
+      outcomes[log.outcome] = (outcomes[log.outcome] || 0) + 1;
+      
+      if (log.userId) {
+        userCounts[log.userId] = (userCounts[log.userId] || 0) + 1;
+      }
+    });
+
+    const topUsers = Object.entries(userCounts)
+      .map(([userId, count]) => ({ userId: userId as UUID, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return { eventTypes, severities, outcomes, topUsers };
+  }
+
+  private identifyTopThreats(logs: SecurityAuditLog[]): string[] {
+    const threatCounts: Record<string, number> = {};
+    
+    logs.forEach(log => {
+      if (log.outcome === 'failure' || log.severity === 'critical' || log.severity === 'high') {
+        const threat = `${log.eventType}_${log.action || 'unknown'}`;
+        threatCounts[threat] = (threatCounts[threat] || 0) + 1;
+      }
+    });
+
+    return Object.entries(threatCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([threat]) => threat);
+  }
+
+  private calculateSecurityMetrics(logs: SecurityAuditLog[]): SecurityMetrics {
+    const total = logs.length;
+    const failures = logs.filter(log => log.outcome === 'failure').length;
+    const criticalEvents = logs.filter(log => log.severity === 'critical').length;
+    const highEvents = logs.filter(log => log.severity === 'high').length;
+
+    return {
+      totalEvents: total,
+      failureRate: total > 0 ? (failures / total) * 100 : 0,
+      criticalEventRate: total > 0 ? (criticalEvents / total) * 100 : 0,
+      highRiskEventRate: total > 0 ? ((criticalEvents + highEvents) / total) * 100 : 0,
+      averageEventsPerDay: total / 30, // Assuming 30-day period
+      uniqueUsers: new Set(logs.map(log => log.userId).filter(Boolean)).size,
+      uniqueResources: new Set(logs.map(log => log.resourceId).filter(Boolean)).size,
+      authenticationFailures: logs.filter(log => 
+        log.eventType === 'authentication' && log.outcome === 'failure'
+      ).length,
+      authorizationFailures: logs.filter(log => 
+        log.eventType === 'authorization' && log.outcome === 'failure'
+      ).length
+    };
+  }
+
+  private analyzeTrends(
+    logs: SecurityAuditLog[],
+    timeframe: { start: Date; end: Date }
+  ): Array<{ metric: string; trend: 'increasing' | 'decreasing' | 'stable'; change: number }> {
+    // Simplified trend analysis - would be more sophisticated in production
+    const midpoint = new Date((timeframe.start.getTime() + timeframe.end.getTime()) / 2);
+    
+    const firstHalf = logs.filter(log => new Date(log.timestamp) < midpoint);
+    const secondHalf = logs.filter(log => new Date(log.timestamp) >= midpoint);
+
+    const trends = [];
+
+    // Total events trend
+    const totalChange = ((secondHalf.length - firstHalf.length) / Math.max(firstHalf.length, 1)) * 100;
+    trends.push({
+      metric: 'Total Events',
+      trend: Math.abs(totalChange) < 5 ? 'stable' : totalChange > 0 ? 'increasing' : 'decreasing',
+      change: Math.abs(totalChange)
+    });
+
+    // Failure rate trend
+    const firstHalfFailures = firstHalf.filter(log => log.outcome === 'failure').length;
+    const secondHalfFailures = secondHalf.filter(log => log.outcome === 'failure').length;
+    const failureChange = ((secondHalfFailures - firstHalfFailures) / Math.max(firstHalfFailures, 1)) * 100;
+    
+    trends.push({
+      metric: 'Failure Rate',
+      trend: Math.abs(failureChange) < 5 ? 'stable' : failureChange > 0 ? 'increasing' : 'decreasing',
+      change: Math.abs(failureChange)
+    });
+
+    return trends;
+  }
+
+  private generateRecommendations(logs: SecurityAuditLog[], summary: any): string[] {
+    const recommendations: string[] = [];
+
+    if (summary.failureRate > 10) {
+      recommendations.push('High failure rate detected - review authentication and authorization mechanisms');
+    }
+
+    if (summary.criticalEvents > 0) {
+      recommendations.push('Critical security events detected - immediate investigation required');
+    }
+
+    const authFailures = logs.filter(log => 
+      log.eventType === 'authentication' && log.outcome === 'failure'
+    ).length;
+    
+    if (authFailures > 50) {
+      recommendations.push('High authentication failure rate - consider implementing rate limiting and account lockout policies');
+    }
+
+    const uniqueIPs = new Set(logs.map(log => log.ipAddress)).size;
+    if (uniqueIPs > summary.affectedUsers * 2) {
+      recommendations.push('Unusual IP activity detected - review for potential distributed attacks');
+    }
+
+    return recommendations;
+  }
+
+  private generateTimelineAnalysis(
+    logs: SecurityAuditLog[],
+    timeframe: { start: Date; end: Date }
+  ): Array<{ date: string; events: number; failures: number }> {
+    const timeline: Array<{ date: string; events: number; failures: number }> = [];
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    for (let date = new Date(timeframe.start); date <= timeframe.end; date = new Date(date.getTime() + dayMs)) {
+      const dateStr = date.toISOString().split('T')[0];
+      const dayLogs = logs.filter(log => log.timestamp.startsWith(dateStr));
+      
+      timeline.push({
+        date: dateStr,
+        events: dayLogs.length,
+        failures: dayLogs.filter(log => log.outcome === 'failure').length
+      });
+    }
+
+    return timeline;
+  }
+}
+
+// ============================================================================
+// THREAT DETECTION UTILITIES
+// ============================================================================
+
+export class ThreatDetectionEngine {
+  private threats: Map<UUID, SecurityThreat> = new Map();
+  private detectionRules: Map<string, any> = new Map();
+
+  /**
+   * Analyze events for security threats
+   */
+  analyzeEvents(
+    events: SecurityAuditLog[],
+    config: {
+      sensitivity: 'low' | 'medium' | 'high';
+      timeWindow: number; // minutes
+      enableMLDetection?: boolean;
+    }
+  ): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    
+    // Brute force detection
+    const bruteForceThreats = this.detectBruteForce(events, config.timeWindow);
+    threats.push(...bruteForceThreats);
+
+    // Suspicious access patterns
+    const accessThreats = this.detectSuspiciousAccess(events, config.sensitivity);
+    threats.push(...accessThreats);
+
+    // Privilege escalation
+    const privilegeThreats = this.detectPrivilegeEscalation(events);
+    threats.push(...privilegeThreats);
+
+    // Data exfiltration
+    const exfiltrationThreats = this.detectDataExfiltration(events);
+    threats.push(...exfiltrationThreats);
+
+    // Store detected threats
+    threats.forEach(threat => {
+      this.threats.set(threat.id, threat);
+    });
+
+    return threats;
+  }
+
+  /**
+   * Get threat summary
+   */
+  getThreatSummary(timeframe?: { start: Date; end: Date }): {
+    totalThreats: number;
+    activethreats: number;
+    threatsByType: Record<string, number>;
+    threatsBySeverity: Record<string, number>;
+    topThreats: SecurityThreat[];
+    riskScore: number;
+  } {
+    let threats = Array.from(this.threats.values());
+    
+    if (timeframe) {
+      threats = threats.filter(threat => {
+        const threatTime = new Date(threat.detectedAt);
+        return threatTime >= timeframe.start && threatTime <= timeframe.end;
+      });
+    }
+
+    const activeThreats = threats.filter(threat => threat.status === 'active');
+    
+    const threatsByType: Record<string, number> = {};
+    const threatsBySeverity: Record<string, number> = {};
+    
+    threats.forEach(threat => {
+      threatsByType[threat.type] = (threatsByType[threat.type] || 0) + 1;
+      threatsBySeverity[threat.severity] = (threatsBySeverity[threat.severity] || 0) + 1;
+    });
+
+    const topThreats = threats
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 10);
+
+    const riskScore = this.calculateOverallRiskScore(threats);
+
+    return {
+      totalThreats: threats.length,
+      activethreats: activeThreats.length,
+      threatsByType,
+      threatsBySeverity,
+      topThreats,
+      riskScore
+    };
+  }
+
+  private detectBruteForce(events: SecurityAuditLog[], timeWindowMinutes: number): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    const timeWindow = timeWindowMinutes * 60 * 1000; // Convert to milliseconds
+    const threshold = 10; // Failed attempts threshold
+
+    // Group by user and IP
+    const attempts: Record<string, SecurityAuditLog[]> = {};
+    
+    events.forEach(event => {
+      if (event.eventType === 'authentication' && event.outcome === 'failure') {
+        const key = `${event.userId || 'unknown'}_${event.ipAddress}`;
+        if (!attempts[key]) attempts[key] = [];
+        attempts[key].push(event);
+      }
+    });
+
+    // Check for brute force patterns
+    Object.entries(attempts).forEach(([key, userAttempts]) => {
+      const [userId, ipAddress] = key.split('_');
+      
+      // Sort by timestamp
+      userAttempts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // Check for rapid failed attempts
+      for (let i = 0; i < userAttempts.length - threshold + 1; i++) {
+        const windowAttempts = userAttempts.slice(i, i + threshold);
+        const firstAttempt = new Date(windowAttempts[0].timestamp);
+        const lastAttempt = new Date(windowAttempts[windowAttempts.length - 1].timestamp);
+        
+        if (lastAttempt.getTime() - firstAttempt.getTime() <= timeWindow) {
+          const threat: SecurityThreat = {
+            id: `threat_brute_force_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'brute_force',
+            severity: 'high',
+            title: 'Brute Force Attack Detected',
+            description: `${threshold} failed authentication attempts from ${ipAddress} for user ${userId} within ${timeWindowMinutes} minutes`,
+            riskScore: 85,
+            status: 'active',
+            affectedResources: ['authentication_system'],
+            affectedUsers: userId !== 'unknown' ? [userId as UUID] : [],
+            sourceIPs: [ipAddress],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: lastAttempt.toISOString() as ISODateString,
+            evidence: windowAttempts.map(attempt => ({
+              type: 'audit_log',
+              id: attempt.id,
+              timestamp: attempt.timestamp,
+              description: attempt.description
+            })),
+            recommendations: [
+              'Block source IP address',
+              'Lock affected user account',
+              'Enable account lockout policies',
+              'Implement rate limiting'
+            ],
+            metadata: {
+              attemptCount: windowAttempts.length,
+              timeWindow: timeWindowMinutes,
+              detectionMethod: 'rule-based'
+            }
+          };
+          
+          threats.push(threat);
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private detectSuspiciousAccess(
+    events: SecurityAuditLog[],
+    sensitivity: 'low' | 'medium' | 'high'
+  ): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    
+    // Detect unusual access patterns
+    const accessPatterns: Record<string, {
+      ips: Set<string>;
+      resources: Set<string>;
+      times: Date[];
+    }> = {};
+
+    events.forEach(event => {
+      if (event.userId && event.eventType === 'data_access') {
+        if (!accessPatterns[event.userId]) {
+          accessPatterns[event.userId] = {
+            ips: new Set(),
+            resources: new Set(),
+            times: []
+          };
+        }
+        
+        accessPatterns[event.userId].ips.add(event.ipAddress);
+        if (event.resourceId) {
+          accessPatterns[event.userId].resources.add(event.resourceId);
+        }
+        accessPatterns[event.userId].times.push(new Date(event.timestamp));
+      }
+    });
+
+    // Analyze patterns
+    Object.entries(accessPatterns).forEach(([userId, pattern]) => {
+      const uniqueIPs = pattern.ips.size;
+      const uniqueResources = pattern.resources.size;
+      
+      // Multiple IP addresses
+      const ipThreshold = sensitivity === 'high' ? 3 : sensitivity === 'medium' ? 5 : 10;
+      if (uniqueIPs >= ipThreshold) {
+        threats.push({
+          id: `threat_multi_ip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+          type: 'suspicious_access',
+          severity: 'medium',
+          title: 'Multiple IP Access Pattern',
+          description: `User ${userId} accessed resources from ${uniqueIPs} different IP addresses`,
+          riskScore: 60,
+          status: 'active',
+          affectedResources: Array.from(pattern.resources),
+          affectedUsers: [userId as UUID],
+          sourceIPs: Array.from(pattern.ips),
+          detectedAt: new Date().toISOString() as ISODateString,
+          lastActivity: Math.max(...pattern.times.map(t => t.getTime())).toString() as ISODateString,
+          evidence: [],
+          recommendations: [
+            'Verify user identity',
+            'Check for compromised credentials',
+            'Review access patterns'
+          ],
+          metadata: {
+            uniqueIPs,
+            uniqueResources,
+            detectionMethod: 'pattern-analysis'
           }
         });
       }
 
-      // Encryption requirement
-      if (rules.requireEncryption && !this.isEncrypted(data)) {
-        warnings.push('Data should be encrypted');
-      }
-    }
+      // Unusual time access
+      const offHoursAccess = pattern.times.filter(time => {
+        const hour = time.getHours();
+        return hour < 6 || hour > 22; // Outside 6 AM - 10 PM
+      });
 
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
-  }
-
-  /**
-   * Check if data appears to be encrypted
-   */
-  private static isEncrypted(data: string): boolean {
-    // Simple heuristic - in production, use proper detection
-    return data.length > 50 && !/^[a-zA-Z0-9\s.,!?-]+$/.test(data);
-  }
-
-  /**
-   * Generate secure random string
-   */
-  static generateSecureRandom(length: number = 32): string {
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  /**
-   * Mask sensitive data for logging
-   */
-  static maskSensitiveData(data: any, sensitiveFields: string[] = []): any {
-    if (typeof data !== 'object' || data === null) {
-      return data;
-    }
-
-    const masked = { ...data };
-    const defaultSensitiveFields = ['password', 'token', 'key', 'secret', 'ssn', 'credit_card'];
-    const allSensitiveFields = [...defaultSensitiveFields, ...sensitiveFields];
-
-    Object.keys(masked).forEach(key => {
-      if (allSensitiveFields.some(field => key.toLowerCase().includes(field))) {
-        if (typeof masked[key] === 'string' && masked[key].length > 4) {
-          masked[key] = '***' + masked[key].slice(-4);
-        } else {
-          masked[key] = '***';
-        }
-      } else if (typeof masked[key] === 'object') {
-        masked[key] = this.maskSensitiveData(masked[key], sensitiveFields);
+      if (offHoursAccess.length > 5) {
+        threats.push({
+          id: `threat_off_hours_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+          type: 'suspicious_access',
+          severity: 'low',
+          title: 'Off-Hours Access Pattern',
+          description: `User ${userId} accessed resources ${offHoursAccess.length} times outside normal hours`,
+          riskScore: 40,
+          status: 'active',
+          affectedResources: Array.from(pattern.resources),
+          affectedUsers: [userId as UUID],
+          sourceIPs: Array.from(pattern.ips),
+          detectedAt: new Date().toISOString() as ISODateString,
+          lastActivity: Math.max(...offHoursAccess.map(t => t.getTime())).toString() as ISODateString,
+          evidence: [],
+          recommendations: [
+            'Verify legitimate business need',
+            'Review access policies',
+            'Consider time-based restrictions'
+          ],
+          metadata: {
+            offHoursCount: offHoursAccess.length,
+            detectionMethod: 'temporal-analysis'
+          }
+        });
       }
     });
 
-    return masked;
+    return threats;
+  }
+
+  private detectPrivilegeEscalation(events: SecurityAuditLog[]): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+
+    // Look for rapid permission changes
+    const permissionChanges = events.filter(event => 
+      event.action === 'grant_permission' || event.action === 'assign_role'
+    );
+
+    // Group by user
+    const userChanges: Record<string, SecurityAuditLog[]> = {};
+    permissionChanges.forEach(event => {
+      if (event.userId) {
+        if (!userChanges[event.userId]) userChanges[event.userId] = [];
+        userChanges[event.userId].push(event);
+      }
+    });
+
+    // Detect rapid escalation
+    Object.entries(userChanges).forEach(([userId, changes]) => {
+      if (changes.length >= 3) {
+        changes.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        
+        const firstChange = new Date(changes[0].timestamp);
+        const lastChange = new Date(changes[changes.length - 1].timestamp);
+        const timeSpan = lastChange.getTime() - firstChange.getTime();
+        
+        // If multiple permission changes within 1 hour
+        if (timeSpan <= 60 * 60 * 1000) {
+          threats.push({
+            id: `threat_privilege_escalation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'privilege_escalation',
+            severity: 'high',
+            title: 'Rapid Privilege Escalation',
+            description: `User ${userId} received ${changes.length} permission changes within 1 hour`,
+            riskScore: 80,
+            status: 'active',
+            affectedResources: changes.map(c => c.resourceId).filter(Boolean) as string[],
+            affectedUsers: [userId as UUID],
+            sourceIPs: [...new Set(changes.map(c => c.ipAddress))],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: lastChange.toISOString() as ISODateString,
+            evidence: changes.map(change => ({
+              type: 'audit_log',
+              id: change.id,
+              timestamp: change.timestamp,
+              description: change.description
+            })),
+            recommendations: [
+              'Review permission changes',
+              'Verify authorization for changes',
+              'Check for compromised admin accounts'
+            ],
+            metadata: {
+              changeCount: changes.length,
+              timeSpan: timeSpan / 1000, // seconds
+              detectionMethod: 'privilege-analysis'
+            }
+          });
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private detectDataExfiltration(events: SecurityAuditLog[]): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+
+    // Look for unusual data access patterns
+    const dataAccess = events.filter(event => 
+      event.eventType === 'data_access' && event.outcome === 'success'
+    );
+
+    // Group by user and analyze volume
+    const userAccess: Record<string, SecurityAuditLog[]> = {};
+    dataAccess.forEach(event => {
+      if (event.userId) {
+        if (!userAccess[event.userId]) userAccess[event.userId] = [];
+        userAccess[event.userId].push(event);
+      }
+    });
+
+    // Detect high-volume access
+    Object.entries(userAccess).forEach(([userId, accesses]) => {
+      if (accesses.length >= 100) { // Threshold for suspicious volume
+        const uniqueResources = new Set(accesses.map(a => a.resourceId)).size;
+        const timeSpan = Math.max(...accesses.map(a => new Date(a.timestamp).getTime())) - 
+                        Math.min(...accesses.map(a => new Date(a.timestamp).getTime()));
+        
+        if (timeSpan <= 24 * 60 * 60 * 1000) { // Within 24 hours
+          threats.push({
+            id: `threat_data_exfiltration_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'data_exfiltration',
+            severity: 'critical',
+            title: 'Potential Data Exfiltration',
+            description: `User ${userId} accessed ${accesses.length} resources (${uniqueResources} unique) within 24 hours`,
+            riskScore: 95,
+            status: 'active',
+            affectedResources: [...new Set(accesses.map(a => a.resourceId).filter(Boolean))] as string[],
+            affectedUsers: [userId as UUID],
+            sourceIPs: [...new Set(accesses.map(a => a.ipAddress))],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: new Date(Math.max(...accesses.map(a => new Date(a.timestamp).getTime()))).toISOString() as ISODateString,
+            evidence: accesses.slice(0, 10).map(access => ({
+              type: 'audit_log',
+              id: access.id,
+              timestamp: access.timestamp,
+              description: access.description
+            })),
+            recommendations: [
+              'Immediately suspend user account',
+              'Review all accessed data',
+              'Check for data loss prevention alerts',
+              'Investigate user activity'
+            ],
+            metadata: {
+              accessCount: accesses.length,
+              uniqueResources,
+              timeSpan: timeSpan / 1000,
+              detectionMethod: 'volume-analysis'
+            }
+          });
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private calculateOverallRiskScore(threats: SecurityThreat[]): number {
+    if (threats.length === 0) return 0;
+
+    const totalRisk = threats.reduce((sum, threat) => sum + threat.riskScore, 0);
+    const averageRisk = totalRisk / threats.length;
+
+    // Weight by severity
+    const criticalCount = threats.filter(t => t.severity === 'critical').length;
+    const highCount = threats.filter(t => t.severity === 'high').length;
+    
+    const severityBonus = (criticalCount * 20) + (highCount * 10);
+    
+    return Math.min(100, averageRisk + severityBonus);
   }
 }
 
-// Export all utility classes
-export {
-  AccessControlManager,
-  SecurityAuditManager,
-  AuthenticationManager,
-  DataSecurityManager
+// ============================================================================
+// MAIN SECURITY UTILITIES EXPORT
+// ============================================================================
+
+export const securityUtils = {
+  rbacManager: new RBACManager(),
+  accessControlManager: new AccessControlManager(),
+  auditManager: new SecurityAuditManager(),
+  threatDetection: new ThreatDetectionEngine()
 };
 
-// Export utility functions for common operations
-export const securityUtils = {
-  generateSecureId: (): UUID => {
-    return crypto.randomUUID() as UUID;
-  },
+// Utility functions for common operations
+export const generateSecurityId = (): UUID => {
+  return `sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+};
 
-  validateEmail: (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  },
+export const hashPassword = (password: string, salt?: string): string => {
+  // In production, use a proper cryptographic library like bcrypt
+  const actualSalt = salt || Math.random().toString(36).substr(2, 16);
+  const hash = btoa(password + actualSalt); // Simple base64 encoding for demo
+  return `${hash}:${actualSalt}`;
+};
 
-  validatePassword: (password: string): {
-    isValid: boolean;
-    score: number;
-    requirements: {
-      length: boolean;
-      uppercase: boolean;
-      lowercase: boolean;
-      numbers: boolean;
-      symbols: boolean;
-    };
-  } => {
-    const requirements = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      numbers: /\d/.test(password),
-      symbols: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
+export const verifyPassword = (password: string, hashedPassword: string): boolean => {
+  const [hash, salt] = hashedPassword.split(':');
+  const newHash = btoa(password + salt);
+  return hash === newHash;
+};
 
-    const score = Object.values(requirements).filter(Boolean).length;
-    const isValid = score >= 4;
-
-    return { isValid, score, requirements };
-  },
-
-  sanitizeFilename: (filename: string): string => {
-    return filename
-      .replace(/[^a-zA-Z0-9.-]/g, '_')
-      .replace(/_{2,}/g, '_')
-      .replace(/^_|_$/g, '');
-  },
-
-  detectSensitiveData: (text: string): {
-    hasSensitiveData: boolean;
-    detectedTypes: string[];
-    confidence: number;
-  } => {
-    const patterns = {
-      ssn: /\b\d{3}-\d{2}-\d{4}\b/,
-      creditCard: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/,
-      email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/,
-      phone: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,
-      ipAddress: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/
-    };
-
-    const detectedTypes: string[] = [];
-    Object.entries(patterns).forEach(([type, pattern]) => {
-      if (pattern.test(text)) {
-        detectedTypes.push(type);
-      }
-    });
-
-    const confidence = detectedTypes.length > 0 ? Math.min(detectedTypes.length * 0.3, 1) : 0;
-
-    return {
-      hasSensitiveData: detectedTypes.length > 0,
-      detectedTypes,
-      confidence
-    };
-  },
-
-  createSecurityAlert: (
-    type: 'authentication' | 'authorization' | 'data_access' | 'system' | 'compliance',
-    severity: 'low' | 'medium' | 'high' | 'critical',
-    message: string,
-    userId?: UUID,
-    metadata?: any
-  ): SecurityAlert => {
-    return {
-      id: crypto.randomUUID() as UUID,
-      type,
-      severity,
-      message,
-      user_id: userId,
-      metadata,
-      is_resolved: false,
-      created_at: new Date().toISOString() as ISODateString,
-      updated_at: new Date().toISOString() as ISODateString
-    };
+export const generateSecureToken = (length: number = 32): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return result;
+};
+
+export const validateIPAddress = (ip: string): boolean => {
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+};
+
+export const calculatePasswordStrength = (password: string): {
+  score: number;
+  strength: 'weak' | 'fair' | 'good' | 'strong';
+  recommendations: string[];
+} => {
+  let score = 0;
+  const recommendations: string[] = [];
+
+  // Length check
+  if (password.length >= 8) score += 2;
+  else recommendations.push('Use at least 8 characters');
+
+  if (password.length >= 12) score += 1;
+  if (password.length >= 16) score += 1;
+
+  // Character variety
+  if (/[a-z]/.test(password)) score += 1;
+  else recommendations.push('Include lowercase letters');
+
+  if (/[A-Z]/.test(password)) score += 1;
+  else recommendations.push('Include uppercase letters');
+
+  if (/[0-9]/.test(password)) score += 1;
+  else recommendations.push('Include numbers');
+
+  if (/[^a-zA-Z0-9]/.test(password)) score += 2;
+  else recommendations.push('Include special characters');
+
+  // Pattern checks
+  if (!/(.)\1{2,}/.test(password)) score += 1;
+  else recommendations.push('Avoid repeating characters');
+
+  if (!/123|abc|qwe|password|admin/i.test(password)) score += 1;
+  else recommendations.push('Avoid common patterns');
+
+  let strength: 'weak' | 'fair' | 'good' | 'strong';
+  if (score >= 8) strength = 'strong';
+  else if (score >= 6) strength = 'good';
+  else if (score >= 4) strength = 'fair';
+  else strength = 'weak';
+
+  return { score, strength, recommendations };
+};
+
+export const sanitizeInput = (input: string): string => {
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/['"]/g, '') // Remove quotes
+    .replace(/[&]/g, '&amp;') // Escape ampersands
+    .trim();
+};
+
+export const isSecureContext = (request: { protocol?: string; headers?: Record<string, string> }): boolean => {
+  // Check for HTTPS
+  if (request.protocol === 'https') return true;
+  
+  // Check for secure headers
+  const secureHeaders = [
+    'x-forwarded-proto',
+    'x-forwarded-ssl',
+    'x-url-scheme'
+  ];
+  
+  return secureHeaders.some(header => 
+    request.headers?.[header]?.toLowerCase() === 'https'
+  );
+};
+
+export const generateCSRFToken = (): string => {
+  return generateSecureToken(64);
+};
+
+export const validateCSRFToken = (token: string, expectedToken: string): boolean => {
+  return token === expectedToken && token.length === 64;
 };
