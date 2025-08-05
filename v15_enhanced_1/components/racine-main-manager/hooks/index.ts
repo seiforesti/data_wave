@@ -1,60 +1,88 @@
 /**
- * Racine Main Manager Hooks
- * =========================
+ * Racine Main Manager Hooks - Index
+ * ==================================
  * 
- * Central export file for all React hooks used in the racine main manager system.
- * These hooks provide reactive state management and integrate with the API services
- * to deliver real-time, type-safe functionality across all racine components.
+ * Central export point for all Racine Main Manager React hooks.
+ * All hooks provide comprehensive state management, API integration,
+ * and real-time updates for the master data governance system.
  */
 
-// Core orchestration hook
+// Core orchestration hooks
 export { useRacineOrchestration } from './useRacineOrchestration';
+export type { 
+  OrchestrationState,
+  OrchestrationHookOperations,
+  OrchestrationHookConfig
+} from './useRacineOrchestration';
 
 // Workspace management hooks
 export { useWorkspaceManagement } from './useWorkspaceManagement';
+export type {
+  WorkspaceManagementHookState,
+  WorkspaceManagementHookOperations,
+  WorkspaceManagementHookConfig
+} from './useWorkspaceManagement';
 
 // Job workflow hooks
 export { useJobWorkflowBuilder } from './useJobWorkflowBuilder';
+export type {
+  JobWorkflowBuilderHookState,
+  JobWorkflowBuilderHookOperations,
+  JobWorkflowBuilderHookConfig
+} from './useJobWorkflowBuilder';
 
 // Pipeline management hooks
 export { usePipelineManager } from './usePipelineManager';
+export type {
+  PipelineManagerHookState,
+  PipelineManagerHookOperations,
+  PipelineManagerHookConfig
+} from './usePipelineManager';
 
 // AI assistant hooks
 export { useAIAssistant } from './useAIAssistant';
+export type {
+  AIAssistantHookState,
+  AIAssistantHookOperations,
+  AIAssistantHookConfig
+} from './useAIAssistant';
+
+// Context-aware AI hooks
+export { useContextAwareAI } from './useContextAwareAI';
+export type {
+  ContextAwareAIHookState,
+  ContextAwareAIHookOperations,
+  ContextAwareAIHookConfig
+} from './useContextAwareAI';
 
 // Activity tracking hooks
 export { useActivityTracker } from './useActivityTracker';
-
-// Re-export all hook types for external usage
 export type {
-  // Workspace management types
-  UseWorkspaceManagementOptions,
-  
-  // Job workflow types
-  UseJobWorkflowBuilderOptions,
-  
-  // Pipeline management types
-  UsePipelineManagerOptions,
-  
-  // AI assistant types
-  UseAIAssistantOptions,
-  
-  // Activity tracking types
-  UseActivityTrackerOptions
-} from './useWorkspaceManagement';
-
-export type {
-  UseJobWorkflowBuilderOptions
-} from './useJobWorkflowBuilder';
-
-export type {
-  UsePipelineManagerOptions
-} from './usePipelineManager';
-
-export type {
-  UseAIAssistantOptions
-} from './useAIAssistant';
-
-export type {
-  UseActivityTrackerOptions
+  ActivityTrackerHookState,
+  ActivityTrackerHookOperations,
+  ActivityTrackerHookConfig
 } from './useActivityTracker';
+
+// Collaboration hooks
+export { useCollaboration } from './useCollaboration';
+export type {
+  CollaborationHookState,
+  CollaborationHookOperations,
+  CollaborationHookConfig
+} from './useCollaboration';
+
+// Intelligent dashboard hooks
+export { useIntelligentDashboard } from './useIntelligentDashboard';
+export type {
+  DashboardHookState,
+  DashboardHookOperations,
+  DashboardHookConfig
+} from './useIntelligentDashboard';
+
+// User management hooks
+export { useUserManagement } from './useUserManagement';
+export type {
+  UserManagementHookState,
+  UserManagementHookOperations,
+  UserManagementHookConfig
+} from './useUserManagement';
