@@ -33,6 +33,9 @@ export * from './collaboration-apis';
 // Cross-group integration service
 export * from './cross-group-integration-apis';
 
+// User management service
+export * from './user-management-apis';
+
 // Re-export service instances for convenience
 export { racineOrchestrationAPI } from './racine-orchestration-apis';
 export { workspaceManagementAPI } from './workspace-management-apis';
@@ -43,6 +46,7 @@ export { activityTrackingAPI } from './activity-tracking-apis';
 export { dashboardAPI } from './dashboard-apis';
 export { collaborationAPI } from './collaboration-apis';
 export { crossGroupIntegrationAPI } from './cross-group-integration-apis';
+export { userManagementAPI } from './user-management-apis';
 
 // Export service types for external usage
 export type {
@@ -124,3 +128,10 @@ export type {
   CrossGroupSearchFilters,
   SyncOptions
 } from './cross-group-integration-apis';
+
+export type {
+  UserManagementAPIConfig,
+  UserManagementEventType,
+  UserManagementEvent,
+  UserManagementEventHandler
+} from './user-management-apis';
