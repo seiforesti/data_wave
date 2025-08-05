@@ -136,6 +136,13 @@ export interface CreateOrchestrationRequest {
   notifications: NotificationSettings;
 }
 
+export interface UpdateOrchestrationRequest {
+  name?: string;
+  description?: string;
+  group_configurations?: Record<string, JSONValue>;
+  priority?: 'critical' | 'high' | 'medium' | 'low' | 'background';
+}
+
 export interface OrchestrationResponse {
   id: UUID;
   name: string;
@@ -145,6 +152,220 @@ export interface OrchestrationResponse {
   performanceMetrics: PerformanceMetrics;
   createdAt: ISODateString;
   lastHealthCheck: ISODateString;
+}
+
+export interface BulkOperationRequest {
+  operations: Array<{
+    operation_type: string;
+    target_group: string;
+    parameters: Record<string, JSONValue>;
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+  }>;
+  execution_mode: 'sequential' | 'parallel' | 'optimized';
+  timeout_seconds?: number;
+  rollback_on_failure?: boolean;
+}
+
+export interface BulkOperationResponse {
+  operation_id: UUID;
+  status: OperationStatus;
+  total_operations: number;
+  completed_operations: number;
+  failed_operations: number;
+  results: Array<{
+    operation_index: number;
+    status: OperationStatus;
+    result?: JSONValue;
+    error?: string;
+    execution_time_ms: number;
+  }>;
+  total_execution_time_ms: number;
+  created_at: ISODateString;
+  completed_at?: ISODateString;
+}
+
+export interface ServiceRegistryResponse {
+  services: Array<{
+    service_id: UUID;
+    service_name: string;
+    service_type: string;
+    status: SystemStatus;
+    last_heartbeat: ISODateString;
+    endpoints: string[];
+    health_check_url?: string;
+    metrics?: Record<string, JSONValue>;
+  }>;
+  registry_health: SystemStatus;
+  total_services: number;
+  healthy_services: number;
+  degraded_services: number;
+  failed_services: number;
+  last_updated: ISODateString;
+}
+
+export interface EmergencyShutdownRequest {
+  reason: string;
+  shutdown_type: 'graceful' | 'immediate' | 'maintenance';
+  affected_groups?: string[];
+  notification_message?: string;
+  estimated_downtime_minutes?: number;
+  contact_info?: string;
+}
+
+export interface CrossGroupDependencyResponse {
+  orchestration_id: UUID;
+  dependency_graph: {
+    nodes: Array<{
+      id: string;
+      group: string;
+      resource_type: string;
+      resource_id: UUID;
+      status: string;
+    }>;
+    edges: Array<{
+      source: string;
+      target: string;
+      dependency_type: string;
+      strength: number;
+    }>;
+  };
+  critical_paths: Array<{
+    path: string[];
+    risk_level: 'low' | 'medium' | 'high' | 'critical';
+    estimated_impact: string;
+  }>;
+  recommendations: Array<{
+    type: string;
+    description: string;
+    priority: string;
+    implementation_effort: string;
+  }>;
+  analysis_timestamp: ISODateString;
+}
+
+export interface ValidateOrchestrationRequest {
+  name: string;
+  orchestration_type: string;
+  connected_groups: string[];
+  group_configurations: Record<string, JSONValue>;
+  workflow_definition?: WorkflowDefinition;
+  pipeline_definition?: PipelineDefinition;
+}
+
+export interface OrchestrationValidationResponse {
+  is_valid: boolean;
+  validation_errors: Array<{
+    error_code: string;
+    error_message: string;
+    severity: 'error' | 'warning' | 'info';
+    field_path?: string;
+    suggested_fix?: string;
+  }>;
+  warnings: Array<{
+    warning_code: string;
+    warning_message: string;
+    recommendation: string;
+  }>;
+  estimated_resource_usage: {
+    cpu_cores: number;
+    memory_mb: number;
+    storage_gb: number;
+    network_mbps: number;
+  };
+  estimated_execution_time_minutes: number;
+  compatibility_matrix: Record<string, boolean>;
+  validation_timestamp: ISODateString;
+}
+
+export interface PerformanceInsightsResponse {
+  orchestration_id: UUID;
+  time_range: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  overall_health_score: number; // 0-100
+  performance_metrics: {
+    average_response_time_ms: number;
+    throughput_per_minute: number;
+    error_rate_percentage: number;
+    resource_utilization: {
+      cpu_percentage: number;
+      memory_percentage: number;
+      storage_percentage: number;
+      network_percentage: number;
+    };
+  };
+  group_performance: Array<{
+    group_name: string;
+    health_score: number;
+    bottlenecks: Array<{
+      component: string;
+      severity: string;
+      description: string;
+    }>;
+    optimization_opportunities: Array<{
+      opportunity: string;
+      potential_improvement: string;
+      implementation_complexity: string;
+    }>;
+  }>;
+  trends: Array<{
+    metric_name: string;
+    trend_direction: 'improving' | 'degrading' | 'stable';
+    change_percentage: number;
+    confidence_level: number;
+  }>;
+  ai_recommendations: Array<{
+    recommendation_type: string;
+    description: string;
+    expected_improvement: string;
+    implementation_steps: string[];
+    priority_score: number;
+  }>;
+  analysis_timestamp: ISODateString;
+}
+
+export interface OrchestrationReportRequest {
+  report_type: 'summary' | 'detailed' | 'performance' | 'security' | 'compliance';
+  time_range: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  include_sections: string[];
+  format: 'json' | 'pdf' | 'excel' | 'csv';
+  filters?: {
+    groups?: string[];
+    severity_levels?: string[];
+    status_types?: string[];
+  };
+  recipients?: Array<{
+    email: string;
+    role: string;
+  }>;
+}
+
+export interface OrchestrationReportResponse {
+  report_id: UUID;
+  report_type: string;
+  status: 'generating' | 'completed' | 'failed';
+  download_url?: string;
+  file_size_bytes?: number;
+  generated_at?: ISODateString;
+  expires_at?: ISODateString;
+  summary: {
+    total_orchestrations: number;
+    active_orchestrations: number;
+    total_workflows_executed: number;
+    success_rate_percentage: number;
+    average_execution_time_minutes: number;
+  };
+  sections: Array<{
+    section_name: string;
+    status: 'completed' | 'pending' | 'failed';
+    data_points: number;
+    insights: string[];
+  }>;
+  error_message?: string;
 }
 
 export interface SystemHealthResponse {
@@ -1630,7 +1851,625 @@ export interface TemplateCategoryInfo {
   popularTags: string[];
 }
 
-// Continue with Pipeline API, AI Assistant API, Activity API, Dashboard API, Collaboration API, Integration API, and User Management API types...
+// =============================================================================
+// ACTIVITY API TYPES
+// =============================================================================
+
+export interface CreateActivityRequest {
+  user_id: UUID;
+  activity_type: string;
+  description: string;
+  resource_type?: string;
+  resource_id?: UUID;
+  group?: string;
+  metadata?: Record<string, JSONValue>;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface ActivityResponse {
+  id: UUID;
+  user_id: UUID;
+  activity_type: string;
+  description: string;
+  resource_type?: string;
+  resource_id?: UUID;
+  group?: string;
+  metadata?: Record<string, JSONValue>;
+  severity: string;
+  created_at: ISODateString;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+export interface ActivityCorrelationRequest {
+  correlation_type: 'cross_group_impact' | 'user_behavior_pattern' | 'resource_access_pattern' | 
+                   'security_correlation' | 'performance_correlation' | 'causal_analysis' | 
+                   'temporal_correlation';
+  time_range: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  source_activities: UUID[];
+  analysis_depth?: 'shallow' | 'medium' | 'deep';
+  include_patterns?: boolean;
+  confidence_threshold?: number; // 0-1
+}
+
+export interface ActivityCorrelationResponse {
+  correlation_id: UUID;
+  correlation_type: string;
+  source_activities: UUID[];
+  related_activities: UUID[];
+  correlation_strength: number; // 0-1
+  correlation_patterns: Array<{
+    pattern_type: string;
+    pattern_description: string;
+    confidence: number;
+    occurrences: number;
+    time_periods: string[];
+  }>;
+  insights: Array<{
+    insight_type: string;
+    description: string;
+    impact_level: 'low' | 'medium' | 'high' | 'critical';
+    supporting_evidence: string[];
+  }>;
+  recommendations: Array<{
+    recommendation_type: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    implementation_steps: string[];
+  }>;
+  confidence_score: number; // 0-1
+  created_at: ISODateString;
+}
+
+export interface ActivitySessionResponse {
+  session_id: UUID;
+  user_id: UUID;
+  start_time: ISODateString;
+  end_time?: ISODateString;
+  duration_minutes?: number;
+  activity_count: number;
+  groups_accessed: string[];
+  resources_accessed: Array<{
+    resource_type: string;
+    resource_id: UUID;
+    access_count: number;
+  }>;
+  session_status: 'active' | 'completed' | 'terminated' | 'timeout';
+  ip_address?: string;
+  user_agent?: string;
+  location?: {
+    country?: string;
+    region?: string;
+    city?: string;
+  };
+  risk_score?: number; // 0-100
+  anomalies_detected?: number;
+}
+
+export interface ActivityReportRequest {
+  report_type: 'summary' | 'detailed' | 'security_audit' | 'compliance_audit' | 
+               'user_activity' | 'performance_analysis' | 'cross_group_analysis';
+  time_range: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  filters: {
+    user_ids?: UUID[];
+    groups?: string[];
+    activity_types?: string[];
+    severity_levels?: string[];
+    resource_types?: string[];
+  };
+  format: 'json' | 'pdf' | 'excel' | 'csv';
+  include_sections: string[];
+  aggregation_level?: 'hour' | 'day' | 'week' | 'month';
+  include_trends?: boolean;
+  include_correlations?: boolean;
+  recipients?: Array<{
+    email: string;
+    role: string;
+  }>;
+}
+
+export interface ActivityReportResponse {
+  report_id: UUID;
+  report_type: string;
+  status: 'generating' | 'completed' | 'failed';
+  progress_percentage?: number;
+  download_url?: string;
+  file_size_bytes?: number;
+  generated_at?: ISODateString;
+  expires_at?: ISODateString;
+  summary: {
+    total_activities: number;
+    unique_users: number;
+    groups_covered: number;
+    time_span_days: number;
+    top_activity_types: Array<{
+      activity_type: string;
+      count: number;
+      percentage: number;
+    }>;
+  };
+  error_message?: string;
+}
+
+export interface AdvancedActivitySearchRequest {
+  query?: string;
+  filters?: {
+    user_ids?: UUID[];
+    activity_types?: string[];
+    groups?: string[];
+    severity_levels?: string[];
+    resource_types?: string[];
+    has_anomalies?: boolean;
+    risk_level?: 'low' | 'medium' | 'high' | 'critical';
+  };
+  date_range?: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  sort?: {
+    field: 'created_at' | 'user_id' | 'activity_type' | 'severity' | 'risk_score';
+    direction: 'asc' | 'desc';
+  };
+  pagination?: {
+    page: number;
+    pageSize: number;
+  };
+  include_correlations?: boolean;
+  include_patterns?: boolean;
+}
+
+export interface ActivitySystemHealthResponse {
+  overall_status: SystemStatus;
+  components: {
+    activity_ingestion: {
+      status: SystemStatus;
+      throughput_per_minute: number;
+      queue_depth: number;
+      processing_latency_ms: number;
+    };
+    correlation_engine: {
+      status: SystemStatus;
+      active_analyses: number;
+      average_processing_time_minutes: number;
+    };
+    storage_backend: {
+      status: SystemStatus;
+      storage_used_gb: number;
+      storage_capacity_gb: number;
+      read_latency_ms: number;
+      write_latency_ms: number;
+    };
+    streaming_pipeline: {
+      status: SystemStatus;
+      active_connections: number;
+      events_per_second: number;
+    };
+  };
+  performance_metrics: {
+    activities_processed_last_hour: number;
+    correlations_completed_last_hour: number;
+    average_response_time_ms: number;
+    error_rate_percentage: number;
+  };
+  resource_utilization: {
+    cpu_percentage: number;
+    memory_percentage: number;
+    disk_percentage: number;
+    network_mbps: number;
+  };
+  alerts: Array<{
+    alert_type: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    message: string;
+    timestamp: ISODateString;
+  }>;
+  last_updated: ISODateString;
+}
+
+export interface ActivitySystemStatsResponse {
+  statistics_period: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  activity_statistics: {
+    total_activities: number;
+    activities_by_type: Record<string, number>;
+    activities_by_group: Record<string, number>;
+    activities_by_hour: Array<{
+      hour: string;
+      count: number;
+    }>;
+    top_users: Array<{
+      user_id: UUID;
+      username: string;
+      activity_count: number;
+    }>;
+  };
+  session_statistics: {
+    total_sessions: number;
+    active_sessions: number;
+    average_session_duration_minutes: number;
+    sessions_by_hour: Array<{
+      hour: string;
+      count: number;
+    }>;
+  };
+  correlation_statistics: {
+    total_correlations_analyzed: number;
+    significant_patterns_found: number;
+    average_correlation_strength: number;
+    top_correlation_types: Array<{
+      type: string;
+      count: number;
+    }>;
+  };
+  security_statistics: {
+    anomalies_detected: number;
+    security_incidents: number;
+    risk_score_distribution: Record<string, number>;
+    failed_access_attempts: number;
+  };
+  performance_statistics: {
+    average_processing_time_ms: number;
+    peak_throughput_per_minute: number;
+    data_retention_days: number;
+    storage_growth_rate_gb_per_day: number;
+  };
+  trends: Array<{
+    metric_name: string;
+    trend_direction: 'increasing' | 'decreasing' | 'stable';
+    change_percentage: number;
+    period_comparison: string;
+  }>;
+}
+
+// =============================================================================
+// INTEGRATION API TYPES
+// =============================================================================
+
+export interface CreateIntegrationEndpointRequest {
+  endpoint_name: string;
+  endpoint_type: 'rest_api' | 'webhook' | 'database' | 'message_queue' | 'file_system';
+  endpoint_url: string;
+  authentication_type: 'none' | 'api_key' | 'oauth2' | 'basic_auth' | 'custom';
+  authentication_config?: Record<string, JSONValue>;
+  connection_config: Record<string, JSONValue>;
+  timeout_seconds?: number;
+  retry_config?: {
+    max_retries: number;
+    retry_delay_ms: number;
+    backoff_multiplier: number;
+  };
+  health_check_config?: {
+    enabled: boolean;
+    interval_seconds: number;
+    timeout_seconds: number;
+    endpoint_path?: string;
+  };
+  tags?: string[];
+  description?: string;
+}
+
+export interface IntegrationEndpointResponse {
+  id: UUID;
+  endpoint_name: string;
+  endpoint_type: string;
+  endpoint_url: string;
+  status: 'active' | 'inactive' | 'error' | 'testing';
+  last_test_result?: {
+    success: boolean;
+    response_time_ms: number;
+    tested_at: ISODateString;
+    error_message?: string;
+  };
+  health_status: {
+    is_healthy: boolean;
+    last_check: ISODateString;
+    consecutive_failures: number;
+    average_response_time_ms?: number;
+  };
+  usage_statistics: {
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    average_response_time_ms: number;
+    last_used: ISODateString;
+  };
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  created_by: UUID;
+}
+
+export interface IntegrationTestResult {
+  test_id: UUID;
+  endpoint_id: UUID;
+  test_status: 'success' | 'failure' | 'timeout' | 'error';
+  response_time_ms: number;
+  status_code?: number;
+  response_data?: Record<string, JSONValue>;
+  error_message?: string;
+  test_details: {
+    request_sent: Record<string, JSONValue>;
+    response_received?: Record<string, JSONValue>;
+    network_info?: {
+      dns_resolution_time_ms: number;
+      connection_time_ms: number;
+      ssl_handshake_time_ms?: number;
+    };
+  };
+  tested_at: ISODateString;
+  tested_by: UUID;
+}
+
+export interface ServiceRegistrationRequest {
+  service_name: string;
+  service_type: 'microservice' | 'database' | 'message_queue' | 'cache' | 'external_api' | 'data_processor';
+  description?: string;
+  version: string;
+  endpoints: string[];
+  health_check_url?: string;
+  metadata?: Record<string, JSONValue>;
+  tags?: string[];
+  auto_heartbeat?: boolean;
+  heartbeat_interval_seconds?: number;
+}
+
+export interface ServiceRegistryResponse {
+  id: UUID;
+  service_name: string;
+  service_type: string;
+  description?: string;
+  version: string;
+  endpoints: string[];
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
+  health_check_url?: string;
+  last_heartbeat?: ISODateString;
+  heartbeat_interval_seconds?: number;
+  registration_time: ISODateString;
+  uptime_percentage: number;
+  metadata?: Record<string, JSONValue>;
+  tags?: string[];
+  registered_by: UUID;
+}
+
+export interface CreateIntegrationJobRequest {
+  job_name: string;
+  job_type: 'sync' | 'migration' | 'validation' | 'cleanup' | 'monitoring';
+  description?: string;
+  source_config: {
+    group: string;
+    resource_type: string;
+    filters?: Record<string, JSONValue>;
+  };
+  target_config: {
+    group: string;
+    resource_type: string;
+    mapping_rules?: Record<string, JSONValue>;
+  };
+  schedule?: {
+    type: 'once' | 'recurring';
+    cron_expression?: string;
+    start_time?: ISODateString;
+    end_time?: ISODateString;
+  };
+  execution_config: {
+    timeout_seconds: number;
+    retry_policy: {
+      max_retries: number;
+      retry_delay_ms: number;
+    };
+    parallelism?: number;
+    batch_size?: number;
+  };
+  notification_config?: {
+    on_success: boolean;
+    on_failure: boolean;
+    recipients: string[];
+  };
+}
+
+export interface IntegrationJobResponse {
+  id: UUID;
+  job_name: string;
+  job_type: string;
+  description?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  progress?: {
+    total_items: number;
+    processed_items: number;
+    failed_items: number;
+    current_step: string;
+    percentage: number;
+  };
+  execution_history: Array<{
+    execution_id: UUID;
+    started_at: ISODateString;
+    completed_at?: ISODateString;
+    status: string;
+    result_summary?: Record<string, JSONValue>;
+    error_message?: string;
+  }>;
+  next_execution?: ISODateString;
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  created_by: UUID;
+}
+
+export interface IntegrationJobExecutionResponse {
+  execution_id: UUID;
+  job_id: UUID;
+  status: 'started' | 'running' | 'completed' | 'failed' | 'cancelled';
+  started_at: ISODateString;
+  estimated_completion?: ISODateString;
+  progress: {
+    total_items: number;
+    processed_items: number;
+    failed_items: number;
+    current_step: string;
+    percentage: number;
+  };
+  logs_url?: string;
+  result_preview?: Record<string, JSONValue>;
+}
+
+export interface StartSyncRequest {
+  source_group: string;
+  target_group: string;
+  sync_type: 'full' | 'incremental' | 'selective';
+  resource_types?: string[];
+  filters?: Record<string, JSONValue>;
+  conflict_resolution?: 'source_wins' | 'target_wins' | 'latest_wins' | 'manual';
+  validation_rules?: Record<string, JSONValue>;
+  notification_config?: {
+    on_completion: boolean;
+    on_error: boolean;
+    recipients: string[];
+  };
+  schedule?: {
+    start_immediately: boolean;
+    start_time?: ISODateString;
+  };
+}
+
+export interface SyncJobResponse {
+  sync_id: UUID;
+  source_group: string;
+  target_group: string;
+  sync_type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused';
+  progress: {
+    total_resources: number;
+    synced_resources: number;
+    failed_resources: number;
+    skipped_resources: number;
+    current_resource_type: string;
+    percentage: number;
+  };
+  sync_statistics: {
+    resources_created: number;
+    resources_updated: number;
+    resources_deleted: number;
+    conflicts_detected: number;
+    conflicts_resolved: number;
+  };
+  started_at: ISODateString;
+  completed_at?: ISODateString;
+  estimated_completion?: ISODateString;
+  error_details?: Array<{
+    resource_type: string;
+    resource_id: UUID;
+    error_message: string;
+    error_code: string;
+  }>;
+  created_by: UUID;
+}
+
+export interface IntegrationSystemHealthResponse {
+  overall_status: SystemStatus;
+  components: {
+    endpoints: {
+      total: number;
+      healthy: number;
+      degraded: number;
+      unhealthy: number;
+      average_response_time_ms: number;
+    };
+    services: {
+      total: number;
+      registered: number;
+      active: number;
+      inactive: number;
+      last_heartbeat_within_threshold: number;
+    };
+    sync_operations: {
+      active_syncs: number;
+      failed_syncs_last_24h: number;
+      average_sync_duration_minutes: number;
+      success_rate_percentage: number;
+    };
+    integration_jobs: {
+      total_jobs: number;
+      running_jobs: number;
+      failed_jobs_last_24h: number;
+      queue_depth: number;
+    };
+  };
+  performance_metrics: {
+    throughput_per_minute: number;
+    error_rate_percentage: number;
+    average_processing_time_ms: number;
+    resource_utilization: {
+      cpu_percentage: number;
+      memory_percentage: number;
+      network_mbps: number;
+    };
+  };
+  alerts: Array<{
+    alert_type: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    message: string;
+    component: string;
+    timestamp: ISODateString;
+  }>;
+  last_updated: ISODateString;
+}
+
+export interface IntegrationPerformanceAnalyticsResponse {
+  time_period: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  endpoint_analytics: {
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    average_response_time_ms: number;
+    p95_response_time_ms: number;
+    throughput_per_minute: number;
+    error_rate_percentage: number;
+    slowest_endpoints: Array<{
+      endpoint_id: UUID;
+      endpoint_name: string;
+      average_response_time_ms: number;
+      request_count: number;
+    }>;
+  };
+  sync_analytics: {
+    total_syncs: number;
+    successful_syncs: number;
+    failed_syncs: number;
+    average_sync_duration_minutes: number;
+    total_resources_synced: number;
+    sync_success_rate_percentage: number;
+    most_active_groups: Array<{
+      group: string;
+      sync_count: number;
+      success_rate: number;
+    }>;
+  };
+  resource_utilization: {
+    peak_cpu_percentage: number;
+    peak_memory_percentage: number;
+    peak_network_mbps: number;
+    average_cpu_percentage: number;
+    average_memory_percentage: number;
+    average_network_mbps: number;
+  };
+  trends: Array<{
+    metric_name: string;
+    trend_direction: 'increasing' | 'decreasing' | 'stable';
+    change_percentage: number;
+    significance: 'high' | 'medium' | 'low';
+  }>;
+}
+
+// Continue with Pipeline API, AI Assistant API, Dashboard API, Collaboration API, Integration API, and User Management API types...
 // Due to length constraints, I'll create additional type files for the remaining APIs
 
 export type {
@@ -1662,5 +2501,31 @@ export type {
   WorkflowResponse,
   ExecuteWorkflowRequest,
   GetWorkflowTemplatesRequest,
-  WorkflowTemplateResponse
+  WorkflowTemplateResponse,
+  
+  // Activity API types
+  CreateActivityRequest,
+  ActivityResponse,
+  ActivityCorrelationRequest,
+  ActivityCorrelationResponse,
+  ActivitySessionResponse,
+  ActivityReportRequest,
+  ActivityReportResponse,
+  AdvancedActivitySearchRequest,
+  ActivitySystemHealthResponse,
+  ActivitySystemStatsResponse,
+
+  // Integration API types
+  CreateIntegrationEndpointRequest,
+  IntegrationEndpointResponse,
+  IntegrationTestResult,
+  ServiceRegistrationRequest,
+  ServiceRegistryResponse,
+  CreateIntegrationJobRequest,
+  IntegrationJobResponse,
+  IntegrationJobExecutionResponse,
+  StartSyncRequest,
+  SyncJobResponse,
+  IntegrationSystemHealthResponse,
+  IntegrationPerformanceAnalyticsResponse
 };
