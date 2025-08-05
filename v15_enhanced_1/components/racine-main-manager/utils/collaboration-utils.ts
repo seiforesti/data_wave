@@ -8,938 +8,624 @@ import {
   CollaborationSession, 
   CollaborationParticipant, 
   CollaborationDocument, 
-  CollaborationMessage,
-  CollaborationWorkflow,
-  CollaborationSpace,
+  CollaborationMessage, 
+  CollaborationTask, 
   CollaborationAnalytics,
   CollaborationPermission,
-  CollaborationEvent,
   CollaborationNotification,
-  WorkflowCoAuthoring,
-  ExpertNetwork,
-  KnowledgeSharing
-} from '../types/collaboration.types';
+  CollaborationEvent,
+  UUID,
+  ISODateString 
+} from '../types/racine-core.types';
 
-import { UUID, ISODateString } from '../types/racine-core.types';
-
-// ============================================================================
-// COLLABORATION SESSION MANAGEMENT
-// ============================================================================
-
-export class CollaborationSessionManager {
-  private activeSessions: Map<UUID, CollaborationSession> = new Map();
-  private sessionParticipants: Map<UUID, CollaborationParticipant[]> = new Map();
+/**
+ * Collaboration Hub Management Utilities
+ * Provides utilities for managing collaboration hubs across all groups
+ */
+export class CollaborationHubManager {
+  /**
+   * Create a new collaboration hub with proper initialization
+   */
+  static createHub(
+    name: string,
+    type: 'project' | 'team' | 'cross_group' | 'temporary',
+    ownerId: UUID,
+    groupIds: string[],
+    settings?: Partial<CollaborationHub['settings']>
+  ): Partial<CollaborationHub> {
+    return {
+      name,
+      type,
+      owner_id: ownerId,
+      connected_groups: groupIds,
+      settings: {
+        is_public: false,
+        allow_external_collaborators: false,
+        auto_archive_inactive: true,
+        require_approval_for_join: true,
+        enable_real_time_collaboration: true,
+        max_participants: 50,
+        retention_policy: '1_year',
+        ...settings
+      },
+      status: 'active',
+      created_at: new Date().toISOString() as ISODateString,
+      updated_at: new Date().toISOString() as ISODateString
+    };
+  }
 
   /**
-   * Create and initialize a new collaboration session
+   * Validate hub permissions for a user
    */
-  createSession(
+  static validateHubPermissions(
+    hub: CollaborationHub,
+    userId: UUID,
+    requiredPermission: CollaborationPermission['permission_type']
+  ): boolean {
+    // Check if user is owner
+    if (hub.owner_id === userId) {
+      return true;
+    }
+
+    // Check participant permissions
+    const participant = hub.participants.find(p => p.user_id === userId);
+    if (!participant) {
+      return false;
+    }
+
+    // Check specific permissions
+    return participant.permissions.some(p => 
+      p.permission_type === requiredPermission && p.granted
+    );
+  }
+
+  /**
+   * Get hub statistics and metrics
+   */
+  static getHubMetrics(hub: CollaborationHub): {
+    totalParticipants: number;
+    activeParticipants: number;
+    totalSessions: number;
+    activeSessions: number;
+    totalDocuments: number;
+    totalMessages: number;
+    averageSessionDuration: number;
+    collaborationScore: number;
+  } {
+    const activeParticipants = hub.participants.filter(p => p.status === 'active').length;
+    const activeSessions = hub.sessions.filter(s => s.status === 'active').length;
+    
+    const totalSessionDuration = hub.sessions.reduce((acc, session) => {
+      if (session.ended_at) {
+        return acc + (new Date(session.ended_at).getTime() - new Date(session.started_at).getTime());
+      }
+      return acc;
+    }, 0);
+
+    const averageSessionDuration = hub.sessions.length > 0 
+      ? totalSessionDuration / hub.sessions.length / (1000 * 60) // in minutes
+      : 0;
+
+    // Calculate collaboration score based on activity
+    const collaborationScore = Math.min(100, 
+      (activeParticipants * 10) + 
+      (activeSessions * 5) + 
+      (hub.documents.length * 2) + 
+      (hub.messages.length * 0.1)
+    );
+
+    return {
+      totalParticipants: hub.participants.length,
+      activeParticipants,
+      totalSessions: hub.sessions.length,
+      activeSessions,
+      totalDocuments: hub.documents.length,
+      totalMessages: hub.messages.length,
+      averageSessionDuration,
+      collaborationScore
+    };
+  }
+}
+
+/**
+ * Collaboration Session Management Utilities
+ * Handles session lifecycle, participant coordination, and real-time features
+ */
+export class CollaborationSessionManager {
+  /**
+   * Create a new collaboration session
+   */
+  static createSession(
     hubId: UUID,
     initiatorId: UUID,
     type: 'meeting' | 'workshop' | 'review' | 'brainstorm' | 'planning',
-    config: {
-      title: string;
-      description?: string;
-      duration?: number;
-      maxParticipants?: number;
-      requiresApproval?: boolean;
-      recordSession?: boolean;
-      allowScreenShare?: boolean;
-      allowFileShare?: boolean;
-    }
-  ): CollaborationSession {
-    const sessionId = this.generateSessionId();
-    const session: CollaborationSession = {
-      id: sessionId,
-      hubId,
-      title: config.title,
-      description: config.description || '',
-      type,
-      status: 'scheduled',
-      initiatorId,
-      participants: [],
-      startTime: new Date().toISOString() as ISODateString,
-      endTime: config.duration ? 
-        new Date(Date.now() + config.duration * 60000).toISOString() as ISODateString : 
-        undefined,
-      settings: {
-        maxParticipants: config.maxParticipants || 50,
-        requiresApproval: config.requiresApproval || false,
-        recordSession: config.recordSession || false,
-        allowScreenShare: config.allowScreenShare || true,
-        allowFileShare: config.allowFileShare || true,
-        allowChat: true,
-        allowVoice: true,
-        allowVideo: true
-      },
-      documents: [],
-      messages: [],
-      recordings: [],
-      analytics: this.initializeSessionAnalytics(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.activeSessions.set(sessionId, session);
-    this.sessionParticipants.set(sessionId, []);
-    
-    return session;
-  }
-
-  /**
-   * Add participant to collaboration session
-   */
-  addParticipant(
-    sessionId: UUID,
-    participant: Omit<CollaborationParticipant, 'joinedAt' | 'status'>
-  ): CollaborationParticipant {
-    const session = this.activeSessions.get(sessionId);
-    if (!session) throw new Error('Session not found');
-
-    const fullParticipant: CollaborationParticipant = {
-      ...participant,
-      joinedAt: new Date().toISOString() as ISODateString,
-      status: 'active'
-    };
-
-    const participants = this.sessionParticipants.get(sessionId) || [];
-    participants.push(fullParticipant);
-    this.sessionParticipants.set(sessionId, participants);
-
-    // Update session
-    session.participants = participants;
-    session.updatedAt = new Date();
-
-    return fullParticipant;
-  }
-
-  /**
-   * Remove participant from session
-   */
-  removeParticipant(sessionId: UUID, participantId: UUID): void {
-    const participants = this.sessionParticipants.get(sessionId) || [];
-    const updatedParticipants = participants.filter(p => p.id !== participantId);
-    this.sessionParticipants.set(sessionId, updatedParticipants);
-
-    const session = this.activeSessions.get(sessionId);
-    if (session) {
-      session.participants = updatedParticipants;
-      session.updatedAt = new Date();
-    }
-  }
-
-  /**
-   * Update session status
-   */
-  updateSessionStatus(
-    sessionId: UUID, 
-    status: 'scheduled' | 'active' | 'paused' | 'ended' | 'cancelled'
-  ): void {
-    const session = this.activeSessions.get(sessionId);
-    if (session) {
-      session.status = status;
-      session.updatedAt = new Date();
-      
-      if (status === 'ended') {
-        session.endTime = new Date().toISOString() as ISODateString;
-      }
-    }
-  }
-
-  private generateSessionId(): UUID {
-    return `collab_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
-  }
-
-  private initializeSessionAnalytics(): CollaborationAnalytics {
+    title: string,
+    agenda?: string[]
+  ): Partial<CollaborationSession> {
     return {
-      participantCount: 0,
-      messageCount: 0,
-      documentCount: 0,
-      screenShareDuration: 0,
-      voiceDuration: 0,
-      videoDuration: 0,
-      engagementScore: 0,
-      productivityMetrics: {
-        tasksCreated: 0,
-        tasksCompleted: 0,
-        decisionseMade: 0,
-        documentsShared: 0
+      hub_id: hubId,
+      initiator_id: initiatorId,
+      type,
+      title,
+      agenda: agenda || [],
+      status: 'scheduled',
+      started_at: new Date().toISOString() as ISODateString,
+      settings: {
+        allow_screen_sharing: true,
+        enable_recording: false,
+        require_moderator_approval: false,
+        max_duration_minutes: 120,
+        auto_end_when_empty: true
       },
-      timeMetrics: {
-        totalDuration: 0,
-        activeDuration: 0,
-        idleDuration: 0
-      }
+      created_at: new Date().toISOString() as ISODateString,
+      updated_at: new Date().toISOString() as ISODateString
+    };
+  }
+
+  /**
+   * Calculate session health score
+   */
+  static calculateSessionHealth(session: CollaborationSession): {
+    score: number;
+    factors: {
+      participation: number;
+      engagement: number;
+      productivity: number;
+      technical: number;
+    };
+    recommendations: string[];
+  } {
+    const factors = {
+      participation: Math.min(100, session.participants.length * 20),
+      engagement: session.messages ? Math.min(100, session.messages.length * 2) : 0,
+      productivity: session.shared_documents ? Math.min(100, session.shared_documents.length * 10) : 0,
+      technical: session.connection_quality || 100
+    };
+
+    const score = Object.values(factors).reduce((acc, val) => acc + val, 0) / 4;
+
+    const recommendations: string[] = [];
+    if (factors.participation < 50) recommendations.push('Consider inviting more relevant participants');
+    if (factors.engagement < 30) recommendations.push('Encourage more active participation');
+    if (factors.productivity < 40) recommendations.push('Share more collaborative documents');
+    if (factors.technical < 80) recommendations.push('Check network connectivity');
+
+    return { score, factors, recommendations };
+  }
+
+  /**
+   * Generate session summary
+   */
+  static generateSessionSummary(session: CollaborationSession): {
+    duration: number;
+    participantCount: number;
+    messageCount: number;
+    documentsShared: number;
+    keyTopics: string[];
+    actionItems: string[];
+    decisions: string[];
+  } {
+    const duration = session.ended_at 
+      ? new Date(session.ended_at).getTime() - new Date(session.started_at).getTime()
+      : 0;
+
+    return {
+      duration: Math.round(duration / (1000 * 60)), // in minutes
+      participantCount: session.participants.length,
+      messageCount: session.messages?.length || 0,
+      documentsShared: session.shared_documents?.length || 0,
+      keyTopics: session.agenda || [],
+      actionItems: session.action_items || [],
+      decisions: session.decisions || []
     };
   }
 }
 
-// ============================================================================
-// DOCUMENT COLLABORATION UTILITIES
-// ============================================================================
-
+/**
+ * Document Collaboration Utilities
+ * Handles collaborative document management, versioning, and real-time editing
+ */
 export class DocumentCollaborationManager {
-  private documentSessions: Map<UUID, CollaborationDocument> = new Map();
-  private documentLocks: Map<UUID, { userId: UUID; timestamp: number }> = new Map();
-
   /**
-   * Initialize document for collaboration
+   * Create collaborative document metadata
    */
-  initializeDocument(
-    documentId: UUID,
+  static createDocumentMetadata(
     title: string,
-    type: 'text' | 'spreadsheet' | 'presentation' | 'diagram' | 'code',
-    content: any,
-    ownerId: UUID
-  ): CollaborationDocument {
-    const document: CollaborationDocument = {
-      id: documentId,
+    type: 'document' | 'spreadsheet' | 'presentation' | 'diagram' | 'code',
+    ownerId: UUID,
+    hubId: UUID
+  ): Partial<CollaborationDocument> {
+    return {
       title,
       type,
-      content,
-      version: 1,
-      ownerId,
-      collaborators: [],
-      permissions: {
-        read: [],
-        write: [],
-        comment: [],
-        admin: [ownerId]
-      },
-      changes: [],
-      comments: [],
-      status: 'active',
-      lastModified: new Date().toISOString() as ISODateString,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.documentSessions.set(documentId, document);
-    return document;
-  }
-
-  /**
-   * Add collaborator to document
-   */
-  addCollaborator(
-    documentId: UUID,
-    collaboratorId: UUID,
-    permission: 'read' | 'write' | 'comment' | 'admin'
-  ): void {
-    const document = this.documentSessions.get(documentId);
-    if (!document) throw new Error('Document not found');
-
-    if (!document.collaborators.includes(collaboratorId)) {
-      document.collaborators.push(collaboratorId);
-    }
-
-    if (!document.permissions[permission].includes(collaboratorId)) {
-      document.permissions[permission].push(collaboratorId);
-    }
-
-    document.updatedAt = new Date();
-  }
-
-  /**
-   * Apply document change with conflict resolution
-   */
-  applyDocumentChange(
-    documentId: UUID,
-    userId: UUID,
-    change: {
-      type: 'insert' | 'delete' | 'update' | 'format';
-      position: number;
-      content: any;
-      metadata?: any;
-    }
-  ): boolean {
-    const document = this.documentSessions.get(documentId);
-    if (!document) throw new Error('Document not found');
-
-    // Check permissions
-    if (!document.permissions.write.includes(userId) && !document.permissions.admin.includes(userId)) {
-      throw new Error('Insufficient permissions');
-    }
-
-    // Check for conflicts
-    const hasConflict = this.detectConflicts(documentId, change);
-    if (hasConflict) {
-      return false; // Conflict detected, change rejected
-    }
-
-    // Apply change
-    const changeRecord = {
-      id: this.generateChangeId(),
-      userId,
-      timestamp: new Date().toISOString() as ISODateString,
-      type: change.type,
-      position: change.position,
-      content: change.content,
-      metadata: change.metadata
-    };
-
-    document.changes.push(changeRecord);
-    document.version += 1;
-    document.lastModified = new Date().toISOString() as ISODateString;
-    document.updatedAt = new Date();
-
-    return true;
-  }
-
-  /**
-   * Lock document section for editing
-   */
-  lockDocumentSection(
-    documentId: UUID,
-    userId: UUID,
-    section: { start: number; end: number }
-  ): boolean {
-    const lockKey = `${documentId}_${section.start}_${section.end}`;
-    const existingLock = this.documentLocks.get(lockKey as UUID);
-
-    if (existingLock && existingLock.userId !== userId) {
-      // Check if lock is still valid (5 minutes)
-      if (Date.now() - existingLock.timestamp < 300000) {
-        return false; // Section is locked by another user
-      }
-    }
-
-    this.documentLocks.set(lockKey as UUID, {
-      userId,
-      timestamp: Date.now()
-    });
-
-    return true;
-  }
-
-  /**
-   * Release document section lock
-   */
-  releaseLock(documentId: UUID, userId: UUID, section: { start: number; end: number }): void {
-    const lockKey = `${documentId}_${section.start}_${section.end}`;
-    const lock = this.documentLocks.get(lockKey as UUID);
-
-    if (lock && lock.userId === userId) {
-      this.documentLocks.delete(lockKey as UUID);
-    }
-  }
-
-  private detectConflicts(documentId: UUID, change: any): boolean {
-    // Implement conflict detection logic
-    // This is a simplified version - real implementation would be more sophisticated
-    const document = this.documentSessions.get(documentId);
-    if (!document) return false;
-
-    // Check for overlapping changes in the last few seconds
-    const recentChanges = document.changes.filter(
-      c => Date.now() - new Date(c.timestamp).getTime() < 5000
-    );
-
-    return recentChanges.some(
-      c => Math.abs(c.position - change.position) < 10
-    );
-  }
-
-  private generateChangeId(): UUID {
-    return `change_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
-  }
-}
-
-// ============================================================================
-// WORKFLOW CO-AUTHORING UTILITIES
-// ============================================================================
-
-export class WorkflowCoAuthoringManager {
-  private workflows: Map<UUID, WorkflowCoAuthoring> = new Map();
-
-  /**
-   * Initialize workflow for co-authoring
-   */
-  initializeWorkflow(
-    workflowId: UUID,
-    title: string,
-    type: 'data_pipeline' | 'compliance_check' | 'scan_workflow' | 'classification_rule',
-    definition: any,
-    ownerId: UUID
-  ): WorkflowCoAuthoring {
-    const workflow: WorkflowCoAuthoring = {
-      id: workflowId,
-      title,
-      type,
-      definition,
-      version: 1,
-      ownerId,
-      coAuthors: [],
-      branches: [],
-      mergeRequests: [],
-      comments: [],
+      owner_id: ownerId,
+      hub_id: hubId,
       status: 'draft',
+      version: '1.0.0',
       permissions: {
-        read: [],
-        edit: [],
-        approve: [ownerId],
-        admin: [ownerId]
+        can_view: [],
+        can_edit: [],
+        can_comment: [],
+        can_share: []
       },
-      lastModified: new Date().toISOString() as ISODateString,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.workflows.set(workflowId, workflow);
-    return workflow;
-  }
-
-  /**
-   * Create workflow branch for parallel development
-   */
-  createBranch(
-    workflowId: UUID,
-    branchName: string,
-    authorId: UUID,
-    baseBranch: string = 'main'
-  ): UUID {
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) throw new Error('Workflow not found');
-
-    const branchId = this.generateBranchId();
-    const branch = {
-      id: branchId,
-      name: branchName,
-      authorId,
-      baseBranch,
-      definition: { ...workflow.definition }, // Copy current definition
-      status: 'active' as const,
-      createdAt: new Date().toISOString() as ISODateString,
-      updatedAt: new Date().toISOString() as ISODateString
-    };
-
-    workflow.branches.push(branch);
-    workflow.updatedAt = new Date();
-
-    return branchId;
-  }
-
-  /**
-   * Create merge request
-   */
-  createMergeRequest(
-    workflowId: UUID,
-    sourceBranch: UUID,
-    targetBranch: string,
-    authorId: UUID,
-    title: string,
-    description: string
-  ): UUID {
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) throw new Error('Workflow not found');
-
-    const mergeRequestId = this.generateMergeRequestId();
-    const mergeRequest = {
-      id: mergeRequestId,
-      title,
-      description,
-      sourceBranch,
-      targetBranch,
-      authorId,
-      reviewers: [],
-      status: 'open' as const,
-      changes: [],
-      comments: [],
-      createdAt: new Date().toISOString() as ISODateString,
-      updatedAt: new Date().toISOString() as ISODateString
-    };
-
-    workflow.mergeRequests.push(mergeRequest);
-    workflow.updatedAt = new Date();
-
-    return mergeRequestId;
-  }
-
-  /**
-   * Approve and merge workflow changes
-   */
-  approveMerge(
-    workflowId: UUID,
-    mergeRequestId: UUID,
-    approverId: UUID
-  ): boolean {
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) throw new Error('Workflow not found');
-
-    // Check permissions
-    if (!workflow.permissions.approve.includes(approverId)) {
-      throw new Error('Insufficient permissions to approve');
-    }
-
-    const mergeRequest = workflow.mergeRequests.find(mr => mr.id === mergeRequestId);
-    if (!mergeRequest) throw new Error('Merge request not found');
-
-    // Find source branch
-    const sourceBranch = workflow.branches.find(b => b.id === mergeRequest.sourceBranch);
-    if (!sourceBranch) throw new Error('Source branch not found');
-
-    // Merge changes
-    workflow.definition = { ...sourceBranch.definition };
-    workflow.version += 1;
-    workflow.lastModified = new Date().toISOString() as ISODateString;
-    workflow.updatedAt = new Date();
-
-    // Update merge request status
-    mergeRequest.status = 'merged';
-    mergeRequest.updatedAt = new Date().toISOString() as ISODateString;
-
-    return true;
-  }
-
-  private generateBranchId(): UUID {
-    return `branch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
-  }
-
-  private generateMergeRequestId(): UUID {
-    return `mr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
-  }
-}
-
-// ============================================================================
-// EXPERT NETWORK UTILITIES
-// ============================================================================
-
-export class ExpertNetworkManager {
-  private experts: Map<UUID, ExpertNetwork> = new Map();
-  private expertiseGraph: Map<string, UUID[]> = new Map();
-
-  /**
-   * Register expert in the network
-   */
-  registerExpert(
-    expertId: UUID,
-    profile: {
-      name: string;
-      title: string;
-      department: string;
-      expertise: string[];
-      experience: number;
-      availability: 'available' | 'busy' | 'offline';
-      rating: number;
-      specializations: string[];
-    }
-  ): ExpertNetwork {
-    const expert: ExpertNetwork = {
-      id: expertId,
-      profile: {
-        ...profile,
-        bio: '',
-        location: '',
-        timezone: '',
-        languages: ['en'],
-        certifications: [],
-        publications: [],
-        projects: []
+      collaboration_settings: {
+        allow_simultaneous_editing: true,
+        track_changes: true,
+        require_approval_for_changes: false,
+        auto_save_interval: 30,
+        conflict_resolution: 'last_writer_wins'
       },
-      expertise: profile.expertise,
-      availability: profile.availability,
-      rating: profile.rating,
-      reviews: [],
-      consultations: [],
-      knowledgeContributions: [],
-      mentorships: [],
-      collaborations: [],
-      analytics: {
-        consultationsCount: 0,
-        averageRating: profile.rating,
-        responseTime: 0,
-        successRate: 0,
-        knowledgeShared: 0
-      },
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created_at: new Date().toISOString() as ISODateString,
+      updated_at: new Date().toISOString() as ISODateString
     };
-
-    this.experts.set(expertId, expert);
-
-    // Update expertise graph
-    profile.expertise.forEach(skill => {
-      const experts = this.expertiseGraph.get(skill) || [];
-      if (!experts.includes(expertId)) {
-        experts.push(expertId);
-        this.expertiseGraph.set(skill, experts);
-      }
-    });
-
-    return expert;
   }
 
   /**
-   * Find experts by expertise and availability
+   * Resolve document conflicts
    */
-  findExperts(
-    expertise: string[],
-    filters?: {
-      availability?: 'available' | 'busy' | 'offline';
-      minRating?: number;
-      department?: string;
-      maxResponseTime?: number;
-    }
-  ): ExpertNetwork[] {
-    const candidateExperts = new Set<UUID>();
+  static resolveConflicts(
+    baseVersion: any,
+    userChanges: any[],
+    strategy: 'merge' | 'latest_wins' | 'manual'
+  ): {
+    resolvedContent: any;
+    conflicts: Array<{
+      path: string;
+      baseValue: any;
+      conflictingValues: any[];
+      resolution: any;
+    }>;
+  } {
+    const conflicts: any[] = [];
+    let resolvedContent = { ...baseVersion };
 
-    // Find experts with matching expertise
-    expertise.forEach(skill => {
-      const experts = this.expertiseGraph.get(skill) || [];
-      experts.forEach(expertId => candidateExperts.add(expertId));
-    });
-
-    // Filter and rank experts
-    const experts = Array.from(candidateExperts)
-      .map(id => this.experts.get(id))
-      .filter((expert): expert is ExpertNetwork => {
-        if (!expert) return false;
-        
-        if (filters?.availability && expert.availability !== filters.availability) {
-          return false;
-        }
-        
-        if (filters?.minRating && expert.rating < filters.minRating) {
-          return false;
-        }
-        
-        if (filters?.department && expert.profile.department !== filters.department) {
-          return false;
-        }
-        
-        if (filters?.maxResponseTime && expert.analytics.responseTime > filters.maxResponseTime) {
-          return false;
-        }
-        
-        return true;
+    if (strategy === 'latest_wins') {
+      // Apply the most recent change
+      const latestChange = userChanges[userChanges.length - 1];
+      resolvedContent = { ...resolvedContent, ...latestChange };
+    } else if (strategy === 'merge') {
+      // Attempt to merge non-conflicting changes
+      userChanges.forEach(change => {
+        Object.keys(change).forEach(key => {
+          if (resolvedContent[key] !== change[key]) {
+            if (resolvedContent[key] === baseVersion[key]) {
+              // No conflict, apply change
+              resolvedContent[key] = change[key];
+            } else {
+              // Conflict detected
+              conflicts.push({
+                path: key,
+                baseValue: baseVersion[key],
+                conflictingValues: [resolvedContent[key], change[key]],
+                resolution: change[key] // Default to latest
+              });
+              resolvedContent[key] = change[key];
+            }
+          }
+        });
       });
+    }
 
-    // Sort by relevance (rating + expertise match)
-    return experts.sort((a, b) => {
-      const aRelevance = this.calculateRelevance(a, expertise);
-      const bRelevance = this.calculateRelevance(b, expertise);
-      return bRelevance - aRelevance;
-    });
+    return { resolvedContent, conflicts };
   }
 
   /**
-   * Request expert consultation
+   * Calculate document collaboration metrics
    */
-  requestConsultation(
-    expertId: UUID,
-    requesterId: UUID,
-    topic: string,
-    description: string,
-    urgency: 'low' | 'medium' | 'high' | 'critical',
-    preferredTime?: ISODateString
-  ): UUID {
-    const expert = this.experts.get(expertId);
-    if (!expert) throw new Error('Expert not found');
+  static getDocumentMetrics(document: CollaborationDocument): {
+    totalEditors: number;
+    activeEditors: number;
+    totalVersions: number;
+    collaborationIntensity: number;
+    lastActivity: ISODateString;
+  } {
+    const totalEditors = document.editors?.length || 0;
+    const activeEditors = document.editors?.filter(e => e.status === 'active').length || 0;
+    const totalVersions = document.version_history?.length || 1;
+    
+    // Calculate collaboration intensity based on recent activity
+    const recentActivity = document.version_history?.filter(v => 
+      new Date(v.created_at).getTime() > Date.now() - (24 * 60 * 60 * 1000)
+    ).length || 0;
+    
+    const collaborationIntensity = Math.min(100, recentActivity * 10 + activeEditors * 20);
 
-    const consultationId = this.generateConsultationId();
-    const consultation = {
-      id: consultationId,
-      requesterId,
-      topic,
-      description,
-      urgency,
-      preferredTime,
-      status: 'pending' as const,
-      scheduledTime: null,
-      duration: null,
-      notes: '',
-      rating: null,
-      feedback: '',
-      createdAt: new Date().toISOString() as ISODateString,
-      updatedAt: new Date().toISOString() as ISODateString
+    return {
+      totalEditors,
+      activeEditors,
+      totalVersions,
+      collaborationIntensity,
+      lastActivity: document.updated_at
     };
-
-    expert.consultations.push(consultation);
-    expert.updatedAt = new Date();
-
-    return consultationId;
-  }
-
-  private calculateRelevance(expert: ExpertNetwork, requiredExpertise: string[]): number {
-    const expertiseMatch = expert.expertise.filter(skill => 
-      requiredExpertise.includes(skill)
-    ).length / requiredExpertise.length;
-    
-    const ratingWeight = expert.rating / 5;
-    const availabilityWeight = expert.availability === 'available' ? 1 : 0.5;
-    
-    return (expertiseMatch * 0.5) + (ratingWeight * 0.3) + (availabilityWeight * 0.2);
-  }
-
-  private generateConsultationId(): UUID {
-    return `consultation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
   }
 }
 
-// ============================================================================
-// COLLABORATION ANALYTICS UTILITIES
-// ============================================================================
+/**
+ * Communication and Messaging Utilities
+ * Handles real-time messaging, notifications, and communication flows
+ */
+export class CollaborationCommunicationManager {
+  /**
+   * Format message for display
+   */
+  static formatMessage(message: CollaborationMessage): {
+    displayText: string;
+    timestamp: string;
+    authorName: string;
+    messageType: string;
+    hasAttachments: boolean;
+  } {
+    return {
+      displayText: message.content,
+      timestamp: new Date(message.created_at).toLocaleTimeString(),
+      authorName: message.author_name || 'Unknown User',
+      messageType: message.type,
+      hasAttachments: (message.attachments?.length || 0) > 0
+    };
+  }
 
+  /**
+   * Create notification from collaboration event
+   */
+  static createNotification(
+    event: CollaborationEvent,
+    recipientId: UUID
+  ): CollaborationNotification {
+    return {
+      id: crypto.randomUUID() as UUID,
+      recipient_id: recipientId,
+      type: event.event_type as any,
+      title: this.getNotificationTitle(event),
+      message: this.getNotificationMessage(event),
+      priority: this.getNotificationPriority(event),
+      read: false,
+      created_at: new Date().toISOString() as ISODateString,
+      data: event.event_data
+    };
+  }
+
+  private static getNotificationTitle(event: CollaborationEvent): string {
+    const titles = {
+      'hub_created': 'New Collaboration Hub Created',
+      'session_started': 'Collaboration Session Started',
+      'document_shared': 'Document Shared',
+      'message_received': 'New Message',
+      'participant_joined': 'New Participant Joined',
+      'task_assigned': 'Task Assigned',
+      'deadline_approaching': 'Deadline Approaching'
+    };
+    return titles[event.event_type as keyof typeof titles] || 'Collaboration Update';
+  }
+
+  private static getNotificationMessage(event: CollaborationEvent): string {
+    // Generate contextual message based on event type and data
+    switch (event.event_type) {
+      case 'hub_created':
+        return `A new collaboration hub "${event.event_data.hub_name}" has been created.`;
+      case 'session_started':
+        return `Collaboration session "${event.event_data.session_title}" has started.`;
+      case 'document_shared':
+        return `Document "${event.event_data.document_title}" has been shared with you.`;
+      default:
+        return 'You have a new collaboration update.';
+    }
+  }
+
+  private static getNotificationPriority(event: CollaborationEvent): 'low' | 'medium' | 'high' | 'urgent' {
+    const highPriorityEvents = ['deadline_approaching', 'urgent_task_assigned'];
+    const mediumPriorityEvents = ['session_started', 'document_shared'];
+    
+    if (highPriorityEvents.includes(event.event_type)) return 'high';
+    if (mediumPriorityEvents.includes(event.event_type)) return 'medium';
+    return 'low';
+  }
+}
+
+/**
+ * Analytics and Reporting Utilities
+ * Provides collaboration analytics, insights, and reporting capabilities
+ */
 export class CollaborationAnalyticsManager {
   /**
-   * Calculate collaboration effectiveness metrics
+   * Calculate overall collaboration health across hubs
    */
-  calculateEffectivenessMetrics(
-    sessions: CollaborationSession[],
-    timeframe: { start: Date; end: Date }
-  ): {
-    participationRate: number;
-    engagementScore: number;
-    productivityIndex: number;
-    communicationEfficiency: number;
-    decisionVelocity: number;
-    knowledgeSharingIndex: number;
+  static calculateCollaborationHealth(hubs: CollaborationHub[]): {
+    overallScore: number;
+    metrics: {
+      activeHubs: number;
+      totalParticipants: number;
+      averageEngagement: number;
+      productivityIndex: number;
+    };
+    trends: {
+      hubGrowth: number;
+      participantGrowth: number;
+      engagementTrend: number;
+    };
+    recommendations: string[];
   } {
-    const relevantSessions = sessions.filter(session => {
-      const sessionDate = new Date(session.createdAt);
-      return sessionDate >= timeframe.start && sessionDate <= timeframe.end;
-    });
+    const activeHubs = hubs.filter(h => h.status === 'active').length;
+    const totalParticipants = hubs.reduce((acc, hub) => acc + hub.participants.length, 0);
+    
+    const hubMetrics = hubs.map(hub => CollaborationHubManager.getHubMetrics(hub));
+    const averageEngagement = hubMetrics.reduce((acc, m) => acc + m.collaborationScore, 0) / hubMetrics.length || 0;
+    
+    const productivityIndex = hubMetrics.reduce((acc, m) => 
+      acc + m.totalDocuments + m.totalMessages * 0.1, 0
+    ) / hubs.length || 0;
 
-    if (relevantSessions.length === 0) {
-      return {
-        participationRate: 0,
-        engagementScore: 0,
-        productivityIndex: 0,
-        communicationEfficiency: 0,
-        decisionVelocity: 0,
-        knowledgeSharingIndex: 0
-      };
-    }
+    const overallScore = (
+      (activeHubs / hubs.length * 100) * 0.3 +
+      averageEngagement * 0.4 +
+      Math.min(100, productivityIndex) * 0.3
+    );
 
-    const participationRate = this.calculateParticipationRate(relevantSessions);
-    const engagementScore = this.calculateEngagementScore(relevantSessions);
-    const productivityIndex = this.calculateProductivityIndex(relevantSessions);
-    const communicationEfficiency = this.calculateCommunicationEfficiency(relevantSessions);
-    const decisionVelocity = this.calculateDecisionVelocity(relevantSessions);
-    const knowledgeSharingIndex = this.calculateKnowledgeSharingIndex(relevantSessions);
+    const recommendations: string[] = [];
+    if (overallScore < 60) recommendations.push('Consider organizing team collaboration workshops');
+    if (averageEngagement < 40) recommendations.push('Implement engagement incentives');
+    if (activeHubs < hubs.length * 0.7) recommendations.push('Review and archive inactive hubs');
 
     return {
-      participationRate,
-      engagementScore,
-      productivityIndex,
-      communicationEfficiency,
-      decisionVelocity,
-      knowledgeSharingIndex
+      overallScore,
+      metrics: {
+        activeHubs,
+        totalParticipants,
+        averageEngagement,
+        productivityIndex
+      },
+      trends: {
+        hubGrowth: 0, // Would need historical data
+        participantGrowth: 0, // Would need historical data
+        engagementTrend: 0 // Would need historical data
+      },
+      recommendations
     };
   }
 
   /**
-   * Generate collaboration insights and recommendations
+   * Generate collaboration insights
    */
-  generateInsights(
-    analytics: CollaborationAnalytics[],
-    historicalData: CollaborationAnalytics[]
-  ): {
-    trends: Array<{ metric: string; trend: 'increasing' | 'decreasing' | 'stable'; change: number }>;
-    recommendations: string[];
-    alerts: Array<{ type: 'warning' | 'critical'; message: string }>;
-    opportunities: string[];
+  static generateInsights(analytics: CollaborationAnalytics): {
+    topPerformers: Array<{ userId: UUID; score: number; contributions: number }>;
+    mostActiveHubs: Array<{ hubId: UUID; activityScore: number }>;
+    collaborationPatterns: Array<{ pattern: string; frequency: number; impact: string }>;
+    improvementAreas: Array<{ area: string; currentScore: number; targetScore: number; actions: string[] }>;
   } {
-    const trends = this.analyzeTrends(analytics, historicalData);
-    const recommendations = this.generateRecommendations(analytics, trends);
-    const alerts = this.generateAlerts(analytics);
-    const opportunities = this.identifyOpportunities(analytics, trends);
-
+    // This would typically integrate with more sophisticated analytics
     return {
-      trends,
-      recommendations,
-      alerts,
-      opportunities
+      topPerformers: [],
+      mostActiveHubs: [],
+      collaborationPatterns: [
+        { pattern: 'Cross-group collaboration', frequency: 75, impact: 'high' },
+        { pattern: 'Document co-creation', frequency: 60, impact: 'medium' },
+        { pattern: 'Real-time sessions', frequency: 45, impact: 'high' }
+      ],
+      improvementAreas: [
+        {
+          area: 'Session engagement',
+          currentScore: 65,
+          targetScore: 80,
+          actions: ['Implement interactive features', 'Provide engagement training']
+        }
+      ]
     };
-  }
-
-  private calculateParticipationRate(sessions: CollaborationSession[]): number {
-    const totalInvited = sessions.reduce((sum, session) => sum + (session.participants?.length || 0), 0);
-    const totalAttended = sessions.reduce((sum, session) => {
-      return sum + (session.participants?.filter(p => p.status === 'active').length || 0);
-    }, 0);
-
-    return totalInvited > 0 ? (totalAttended / totalInvited) * 100 : 0;
-  }
-
-  private calculateEngagementScore(sessions: CollaborationSession[]): number {
-    const totalSessions = sessions.length;
-    if (totalSessions === 0) return 0;
-
-    const avgEngagement = sessions.reduce((sum, session) => {
-      return sum + (session.analytics?.engagementScore || 0);
-    }, 0) / totalSessions;
-
-    return avgEngagement;
-  }
-
-  private calculateProductivityIndex(sessions: CollaborationSession[]): number {
-    const totalSessions = sessions.length;
-    if (totalSessions === 0) return 0;
-
-    const avgProductivity = sessions.reduce((sum, session) => {
-      const metrics = session.analytics?.productivityMetrics;
-      if (!metrics) return sum;
-      
-      const productivity = (
-        (metrics.tasksCompleted / Math.max(metrics.tasksCreated, 1)) * 0.4 +
-        (metrics.decisionseMade / Math.max(session.participants?.length || 1, 1)) * 0.3 +
-        (metrics.documentsShared / Math.max(session.participants?.length || 1, 1)) * 0.3
-      );
-      
-      return sum + productivity;
-    }, 0) / totalSessions;
-
-    return avgProductivity * 100;
-  }
-
-  private calculateCommunicationEfficiency(sessions: CollaborationSession[]): number {
-    const totalMessages = sessions.reduce((sum, session) => sum + (session.analytics?.messageCount || 0), 0);
-    const totalDuration = sessions.reduce((sum, session) => {
-      return sum + (session.analytics?.timeMetrics?.totalDuration || 0);
-    }, 0);
-
-    return totalDuration > 0 ? (totalMessages / totalDuration) * 60 : 0; // Messages per minute
-  }
-
-  private calculateDecisionVelocity(sessions: CollaborationSession[]): number {
-    const totalDecisions = sessions.reduce((sum, session) => {
-      return sum + (session.analytics?.productivityMetrics?.decisionseMade || 0);
-    }, 0);
-    const totalDuration = sessions.reduce((sum, session) => {
-      return sum + (session.analytics?.timeMetrics?.totalDuration || 0);
-    }, 0);
-
-    return totalDuration > 0 ? (totalDecisions / totalDuration) * 60 : 0; // Decisions per minute
-  }
-
-  private calculateKnowledgeSharingIndex(sessions: CollaborationSession[]): number {
-    const totalDocuments = sessions.reduce((sum, session) => {
-      return sum + (session.analytics?.productivityMetrics?.documentsShared || 0);
-    }, 0);
-    const totalParticipants = sessions.reduce((sum, session) => sum + (session.participants?.length || 0), 0);
-
-    return totalParticipants > 0 ? (totalDocuments / totalParticipants) * 100 : 0;
-  }
-
-  private analyzeTrends(
-    current: CollaborationAnalytics[],
-    historical: CollaborationAnalytics[]
-  ): Array<{ metric: string; trend: 'increasing' | 'decreasing' | 'stable'; change: number }> {
-    // Simplified trend analysis - real implementation would be more sophisticated
-    const metrics = ['participantCount', 'messageCount', 'engagementScore'];
-    
-    return metrics.map(metric => {
-      const currentAvg = current.reduce((sum, a) => sum + (a[metric as keyof CollaborationAnalytics] as number || 0), 0) / current.length;
-      const historicalAvg = historical.reduce((sum, a) => sum + (a[metric as keyof CollaborationAnalytics] as number || 0), 0) / historical.length;
-      
-      const change = ((currentAvg - historicalAvg) / historicalAvg) * 100;
-      
-      let trend: 'increasing' | 'decreasing' | 'stable';
-      if (Math.abs(change) < 5) trend = 'stable';
-      else if (change > 0) trend = 'increasing';
-      else trend = 'decreasing';
-      
-      return { metric, trend, change };
-    });
-  }
-
-  private generateRecommendations(
-    analytics: CollaborationAnalytics[],
-    trends: Array<{ metric: string; trend: string; change: number }>
-  ): string[] {
-    const recommendations: string[] = [];
-    
-    const avgEngagement = analytics.reduce((sum, a) => sum + a.engagementScore, 0) / analytics.length;
-    if (avgEngagement < 50) {
-      recommendations.push('Consider shorter, more focused collaboration sessions to improve engagement');
-    }
-    
-    const participationTrend = trends.find(t => t.metric === 'participantCount');
-    if (participationTrend?.trend === 'decreasing') {
-      recommendations.push('Review meeting scheduling and relevance to improve participation');
-    }
-    
-    return recommendations;
-  }
-
-  private generateAlerts(analytics: CollaborationAnalytics[]): Array<{ type: 'warning' | 'critical'; message: string }> {
-    const alerts: Array<{ type: 'warning' | 'critical'; message: string }> = [];
-    
-    const avgEngagement = analytics.reduce((sum, a) => sum + a.engagementScore, 0) / analytics.length;
-    if (avgEngagement < 30) {
-      alerts.push({
-        type: 'critical',
-        message: 'Collaboration engagement is critically low - immediate action required'
-      });
-    } else if (avgEngagement < 50) {
-      alerts.push({
-        type: 'warning',
-        message: 'Collaboration engagement is below optimal levels'
-      });
-    }
-    
-    return alerts;
-  }
-
-  private identifyOpportunities(
-    analytics: CollaborationAnalytics[],
-    trends: Array<{ metric: string; trend: string; change: number }>
-  ): string[] {
-    const opportunities: string[] = [];
-    
-    const messageTrend = trends.find(t => t.metric === 'messageCount');
-    if (messageTrend?.trend === 'increasing') {
-      opportunities.push('High communication activity - consider capturing insights for knowledge base');
-    }
-    
-    return opportunities;
   }
 }
 
-// ============================================================================
-// MAIN COLLABORATION UTILITIES EXPORT
-// ============================================================================
+/**
+ * Cross-Group Collaboration Utilities
+ * Handles collaboration across different data governance groups
+ */
+export class CrossGroupCollaborationManager {
+  /**
+   * Identify collaboration opportunities across groups
+   */
+  static identifyCollaborationOpportunities(
+    groupData: { [groupId: string]: any },
+    userRoles: { [userId: UUID]: string[] }
+  ): Array<{
+    type: 'data_quality' | 'compliance' | 'classification' | 'scanning';
+    groups: string[];
+    participants: UUID[];
+    priority: 'low' | 'medium' | 'high';
+    description: string;
+  }> {
+    const opportunities: any[] = [];
 
-export const collaborationUtils = {
-  sessionManager: new CollaborationSessionManager(),
-  documentManager: new DocumentCollaborationManager(),
-  workflowManager: new WorkflowCoAuthoringManager(),
-  expertNetwork: new ExpertNetworkManager(),
-  analytics: new CollaborationAnalyticsManager()
-};
+    // Example: Data quality issues requiring compliance review
+    opportunities.push({
+      type: 'data_quality',
+      groups: ['data_sources', 'compliance'],
+      participants: Object.keys(userRoles).filter(userId => 
+        userRoles[userId].includes('data_steward') || userRoles[userId].includes('compliance_officer')
+      ) as UUID[],
+      priority: 'high',
+      description: 'Data quality issues detected that require compliance review'
+    });
 
-// Utility functions for common operations
-export const createCollaborationId = (): UUID => {
-  return `collab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
-};
-
-export const validateCollaborationPermissions = (
-  userId: UUID,
-  resource: { permissions: CollaborationPermission },
-  requiredPermission: keyof CollaborationPermission
-): boolean => {
-  return resource.permissions[requiredPermission].includes(userId);
-};
-
-export const formatCollaborationDuration = (milliseconds: number): string => {
-  const hours = Math.floor(milliseconds / (1000 * 60 * 60));
-  const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((milliseconds % (1000 * 60)) / 1000);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  } else {
-    return `${seconds}s`;
+    return opportunities;
   }
+
+  /**
+   * Create cross-group collaboration workspace
+   */
+  static createCrossGroupWorkspace(
+    name: string,
+    groups: string[],
+    coordinatorId: UUID,
+    objective: string
+  ): {
+    workspaceConfig: any;
+    requiredPermissions: string[];
+    suggestedParticipants: UUID[];
+  } {
+    return {
+      workspaceConfig: {
+        name,
+        type: 'cross_group',
+        groups,
+        coordinator_id: coordinatorId,
+        objective,
+        settings: {
+          enable_cross_group_data_sharing: true,
+          require_approval_for_sensitive_data: true,
+          audit_all_activities: true
+        }
+      },
+      requiredPermissions: [
+        'cross_group_collaboration',
+        'data_sharing',
+        'workspace_management'
+      ],
+      suggestedParticipants: [] // Would be populated based on group expertise
+    };
+  }
+}
+
+// Export all utility classes
+export {
+  CollaborationHubManager,
+  CollaborationSessionManager,
+  DocumentCollaborationManager,
+  CollaborationCommunicationManager,
+  CollaborationAnalyticsManager,
+  CrossGroupCollaborationManager
 };
 
-export const generateCollaborationSummary = (session: CollaborationSession): string => {
-  const duration = session.endTime ? 
-    new Date(session.endTime).getTime() - new Date(session.startTime).getTime() : 
-    Date.now() - new Date(session.startTime).getTime();
-  
-  return `${session.title} - ${session.participants?.length || 0} participants, ${formatCollaborationDuration(duration)}, ${session.messages?.length || 0} messages, ${session.documents?.length || 0} documents shared`;
+// Export utility functions for common operations
+export const collaborationUtils = {
+  formatDuration: (milliseconds: number): string => {
+    const minutes = Math.floor(milliseconds / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    }
+    return `${minutes}m`;
+  },
+
+  generateCollaborationId: (): UUID => {
+    return crypto.randomUUID() as UUID;
+  },
+
+  validateCollaborationPermissions: (
+    userPermissions: string[],
+    requiredPermissions: string[]
+  ): boolean => {
+    return requiredPermissions.every(permission => 
+      userPermissions.includes(permission)
+    );
+  },
+
+  calculateEngagementScore: (
+    messages: number,
+    documents: number,
+    sessions: number,
+    timeframe: number
+  ): number => {
+    return Math.min(100, 
+      (messages * 0.5) + 
+      (documents * 2) + 
+      (sessions * 5)
+    ) / Math.max(1, timeframe / 7); // Normalize by weeks
+  }
 };
