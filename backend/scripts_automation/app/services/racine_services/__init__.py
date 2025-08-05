@@ -9,6 +9,7 @@ from .racine_ai_service import RacineAIService
 from .racine_activity_service import RacineActivityService
 from .racine_dashboard_service import RacineDashboardService
 from .racine_collaboration_service import RacineCollaborationService
+from .racine_integration_service import RacineIntegrationService
 
 __all__ = [
     "RacineOrchestrationService",
@@ -18,5 +19,6 @@ __all__ = [
     "RacineAIService",
     "RacineActivityService",
     "RacineDashboardService",
-    "RacineCollaborationService"
+    "RacineCollaborationService",
+    "RacineIntegrationService"
 ]

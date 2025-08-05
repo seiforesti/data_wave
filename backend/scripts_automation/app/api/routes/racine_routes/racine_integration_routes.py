@@ -49,6 +49,7 @@ from ....models.auth_models import User
 
 # Racine Services
 from ....services.racine_services.racine_orchestration_service import RacineOrchestrationService
+from ....services.racine_services.racine_integration_service import RacineIntegrationService
 
 # Racine Models
 from ....models.racine_models.racine_integration_models import (
