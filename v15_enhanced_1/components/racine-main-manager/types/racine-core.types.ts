@@ -1232,38 +1232,195 @@ export enum OptimizationStatus {
 // =============================================================================
 
 /**
+ * AI conversation type enumeration - maps to AIConversationType backend enum
+ */
+export enum AIConversationType {
+  GENERAL_QUERY = "general_query",
+  TECHNICAL_SUPPORT = "technical_support",
+  WORKFLOW_ASSISTANCE = "workflow_assistance",
+  PIPELINE_OPTIMIZATION = "pipeline_optimization",
+  DATA_DISCOVERY = "data_discovery",
+  COMPLIANCE_GUIDANCE = "compliance_guidance",
+  TROUBLESHOOTING = "troubleshooting",
+  KNOWLEDGE_DISCOVERY = "knowledge_discovery",
+  CROSS_GROUP_ANALYSIS = "cross_group_analysis",
+  SYSTEM_MONITORING = "system_monitoring"
+}
+
+/**
+ * AI recommendation type enumeration - maps to AIRecommendationType backend enum
+ */
+export enum AIRecommendationType {
+  PERFORMANCE_OPTIMIZATION = "performance_optimization",
+  WORKFLOW_IMPROVEMENT = "workflow_improvement",
+  PIPELINE_OPTIMIZATION = "pipeline_optimization",
+  RESOURCE_ALLOCATION = "resource_allocation",
+  SECURITY_ENHANCEMENT = "security_enhancement",
+  COMPLIANCE_IMPROVEMENT = "compliance_improvement",
+  DATA_QUALITY = "data_quality",
+  INTEGRATION_OPTIMIZATION = "integration_optimization",
+  COST_OPTIMIZATION = "cost_optimization",
+  AUTOMATION_OPPORTUNITY = "automation_opportunity",
+  KNOWLEDGE_SHARING = "knowledge_sharing",
+  PROCESS_IMPROVEMENT = "process_improvement"
+}
+
+/**
+ * AI insight type enumeration - maps to AIInsightType backend enum
+ */
+export enum AIInsightType {
+  TREND_ANALYSIS = "trend_analysis",
+  PATTERN_DISCOVERY = "pattern_discovery",
+  ANOMALY_DETECTION = "anomaly_detection",
+  PREDICTIVE_ANALYSIS = "predictive_analysis",
+  CORRELATION_DISCOVERY = "correlation_discovery",
+  PERFORMANCE_ANALYSIS = "performance_analysis",
+  USAGE_ANALYSIS = "usage_analysis",
+  RISK_ASSESSMENT = "risk_assessment",
+  OPPORTUNITY_IDENTIFICATION = "opportunity_identification",
+  CROSS_GROUP_INSIGHTS = "cross_group_insights"
+}
+
+/**
+ * AI learning type enumeration - maps to AILearningType backend enum
+ */
+export enum AILearningType {
+  USER_INTERACTION = "user_interaction",
+  SYSTEM_BEHAVIOR = "system_behavior",
+  PERFORMANCE_FEEDBACK = "performance_feedback",
+  RECOMMENDATION_OUTCOME = "recommendation_outcome",
+  WORKFLOW_EXECUTION = "workflow_execution",
+  PIPELINE_PERFORMANCE = "pipeline_performance",
+  ERROR_PATTERN = "error_pattern",
+  OPTIMIZATION_RESULT = "optimization_result",
+  USER_PREFERENCE = "user_preference",
+  DOMAIN_KNOWLEDGE = "domain_knowledge"
+}
+
+/**
  * AI conversation - maps to RacineAIConversation backend model
  */
 export interface AIConversation {
   id: UUID;
   userId: UUID;
   workspaceId?: UUID;
-  title: string;
-  context: AIContext;
-  messages: AIMessage[];
-  status: ConversationStatus;
-  createdAt: ISODateString;
-  updatedAt: ISODateString;
+  
+  // Conversation basic information
+  conversationTitle: string;
+  conversationType: AIConversationType;
+  status: string; // active, archived, resolved
+  priority: string; // low, normal, high, urgent
+  
+  // Context information
+  userContext: Record<string, JSONValue>;
+  systemContext: Record<string, JSONValue>;
+  workspaceContext: Record<string, JSONValue>;
+  groupContext: Record<string, JSONValue>;
+  
+  // Conversation metadata
+  conversationSummary?: string;
+  keyTopics: string[];
+  mentionedEntities: Record<string, JSONValue>;
+  crossGroupReferences: Record<string, JSONValue>;
+  
+  // Resolution tracking
+  isResolved: boolean;
+  resolutionType?: string; // answered, escalated, automated, closed
+  resolutionSummary?: string;
+  userSatisfaction?: number; // 1-10 rating
+  
+  // Learning and improvement
+  learningPoints: Record<string, JSONValue>;
+  improvementSuggestions: Record<string, JSONValue>;
+  knowledgeGaps: Record<string, JSONValue>;
+  
+  // Analytics and metrics
+  messageCount: number;
+  durationMinutes?: number;
+  responseTimeAvg?: number;
+  accuracyScore?: number;
+  
+  // Integration tracking
+  workflowsTriggered: Record<string, JSONValue>;
+  pipelinesReferenced: Record<string, JSONValue>;
+  resourcesAccessed: Record<string, JSONValue>;
+  actionsPerformed: Record<string, JSONValue>;
+  
+  // Timing
+  startedAt: ISODateString;
   lastActivity: ISODateString;
+  endedAt?: ISODateString;
+  
+  // Relations
+  messages: AIMessage[];
+  recommendations: AIRecommendation[];
+  
+  // Legacy compatibility
+  title: string; // alias for conversationTitle
+  context: AIContext;
+  createdAt: ISODateString; // alias for startedAt
+  updatedAt: ISODateString; // alias for lastActivity
   metadata: Record<string, JSONValue>;
 }
 
 export enum ConversationStatus {
   ACTIVE = "active",
   ARCHIVED = "archived",
+  RESOLVED = "resolved",
   DELETED = "deleted"
 }
 
 /**
- * AI message within conversation
+ * AI message within conversation - maps to RacineAIMessage backend model
  */
 export interface AIMessage {
   id: UUID;
   conversationId: UUID;
+  
+  // Message basic information
   role: MessageRole;
   content: string;
   messageType: MessageType;
+  isFromUser: boolean;
+  
+  // AI analysis
+  intentDetected?: string;
+  entitiesExtracted: Record<string, JSONValue>;
+  sentimentScore?: number;
+  confidenceScore?: number;
+  complexityScore?: number;
+  
+  // Processing information
+  processingTimeMs?: number;
+  aiModelUsed?: string;
+  processingPipeline: Record<string, JSONValue>;
+  externalApisCalled: Record<string, JSONValue>;
+  
+  // Context and references
+  contextUsed: Record<string, JSONValue>;
+  referencedDocuments: Record<string, JSONValue>;
+  crossGroupDataUsed: Record<string, JSONValue>;
+  workflowContext?: Record<string, JSONValue>;
+  
+  // Quality and feedback
+  userFeedback?: string; // helpful, not_helpful, etc.
+  accuracyRating?: number;
+  relevanceScore?: number;
+  improvementNotes?: string;
+  
+  // Actions and results
+  actionsSuggested: Record<string, JSONValue>;
+  actionsExecuted: Record<string, JSONValue>;
+  followUpRequired: boolean;
+  followUpActions: Record<string, JSONValue>;
+  
+  // Message order
+  messageOrder: number;
+  
+  // Timing
   timestamp: ISODateString;
+  
+  // Legacy compatibility
   context: MessageContext;
   attachments: MessageAttachment[];
   reactions: MessageReaction[];
@@ -1409,20 +1566,159 @@ export enum ExpertiseLevel {
 export interface AIRecommendation {
   id: UUID;
   userId: UUID;
-  type: RecommendationType;
-  title: string;
+  conversationId?: UUID;
+  
+  // Recommendation basic information
+  recommendationTitle: string;
+  recommendationType: AIRecommendationType;
   description: string;
-  confidence: number;
-  priority: RecommendationPriority;
+  priority: string; // low, medium, high, critical
+  
+  // Recommendation details
+  detailedAnalysis: Record<string, JSONValue>;
+  implementationSteps: Record<string, JSONValue>;
+  expectedBenefits: Record<string, JSONValue>;
+  potentialRisks: Record<string, JSONValue>;
+  resourceRequirements: Record<string, JSONValue>;
+  
+  // AI analysis
+  confidenceScore: number; // 0-1
+  evidenceData: Record<string, JSONValue>;
+  similarCases: Record<string, JSONValue>;
+  successProbability?: number;
+  
+  // Impact assessment
+  impactAreas: Record<string, JSONValue>;
+  performanceImpact: Record<string, JSONValue>;
+  costImpact: Record<string, JSONValue>;
+  userImpact: Record<string, JSONValue>;
+  complianceImpact: Record<string, JSONValue>;
+  
+  // Cross-group implications
+  affectedGroups: Record<string, JSONValue>;
+  crossGroupBenefits: Record<string, JSONValue>;
+  integrationRequirements: Record<string, JSONValue>;
+  coordinationNeeded: Record<string, JSONValue>;
+  
+  // Implementation tracking
+  implementationStatus: string; // pending, in_progress, completed, rejected
+  implementationProgress?: number; // 0-100
+  implementationNotes?: string;
+  actualResults?: Record<string, JSONValue>;
+  
+  // Quality and validation
+  validationStatus: string; // pending, validated, disputed
+  accuracyScore?: number;
+  effectivenessScore?: number;
+  userSatisfaction?: number;
+  
+  // Learning and feedback
+  userFeedback?: string;
+  outcomeTracking: Record<string, JSONValue>;
+  learningPoints: Record<string, JSONValue>;
+  improvementSuggestions: Record<string, JSONValue>;
+  
+  // Usage and sharing
+  isPublic: boolean;
+  accessLevel: string; // private, team, organization
+  sharedWithGroups: Record<string, JSONValue>;
+  usageCount: number;
+  
+  // Context and generation
+  generationContext: Record<string, JSONValue>;
+  triggeringAnalysis: Record<string, JSONValue>;
+  relatedRecommendations: string[];
+  
+  // Timing
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  expiresAt?: ISODateString;
+  implementedAt?: ISODateString;
+  reviewedAt?: ISODateString;
+  
+  // Legacy compatibility
+  type: RecommendationType;
+  title: string; // alias for recommendationTitle
+  confidence: number; // alias for confidenceScore
   category: RecommendationCategory;
   context: RecommendationContext;
   actions: RecommendationAction[];
   metrics: RecommendationMetrics;
   status: RecommendationStatus;
-  createdAt: ISODateString;
-  expiresAt?: ISODateString;
-  implementedAt?: ISODateString;
   feedback: RecommendationFeedback[];
+}
+
+/**
+ * AI insight - maps to RacineAIInsight backend model
+ */
+export interface AIInsight {
+  id: UUID;
+  userId: UUID;
+  conversationId?: UUID;
+  orchestrationMasterId?: UUID;
+  
+  // Insight basic information
+  insightTitle: string;
+  insightType: AIInsightType;
+  description: string;
+  significanceLevel: string; // low, medium, high, critical
+  
+  // Insight analysis
+  detailedAnalysis: Record<string, JSONValue>;
+  keyFindings: Record<string, JSONValue>;
+  supportingEvidence: Record<string, JSONValue>;
+  statisticalData: Record<string, JSONValue>;
+  
+  // Data and methodology
+  dataSources: Record<string, JSONValue>;
+  analysisMethodology: Record<string, JSONValue>;
+  aiModelsUsed: Record<string, JSONValue>;
+  confidenceIntervals: Record<string, JSONValue>;
+  
+  // Cross-group analysis
+  groupsAnalyzed: Record<string, JSONValue>;
+  crossGroupPatterns: Record<string, JSONValue>;
+  groupSpecificInsights: Record<string, JSONValue>;
+  integrationOpportunities: Record<string, JSONValue>;
+  
+  // Predictive elements
+  predictions: Record<string, JSONValue>;
+  trendAnalysis: Record<string, JSONValue>;
+  forecasts: Record<string, JSONValue>;
+  scenarioAnalysis: Record<string, JSONValue>;
+  
+  // Impact and implications
+  businessImpact: Record<string, JSONValue>;
+  technicalImplications: Record<string, JSONValue>;
+  operationalImpact: Record<string, JSONValue>;
+  strategicImplications: Record<string, JSONValue>;
+  
+  // Actionable information
+  recommendedActions: Record<string, JSONValue>;
+  nextSteps: Record<string, JSONValue>;
+  monitoringRequirements: Record<string, JSONValue>;
+  successMetrics: Record<string, JSONValue>;
+  
+  // Quality and validation
+  validationStatus: string; // pending, validated, disputed
+  accuracyScore?: number;
+  reliabilityScore?: number;
+  peerReviewNotes: Record<string, JSONValue>;
+  
+  // Usage and sharing
+  isPublic: boolean;
+  accessLevel: string; // private, team, organization
+  sharedWithGroups: Record<string, JSONValue>;
+  usageCount: number;
+  
+  // Context and generation
+  generationContext: Record<string, JSONValue>;
+  triggeringAnalysis: Record<string, JSONValue>;
+  relatedInsights: string[];
+  
+  // Timing
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 }
 
 export enum RecommendationType {
@@ -3088,6 +3384,7 @@ export type {
   
   // AI types
   AIConversation, AIMessage, AIRecommendation, AIInsight,
+  AIConversationType, AIRecommendationType, AIInsightType, AILearningType,
   
   // Activity types
   ActivityRecord, AuditTrail, ActivityFilter, ActivityTimeRange,

@@ -112,6 +112,29 @@ export {
   validateCSRFToken
 } from './security-utils';
 
+// Integration utilities
+export * from './integration-utils';
+export {
+  integrationUtils,
+  CrossGroupDataTransformer,
+  ConflictResolver,
+  SynchronizationManager,
+  IntegrationHealthMonitor,
+  crossGroupDataTransformer,
+  conflictResolver,
+  synchronizationManager,
+  integrationHealthMonitor
+} from './integration-utils';
+export type {
+  IntegrationContext,
+  IntegrationOperation,
+  ConflictResolutionStrategy,
+  SyncConfiguration,
+  DataTransformation,
+  ValidationRule,
+  IntegrationMetrics
+} from './integration-utils';
+
 // Utility type definitions
 export interface UtilityResponse<T = any> {
   success: boolean;
