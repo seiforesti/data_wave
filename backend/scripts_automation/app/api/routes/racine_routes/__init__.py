@@ -39,12 +39,30 @@ try:
 except ImportError:
     collaboration_router = None
 
-# Placeholder for routes not yet implemented
-workflow_router = None
-pipeline_router = None
-ai_router = None
-activity_router = None
-integration_router = None
+try:
+    from .racine_workflow_routes import router as workflow_router
+except ImportError:
+    workflow_router = None
+
+try:
+    from .racine_pipeline_routes import router as pipeline_router
+except ImportError:
+    pipeline_router = None
+
+try:
+    from .racine_ai_routes import router as ai_router
+except ImportError:
+    ai_router = None
+
+try:
+    from .racine_activity_routes import router as activity_router
+except ImportError:
+    activity_router = None
+
+try:
+    from .racine_integration_routes import router as integration_router
+except ImportError:
+    integration_router = None
 
 # Export available routers
 available_routers = [
@@ -52,6 +70,11 @@ available_routers = [
     ("workspace", workspace_router),
     ("dashboard", dashboard_router),
     ("collaboration", collaboration_router),
+    ("workflow", workflow_router),
+    ("pipeline", pipeline_router),
+    ("ai", ai_router),
+    ("activity", activity_router),
+    ("integration", integration_router),
 ]
 
 # Filter out None routers
@@ -59,7 +82,7 @@ available_routers = [(name, router) for name, router in available_routers if rou
 
 __all__ = [
     "orchestration_router",
-    "workspace_router", 
+    "workspace_router",
     "workflow_router",
     "pipeline_router",
     "ai_router",
