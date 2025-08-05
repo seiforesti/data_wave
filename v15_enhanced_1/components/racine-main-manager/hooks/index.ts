@@ -86,3 +86,11 @@ export type {
   UserManagementHookOperations,
   UserManagementHookConfig
 } from './useUserManagement';
+
+// Cross-group integration hooks
+export { useCrossGroupIntegration } from './useCrossGroupIntegration';
+export type {
+  CrossGroupIntegrationHookState,
+  CrossGroupIntegrationHookOperations,
+  CrossGroupIntegrationHookConfig
+} from './useCrossGroupIntegration';

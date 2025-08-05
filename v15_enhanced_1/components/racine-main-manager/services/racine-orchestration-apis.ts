@@ -44,7 +44,18 @@ import {
   SystemStatus,
   OperationStatus,
   PaginationRequest,
-  FilterRequest
+  FilterRequest,
+  UpdateOrchestrationRequest,
+  BulkOperationRequest,
+  BulkOperationResponse,
+  ServiceRegistryResponse,
+  EmergencyShutdownRequest,
+  CrossGroupDependencyResponse,
+  ValidateOrchestrationRequest,
+  OrchestrationValidationResponse,
+  PerformanceInsightsResponse,
+  OrchestrationReportRequest,
+  OrchestrationReportResponse
 } from '../types/api.types';
 
 import {
@@ -252,16 +263,13 @@ export class RacineOrchestrationAPI {
   }
 
   // =============================================================================
-  // ORCHESTRATION MASTER MANAGEMENT
+  // CORE ORCHESTRATION API METHODS
   // =============================================================================
 
   /**
    * Create a new orchestration master instance
    */
-  async createOrchestrationMaster(
-    request: CreateOrchestrationRequest,
-    options?: RequestOptions
-  ): Promise<APIResponse<OrchestrationResponse>> {
+  async createOrchestration(request: CreateOrchestrationRequest, options?: RequestOptions): Promise<APIResponse<OrchestrationResponse>> {
     return this.makeRequest<OrchestrationResponse>('/api/racine/orchestration/create', {
       method: 'POST',
       body: JSON.stringify(request),
@@ -270,80 +278,302 @@ export class RacineOrchestrationAPI {
   }
 
   /**
-   * Get orchestration master details
+   * Get orchestration details by ID
    */
-  async getOrchestrationMaster(
-    orchestrationId: UUID,
+  async getOrchestration(orchestrationId: UUID, options?: RequestOptions): Promise<APIResponse<OrchestrationResponse>> {
+    return this.makeRequest<OrchestrationResponse>(`/api/racine/orchestration/${orchestrationId}`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Update orchestration configuration
+   */
+  async updateOrchestration(
+    orchestrationId: UUID, 
+    request: UpdateOrchestrationRequest, 
     options?: RequestOptions
   ): Promise<APIResponse<OrchestrationResponse>> {
-    return this.makeRequest<OrchestrationResponse>(
-      `/api/racine/orchestration/${orchestrationId}`,
-      { method: 'GET', ...options }
-    );
+    return this.makeRequest<OrchestrationResponse>(`/api/racine/orchestration/${orchestrationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+      ...options
+    });
   }
 
   /**
-   * Update orchestration master configuration
+   * Delete orchestration instance
    */
-  async updateOrchestrationMaster(
-    orchestrationId: UUID,
-    updates: Partial<CreateOrchestrationRequest>,
+  async deleteOrchestration(orchestrationId: UUID, options?: RequestOptions): Promise<APIResponse<void>> {
+    return this.makeRequest<void>(`/api/racine/orchestration/${orchestrationId}`, {
+      method: 'DELETE',
+      ...options
+    });
+  }
+
+  /**
+   * Execute cross-group workflow
+   */
+  async executeWorkflow(
+    orchestrationId: UUID, 
+    request: ExecuteWorkflowRequest, 
     options?: RequestOptions
-  ): Promise<APIResponse<OrchestrationResponse>> {
-    return this.makeRequest<OrchestrationResponse>(
-      `/api/racine/orchestration/${orchestrationId}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-        ...options
-      }
-    );
+  ): Promise<APIResponse<WorkflowExecutionResponse>> {
+    return this.makeRequest<WorkflowExecutionResponse>(`/api/racine/orchestration/${orchestrationId}/execute-workflow`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+      ...options
+    });
   }
 
   /**
-   * Delete orchestration master
+   * Get workflow executions for an orchestration
    */
-  async deleteOrchestrationMaster(
-    orchestrationId: UUID,
-    options?: RequestOptions
-  ): Promise<APIResponse<void>> {
-    return this.makeRequest<void>(
-      `/api/racine/orchestration/${orchestrationId}`,
-      { method: 'DELETE', ...options }
-    );
-  }
-
-  /**
-   * List all orchestration masters
-   */
-  async listOrchestrationMasters(
+  async getWorkflowExecutions(
+    orchestrationId: UUID, 
     pagination?: PaginationRequest,
+    options?: RequestOptions
+  ): Promise<APIResponse<WorkflowExecutionResponse[]>> {
+    const queryParams = pagination ? `?${new URLSearchParams(pagination as any).toString()}` : '';
+    return this.makeRequest<WorkflowExecutionResponse[]>(`/api/racine/orchestration/${orchestrationId}/workflows${queryParams}`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Get system health status
+   */
+  async getSystemHealth(
+    orchestrationId: UUID, 
+    options?: RequestOptions
+  ): Promise<APIResponse<SystemHealthResponse>> {
+    return this.makeRequest<SystemHealthResponse>(`/api/racine/orchestration/${orchestrationId}/health`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Optimize system performance
+   */
+  async optimizePerformance(
+    orchestrationId: UUID, 
+    request: OptimizePerformanceRequest, 
+    options?: RequestOptions
+  ): Promise<APIResponse<PerformanceOptimizationResponse>> {
+    return this.makeRequest<PerformanceOptimizationResponse>(`/api/racine/orchestration/${orchestrationId}/optimize`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+      ...options
+    });
+  }
+
+  /**
+   * Get cross-group metrics
+   */
+  async getCrossGroupMetrics(
+    orchestrationId: UUID, 
+    options?: RequestOptions
+  ): Promise<APIResponse<any>> {
+    return this.makeRequest<any>(`/api/racine/orchestration/${orchestrationId}/metrics`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Get all active orchestrations
+   */
+  async getActiveOrchestrations(
     filters?: FilterRequest,
+    pagination?: PaginationRequest,
     options?: RequestOptions
   ): Promise<APIResponse<OrchestrationResponse[]>> {
     const params = new URLSearchParams();
-    
-    if (pagination) {
-      if (pagination.page) params.append('page', pagination.page.toString());
-      if (pagination.pageSize) params.append('pageSize', pagination.pageSize.toString());
-      if (pagination.sortBy) params.append('sortBy', pagination.sortBy);
-      if (pagination.sortOrder) params.append('sortOrder', pagination.sortOrder);
-    }
-
     if (filters) {
-      if (filters.search) params.append('search', filters.search);
-      if (filters.filters) {
-        Object.entries(filters.filters).forEach(([key, value]) => {
-          params.append(`filter.${key}`, String(value));
-        });
-      }
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
     }
-
+    if (pagination) {
+      Object.entries(pagination).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+    }
+    
     const queryString = params.toString();
-    const url = `/api/racine/orchestration${queryString ? `?${queryString}` : ''}`;
-
+    const url = queryString ? `/api/racine/orchestration/active?${queryString}` : '/api/racine/orchestration/active';
+    
     return this.makeRequest<OrchestrationResponse[]>(url, {
       method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Execute bulk operations across groups
+   */
+  async executeBulkOperations(
+    request: BulkOperationRequest, 
+    options?: RequestOptions
+  ): Promise<APIResponse<BulkOperationResponse>> {
+    return this.makeRequest<BulkOperationResponse>('/api/racine/orchestration/bulk-operations', {
+      method: 'POST',
+      body: JSON.stringify(request),
+      ...options
+    });
+  }
+
+  /**
+   * Get service registry status
+   */
+  async getServiceRegistry(options?: RequestOptions): Promise<APIResponse<ServiceRegistryResponse>> {
+    return this.makeRequest<ServiceRegistryResponse>('/api/racine/orchestration/service-registry', {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Emergency shutdown procedures
+   */
+  async emergencyShutdown(
+    request: EmergencyShutdownRequest, 
+    options?: RequestOptions
+  ): Promise<APIResponse<void>> {
+    return this.makeRequest<void>('/api/racine/orchestration/emergency-shutdown', {
+      method: 'POST',
+      body: JSON.stringify(request),
+      ...options
+    });
+  }
+
+  // =============================================================================
+  // WORKFLOW EXECUTION MONITORING
+  // =============================================================================
+
+  /**
+   * Get workflow execution status with real-time updates
+   */
+  async getWorkflowExecutionStatus(
+    orchestrationId: UUID,
+    executionId: UUID,
+    options?: RequestOptions
+  ): Promise<APIResponse<WorkflowExecutionResponse>> {
+    return this.makeRequest<WorkflowExecutionResponse>(`/api/racine/orchestration/${orchestrationId}/workflows/${executionId}/status`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Stream workflow execution logs
+   */
+  async streamWorkflowLogs(
+    orchestrationId: UUID,
+    executionId: UUID,
+    onLogReceived: (log: ExecutionLog) => void,
+    options?: RequestOptions
+  ): Promise<EventSource> {
+    const url = `${this.config.baseURL}/api/racine/orchestration/${orchestrationId}/workflows/${executionId}/logs/stream`;
+    
+    const eventSource = new EventSource(url);
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const log = JSON.parse(event.data) as ExecutionLog;
+        onLogReceived(log);
+      } catch (error) {
+        console.error('Failed to parse log stream:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('Log stream error:', error);
+    };
+
+    return eventSource;
+  }
+
+  /**
+   * Control workflow execution (pause, resume, cancel)
+   */
+  async controlWorkflowExecution(
+    orchestrationId: UUID,
+    executionId: UUID,
+    action: 'pause' | 'resume' | 'cancel',
+    options?: RequestOptions
+  ): Promise<APIResponse<WorkflowExecutionResponse>> {
+    return this.makeRequest<WorkflowExecutionResponse>(`/api/racine/orchestration/${orchestrationId}/workflows/${executionId}/control`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+      ...options
+    });
+  }
+
+  // =============================================================================
+  // ADVANCED ORCHESTRATION FEATURES
+  // =============================================================================
+
+  /**
+   * Get cross-group dependencies analysis
+   */
+  async getCrossGroupDependencies(
+    orchestrationId: UUID,
+    options?: RequestOptions
+  ): Promise<APIResponse<CrossGroupDependencyResponse>> {
+    return this.makeRequest<CrossGroupDependencyResponse>(`/api/racine/orchestration/${orchestrationId}/dependencies`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Validate orchestration configuration
+   */
+  async validateOrchestrationConfig(
+    request: ValidateOrchestrationRequest,
+    options?: RequestOptions
+  ): Promise<APIResponse<OrchestrationValidationResponse>> {
+    return this.makeRequest<OrchestrationValidationResponse>('/api/racine/orchestration/validate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+      ...options
+    });
+  }
+
+  /**
+   * Get orchestration performance insights
+   */
+  async getPerformanceInsights(
+    orchestrationId: UUID,
+    timeRange?: { start: ISODateString; end: ISODateString },
+    options?: RequestOptions
+  ): Promise<APIResponse<PerformanceInsightsResponse>> {
+    const params = timeRange ? `?start=${timeRange.start}&end=${timeRange.end}` : '';
+    return this.makeRequest<PerformanceInsightsResponse>(`/api/racine/orchestration/${orchestrationId}/insights${params}`, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  /**
+   * Generate orchestration report
+   */
+  async generateOrchestrationReport(
+    orchestrationId: UUID,
+    request: OrchestrationReportRequest,
+    options?: RequestOptions
+  ): Promise<APIResponse<OrchestrationReportResponse>> {
+    return this.makeRequest<OrchestrationReportResponse>(`/api/racine/orchestration/${orchestrationId}/report`, {
+      method: 'POST',
+      body: JSON.stringify(request),
       ...options
     });
   }

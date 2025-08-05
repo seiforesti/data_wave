@@ -37,7 +37,15 @@ import {
   ISODateString,
   PaginationRequest,
   FilterRequest,
-  SortRequest
+  SortRequest,
+  ActivityCorrelationRequest,
+  ActivityCorrelationResponse,
+  ActivitySessionResponse,
+  ActivityReportRequest,
+  ActivityReportResponse,
+  AdvancedActivitySearchRequest,
+  ActivitySystemHealthResponse,
+  ActivitySystemStatsResponse
 } from '../types/api.types';
 
 import {
@@ -699,6 +707,239 @@ class ActivityTrackingAPI {
     if (this.websocket) {
       this.websocket.close();
       this.websocket = null;
+    }
+  }
+
+  // =============================================================================
+  // ACTIVITY CORRELATION ANALYSIS
+  // =============================================================================
+
+  /**
+   * Analyze activity correlations
+   * Maps to: POST /api/racine/activity/correlation
+   */
+  async analyzeActivityCorrelation(request: ActivityCorrelationRequest): Promise<APIResponse<ActivityCorrelationResponse>> {
+    return this.makeRequest<ActivityCorrelationResponse>('/api/racine/activity/correlation', {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request)
+    });
+  }
+
+  /**
+   * Get correlation analysis results
+   * Maps to: GET /api/racine/activity/correlation/{correlation_id}
+   */
+  async getCorrelationResults(correlationId: UUID): Promise<APIResponse<ActivityCorrelationResponse>> {
+    return this.makeRequest<ActivityCorrelationResponse>(`/api/racine/activity/correlation/${correlationId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // =============================================================================
+  // ACTIVITY SESSIONS MANAGEMENT
+  // =============================================================================
+
+  /**
+   * Get activity sessions
+   * Maps to: GET /api/racine/activity/sessions
+   */
+  async getActivitySessions(
+    options: {
+      limit?: number;
+      offset?: number;
+      start_date?: ISODateString;
+      end_date?: ISODateString;
+      active_only?: boolean;
+    } = {}
+  ): Promise<APIResponse<ActivitySessionResponse[]>> {
+    const params = new URLSearchParams();
+    
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.offset) params.append('offset', options.offset.toString());
+    if (options.start_date) params.append('start_date', options.start_date);
+    if (options.end_date) params.append('end_date', options.end_date);
+    if (options.active_only) params.append('active_only', options.active_only.toString());
+
+    const queryString = params.toString();
+    const url = queryString ? `/api/racine/activity/sessions?${queryString}` : '/api/racine/activity/sessions';
+
+    return this.makeRequest<ActivitySessionResponse[]>(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Get specific activity session
+   * Maps to: GET /api/racine/activity/sessions/{session_id}
+   */
+  async getActivitySession(sessionId: UUID): Promise<APIResponse<ActivitySessionResponse>> {
+    return this.makeRequest<ActivitySessionResponse>(`/api/racine/activity/sessions/${sessionId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // =============================================================================
+  // ACTIVITY REPORTS GENERATION
+  // =============================================================================
+
+  /**
+   * Generate activity report
+   * Maps to: POST /api/racine/activity/reports
+   */
+  async generateActivityReport(request: ActivityReportRequest): Promise<APIResponse<ActivityReportResponse>> {
+    return this.makeRequest<ActivityReportResponse>('/api/racine/activity/reports', {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request)
+    });
+  }
+
+  /**
+   * Download activity report
+   * Maps to: GET /api/racine/activity/reports/{report_id}/download
+   */
+  async downloadActivityReport(reportId: UUID): Promise<Blob> {
+    const response = await fetch(`${this.config.baseURL}/api/racine/activity/reports/${reportId}/download`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download activity report: ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  // =============================================================================
+  // ADVANCED SEARCH AND FILTERING
+  // =============================================================================
+
+  /**
+   * Advanced activity search
+   * Maps to: GET /api/racine/activity/search
+   */
+  async searchActivitiesAdvanced(request: AdvancedActivitySearchRequest): Promise<APIResponse<ActivityResponse[]>> {
+    const params = new URLSearchParams();
+    
+    if (request.query) params.append('query', request.query);
+    if (request.filters) {
+      Object.entries(request.filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(`filter.${key}`, String(value));
+        }
+      });
+    }
+    if (request.date_range) {
+      params.append('start_date', request.date_range.start);
+      params.append('end_date', request.date_range.end);
+    }
+    if (request.sort) {
+      params.append('sort_by', request.sort.field);
+      params.append('sort_order', request.sort.direction);
+    }
+    if (request.pagination) {
+      params.append('page', request.pagination.page.toString());
+      params.append('page_size', request.pagination.pageSize.toString());
+    }
+
+    return this.makeRequest<ActivityResponse[]>(`/api/racine/activity/search?${params}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // =============================================================================
+  // SYSTEM HEALTH AND MONITORING
+  // =============================================================================
+
+  /**
+   * Get activity system health
+   * Maps to: GET /api/racine/activity/health
+   */
+  async getActivitySystemHealth(): Promise<APIResponse<ActivitySystemHealthResponse>> {
+    return this.makeRequest<ActivitySystemHealthResponse>('/api/racine/activity/health', {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Get activity system statistics
+   * Maps to: GET /api/racine/activity/system-stats
+   */
+  async getActivitySystemStats(): Promise<APIResponse<ActivitySystemStatsResponse>> {
+    return this.makeRequest<ActivitySystemStatsResponse>('/api/racine/activity/system-stats', {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // =============================================================================
+  // ANOMALY DETECTION (Enhanced)
+  // =============================================================================
+
+  // The original getActivityAnomalies and reportAnomaly methods are kept here
+  // as they are not explicitly replaced by the new_code.
+  // The new_code only added the new methods for correlation analysis, sessions, and reports.
+  // The original methods for anomalies are still relevant and should be preserved.
+
+  /**
+   * Get activity anomalies
+   * Maps to: GET /api/racine/activity/anomalies
+   */
+  async getActivityAnomalies(
+    timeRange?: { start: ISODateString; end: ISODateString },
+    severity?: ActivitySeverity[]
+  ): Promise<ActivityAnomaly[]> {
+    const params = new URLSearchParams();
+    
+    if (timeRange) {
+      params.append('start_date', timeRange.start);
+      params.append('end_date', timeRange.end);
+    }
+    
+    if (severity) {
+      params.append('severity', JSON.stringify(severity));
+    }
+
+    const response = await fetch(`${this.config.baseURL}/api/racine/activity/anomalies?${params}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get activity anomalies: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Report activity anomaly
+   * Maps to: POST /api/racine/activity/report-anomaly
+   */
+  async reportAnomaly(
+    activityId: UUID,
+    description: string,
+    severity: ActivitySeverity = ActivitySeverity.MEDIUM
+  ): Promise<void> {
+    const response = await fetch(`${this.config.baseURL}/api/racine/activity/report-anomaly`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({
+        activity_id: activityId,
+        description,
+        severity
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to report anomaly: ${response.statusText}`);
     }
   }
 

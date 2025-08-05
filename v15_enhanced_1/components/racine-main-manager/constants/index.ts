@@ -15,6 +15,12 @@ export * from './workflow-templates';
 // Pipeline template constants
 export * from './pipeline-templates';
 
+// Workspace configuration constants
+export * from './workspace-configs';
+
+// Integration configuration constants
+export * from './integration-configs';
+
 // Re-export main constants for convenience
 export {
   SUPPORTED_GROUPS,
@@ -46,6 +52,14 @@ export {
   OPTIMIZATION_CONFIGS,
   PIPELINE_CATEGORIES
 } from './pipeline-templates';
+
+export {
+  INTEGRATION_GROUPS,
+  INTEGRATION_API_ENDPOINTS,
+  SYNC_PATTERNS,
+  CONFLICT_RESOLUTION_STRATEGIES,
+  INTEGRATION_TEMPLATES
+} from './integration-configs';
 
 // Re-export utility functions for convenience
 export {
@@ -80,3 +94,13 @@ export {
   validatePipelineStage,
   getOptimizationRecommendations
 } from './pipeline-templates';
+
+export {
+  getIntegrationGroupById,
+  getEnabledIntegrationGroups,
+  getIntegrationGroupsByPriority,
+  buildIntegrationApiUrl,
+  getSyncTemplate,
+  getConflictResolutionStrategy,
+  isIntegrationFeatureEnabled
+} from './integration-configs';

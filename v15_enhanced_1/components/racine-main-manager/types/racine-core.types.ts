@@ -791,254 +791,511 @@ export interface ExecutionError {
 export interface PipelineDefinition {
   id: UUID;
   name: string;
-  description: string;
+  description?: string;
   version: string;
-  workspaceId: UUID;
-  stages: PipelineStage[];
-  configuration: PipelineConfiguration;
-  status: OperationStatus;
-  createdBy: UUID;
-  createdAt: ISODateString;
-  updatedAt: ISODateString;
-  lastExecution: ISODateString;
-  executionCount: number;
-  successRate: number;
-  averageDuration: number;
-  tags: string[];
+  status: PipelineStatus;
+  
+  // Pipeline configuration
+  pipeline_definition: Record<string, JSONValue>; // Complete pipeline DAG definition
+  stage_configurations?: Record<string, JSONValue>; // Individual stage configurations
+  data_flow_mapping?: Record<string, JSONValue>; // Data flow between stages
+  dependency_graph?: Record<string, JSONValue>; // Stage dependency graph
+  
+  // Cross-group integration
+  involved_groups?: string[]; // List of groups involved in pipeline
+  group_stage_mapping?: Record<string, JSONValue>; // Mapping of stages to groups
+  cross_group_data_flow?: Record<string, JSONValue>; // Data flow across groups
+  group_specific_configs?: Record<string, JSONValue>; // Group-specific configurations
+  
+  // Performance and optimization
+  performance_targets?: Record<string, JSONValue>; // Performance targets and SLAs
+  optimization_config?: Record<string, JSONValue>; // AI optimization configuration
+  resource_allocation?: Record<string, JSONValue>; // Resource allocation per stage
+  scaling_policies?: Record<string, JSONValue>; // Auto-scaling policies
+  
+  // AI-driven optimization
+  ai_optimization_enabled: boolean;
+  optimization_history?: Record<string, JSONValue>; // History of AI optimizations
+  performance_baselines?: Record<string, JSONValue>; // Performance baselines
+  optimization_recommendations?: Record<string, JSONValue>; // Current AI recommendations
+  
+  // Pipeline templates and reusability
+  is_template: boolean;
+  template_category?: string;
+  template_tags?: string[]; // Template categorization tags
+  parent_template_id?: UUID;
+  
+  // Versioning and lifecycle
+  previous_version_id?: UUID;
+  next_version_id?: UUID;
+  is_current_version: boolean;
+  deprecation_date?: ISODateString;
+  
+  // Data lineage and quality
+  data_lineage_config?: Record<string, JSONValue>; // Data lineage tracking configuration
+  quality_gates?: Record<string, JSONValue>; // Quality gates and validations
+  data_governance_rules?: Record<string, JSONValue>; // Data governance rules
+  compliance_requirements?: Record<string, JSONValue>; // Compliance requirements
+  
+  // Monitoring and alerting
+  monitoring_config?: Record<string, JSONValue>; // Monitoring configuration
+  alerting_rules?: Record<string, JSONValue>; // Alerting rules and thresholds
+  notification_settings?: Record<string, JSONValue>; // Notification preferences
+  health_check_config?: Record<string, JSONValue>; // Health check configuration
+  
+  // Security and access control
+  access_level: AccessLevel; // private, team, organization, public
+  allowed_groups?: string[]; // RBAC groups allowed to access
+  execution_permissions?: Record<string, JSONValue>; // Execution permission configuration
+  data_access_policies?: Record<string, JSONValue>; // Data access policies
+  
+  // Integration with orchestration
+  orchestration_master_id?: UUID;
+  
+  // Audit and tracking fields
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  created_by: UUID;
+  updated_by?: UUID;
+  
+  // Legacy fields for backward compatibility
+  workspaceId?: UUID;
+  stages?: PipelineStage[];
+  configuration?: PipelineConfiguration;
+  lastExecution?: ISODateString;
+  executionCount?: number;
+  successRate?: number;
+  averageDuration?: number;
+  tags?: string[];
+}
+
+export enum PipelineStatus {
+  DRAFT = "draft",
+  ACTIVE = "active", 
+  RUNNING = "running",
+  PAUSED = "paused",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  OPTIMIZING = "optimizing",
+  ARCHIVED = "archived"
+}
+
+export enum AccessLevel {
+  PRIVATE = "private",
+  TEAM = "team", 
+  ORGANIZATION = "organization",
+  PUBLIC = "public"
 }
 
 /**
- * Pipeline stage definition
- */
-export interface PipelineStage {
-  id: UUID;
-  name: string;
-  description: string;
-  type: StageType;
-  groupId: string;
-  operations: PipelineOperation[];
-  inputs: StageInput[];
-  outputs: StageOutput[];
-  dependencies: string[];
-  parallelism: number;
-  timeout: number;
-  retryPolicy: RetryPolicy;
-  position: StagePosition;
-  configuration: Record<string, JSONValue>;
-}
-
-export enum StageType {
-  INGESTION = "ingestion",
-  TRANSFORMATION = "transformation",
-  VALIDATION = "validation",
-  CLASSIFICATION = "classification",
-  COMPLIANCE_CHECK = "compliance_check",
-  CATALOGING = "cataloging",
-  ANALYSIS = "analysis",
-  OUTPUT = "output"
-}
-
-export interface PipelineOperation {
-  id: UUID;
-  name: string;
-  type: string;
-  parameters: Record<string, JSONValue>;
-  timeout: number;
-  retryPolicy: RetryPolicy;
-}
-
-export interface StageInput {
-  name: string;
-  type: string;
-  source: string;
-  required: boolean;
-  schema?: Record<string, JSONValue>;
-}
-
-export interface StageOutput {
-  name: string;
-  type: string;
-  destination: string;
-  schema?: Record<string, JSONValue>;
-}
-
-export interface StagePosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  level: number;
-}
-
-/**
- * Pipeline configuration
- */
-export interface PipelineConfiguration {
-  maxConcurrentStages: number;
-  globalTimeout: number;
-  errorHandling: ErrorHandlingPolicy;
-  monitoring: MonitoringConfiguration;
-  optimization: OptimizationConfiguration;
-  resources: ResourceConfiguration;
-  security: SecurityConfiguration;
-}
-
-export interface OptimizationConfiguration {
-  enabled: boolean;
-  autoScaling: boolean;
-  resourceOptimization: boolean;
-  costOptimization: boolean;
-  performanceOptimization: boolean;
-  customRules: OptimizationRule[];
-}
-
-export interface OptimizationRule {
-  name: string;
-  type: string;
-  condition: string;
-  action: string;
-  parameters: Record<string, JSONValue>;
-}
-
-export interface SecurityConfiguration {
-  encryption: EncryptionSettings;
-  authentication: AuthenticationSettings;
-  authorization: AuthorizationSettings;
-  audit: AuditSettings;
-}
-
-export interface EncryptionSettings {
-  enabled: boolean;
-  algorithm: string;
-  keyRotation: boolean;
-  keyRotationInterval: number;
-}
-
-export interface AuthenticationSettings {
-  required: boolean;
-  methods: string[];
-  tokenExpiry: number;
-}
-
-export interface AuthorizationSettings {
-  rbacEnabled: boolean;
-  requiredPermissions: string[];
-  resourceAccess: Record<string, string[]>;
-}
-
-export interface AuditSettings {
-  enabled: boolean;
-  logLevel: LogLevel;
-  retention: number;
-  destinations: string[];
-}
-
-/**
- * Pipeline execution
+ * Pipeline execution - maps to RacinePipelineExecution backend model
  */
 export interface PipelineExecution {
   id: UUID;
-  pipelineId: UUID;
-  pipelineVersion: string;
-  status: OperationStatus;
-  startTime: ISODateString;
+  
+  // Execution basic information
+  execution_name?: string;
+  status: PipelineStatus;
+  trigger_type: TriggerType; // manual, scheduled, event_driven, api
+  
+  // Execution context
+  triggered_by: UUID;
+  trigger_data?: Record<string, JSONValue>; // Data that triggered the execution
+  execution_context?: Record<string, JSONValue>; // Execution environment context
+  input_parameters?: Record<string, JSONValue>; // Input parameters for this execution
+  input_data_sources?: Record<string, JSONValue>; // Input data sources
+  
+  // Timing information
+  started_at: ISODateString;
+  completed_at?: ISODateString;
+  estimated_completion?: ISODateString;
+  actual_duration?: number; // Duration in seconds
+  estimated_duration?: number; // Estimated duration in seconds
+  
+  // Progress tracking
+  total_stages: number;
+  completed_stages: number;
+  failed_stages: number;
+  skipped_stages: number;
+  current_stage?: string;
+  progress_percentage: number;
+  
+  // Resource tracking
+  resource_usage?: Record<string, JSONValue>; // Current resource usage
+  peak_resource_usage?: Record<string, JSONValue>; // Peak resource usage
+  resource_allocation?: Record<string, JSONValue>; // Allocated resources
+  cost_tracking?: Record<string, JSONValue>; // Cost tracking data
+  
+  // Performance metrics
+  throughput_metrics?: Record<string, JSONValue>; // Throughput measurements
+  performance_metrics?: Record<string, JSONValue>; // Performance data
+  bottlenecks_detected?: Record<string, JSONValue>; // Performance bottlenecks
+  optimization_applied?: Record<string, JSONValue>; // Applied optimizations
+  
+  // Data processing metrics
+  total_records_processed: number;
+  total_records_failed: number;
+  total_data_size?: number; // Data size in bytes
+  data_quality_score?: number; // Overall data quality score
+  
+  // Output and results
+  execution_results?: Record<string, JSONValue>; // Execution results
+  output_artifacts?: string[]; // Output artifacts paths
+  logs_location?: string; // Location of execution logs
+  metrics_snapshot?: Record<string, JSONValue>; // Metrics snapshot
+  
+  // Error handling
+  error_details?: Record<string, JSONValue>; // Error details if execution failed
+  error_recovery_attempts?: number;
+  last_error_stage?: string;
+  error_handling_stages?: string[]; // Stages to execute on error
+  
+  // AI optimization
+  ai_optimization_enabled: boolean;
+  optimization_priorities?: Record<string, JSONValue>; // Optimization priorities
+  learning_data?: Record<string, JSONValue>; // Data for AI learning
+  
+  // Pipeline reference
+  pipeline_id: UUID;
+  
+  // Legacy fields for backward compatibility
+  pipelineId?: UUID;
+  pipelineVersion?: string;
+  startTime?: ISODateString;
   endTime?: ISODateString;
   duration?: number;
-  triggeredBy: UUID;
-  triggerType: TriggerType;
-  stageExecutions: StageExecution[];
-  results: PipelineResults;
-  metrics: PipelineMetrics;
-  logs: ExecutionLog[];
-  errors: ExecutionError[];
+  triggerType?: TriggerType;
+  stageExecutions?: StageExecution[];
+  results?: PipelineResults;
+  metrics?: PipelineMetrics;
+  logs?: ExecutionLog[];
+  errors?: ExecutionError[];
 }
 
-export interface StageExecution {
-  stageId: UUID;
-  stageName: string;
-  status: OperationStatus;
-  startTime: ISODateString;
-  endTime?: ISODateString;
-  duration?: number;
-  operationExecutions: OperationExecution[];
-  inputs: Record<string, JSONValue>;
-  outputs: Record<string, JSONValue>;
-  metrics: StageMetrics;
-  logs: string[];
-  errors: string[];
+/**
+ * Pipeline stage - maps to RacinePipelineStage backend model
+ */
+export interface PipelineStage {
+  id: UUID;
+  stage_name: string;
+  stage_description?: string;
+  stage_type: PipelineStageType;
+  stage_order: number;
+  
+  // Stage configuration
+  stage_configuration: Record<string, JSONValue>; // Stage-specific configuration
+  input_schema?: Record<string, JSONValue>; // Input data schema
+  output_schema?: Record<string, JSONValue>; // Output data schema
+  validation_rules?: Record<string, JSONValue>; // Data validation rules
+  
+  // Dependencies and flow
+  depends_on?: string[]; // Stage dependencies
+  parallel_execution: boolean; // Can execute in parallel
+  conditional_execution?: Record<string, JSONValue>; // Conditional execution logic
+  data_flow_config?: Record<string, JSONValue>; // Data flow configuration
+  
+  // Cross-group integration
+  target_group: string; // Which group this stage targets
+  group_operation: string; // Specific operation within the group
+  group_specific_config?: Record<string, JSONValue>; // Group-specific configuration
+  
+  // Performance and resources
+  resource_requirements?: Record<string, JSONValue>; // Resource requirements
+  performance_targets?: Record<string, JSONValue>; // Performance targets
+  timeout_seconds?: number; // Stage timeout
+  retry_policy?: RetryPolicy; // Retry configuration
+  
+  // Quality and compliance
+  quality_requirements?: Record<string, JSONValue>; // Quality requirements
+  compliance_requirements?: Record<string, JSONValue>; // Compliance requirements
+  data_lineage_config?: Record<string, JSONValue>; // Data lineage configuration
+  
+  // Monitoring and alerting
+  monitoring_config?: Record<string, JSONValue>; // Monitoring configuration
+  alerting_config?: Record<string, JSONValue>; // Alerting configuration
+  health_check_config?: Record<string, JSONValue>; // Health check configuration
+  
+  // Error handling
+  error_handling_policy?: Record<string, JSONValue>; // Error handling policy
+  error_recovery_config?: Record<string, JSONValue>; // Error recovery configuration
+  error_handling_stages?: string[]; // Stages to execute on error
+  
+  // AI optimization
+  ai_optimization_enabled: boolean;
+  optimization_priorities?: Record<string, JSONValue>; // Optimization priorities
+  learning_data?: Record<string, JSONValue>; // Data for AI learning
+  
+  // Pipeline reference
+  pipeline_id: UUID;
+  
+  // Legacy fields for backward compatibility
+  name?: string;
+  description?: string;
+  type?: StageType;
+  groupId?: string;
+  operations?: PipelineOperation[];
+  inputs?: StageInput[];
+  outputs?: StageOutput[];
+  dependencies?: string[];
+  parallelism?: number;
+  timeout?: number;
+  position?: StagePosition;
+  configuration?: Record<string, JSONValue>;
 }
 
-export interface OperationExecution {
-  operationId: UUID;
-  operationName: string;
-  status: OperationStatus;
-  startTime: ISODateString;
-  endTime?: ISODateString;
-  duration?: number;
-  inputs: Record<string, JSONValue>;
-  outputs: Record<string, JSONValue>;
-  metrics: OperationMetrics;
-  logs: string[];
-  errors: string[];
+export enum PipelineStageType {
+  DATA_INGESTION = "data_ingestion",
+  DATA_TRANSFORMATION = "data_transformation", 
+  DATA_VALIDATION = "data_validation",
+  QUALITY_CHECK = "quality_check",
+  CLASSIFICATION = "classification",
+  COMPLIANCE_VALIDATION = "compliance_validation",
+  CATALOG_UPDATE = "catalog_update",
+  SCAN_EXECUTION = "scan_execution",
+  AI_PROCESSING = "ai_processing",
+  NOTIFICATION = "notification",
+  CONDITIONAL_BRANCH = "conditional_branch",
+  PARALLEL_PROCESSING = "parallel_processing",
+  CUSTOM_OPERATION = "custom_operation"
 }
 
-export interface OperationMetrics {
-  recordsProcessed: number;
-  dataSize: number;
-  throughput: number;
-  memoryUsage: number;
-  cpuUsage: number;
-  networkIO: number;
-  diskIO: number;
+/**
+ * Pipeline stage execution - maps to RacineStageExecution backend model
+ */
+export interface PipelineStageExecution {
+  id: UUID;
+  
+  // Execution information
+  status: PipelineStatus;
+  started_at: ISODateString;
+  completed_at?: ISODateString;
+  duration_seconds?: number;
+  
+  // Data processing
+  input_data?: Record<string, JSONValue>; // Actual input data for this execution
+  output_data?: Record<string, JSONValue>; // Output data from this execution
+  records_processed: number;
+  records_failed: number;
+  data_quality_metrics?: Record<string, JSONValue>; // Data quality metrics
+  
+  // Performance tracking
+  resource_usage?: Record<string, JSONValue>; // Resource consumption
+  performance_metrics?: Record<string, JSONValue>; // Performance metrics
+  throughput_metrics?: Record<string, JSONValue>; // Throughput measurements
+  bottlenecks_detected?: Record<string, JSONValue>; // Performance bottlenecks
+  
+  // Quality and compliance results
+  quality_check_results?: Record<string, JSONValue>; // Quality validation results
+  compliance_validation_results?: Record<string, JSONValue>; // Compliance validation results
+  validation_errors?: Record<string, JSONValue>; // Validation errors encountered
+  
+  // Error handling
+  execution_logs?: string; // Execution logs
+  error_details?: Record<string, JSONValue>; // Error details if stage failed
+  retry_attempts: number;
+  retry_reason?: string;
+  recovery_actions?: Record<string, JSONValue>;
+  
+  // AI optimization tracking
+  optimization_applied?: Record<string, JSONValue>; // Applied optimizations
+  performance_improvement?: number; // Performance improvement
+  ai_recommendations_generated?: Record<string, JSONValue>; // AI recommendations generated
+  
+  // References
+  pipeline_execution_id: UUID;
+  pipeline_stage_id: UUID;
 }
 
-export interface StageMetrics {
-  totalOperations: number;
-  successfulOperations: number;
-  failedOperations: number;
-  dataProcessed: number;
-  recordsProcessed: number;
-  averageOperationTime: number;
-  resourceUsage: ResourceUsage;
+/**
+ * Pipeline template - maps to RacinePipelineTemplate backend model
+ */
+export interface PipelineTemplate {
+  id: UUID;
+  
+  // Template information
+  template_name: string;
+  template_description?: string;
+  template_category: string;
+  template_version: string;
+  complexity_level: ComplexityLevel; // beginner, intermediate, advanced
+  
+  // Template configuration
+  template_definition: Record<string, JSONValue>; // Complete template definition
+  parameter_schema?: Record<string, JSONValue>; // Schema for template parameters
+  default_parameters?: Record<string, JSONValue>; // Default parameter values
+  validation_rules?: Record<string, JSONValue>; // Parameter validation rules
+  
+  // Template metadata
+  use_cases?: string[]; // Documented use cases
+  prerequisites?: string[]; // Prerequisites for using template
+  expected_outcomes?: string[]; // Expected outcomes
+  supported_groups?: string[]; // Supported groups
+  integration_examples?: Record<string, JSONValue>; // Integration examples
+  
+  // Performance and optimization
+  performance_benchmarks?: Record<string, JSONValue>; // Performance benchmarks
+  optimization_recommendations?: Record<string, JSONValue>; // Optimization recommendations
+  best_practices?: string[]; // Best practices
+  common_issues?: string[]; // Common issues and solutions
+  
+  // AI enhancements
+  ai_optimization_enabled: boolean;
+  ai_recommendations?: Record<string, JSONValue>; // AI recommendations for usage
+  learning_data?: Record<string, JSONValue>; // Learning data for improvement
+  success_patterns?: Record<string, JSONValue>; // Success patterns
+  
+  // Usage tracking
+  usage_count: number;
+  success_rate: number;
+  average_execution_time?: number;
+  user_ratings?: Record<string, JSONValue>; // User ratings and feedback
+  
+  // Versioning and maintenance
+  is_active: boolean;
+  maintenance_schedule?: Record<string, JSONValue>; // Maintenance schedule
+  deprecation_notice?: string;
+  migration_guide?: string;
+  
+  // Access control
+  access_level: AccessLevel;
+  allowed_groups?: string[];
+  created_by_organization?: UUID;
+  
+  // Base pipeline reference
+  base_pipeline_id?: UUID;
+  
+  // Audit fields
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  created_by: UUID;
+  updated_by?: UUID;
 }
 
-export interface PipelineResults {
-  success: boolean;
-  totalStages: number;
-  successfulStages: number;
-  failedStages: number;
-  skippedStages: number;
-  totalOperations: number;
-  dataProcessed: number;
-  recordsProcessed: number;
-  outputArtifacts: string[];
-  qualityScore: number;
-  summary: string;
+export enum ComplexityLevel {
+  BEGINNER = "beginner",
+  INTERMEDIATE = "intermediate", 
+  ADVANCED = "advanced"
 }
 
-export interface PipelineMetrics {
-  totalDuration: number;
-  queueTime: number;
-  executionTime: number;
-  optimizationSavings: number;
-  resourceEfficiency: number;
-  costEfficiency: number;
-  qualityMetrics: QualityMetrics;
-  performanceMetrics: PerformanceMetrics;
+/**
+ * Pipeline optimization - maps to RacinePipelineOptimization backend model
+ */
+export interface PipelineOptimization {
+  id: UUID;
+  optimization_type: PipelineOptimizationType;
+  recommendation_data: Record<string, JSONValue>;
+  implementation_status: OptimizationStatus;
+  expected_improvement: Record<string, JSONValue>;
+  actual_improvement?: Record<string, JSONValue>;
+  confidence_score: number;
+  
+  // AI analysis
+  ai_analysis: Record<string, JSONValue>;
+  learning_source: string;
+  validation_results?: Record<string, JSONValue>;
+  
+  // Implementation tracking
+  applied_at?: ISODateString;
+  rollback_plan?: Record<string, JSONValue>;
+  monitoring_config?: Record<string, JSONValue>;
+  
+  // Pipeline reference
+  pipeline_id: UUID;
+  
+  // Audit fields
+  created_at: ISODateString;
+  updated_at: ISODateString;
+  created_by: UUID;
 }
 
-export interface QualityMetrics {
-  dataQualityScore: number;
-  completenessScore: number;
-  accuracyScore: number;
-  consistencyScore: number;
-  validityScore: number;
-  uniquenessScore: number;
+export enum PipelineOptimizationType {
+  PERFORMANCE = "performance",
+  RESOURCE_USAGE = "resource_usage",
+  COST = "cost", 
+  RELIABILITY = "reliability",
+  THROUGHPUT = "throughput",
+  LATENCY = "latency",
+  QUALITY = "quality"
+}
+
+export enum OptimizationStatus {
+  PENDING = "pending",
+  APPROVED = "approved",
+  APPLIED = "applied",
+  REJECTED = "rejected",
+  ROLLED_BACK = "rolled_back"
 }
 
 // =============================================================================
 // AI ASSISTANT TYPES - Maps to RacineAI models
 // =============================================================================
+
+/**
+ * AI conversation type enumeration - maps to AIConversationType backend enum
+ */
+export enum AIConversationType {
+  GENERAL_QUERY = "general_query",
+  TECHNICAL_SUPPORT = "technical_support",
+  WORKFLOW_ASSISTANCE = "workflow_assistance",
+  PIPELINE_OPTIMIZATION = "pipeline_optimization",
+  DATA_DISCOVERY = "data_discovery",
+  COMPLIANCE_GUIDANCE = "compliance_guidance",
+  TROUBLESHOOTING = "troubleshooting",
+  KNOWLEDGE_DISCOVERY = "knowledge_discovery",
+  CROSS_GROUP_ANALYSIS = "cross_group_analysis",
+  SYSTEM_MONITORING = "system_monitoring"
+}
+
+/**
+ * AI recommendation type enumeration - maps to AIRecommendationType backend enum
+ */
+export enum AIRecommendationType {
+  PERFORMANCE_OPTIMIZATION = "performance_optimization",
+  WORKFLOW_IMPROVEMENT = "workflow_improvement",
+  PIPELINE_OPTIMIZATION = "pipeline_optimization",
+  RESOURCE_ALLOCATION = "resource_allocation",
+  SECURITY_ENHANCEMENT = "security_enhancement",
+  COMPLIANCE_IMPROVEMENT = "compliance_improvement",
+  DATA_QUALITY = "data_quality",
+  INTEGRATION_OPTIMIZATION = "integration_optimization",
+  COST_OPTIMIZATION = "cost_optimization",
+  AUTOMATION_OPPORTUNITY = "automation_opportunity",
+  KNOWLEDGE_SHARING = "knowledge_sharing",
+  PROCESS_IMPROVEMENT = "process_improvement"
+}
+
+/**
+ * AI insight type enumeration - maps to AIInsightType backend enum
+ */
+export enum AIInsightType {
+  TREND_ANALYSIS = "trend_analysis",
+  PATTERN_DISCOVERY = "pattern_discovery",
+  ANOMALY_DETECTION = "anomaly_detection",
+  PREDICTIVE_ANALYSIS = "predictive_analysis",
+  CORRELATION_DISCOVERY = "correlation_discovery",
+  PERFORMANCE_ANALYSIS = "performance_analysis",
+  USAGE_ANALYSIS = "usage_analysis",
+  RISK_ASSESSMENT = "risk_assessment",
+  OPPORTUNITY_IDENTIFICATION = "opportunity_identification",
+  CROSS_GROUP_INSIGHTS = "cross_group_insights"
+}
+
+/**
+ * AI learning type enumeration - maps to AILearningType backend enum
+ */
+export enum AILearningType {
+  USER_INTERACTION = "user_interaction",
+  SYSTEM_BEHAVIOR = "system_behavior",
+  PERFORMANCE_FEEDBACK = "performance_feedback",
+  RECOMMENDATION_OUTCOME = "recommendation_outcome",
+  WORKFLOW_EXECUTION = "workflow_execution",
+  PIPELINE_PERFORMANCE = "pipeline_performance",
+  ERROR_PATTERN = "error_pattern",
+  OPTIMIZATION_RESULT = "optimization_result",
+  USER_PREFERENCE = "user_preference",
+  DOMAIN_KNOWLEDGE = "domain_knowledge"
+}
 
 /**
  * AI conversation - maps to RacineAIConversation backend model
@@ -1047,32 +1304,123 @@ export interface AIConversation {
   id: UUID;
   userId: UUID;
   workspaceId?: UUID;
-  title: string;
-  context: AIContext;
-  messages: AIMessage[];
-  status: ConversationStatus;
-  createdAt: ISODateString;
-  updatedAt: ISODateString;
+  
+  // Conversation basic information
+  conversationTitle: string;
+  conversationType: AIConversationType;
+  status: string; // active, archived, resolved
+  priority: string; // low, normal, high, urgent
+  
+  // Context information
+  userContext: Record<string, JSONValue>;
+  systemContext: Record<string, JSONValue>;
+  workspaceContext: Record<string, JSONValue>;
+  groupContext: Record<string, JSONValue>;
+  
+  // Conversation metadata
+  conversationSummary?: string;
+  keyTopics: string[];
+  mentionedEntities: Record<string, JSONValue>;
+  crossGroupReferences: Record<string, JSONValue>;
+  
+  // Resolution tracking
+  isResolved: boolean;
+  resolutionType?: string; // answered, escalated, automated, closed
+  resolutionSummary?: string;
+  userSatisfaction?: number; // 1-10 rating
+  
+  // Learning and improvement
+  learningPoints: Record<string, JSONValue>;
+  improvementSuggestions: Record<string, JSONValue>;
+  knowledgeGaps: Record<string, JSONValue>;
+  
+  // Analytics and metrics
+  messageCount: number;
+  durationMinutes?: number;
+  responseTimeAvg?: number;
+  accuracyScore?: number;
+  
+  // Integration tracking
+  workflowsTriggered: Record<string, JSONValue>;
+  pipelinesReferenced: Record<string, JSONValue>;
+  resourcesAccessed: Record<string, JSONValue>;
+  actionsPerformed: Record<string, JSONValue>;
+  
+  // Timing
+  startedAt: ISODateString;
   lastActivity: ISODateString;
+  endedAt?: ISODateString;
+  
+  // Relations
+  messages: AIMessage[];
+  recommendations: AIRecommendation[];
+  
+  // Legacy compatibility
+  title: string; // alias for conversationTitle
+  context: AIContext;
+  createdAt: ISODateString; // alias for startedAt
+  updatedAt: ISODateString; // alias for lastActivity
   metadata: Record<string, JSONValue>;
 }
 
 export enum ConversationStatus {
   ACTIVE = "active",
   ARCHIVED = "archived",
+  RESOLVED = "resolved",
   DELETED = "deleted"
 }
 
 /**
- * AI message within conversation
+ * AI message within conversation - maps to RacineAIMessage backend model
  */
 export interface AIMessage {
   id: UUID;
   conversationId: UUID;
+  
+  // Message basic information
   role: MessageRole;
   content: string;
   messageType: MessageType;
+  isFromUser: boolean;
+  
+  // AI analysis
+  intentDetected?: string;
+  entitiesExtracted: Record<string, JSONValue>;
+  sentimentScore?: number;
+  confidenceScore?: number;
+  complexityScore?: number;
+  
+  // Processing information
+  processingTimeMs?: number;
+  aiModelUsed?: string;
+  processingPipeline: Record<string, JSONValue>;
+  externalApisCalled: Record<string, JSONValue>;
+  
+  // Context and references
+  contextUsed: Record<string, JSONValue>;
+  referencedDocuments: Record<string, JSONValue>;
+  crossGroupDataUsed: Record<string, JSONValue>;
+  workflowContext?: Record<string, JSONValue>;
+  
+  // Quality and feedback
+  userFeedback?: string; // helpful, not_helpful, etc.
+  accuracyRating?: number;
+  relevanceScore?: number;
+  improvementNotes?: string;
+  
+  // Actions and results
+  actionsSuggested: Record<string, JSONValue>;
+  actionsExecuted: Record<string, JSONValue>;
+  followUpRequired: boolean;
+  followUpActions: Record<string, JSONValue>;
+  
+  // Message order
+  messageOrder: number;
+  
+  // Timing
   timestamp: ISODateString;
+  
+  // Legacy compatibility
   context: MessageContext;
   attachments: MessageAttachment[];
   reactions: MessageReaction[];
@@ -1218,20 +1566,159 @@ export enum ExpertiseLevel {
 export interface AIRecommendation {
   id: UUID;
   userId: UUID;
-  type: RecommendationType;
-  title: string;
+  conversationId?: UUID;
+  
+  // Recommendation basic information
+  recommendationTitle: string;
+  recommendationType: AIRecommendationType;
   description: string;
-  confidence: number;
-  priority: RecommendationPriority;
+  priority: string; // low, medium, high, critical
+  
+  // Recommendation details
+  detailedAnalysis: Record<string, JSONValue>;
+  implementationSteps: Record<string, JSONValue>;
+  expectedBenefits: Record<string, JSONValue>;
+  potentialRisks: Record<string, JSONValue>;
+  resourceRequirements: Record<string, JSONValue>;
+  
+  // AI analysis
+  confidenceScore: number; // 0-1
+  evidenceData: Record<string, JSONValue>;
+  similarCases: Record<string, JSONValue>;
+  successProbability?: number;
+  
+  // Impact assessment
+  impactAreas: Record<string, JSONValue>;
+  performanceImpact: Record<string, JSONValue>;
+  costImpact: Record<string, JSONValue>;
+  userImpact: Record<string, JSONValue>;
+  complianceImpact: Record<string, JSONValue>;
+  
+  // Cross-group implications
+  affectedGroups: Record<string, JSONValue>;
+  crossGroupBenefits: Record<string, JSONValue>;
+  integrationRequirements: Record<string, JSONValue>;
+  coordinationNeeded: Record<string, JSONValue>;
+  
+  // Implementation tracking
+  implementationStatus: string; // pending, in_progress, completed, rejected
+  implementationProgress?: number; // 0-100
+  implementationNotes?: string;
+  actualResults?: Record<string, JSONValue>;
+  
+  // Quality and validation
+  validationStatus: string; // pending, validated, disputed
+  accuracyScore?: number;
+  effectivenessScore?: number;
+  userSatisfaction?: number;
+  
+  // Learning and feedback
+  userFeedback?: string;
+  outcomeTracking: Record<string, JSONValue>;
+  learningPoints: Record<string, JSONValue>;
+  improvementSuggestions: Record<string, JSONValue>;
+  
+  // Usage and sharing
+  isPublic: boolean;
+  accessLevel: string; // private, team, organization
+  sharedWithGroups: Record<string, JSONValue>;
+  usageCount: number;
+  
+  // Context and generation
+  generationContext: Record<string, JSONValue>;
+  triggeringAnalysis: Record<string, JSONValue>;
+  relatedRecommendations: string[];
+  
+  // Timing
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  expiresAt?: ISODateString;
+  implementedAt?: ISODateString;
+  reviewedAt?: ISODateString;
+  
+  // Legacy compatibility
+  type: RecommendationType;
+  title: string; // alias for recommendationTitle
+  confidence: number; // alias for confidenceScore
   category: RecommendationCategory;
   context: RecommendationContext;
   actions: RecommendationAction[];
   metrics: RecommendationMetrics;
   status: RecommendationStatus;
-  createdAt: ISODateString;
-  expiresAt?: ISODateString;
-  implementedAt?: ISODateString;
   feedback: RecommendationFeedback[];
+}
+
+/**
+ * AI insight - maps to RacineAIInsight backend model
+ */
+export interface AIInsight {
+  id: UUID;
+  userId: UUID;
+  conversationId?: UUID;
+  orchestrationMasterId?: UUID;
+  
+  // Insight basic information
+  insightTitle: string;
+  insightType: AIInsightType;
+  description: string;
+  significanceLevel: string; // low, medium, high, critical
+  
+  // Insight analysis
+  detailedAnalysis: Record<string, JSONValue>;
+  keyFindings: Record<string, JSONValue>;
+  supportingEvidence: Record<string, JSONValue>;
+  statisticalData: Record<string, JSONValue>;
+  
+  // Data and methodology
+  dataSources: Record<string, JSONValue>;
+  analysisMethodology: Record<string, JSONValue>;
+  aiModelsUsed: Record<string, JSONValue>;
+  confidenceIntervals: Record<string, JSONValue>;
+  
+  // Cross-group analysis
+  groupsAnalyzed: Record<string, JSONValue>;
+  crossGroupPatterns: Record<string, JSONValue>;
+  groupSpecificInsights: Record<string, JSONValue>;
+  integrationOpportunities: Record<string, JSONValue>;
+  
+  // Predictive elements
+  predictions: Record<string, JSONValue>;
+  trendAnalysis: Record<string, JSONValue>;
+  forecasts: Record<string, JSONValue>;
+  scenarioAnalysis: Record<string, JSONValue>;
+  
+  // Impact and implications
+  businessImpact: Record<string, JSONValue>;
+  technicalImplications: Record<string, JSONValue>;
+  operationalImpact: Record<string, JSONValue>;
+  strategicImplications: Record<string, JSONValue>;
+  
+  // Actionable information
+  recommendedActions: Record<string, JSONValue>;
+  nextSteps: Record<string, JSONValue>;
+  monitoringRequirements: Record<string, JSONValue>;
+  successMetrics: Record<string, JSONValue>;
+  
+  // Quality and validation
+  validationStatus: string; // pending, validated, disputed
+  accuracyScore?: number;
+  reliabilityScore?: number;
+  peerReviewNotes: Record<string, JSONValue>;
+  
+  // Usage and sharing
+  isPublic: boolean;
+  accessLevel: string; // private, team, organization
+  sharedWithGroups: Record<string, JSONValue>;
+  usageCount: number;
+  
+  // Context and generation
+  generationContext: Record<string, JSONValue>;
+  triggeringAnalysis: Record<string, JSONValue>;
+  relatedInsights: string[];
+  
+  // Timing
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 }
 
 export enum RecommendationType {
@@ -2680,6 +3167,192 @@ export interface RateLimitConfig {
   burst: number;
 }
 
+// Legacy types for backward compatibility
+export interface PipelineOperation {
+  id: UUID;
+  name: string;
+  type: string;
+  parameters: Record<string, JSONValue>;
+  timeout: number;
+  retryPolicy: RetryPolicy;
+}
+
+export interface StageInput {
+  name: string;
+  type: string;
+  source: string;
+  required: boolean;
+  schema?: Record<string, JSONValue>;
+}
+
+export interface StageOutput {
+  name: string;
+  type: string;
+  destination: string;
+  schema?: Record<string, JSONValue>;
+}
+
+export interface StagePosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  level: number;
+}
+
+export enum StageType {
+  INGESTION = "ingestion",
+  TRANSFORMATION = "transformation",
+  VALIDATION = "validation",
+  CLASSIFICATION = "classification",
+  COMPLIANCE_CHECK = "compliance_check",
+  CATALOGING = "cataloging",
+  ANALYSIS = "analysis",
+  OUTPUT = "output"
+}
+
+export interface PipelineConfiguration {
+  maxConcurrentStages: number;
+  globalTimeout: number;
+  errorHandling: ErrorHandlingPolicy;
+  monitoring: MonitoringConfiguration;
+  optimization: OptimizationConfiguration;
+  resources: ResourceConfiguration;
+}
+
+export interface OptimizationConfiguration {
+  enabled: boolean;
+  autoScaling: boolean;
+  resourceOptimization: boolean;
+  costOptimization: boolean;
+  performanceOptimization: boolean;
+  customRules: OptimizationRule[];
+}
+
+export interface OptimizationRule {
+  name: string;
+  type: string;
+  condition: string;
+  action: string;
+  parameters: Record<string, JSONValue>;
+}
+
+export interface SecurityConfiguration {
+  encryption: EncryptionSettings;
+  authentication: AuthenticationSettings;
+  authorization: AuthorizationSettings;
+  audit: AuditSettings;
+}
+
+export interface EncryptionSettings {
+  enabled: boolean;
+  algorithm: string;
+  keyRotation: boolean;
+  keyRotationInterval: number;
+}
+
+export interface AuthenticationSettings {
+  required: boolean;
+  methods: string[];
+  tokenExpiry: number;
+}
+
+export interface AuthorizationSettings {
+  rbacEnabled: boolean;
+  requiredPermissions: string[];
+  resourceAccess: Record<string, string[]>;
+}
+
+export interface AuditSettings {
+  enabled: boolean;
+  logLevel: LogLevel;
+  retention: number;
+  destinations: string[];
+}
+
+export interface StageExecution {
+  stageId: UUID;
+  stageName: string;
+  status: OperationStatus;
+  startTime: ISODateString;
+  endTime?: ISODateString;
+  duration?: number;
+  operationExecutions: OperationExecution[];
+  inputs: Record<string, JSONValue>;
+  outputs: Record<string, JSONValue>;
+  metrics: StageMetrics;
+  logs: string[];
+  errors: string[];
+}
+
+export interface OperationExecution {
+  operationId: UUID;
+  operationName: string;
+  status: OperationStatus;
+  startTime: ISODateString;
+  endTime?: ISODateString;
+  duration?: number;
+  inputs: Record<string, JSONValue>;
+  outputs: Record<string, JSONValue>;
+  metrics: OperationMetrics;
+  logs: string[];
+  errors: string[];
+}
+
+export interface OperationMetrics {
+  recordsProcessed: number;
+  dataSize: number;
+  throughput: number;
+  memoryUsage: number;
+  cpuUsage: number;
+  networkIO: number;
+  diskIO: number;
+}
+
+export interface StageMetrics {
+  totalOperations: number;
+  successfulOperations: number;
+  failedOperations: number;
+  dataProcessed: number;
+  recordsProcessed: number;
+  averageOperationTime: number;
+  resourceUsage: ResourceUsage;
+}
+
+export interface PipelineResults {
+  success: boolean;
+  totalStages: number;
+  successfulStages: number;
+  failedStages: number;
+  skippedStages: number;
+  totalOperations: number;
+  dataProcessed: number;
+  recordsProcessed: number;
+  outputArtifacts: string[];
+  qualityScore: number;
+  summary: string;
+}
+
+export interface PipelineMetrics {
+  totalDuration: number;
+  queueTime: number;
+  executionTime: number;
+  optimizationSavings: number;
+  resourceEfficiency: number;
+  costEfficiency: number;
+  qualityMetrics: QualityMetrics;
+  performanceMetrics: PerformanceMetrics;
+}
+
+export interface QualityMetrics {
+  dataQualityScore: number;
+  completenessScore: number;
+  accuracyScore: number;
+  consistencyScore: number;
+  validityScore: number;
+  uniquenessScore: number;
+}
+
 // =============================================================================
 // EXPORT ALL TYPES
 // =============================================================================
@@ -2687,35 +3360,70 @@ export interface RateLimitConfig {
 // Re-export all types for easy importing
 export type {
   // Core system types
-  SystemHealth, GroupHealth, ServiceHealth, PerformanceMetrics,
-  
-  // Cross-group integration types  
-  GroupConfiguration, Integration, SharedResource, CrossGroupWorkflow,
+  SystemHealth, GroupHealth, ServiceHealth, PerformanceMetrics, SystemAlert,
+  UserContext, WorkspaceState, NavigationContext, GroupConfiguration, 
+  Integration, SharedResource, CrossGroupWorkflow, SynchronizationStatus,
   
   // Workspace types
   WorkspaceConfiguration, WorkspaceMember, WorkspaceResource, WorkspaceSettings,
+  WorkspaceAnalytics, WorkspaceTemplate, ResourceType, ResourceLink, ResourceDependency,
   
   // Workflow types
   WorkflowDefinition, WorkflowStep, WorkflowDependency, WorkflowExecution,
   
-  // Pipeline types
-  PipelineDefinition, PipelineStage, PipelineExecution,
+  // Pipeline types - Enhanced
+  PipelineDefinition, PipelineStage, PipelineExecution, PipelineStageExecution, 
+  PipelineTemplate, PipelineOptimization,
+  
+  // Pipeline legacy types
+  PipelineOperation, StageInput, StageOutput, StagePosition, PipelineConfiguration,
+  OptimizationConfiguration, OptimizationRule, SecurityConfiguration, EncryptionSettings,
+  AuthenticationSettings, AuthorizationSettings, AuditSettings, StageExecution,
+  OperationExecution, OperationMetrics, StageMetrics, PipelineResults, PipelineMetrics,
+  QualityMetrics,
   
   // AI types
   AIConversation, AIMessage, AIRecommendation, AIInsight,
-  
-  // User management types
-  UserProfile, Role, Permission, UserSession,
+  AIConversationType, AIRecommendationType, AIInsightType, AILearningType,
   
   // Activity types
-  ActivityRecord, AuditTrail,
+  ActivityRecord, AuditTrail, ActivityFilter, ActivityTimeRange,
   
   // Dashboard types
-  DashboardState, DashboardWidget, DashboardFilter,
+  DashboardState, Widget, WidgetConfiguration,
   
   // Collaboration types
-  CollaborationState, CollaborationParticipant, CollaborationMessage,
+  CollaborationState, CollaborationSession, CollaborationMember,
   
   // Integration types
-  IntegrationConfiguration, IntegrationSettings
+  IntegrationConfiguration, IntegrationEndpoint, ExternalSystemConfig,
+  
+  // User management types
+  UserProfile, UserSession, UserPermissions, RolePermissions, GroupPermissions,
+  SystemPermissions, UserPreferences, NotificationSettings,
+  
+  // Common utility types
+  RetryPolicy, ErrorHandlingPolicy, MonitoringConfiguration, ResourceConfiguration,
+  ResourceUsage, LogLevel, TriggerType, ExecutionLog, ExecutionError
+};
+
+// Export enums separately
+export {
+  // Core system enums
+  SystemStatus, OperationStatus, ViewMode, LayoutMode, IntegrationStatus,
+  
+  // Pipeline enums - Enhanced
+  PipelineStatus, AccessLevel, PipelineStageType, ComplexityLevel, 
+  PipelineOptimizationType, OptimizationStatus,
+  
+  // Pipeline legacy enums
+  StageType,
+  
+  // User management enums
+  ThemePreference, DigestFrequency, ProfileVisibility,
+  
+  // Activity enums
+  ActivityType, ActivitySeverity, ResourceScope, CollaborationType,
+  NotificationType, IntegrationType, AlertLevel, ActivityCategory,
+  GroupType, AnalyticsMetric
 };

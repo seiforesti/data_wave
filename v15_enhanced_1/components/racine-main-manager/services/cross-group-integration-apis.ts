@@ -38,6 +38,18 @@ import {
   CrossGroupAnalyticsResponse,
   ConflictDetectionRequest,
   ConflictDetectionResponse,
+  CreateIntegrationEndpointRequest,
+  IntegrationEndpointResponse,
+  IntegrationTestResult,
+  ServiceRegistrationRequest,
+  ServiceRegistryResponse,
+  CreateIntegrationJobRequest,
+  IntegrationJobResponse,
+  IntegrationJobExecutionResponse,
+  StartSyncRequest,
+  SyncJobResponse,
+  IntegrationSystemHealthResponse,
+  IntegrationPerformanceAnalyticsResponse,
   UUID,
   ISODateString,
   PaginationRequest,
@@ -695,6 +707,120 @@ class CrossGroupIntegrationAPI {
     if (!response.ok) {
       throw new Error(`Failed to resolve conflict: ${response.statusText}`);
     }
+  }
+
+  // =============================================================================
+  // INTEGRATION ENDPOINTS MANAGEMENT
+  // =============================================================================
+
+  /**
+   * Create integration endpoint
+   * Maps to: POST /api/racine/integration/endpoints
+   */
+  async createIntegrationEndpoint(request: CreateIntegrationEndpointRequest): Promise<APIResponse<IntegrationEndpointResponse>> {
+    return this.makeRequest<IntegrationEndpointResponse>('/api/racine/integration/endpoints', {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request)
+    });
+  }
+
+  /**
+   * Get integration endpoints
+   * Maps to: GET /api/racine/integration/endpoints
+   */
+  async getIntegrationEndpoints(
+    options: {
+      limit?: number;
+      offset?: number;
+      endpoint_type?: string;
+      status?: string;
+    } = {}
+  ): Promise<APIResponse<IntegrationEndpointResponse[]>> {
+    const params = new URLSearchParams();
+    
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.offset) params.append('offset', options.offset.toString());
+    if (options.endpoint_type) params.append('endpoint_type', options.endpoint_type);
+    if (options.status) params.append('status', options.status);
+
+    const queryString = params.toString();
+    const url = queryString ? `/api/racine/integration/endpoints?${queryString}` : '/api/racine/integration/endpoints';
+
+    return this.makeRequest<IntegrationEndpointResponse[]>(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Test integration endpoint
+   * Maps to: POST /api/racine/integration/endpoints/{endpoint_id}/test
+   */
+  async testIntegrationEndpoint(
+    endpointId: UUID,
+    testData?: Record<string, any>
+  ): Promise<APIResponse<IntegrationTestResult>> {
+    return this.makeRequest<IntegrationTestResult>(`/api/racine/integration/endpoints/${endpointId}/test`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ test_data: testData })
+    });
+  }
+
+  // =============================================================================
+  // SERVICE REGISTRY MANAGEMENT
+  // =============================================================================
+
+  /**
+   * Register service in registry
+   * Maps to: POST /api/racine/integration/services/register
+   */
+  async registerService(request: ServiceRegistrationRequest): Promise<APIResponse<ServiceRegistryResponse>> {
+    return this.makeRequest<ServiceRegistryResponse>('/api/racine/integration/services/register', {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request)
+    });
+  }
+
+  /**
+   * Get registered services
+   * Maps to: GET /api/racine/integration/services
+   */
+  async getRegisteredServices(
+    options: {
+      limit?: number;
+      offset?: number;
+      service_type?: string;
+      status?: string;
+    } = {}
+  ): Promise<APIResponse<ServiceRegistryResponse[]>> {
+    const params = new URLSearchParams();
+    
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.offset) params.append('offset', options.offset.toString());
+    if (options.service_type) params.append('service_type', options.service_type);
+    if (options.status) params.append('status', options.status);
+
+    const queryString = params.toString();
+    const url = queryString ? `/api/racine/integration/services?${queryString}` : '/api/racine/integration/services';
+
+    return this.makeRequest<ServiceRegistryResponse[]>(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Send service heartbeat
+   * Maps to: POST /api/racine/integration/services/{service_id}/heartbeat
+   */
+  async sendServiceHeartbeat(serviceId: UUID): Promise<APIResponse<{ message: string }>> {
+    return this.makeRequest<{ message: string }>(`/api/racine/integration/services/${serviceId}/heartbeat`, {
+      method: 'POST',
+      headers: this.getAuthHeaders()
+    });
   }
 
   // =============================================================================
