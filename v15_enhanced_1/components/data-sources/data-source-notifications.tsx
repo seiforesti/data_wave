@@ -1,381 +1,710 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { useNotificationsQuery } from "@/hooks/useDataSources"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import {
+  Bell,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  AlertCircle,
+  Filter,
+  Search,
+  MoreHorizontal,
+  RefreshCw,
+  Download,
+  Settings,
+  Archive,
+  Mark,
+  Trash2,
+  Eye,
+  EyeOff,
+  ExternalLink
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Bell, AlertTriangle, CheckCircle, Info, X, Plus, Settings, Filter } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Checkbox } from "@/components/ui/checkbox"
+import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
 
-import { useNotificationsQuery } from "./services/apis"
-import { DataSource } from "./types"
+// Import RBAC integration
+import { useRBAC, DATA_SOURCE_PERMISSIONS } from './hooks/use-rbac-integration'
 
-interface NotificationsProps {
-  dataSource: DataSource
-  onNavigateToComponent?: (componentId: string, data?: any) => void
-  className?: string
-}
-
-interface Notification {
+// Enhanced notification interface
+interface DataSourceNotification {
   id: string
   title: string
   message: string
-  type: "info" | "warning" | "error" | "success"
+  type: "info" | "success" | "warning" | "error"
   priority: "low" | "medium" | "high" | "critical"
-  createdAt: string
+  category: "system" | "performance" | "security" | "backup" | "connectivity" | "compliance" | "maintenance"
+  source: string
+  dataSourceId?: number
+  dataSourceName?: string
+  createdAt: Date
+  readAt?: Date
   read: boolean
-  category: string
-  actionRequired?: boolean
+  actionUrl?: string
+  metadata?: Record<string, any>
+  acknowledgedAt?: Date
+  acknowledgedBy?: string
+  expiresAt?: Date
+  tags?: string[]
+}
+
+interface DataSourceNotificationsProps {
+  dataSourceId?: number
+  className?: string
+  showFilters?: boolean
+  compact?: boolean
+  autoRefresh?: boolean
+  refreshInterval?: number
+}
+
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+
+// Backend API functions
+const notificationApi = {
+  // Get notifications for specific data source or all
+  getNotifications: async (dataSourceId?: number, filters?: any): Promise<DataSourceNotification[]> => {
+    const params = new URLSearchParams()
+    if (dataSourceId) params.append('data_source_id', dataSourceId.toString())
+    if (filters?.type) params.append('type', filters.type)
+    if (filters?.priority) params.append('priority', filters.priority)
+    if (filters?.category) params.append('category', filters.category)
+    if (filters?.unread_only) params.append('unread_only', 'true')
+    if (filters?.limit) params.append('limit', filters.limit.toString())
+    
+    const response = await fetch(`${API_BASE_URL}/api/notifications?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch notifications')
+    }
+    
+    const data = await response.json()
+    return data.notifications || []
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to mark notification as read')
+    }
+  },
+
+  // Mark multiple notifications as read
+  markMultipleAsRead: async (notificationIds: string[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/mark-read`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ notification_ids: notificationIds })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to mark notifications as read')
+    }
+  },
+
+  // Acknowledge notification
+  acknowledgeNotification: async (notificationId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/acknowledge`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to acknowledge notification')
+    }
+  },
+
+  // Delete notification
+  deleteNotification: async (notificationId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete notification')
+    }
+  },
+
+  // Get notification statistics
+  getNotificationStats: async (dataSourceId?: number): Promise<any> => {
+    const params = new URLSearchParams()
+    if (dataSourceId) params.append('data_source_id', dataSourceId.toString())
+    
+    const response = await fetch(`${API_BASE_URL}/api/notifications/stats?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch notification statistics')
+    }
+    
+    return response.json()
+  },
+
+  // Update notification preferences
+  updatePreferences: async (preferences: any): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/notifications/preferences`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(preferences)
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to update notification preferences')
+    }
+  }
 }
 
 export function DataSourceNotifications({
-  dataSource,
-  onNavigateToComponent,
-  className = ""}: NotificationsProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [filterType, setFilterType] = useState("all")
-  const [filterPriority, setFilterPriority] = useState("all")
-  const [showSettings, setShowSettings] = useState(false)
-
-  const { data: notificationData, isLoading, error, refetch } = useNotificationsQuery()
-
-  // Enterprise features integration
-  const enterpriseFeatures = useEnterpriseFeatures({
-    componentName: 'DataSourceNotifications',
-    dataSourceId: dataSource.id,
-    enableAnalytics: true,
-    enableRealTimeUpdates: true,
-    enableNotifications: true,
-    enableAuditLogging: true
+  dataSourceId,
+  className = "",
+  showFilters = true,
+  compact = false,
+  autoRefresh = true,
+  refreshInterval = 30000
+}: DataSourceNotificationsProps) {
+  const queryClient = useQueryClient()
+  const { currentUser, hasPermission, logUserAction } = useRBAC()
+  
+  // State management
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([])
+  const [filters, setFilters] = useState({
+    type: "all",
+    priority: "all",
+    category: "all",
+    unreadOnly: false,
+    search: ""
   })
 
-  // Backend data queries
-  const { data: notificationsData, isLoading, error, refetch } = useNotificationsQuery(dataSource.id)
+  // Check permissions
+  const canManageNotifications = hasPermission(DATA_SOURCE_PERMISSIONS.VIEW_AUDIT)
+  const canDeleteNotifications = hasPermission('notifications.delete')
 
-  // Transform backend data to component format
-  const notifications: Notification[] = useMemo(() => {
-    if (!notificationsData) return []
+  // Fetch notifications with real backend integration
+  const { 
+    data: notifications = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['dataSourceNotifications', dataSourceId, filters],
+    queryFn: () => notificationApi.getNotifications(dataSourceId, {
+      type: filters.type !== 'all' ? filters.type : undefined,
+      priority: filters.priority !== 'all' ? filters.priority : undefined,
+      category: filters.category !== 'all' ? filters.category : undefined,
+      unread_only: filters.unreadOnly,
+      limit: 100
+    }),
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    staleTime: 5000,
+    enabled: canManageNotifications
+  })
+
+  // Fetch notification statistics
+  const { data: notificationStats } = useQuery({
+    queryKey: ['notificationStats', dataSourceId],
+    queryFn: () => notificationApi.getNotificationStats(dataSourceId),
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    staleTime: 10000,
+    enabled: canManageNotifications
+  })
+
+  // Mark as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: notificationApi.markAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSourceNotifications'] })
+      toast.success('Notification marked as read')
+    },
+    onError: (error) => {
+      toast.error('Failed to mark notification as read')
+      console.error('Mark as read error:', error)
+    }
+  })
+
+  // Mark multiple as read mutation
+  const markMultipleAsReadMutation = useMutation({
+    mutationFn: notificationApi.markMultipleAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSourceNotifications'] })
+      setSelectedNotifications([])
+      toast.success('Notifications marked as read')
+    },
+    onError: (error) => {
+      toast.error('Failed to mark notifications as read')
+      console.error('Mark multiple as read error:', error)
+    }
+  })
+
+  // Acknowledge notification mutation
+  const acknowledgeMutation = useMutation({
+    mutationFn: notificationApi.acknowledgeNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSourceNotifications'] })
+      toast.success('Notification acknowledged')
+    },
+    onError: (error) => {
+      toast.error('Failed to acknowledge notification')
+      console.error('Acknowledge error:', error)
+    }
+  })
+
+  // Delete notification mutation
+  const deleteNotificationMutation = useMutation({
+    mutationFn: notificationApi.deleteNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSourceNotifications'] })
+      toast.success('Notification deleted')
+    },
+    onError: (error) => {
+      toast.error('Failed to delete notification')
+      console.error('Delete error:', error)
+    }
+  })
+
+  // Transform notifications data from backend
+  const transformedNotifications = useMemo(() => {
+    if (!notifications) return []
     
-    return notificationsData.map(notification => ({
-      id: notification.id,
-      title: notification.title,
-      message: notification.message,
-      type: notification.notification_type || 'info',
-      severity: notification.severity || 'medium',
-      status: notification.status || 'unread',
+    return notifications.map(notification => ({
+      ...notification,
       createdAt: new Date(notification.created_at),
       readAt: notification.read_at ? new Date(notification.read_at) : null,
-      category: notification.category || 'system',
-      source: notification.source || 'system',
-      actionUrl: notification.action_url
+      acknowledgedAt: notification.acknowledged_at ? new Date(notification.acknowledged_at) : null,
+      expiresAt: notification.expires_at ? new Date(notification.expires_at) : null,
+      read: !!notification.read_at
     }))
-  }, [notificationsData])
+  }, [notifications])
 
-  // Remove mock data
-    {
-      id: "1",
-      title: "Backup Completed Successfully",
-      message: "Full backup of production database completed at 2:00AM",
-      type: "success",
-      priority: "low",
-      createdAt: "2024-01-01T02:00:00.000Z",
-      read: false,
-      category: "backup"
-    },
-    {
-      id: "2",
-      title: "High CPU Usage Detected",
-      message: "CPU usage has exceeded 80% in the last 10 minutes",
-      type: "warning",
-      priority: "high",
-      createdAt: "2024-01-01T02:30:00.000Z",
-      read: false,
-      category: "performance"
-    },
-    {
-      id: "3",
-      title: "Connection Timeout Error",
-      message: "Database connection timeout occurred during peak hours",
-      type: "error",
-      priority: "critical",
-      createdAt: "2024-01-01T02:15:00.000Z",
-      read: true,
-      category: "connectivity"
-    }
-  ]), [])
-
-  useEffect(() => {
-    setNotifications(mockNotifications)
-  }, [mockNotifications])
-
+  // Filter notifications based on search and filters
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(notification => {
-      const matchesType = filterType === "all" || notification.type === filterType
-      const matchesPriority = filterPriority === "all" || notification.priority === filterPriority
-      return matchesType && matchesPriority
+    return transformedNotifications.filter(notification => {
+      const matchesType = filters.type === "all" || notification.type === filters.type
+      const matchesPriority = filters.priority === "all" || notification.priority === filters.priority
+      const matchesCategory = filters.category === "all" || notification.category === filters.category
+      const matchesUnread = !filters.unreadOnly || !notification.read
+      const matchesSearch = !filters.search || 
+        notification.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        notification.message.toLowerCase().includes(filters.search.toLowerCase())
+      
+      return matchesType && matchesPriority && matchesCategory && matchesUnread && matchesSearch
     })
-  }, [notifications, filterType, filterPriority])
+  }, [transformedNotifications, filters])
 
-  const getTypeColor = (type: string) => {
+  // Handle notification click
+  const handleNotificationClick = useCallback(async (notification: DataSourceNotification) => {
+    // Mark as read if not already read
+    if (!notification.read) {
+      await markAsReadMutation.mutateAsync(notification.id)
+      
+      // Log user action
+      await logUserAction('notification_viewed', 'notification', undefined, {
+        notificationId: notification.id,
+        notificationType: notification.type,
+        category: notification.category
+      })
+    }
+
+    // Navigate to action URL if available
+    if (notification.actionUrl) {
+      window.open(notification.actionUrl, '_blank')
+    }
+  }, [markAsReadMutation, logUserAction])
+
+  // Handle bulk actions
+  const handleMarkSelectedAsRead = useCallback(async () => {
+    if (selectedNotifications.length === 0) return
+    
+    await markMultipleAsReadMutation.mutateAsync(selectedNotifications)
+    await logUserAction('notifications_bulk_read', 'notification', undefined, {
+      count: selectedNotifications.length
+    })
+  }, [selectedNotifications, markMultipleAsReadMutation, logUserAction])
+
+  // Handle acknowledge notification
+  const handleAcknowledge = useCallback(async (notificationId: string) => {
+    await acknowledgeMutation.mutateAsync(notificationId)
+    await logUserAction('notification_acknowledged', 'notification', undefined, {
+      notificationId
+    })
+  }, [acknowledgeMutation, logUserAction])
+
+  // Handle delete notification
+  const handleDelete = useCallback(async (notificationId: string) => {
+    if (!canDeleteNotifications) {
+      toast.error('You do not have permission to delete notifications')
+      return
+    }
+    
+    await deleteNotificationMutation.mutateAsync(notificationId)
+    await logUserAction('notification_deleted', 'notification', undefined, {
+      notificationId
+    })
+  }, [deleteNotificationMutation, canDeleteNotifications, logUserAction])
+
+  // Get notification icon
+  const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "success": return "text-green-600 bg-green-50"
-      case "warning": return "text-yellow-600 bg-yellow-50"
-      case "error": return "text-red-600"
-      case "info": return "text-blue-600 bg-blue-50"
-      default: return "text-gray-600 bg-gray-50"
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case "warning":
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+      case "error":
+        return <AlertCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />
     }
   }
 
-  const getPriorityColor = (priority: string) => {
+  // Get priority badge variant
+  const getPriorityVariant = (priority: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (priority) {
-      case "critical": return "text-red-600 bg-red-50"
-      case "high": return "text-orange-600 bg-orange-50"
-      case "medium": return "text-yellow-600 bg-yellow-50"
-      case "low": return "text-blue-600 bg-blue-50"
-      default: return "text-gray-600 bg-gray-50"
+      case "critical":
+        return "destructive"
+      case "high":
+        return "default"
+      case "medium":
+        return "secondary"
+      default:
+        return "outline"
     }
   }
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "success": return <CheckCircle className="h-4 w-4" />
-      case "warning": return <AlertTriangle className="h-4 w-4" />
-      case "error": return <X className="h-4 w-4" />
-      case "info": return <Info className="h-4 w-4" />
-      default: return <Info className="h-4 w-4" />
-    }
-  }
-
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ))
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })))
-  }
-
-  return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Bell className="h-6 text-blue-600" />
-            Notifications
-          </h2>
-          <p className="text-muted-foreground">
-            Manage alerts and notifications for {dataSource.name}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowSettings(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-          <Button variant="outline" onClick={markAllAsRead}>
-            Mark All Read
-          </Button>
-        </div>
-      </div>
-
-      {/* Notification Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{notifications.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">All time</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Unread
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{notifications.filter(n => !n.read).length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Require attention</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Critical Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{notifications.filter(n => n.priority === "critical").length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Immediate action</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{notifications.filter(n => 
-              new Date(n.createdAt).toDateString() === new Date().toDateString()
-            ).length}</div>
-            <p className="text-xs text-muted-foreground mt-1">New notifications</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Card className={className}>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>
-            View and manage system notifications
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+            <Skeleton className="h-8 w-24" />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-4">
-            <div className="flex gap-2">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Types</option>
-                <option value="info">Info</option>
-                <option value="warning">Warning</option>
-                <option value="error">Error</option>
-                <option value="success">Success</option>
-              </select>
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="px-3 py-2 border rounded-md"
-              >
-                <option value="all">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
-
           <div className="space-y-4">
-            {filteredNotifications.map((notification) => (
-              <div 
-                key={notification.id} 
-                className={`border rounded-lg p-4 ${notification.read ? 'bg-blue-50' : ''}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getTypeIcon(notification.type)}
-                      <h3 className="font-medium">{notification.title}</h3>
-                      <Badge className={getTypeColor(notification.type)}>
-                        {notification.type}
-                      </Badge>
-                      <Badge className={getPriorityColor(notification.priority)}>
-                        {notification.priority}
-                      </Badge>
-                      {!notification.read && (
-                        <Badge variant="default" className="bg-blue-600">
-                          New
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {notification.message}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>{new Date(notification.createdAt).toLocaleString()}</span>
-                      <span>{notification.category}</span>
-                      {notification.actionRequired && (
-                        <span className="text-red-600">Action Required</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {!notification.read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        Mark Read
-                      </Button>
-                    )}
-                  </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 border rounded-lg">
+                <Skeleton className="h-4 w-4 mt-1" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+    )
+  }
 
-      {/* Settings Dialog */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notification Settings</DialogTitle>
-            <DialogDescription>
-              Configure notification preferences
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Email Notifications</Label>
-              <div className="space-y-2 mt-2">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked />
-                  <span>Critical alerts</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked />
-                  <span>Performance warnings</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
-                  <span>Backup notifications</span>
-                </label>
-              </div>
-            </div>
-            <div>
-              <Label>In-App Notifications</Label>
-              <div className="space-y-2 mt-2">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked />
-                  <span>Show notifications</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" defaultChecked />
-                  <span>Sound alerts</span>
-                </label>
-              </div>
+  // Show error state
+  if (error) {
+    return (
+      <Card className={className}>
+        <CardContent className="pt-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load notifications. {error instanceof Error ? error.message : 'Unknown error occurred.'}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show access denied
+  if (!canManageNotifications) {
+    return (
+      <Card className={className}>
+        <CardContent className="pt-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You do not have permission to view notifications.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <TooltipProvider>
+      <Card className={className}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+              {notificationStats?.unread_count > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {notificationStats.unread_count}
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {selectedNotifications.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleMarkSelectedAsRead}
+                  disabled={markMultipleAsReadMutation.isPending}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Mark Read ({selectedNotifications.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetch()}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSettings(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowSettings(false)}>
-              Save Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          
+          {showFilters && (
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Input
+                placeholder="Search notifications..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                className="w-64"
+              />
+              
+              <Select
+                value={filters.type}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="success">Success</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.priority}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value }))}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={filters.category}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="performance">Performance</SelectItem>
+                  <SelectItem value="security">Security</SelectItem>
+                  <SelectItem value="backup">Backup</SelectItem>
+                  <SelectItem value="connectivity">Connectivity</SelectItem>
+                  <SelectItem value="compliance">Compliance</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="unread-only"
+                  checked={filters.unreadOnly}
+                  onCheckedChange={(checked) => 
+                    setFilters(prev => ({ ...prev, unreadOnly: !!checked }))
+                  }
+                />
+                <label htmlFor="unread-only" className="text-sm">
+                  Unread only
+                </label>
+              </div>
+            </div>
+          )}
+        </CardHeader>
+
+        <CardContent>
+          {filteredNotifications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No notifications found</p>
+              {filters.unreadOnly && (
+                <p className="text-sm">Try changing your filters to see more notifications</p>
+              )}
+            </div>
+          ) : (
+            <ScrollArea className="h-96">
+              <div className="space-y-2">
+                {filteredNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`
+                      flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors
+                      ${notification.read ? 'bg-muted/30' : 'bg-background border-l-4 border-l-blue-500'}
+                      hover:bg-muted/50
+                    `}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedNotifications.includes(notification.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedNotifications(prev => [...prev, notification.id])
+                          } else {
+                            setSelectedNotifications(prev => prev.filter(id => id !== notification.id))
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <h4 className={`font-medium text-sm ${!notification.read ? 'font-semibold' : ''}`}>
+                            {notification.title}
+                          </h4>
+                          <p className="text-muted-foreground text-xs mt-1 line-clamp-2">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant={getPriorityVariant(notification.priority)} className="text-xs">
+                              {notification.priority}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {notification.category}
+                            </Badge>
+                            {notification.dataSourceName && (
+                              <Badge variant="secondary" className="text-xs">
+                                {notification.dataSourceName}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
+                          </span>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {!notification.read && (
+                                <DropdownMenuItem onClick={() => markAsReadMutation.mutate(notification.id)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Mark as read
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {!notification.acknowledgedAt && (
+                                <DropdownMenuItem onClick={() => handleAcknowledge(notification.id)}>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Acknowledge
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {notification.actionUrl && (
+                                <DropdownMenuItem onClick={() => window.open(notification.actionUrl!, '_blank')}>
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                              )}
+                              
+                              <DropdownMenuSeparator />
+                              
+                              {canDeleteNotifications && (
+                                <DropdownMenuItem 
+                                  onClick={() => handleDelete(notification.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   )
 }
