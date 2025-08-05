@@ -1,22 +1,60 @@
 /**
- * Racine Main Manager Hooks - Index
- * =================================
- *
- * Central export for all React hooks that provide state management
- * and API integration for Racine Main Manager components.
+ * Racine Main Manager Hooks
+ * =========================
+ * 
+ * Central export file for all React hooks used in the racine main manager system.
+ * These hooks provide reactive state management and integrate with the API services
+ * to deliver real-time, type-safe functionality across all racine components.
  */
 
-// Main orchestration hook
-export * from './useRacineOrchestration';
-
-// Re-export hook for convenience
+// Core orchestration hook
 export { useRacineOrchestration } from './useRacineOrchestration';
 
-// Export hook types for external usage
+// Workspace management hooks
+export { useWorkspaceManagement } from './useWorkspaceManagement';
+
+// Job workflow hooks
+export { useJobWorkflowBuilder } from './useJobWorkflowBuilder';
+
+// Pipeline management hooks
+export { usePipelineManager } from './usePipelineManager';
+
+// AI assistant hooks
+export { useAIAssistant } from './useAIAssistant';
+
+// Activity tracking hooks
+export { useActivityTracker } from './useActivityTracker';
+
+// Re-export all hook types for external usage
 export type {
-  UseOrchestrationOptions,
-  UseOrchestrationReturn,
-  OrchestrationState,
-  OrchestrationLoading,
-  OrchestrationErrors
-} from './useRacineOrchestration';
+  // Workspace management types
+  UseWorkspaceManagementOptions,
+  
+  // Job workflow types
+  UseJobWorkflowBuilderOptions,
+  
+  // Pipeline management types
+  UsePipelineManagerOptions,
+  
+  // AI assistant types
+  UseAIAssistantOptions,
+  
+  // Activity tracking types
+  UseActivityTrackerOptions
+} from './useWorkspaceManagement';
+
+export type {
+  UseJobWorkflowBuilderOptions
+} from './useJobWorkflowBuilder';
+
+export type {
+  UsePipelineManagerOptions
+} from './usePipelineManager';
+
+export type {
+  UseAIAssistantOptions
+} from './useAIAssistant';
+
+export type {
+  UseActivityTrackerOptions
+} from './useActivityTracker';

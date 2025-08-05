@@ -21,12 +21,28 @@ export * from './pipeline-management-apis';
 // AI assistant service
 export * from './ai-assistant-apis';
 
+// Activity tracking service
+export * from './activity-tracking-apis';
+
+// Dashboard management service
+export * from './dashboard-apis';
+
+// Collaboration service
+export * from './collaboration-apis';
+
+// Cross-group integration service
+export * from './cross-group-integration-apis';
+
 // Re-export service instances for convenience
 export { racineOrchestrationAPI } from './racine-orchestration-apis';
 export { workspaceManagementAPI } from './workspace-management-apis';
 export { jobWorkflowAPI } from './job-workflow-apis';
 export { pipelineManagementAPI } from './pipeline-management-apis';
 export { aiAssistantAPI } from './ai-assistant-apis';
+export { activityTrackingAPI } from './activity-tracking-apis';
+export { dashboardAPI } from './dashboard-apis';
+export { collaborationAPI } from './collaboration-apis';
+export { crossGroupIntegrationAPI } from './cross-group-integration-apis';
 
 // Export service types for external usage
 export type {
@@ -75,3 +91,36 @@ export type {
   AIEventSubscription,
   ConversationContext
 } from './ai-assistant-apis';
+
+export type {
+  ActivityTrackingAPIConfig,
+  ActivityEventType,
+  ActivityEvent,
+  ActivityEventHandler,
+  ActivityEventSubscription
+} from './activity-tracking-apis';
+
+export type {
+  DashboardAPIConfig,
+  DashboardEvent,
+  DashboardEventHandler,
+  DashboardEventSubscription
+} from './dashboard-apis';
+
+export type {
+  CollaborationAPIConfig,
+  CollaborationEvent,
+  CollaborationEventHandler,
+  CollaborationEventSubscription,
+  CoAuthoringOperation,
+  UserPresence
+} from './collaboration-apis';
+
+export type {
+  IntegrationAPIConfig,
+  IntegrationEvent,
+  IntegrationEventHandler,
+  IntegrationEventSubscription,
+  CrossGroupSearchFilters,
+  SyncOptions
+} from './cross-group-integration-apis';
