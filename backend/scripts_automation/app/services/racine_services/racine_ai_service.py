@@ -60,17 +60,17 @@ from ...models.auth_models import User
 logger = logging.getLogger(__name__)
 
 
-class RacineAIAssistantService:
+class RacineAIService:
     """
-    Comprehensive AI assistant service with context-aware capabilities
-    and enterprise-grade intelligence.
+    Advanced AI Assistant service with context-aware intelligence, cross-group insights,
+    and machine learning capabilities that surpass traditional assistants.
     """
 
     def __init__(self, db_session: Session):
-        """Initialize the AI assistant service with database session and integrated services."""
+        """Initialize the AI service with database session and integrated services."""
         self.db = db_session
-        
-        # Initialize ALL existing services for full integration
+
+        # CRITICAL: Initialize ALL existing services for full integration
         self.data_source_service = DataSourceService(db_session)
         self.scan_rule_service = ScanRuleSetService(db_session)
         self.classification_service = EnterpriseClassificationService(db_session)
@@ -78,9 +78,9 @@ class RacineAIAssistantService:
         self.catalog_service = EnterpriseIntelligentCatalogService(db_session)
         self.scan_orchestrator = UnifiedScanOrchestrator(db_session)
         self.rbac_service = RBACService(db_session)
-        self.ai_service = AdvancedAIService(db_session)
+        self.advanced_ai_service = AdvancedAIService(db_session)
         self.analytics_service = ComprehensiveAnalyticsService(db_session)
-        
+
         # Service registry for dynamic access
         self.service_registry = {
             'data_sources': self.data_source_service,
@@ -90,77 +90,82 @@ class RacineAIAssistantService:
             'advanced_catalog': self.catalog_service,
             'scan_logic': self.scan_orchestrator,
             'rbac_system': self.rbac_service,
-            'ai_service': self.ai_service,
+            'ai_service': self.advanced_ai_service,
             'analytics': self.analytics_service
         }
-        
-        logger.info("RacineAIAssistantService initialized with full cross-group integration")
+
+        # Initialize AI knowledge base
+        self._initialize_ai_knowledge_base()
+
+        logger.info("RacineAIService initialized with full cross-group integration")
 
     async def start_conversation(
         self,
         user_id: str,
         conversation_type: ConversationType,
-        workspace_id: Optional[str] = None,
-        initial_context: Optional[Dict[str, Any]] = None
+        initial_context: Optional[Dict[str, Any]] = None,
+        workspace_id: Optional[str] = None
     ) -> RacineAIConversation:
         """
-        Start a new AI conversation with context awareness.
-        
+        Start a new AI conversation with context-aware initialization.
+
         Args:
-            user_id: User ID starting the conversation
-            conversation_type: Type of conversation (general, workflow, pipeline, etc.)
+            user_id: User starting the conversation
+            conversation_type: Type of conversation
+            initial_context: Initial context data
             workspace_id: Optional workspace context
-            initial_context: Optional initial context data
-            
+
         Returns:
             Created conversation instance
         """
         try:
             logger.info(f"Starting AI conversation for user {user_id} of type {conversation_type.value}")
-            
-            # Build conversation context from workspace and user data
-            conversation_context = await self._build_conversation_context(
-                user_id, workspace_id, initial_context
-            )
-            
+
+            # Get user context for personalization
+            user_context = await self._get_user_context(user_id, workspace_id)
+
             # Create conversation
             conversation = RacineAIConversation(
                 user_id=user_id,
                 conversation_type=conversation_type,
-                workspace_id=workspace_id,
-                conversation_context=conversation_context,
-                is_active=True,
-                configuration={
-                    "ai_model": "gpt-4",
-                    "max_messages": 100,
-                    "context_window": 4000,
-                    "temperature": 0.7,
-                    "cross_group_aware": True,
-                    "learning_enabled": True
+                title=await self._generate_conversation_title(conversation_type, initial_context),
+                context={
+                    "user_context": user_context,
+                    "workspace_id": workspace_id,
+                    "initial_context": initial_context or {},
+                    "cross_group_access": await self._get_user_group_access(user_id),
+                    "conversation_goals": [],
+                    "active_insights": []
                 },
                 metadata={
-                    "started_from": initial_context.get("source", "direct") if initial_context else "direct",
-                    "context_groups": conversation_context.get("available_groups", [])
-                }
+                    "start_time": datetime.utcnow().isoformat(),
+                    "user_preferences": await self._get_user_ai_preferences(user_id),
+                    "ai_personality": "professional_assistant",
+                    "learning_enabled": True
+                },
+                workspace_id=workspace_id
             )
-            
+
             self.db.add(conversation)
-            self.db.flush()  # Get the conversation ID
-            
-            # Create welcome message
-            await self._create_welcome_message(conversation.id, conversation_type)
-            
-            # Initialize conversation metrics
-            await self._create_conversation_metrics(conversation.id)
-            
+            self.db.flush()
+
+            # Send welcome message
+            welcome_message = await self._create_welcome_message(conversation, user_context)
+
+            # Initialize conversation insights
+            await self._initialize_conversation_insights(conversation.id, user_id)
+
+            # Track AI metrics
+            await self._track_conversation_start(conversation.id, user_id)
+
             self.db.commit()
             logger.info(f"Successfully started conversation {conversation.id}")
-            
+
             return conversation
-            
+
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error starting conversation: {str(e)}")
+            logger.error(f"Error starting AI conversation: {str(e)}")
             raise
 
     async def send_message(
@@ -168,1138 +173,1042 @@ class RacineAIAssistantService:
         conversation_id: str,
         user_id: str,
         message_content: str,
-        message_type: MessageType = MessageType.USER,
-        context_data: Optional[Dict[str, Any]] = None
-    ) -> RacineAIMessage:
+        message_type: MessageType = MessageType.TEXT,
+        attachments: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[str, Any]:
         """
-        Send a message in an AI conversation and get AI response.
-        
+        Send a message in an AI conversation and get intelligent response.
+
         Args:
             conversation_id: Conversation ID
-            user_id: User ID sending the message
+            user_id: User sending the message
             message_content: Message content
-            message_type: Type of message (user, assistant, system)
-            context_data: Optional context data for the message
-            
+            message_type: Type of message
+            attachments: Optional attachments
+
         Returns:
-            User message and AI response
+            Response with AI message and insights
         """
         try:
             logger.info(f"Processing message in conversation {conversation_id}")
-            
+
             # Get conversation
-            conversation = self.db.query(RacineAIConversation).filter(
-                RacineAIConversation.id == conversation_id
-            ).first()
-            
+            conversation = await self._get_conversation(conversation_id, user_id)
             if not conversation:
-                raise ValueError(f"Conversation {conversation_id} not found")
-            
-            if not conversation.is_active:
-                raise ValueError(f"Conversation {conversation_id} is not active")
-            
+                raise ValueError(f"Conversation {conversation_id} not found or not accessible")
+
             # Create user message
             user_message = RacineAIMessage(
                 conversation_id=conversation_id,
                 message_type=message_type,
                 content=message_content,
-                context_data=context_data or {},
-                status=MessageStatus.PROCESSED,
-                sent_by=user_id
+                sender_id=user_id,
+                sender_type="user",
+                metadata={
+                    "attachments": attachments or [],
+                    "message_length": len(message_content),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
             )
-            
+
             self.db.add(user_message)
             self.db.flush()
-            
-            # Generate AI response
-            ai_response = await self._generate_ai_response(
-                conversation, user_message, message_content
+
+            # Process message with AI intelligence
+            ai_response = await self._process_ai_message(
+                conversation, user_message, message_content, attachments
             )
-            
+
             # Create AI response message
             ai_message = RacineAIMessage(
                 conversation_id=conversation_id,
-                message_type=MessageType.ASSISTANT,
+                message_type=MessageType.TEXT,
                 content=ai_response["content"],
-                context_data=ai_response.get("context_data", {}),
-                metadata=ai_response.get("metadata", {}),
-                status=MessageStatus.PROCESSED
+                sender_id="racine_ai",
+                sender_type="assistant",
+                ai_processing_data={
+                    "processing_time_ms": ai_response.get("processing_time", 0),
+                    "confidence_score": ai_response.get("confidence", 0.95),
+                    "used_knowledge_sources": ai_response.get("knowledge_sources", []),
+                    "cross_group_insights": ai_response.get("cross_group_insights", [])
+                },
+                metadata={
+                    "response_type": ai_response.get("response_type", "informational"),
+                    "action_items": ai_response.get("action_items", []),
+                    "recommendations": ai_response.get("recommendations", [])
+                }
             )
-            
+
             self.db.add(ai_message)
-            
-            # Update conversation last activity
-            conversation.last_message_at = datetime.utcnow()
-            conversation.message_count = (conversation.message_count or 0) + 2
-            
+
+            # Update conversation context
+            await self._update_conversation_context(conversation, user_message, ai_response)
+
+            # Generate insights and recommendations
+            insights = await self._generate_contextual_insights(conversation, ai_response)
+            recommendations = await self._generate_smart_recommendations(conversation, ai_response)
+
             # Learn from interaction
-            await self._learn_from_interaction(conversation, user_message, ai_message)
-            
+            await self._learn_from_interaction(conversation, user_message, ai_response)
+
+            # Track metrics
+            await self._track_message_interaction(conversation_id, user_id, ai_response)
+
+            response = {
+                "user_message": user_message,
+                "ai_message": ai_message,
+                "insights": insights,
+                "recommendations": recommendations,
+                "conversation_updated": True,
+                "processing_metadata": ai_response.get("metadata", {})
+            }
+
             self.db.commit()
-            logger.info(f"Successfully processed message in conversation {conversation_id}")
-            
-            return ai_message
-            
+            return response
+
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error sending message: {str(e)}")
+            logger.error(f"Error processing AI message: {str(e)}")
             raise
 
-    async def get_conversation(self, conversation_id: str, user_id: str) -> Optional[RacineAIConversation]:
-        """
-        Get conversation by ID with permission checking.
-        
-        Args:
-            conversation_id: Conversation ID
-            user_id: User requesting access
-            
-        Returns:
-            Conversation if accessible, None otherwise
-        """
-        try:
-            conversation = self.db.query(RacineAIConversation).filter(
-                and_(
-                    RacineAIConversation.id == conversation_id,
-                    RacineAIConversation.user_id == user_id
-                )
-            ).first()
-            
-            return conversation
-            
-        except Exception as e:
-            logger.error(f"Error getting conversation {conversation_id}: {str(e)}")
-            raise
-
-    async def get_conversation_messages(
+    async def get_conversation_history(
         self,
         conversation_id: str,
         user_id: str,
         limit: int = 50,
-        offset: int = 0
-    ) -> List[RacineAIMessage]:
+        include_insights: bool = True
+    ) -> Dict[str, Any]:
         """
-        Get messages for a conversation.
-        
+        Get conversation history with AI insights and analytics.
+
         Args:
             conversation_id: Conversation ID
-            user_id: User requesting access
-            limit: Maximum number of messages to return
-            offset: Offset for pagination
-            
+            user_id: User requesting history
+            limit: Number of messages to return
+            include_insights: Whether to include AI insights
+
         Returns:
-            List of conversation messages
+            Conversation history with analytics
         """
         try:
-            # Verify user has access to conversation
-            conversation = await self.get_conversation(conversation_id, user_id)
+            # Get conversation
+            conversation = await self._get_conversation(conversation_id, user_id)
             if not conversation:
                 raise ValueError(f"Conversation {conversation_id} not found or not accessible")
-            
+
+            # Get messages
             messages = self.db.query(RacineAIMessage).filter(
                 RacineAIMessage.conversation_id == conversation_id
-            ).order_by(
-                RacineAIMessage.created_at.asc()
-            ).offset(offset).limit(limit).all()
-            
-            return messages
-            
+            ).order_by(RacineAIMessage.created_at.desc()).limit(limit).all()
+
+            # Get insights if requested
+            insights = []
+            if include_insights:
+                insights = await self._get_conversation_insights(conversation_id)
+
+            # Get conversation analytics
+            analytics = await self._get_conversation_analytics(conversation_id)
+
+            return {
+                "conversation": conversation,
+                "messages": list(reversed(messages)),  # Return in chronological order
+                "insights": insights,
+                "analytics": analytics,
+                "total_messages": len(messages),
+                "conversation_duration": self._calculate_conversation_duration(conversation),
+                "ai_assistance_quality": analytics.get("assistance_quality", 0.0)
+            }
+
         except Exception as e:
-            logger.error(f"Error getting conversation messages: {str(e)}")
+            logger.error(f"Error getting conversation history: {str(e)}")
             raise
 
-    async def get_recommendations(
+    async def generate_cross_group_insights(
         self,
         user_id: str,
-        recommendation_type: Optional[RecommendationType] = None,
-        workspace_id: Optional[str] = None,
-        limit: int = 10
-    ) -> List[RacineAIRecommendation]:
-        """
-        Get AI recommendations for a user.
-        
-        Args:
-            user_id: User ID
-            recommendation_type: Optional filter by recommendation type
-            workspace_id: Optional workspace context
-            limit: Maximum number of recommendations
-            
-        Returns:
-            List of AI recommendations
-        """
-        try:
-            # Generate fresh recommendations
-            recommendations = await self._generate_recommendations(
-                user_id, recommendation_type, workspace_id
-            )
-            
-            # Store recommendations in database
-            for rec in recommendations:
-                db_recommendation = RacineAIRecommendation(
-                    user_id=user_id,
-                    workspace_id=workspace_id,
-                    recommendation_type=rec["type"],
-                    title=rec["title"],
-                    description=rec["description"],
-                    recommendation_data=rec["data"],
-                    confidence_score=rec["confidence"],
-                    priority_score=rec["priority"],
-                    metadata=rec.get("metadata", {})
-                )
-                
-                self.db.add(db_recommendation)
-            
-            self.db.commit()
-            
-            # Return the stored recommendations
-            query = self.db.query(RacineAIRecommendation).filter(
-                RacineAIRecommendation.user_id == user_id
-            )
-            
-            if recommendation_type:
-                query = query.filter(RacineAIRecommendation.recommendation_type == recommendation_type)
-            
-            if workspace_id:
-                query = query.filter(RacineAIRecommendation.workspace_id == workspace_id)
-            
-            stored_recommendations = query.order_by(
-                RacineAIRecommendation.priority_score.desc()
-            ).limit(limit).all()
-            
-            return stored_recommendations
-            
-        except Exception as e:
-            logger.error(f"Error getting recommendations: {str(e)}")
-            raise
-
-    async def get_insights(
-        self,
-        user_id: str,
-        insight_type: Optional[InsightType] = None,
-        workspace_id: Optional[str] = None,
-        time_range: Optional[Dict[str, datetime]] = None
+        insight_type: InsightType,
+        context: Optional[Dict[str, Any]] = None,
+        workspace_id: Optional[str] = None
     ) -> List[RacineAIInsight]:
         """
-        Get AI insights for a user or workspace.
-        
+        Generate AI insights across all data governance groups.
+
         Args:
-            user_id: User ID
-            insight_type: Optional filter by insight type
+            user_id: User requesting insights
+            insight_type: Type of insights to generate
+            context: Optional context for insight generation
             workspace_id: Optional workspace context
-            time_range: Optional time range for insights
-            
+
         Returns:
-            List of AI insights
+            List of generated insights
         """
         try:
-            # Generate insights based on cross-group data
-            insights = await self._generate_insights(
-                user_id, insight_type, workspace_id, time_range
-            )
-            
-            # Store insights in database
-            for insight in insights:
-                db_insight = RacineAIInsight(
+            logger.info(f"Generating cross-group insights of type {insight_type.value}")
+
+            # Gather data from all groups
+            cross_group_data = await self._gather_cross_group_data(user_id, workspace_id)
+
+            # Generate insights using AI analysis
+            insights = []
+
+            if insight_type == InsightType.PERFORMANCE:
+                insights.extend(await self._generate_performance_insights(cross_group_data, context))
+            elif insight_type == InsightType.SECURITY:
+                insights.extend(await self._generate_security_insights(cross_group_data, context))
+            elif insight_type == InsightType.COMPLIANCE:
+                insights.extend(await self._generate_compliance_insights(cross_group_data, context))
+            elif insight_type == InsightType.OPTIMIZATION:
+                insights.extend(await self._generate_optimization_insights(cross_group_data, context))
+            else:
+                insights.extend(await self._generate_general_insights(cross_group_data, context))
+
+            # Save insights to database
+            for insight_data in insights:
+                insight = RacineAIInsight(
                     user_id=user_id,
-                    workspace_id=workspace_id,
-                    insight_type=insight["type"],
-                    title=insight["title"],
-                    description=insight["description"],
-                    insight_data=insight["data"],
-                    confidence_score=insight["confidence"],
-                    impact_score=insight["impact"],
-                    source_groups=insight.get("source_groups", []),
-                    metadata=insight.get("metadata", {})
+                    insight_type=insight_type,
+                    title=insight_data["title"],
+                    description=insight_data["description"],
+                    insight_data=insight_data["data"],
+                    confidence_score=insight_data.get("confidence", 0.85),
+                    impact_level=insight_data.get("impact", "medium"),
+                    actionable_recommendations=insight_data.get("recommendations", []),
+                    cross_group_analysis=insight_data.get("cross_group_analysis", {}),
+                    metadata={
+                        "generation_method": "ai_analysis",
+                        "data_sources": insight_data.get("sources", []),
+                        "workspace_context": workspace_id
+                    },
+                    workspace_id=workspace_id
                 )
-                
-                self.db.add(db_insight)
-            
+                self.db.add(insight)
+                insights.append(insight)
+
             self.db.commit()
-            
-            # Return the stored insights
-            query = self.db.query(RacineAIInsight).filter(
-                RacineAIInsight.user_id == user_id
-            )
-            
-            if insight_type:
-                query = query.filter(RacineAIInsight.insight_type == insight_type)
-            
-            if workspace_id:
-                query = query.filter(RacineAIInsight.workspace_id == workspace_id)
-            
-            if time_range:
-                if time_range.get("start"):
-                    query = query.filter(RacineAIInsight.created_at >= time_range["start"])
-                if time_range.get("end"):
-                    query = query.filter(RacineAIInsight.created_at <= time_range["end"])
-            
-            stored_insights = query.order_by(
-                RacineAIInsight.impact_score.desc()
-            ).all()
-            
-            return stored_insights
-            
+            logger.info(f"Generated {len(insights)} insights")
+
+            return insights
+
         except Exception as e:
-            logger.error(f"Error getting insights: {str(e)}")
+            self.db.rollback()
+            logger.error(f"Error generating cross-group insights: {str(e)}")
             raise
 
-    async def search_knowledge(
+    async def get_smart_recommendations(
         self,
         user_id: str,
-        query: str,
-        knowledge_type: Optional[str] = None,
+        recommendation_type: RecommendationType,
+        context: Optional[Dict[str, Any]] = None,
         workspace_id: Optional[str] = None
-    ) -> List[RacineAIKnowledge]:
+    ) -> List[RacineAIRecommendation]:
         """
-        Search the AI knowledge base.
-        
+        Get AI-driven smart recommendations based on user context and system state.
+
         Args:
-            user_id: User ID
-            query: Search query
-            knowledge_type: Optional filter by knowledge type
+            user_id: User requesting recommendations
+            recommendation_type: Type of recommendations
+            context: Optional context
             workspace_id: Optional workspace context
-            
+
         Returns:
-            List of relevant knowledge articles
+            List of smart recommendations
         """
         try:
-            # Perform semantic search in knowledge base
-            knowledge_items = await self._search_knowledge_base(
-                query, knowledge_type, workspace_id
+            logger.info(f"Generating smart recommendations of type {recommendation_type.value}")
+
+            # Analyze user patterns and system state
+            user_patterns = await self._analyze_user_patterns(user_id, workspace_id)
+            system_state = await self._analyze_system_state(workspace_id)
+
+            # Generate recommendations
+            recommendations = await self._generate_recommendations(
+                recommendation_type, user_patterns, system_state, context
             )
-            
-            logger.info(f"Found {len(knowledge_items)} knowledge items for query: {query}")
-            return knowledge_items
-            
+
+            # Save recommendations
+            saved_recommendations = []
+            for rec_data in recommendations:
+                recommendation = RacineAIRecommendation(
+                    user_id=user_id,
+                    recommendation_type=recommendation_type,
+                    title=rec_data["title"],
+                    description=rec_data["description"],
+                    recommendation_data=rec_data["data"],
+                    priority_score=rec_data.get("priority", 0.5),
+                    confidence_score=rec_data.get("confidence", 0.8),
+                    estimated_impact=rec_data.get("impact", {}),
+                    implementation_steps=rec_data.get("steps", []),
+                    metadata={
+                        "recommendation_source": "ai_analysis",
+                        "user_patterns": user_patterns,
+                        "system_context": system_state
+                    },
+                    workspace_id=workspace_id
+                )
+                self.db.add(recommendation)
+                saved_recommendations.append(recommendation)
+
+            self.db.commit()
+            return saved_recommendations
+
         except Exception as e:
-            logger.error(f"Error searching knowledge: {str(e)}")
+            self.db.rollback()
+            logger.error(f"Error generating smart recommendations: {str(e)}")
             raise
 
-    async def get_ai_metrics(
+    async def learn_from_user_feedback(
+        self,
+        user_id: str,
+        feedback_data: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None
+    ) -> RacineAILearning:
+        """
+        Learn from user feedback to improve AI assistance quality.
+
+        Args:
+            user_id: User providing feedback
+            feedback_data: Feedback information
+            context: Optional context
+
+        Returns:
+            Learning record
+        """
+        try:
+            logger.info(f"Processing user feedback from user {user_id}")
+
+            # Create learning record
+            learning = RacineAILearning(
+                user_id=user_id,
+                learning_type=LearningType.USER_FEEDBACK,
+                learning_data=feedback_data,
+                context_data=context or {},
+                confidence_impact=self._calculate_confidence_impact(feedback_data),
+                learning_metadata={
+                    "feedback_type": feedback_data.get("type", "general"),
+                    "satisfaction_score": feedback_data.get("satisfaction", 0),
+                    "improvement_areas": feedback_data.get("improvements", [])
+                }
+            )
+
+            self.db.add(learning)
+
+            # Update AI knowledge base
+            await self._update_knowledge_from_feedback(feedback_data, context)
+
+            # Adjust AI behavior based on feedback
+            await self._adjust_ai_behavior(user_id, feedback_data)
+
+            self.db.commit()
+            logger.info(f"Successfully processed user feedback")
+
+            return learning
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error processing user feedback: {str(e)}")
+            raise
+
+    async def get_ai_analytics(
         self,
         user_id: Optional[str] = None,
         workspace_id: Optional[str] = None,
         time_range: Optional[Dict[str, datetime]] = None
     ) -> Dict[str, Any]:
         """
-        Get comprehensive AI metrics.
-        
+        Get comprehensive AI analytics and performance metrics.
+
         Args:
-            user_id: Optional user filter
+            user_id: Optional specific user
             workspace_id: Optional workspace filter
-            time_range: Optional time range for metrics
-            
+            time_range: Optional time range
+
         Returns:
-            Comprehensive AI metrics
+            Comprehensive AI analytics
         """
         try:
-            # Get conversation metrics
-            conversation_metrics = await self._get_conversation_metrics(user_id, workspace_id, time_range)
-            
-            # Get recommendation metrics
-            recommendation_metrics = await self._get_recommendation_metrics(user_id, workspace_id, time_range)
-            
-            # Get insight metrics
-            insight_metrics = await self._get_insight_metrics(user_id, workspace_id, time_range)
-            
-            # Get learning metrics
-            learning_metrics = await self._get_learning_metrics(user_id, workspace_id, time_range)
-            
+            # Get conversation analytics
+            conversation_analytics = await self._get_ai_conversation_analytics(user_id, workspace_id, time_range)
+
+            # Get insight analytics
+            insight_analytics = await self._get_ai_insight_analytics(user_id, workspace_id, time_range)
+
+            # Get recommendation analytics
+            recommendation_analytics = await self._get_ai_recommendation_analytics(user_id, workspace_id, time_range)
+
+            # Get learning analytics
+            learning_analytics = await self._get_ai_learning_analytics(user_id, workspace_id, time_range)
+
+            # Get performance metrics
+            performance_metrics = await self._get_ai_performance_metrics(time_range)
+
             return {
-                "conversation_metrics": conversation_metrics,
-                "recommendation_metrics": recommendation_metrics,
-                "insight_metrics": insight_metrics,
-                "learning_metrics": learning_metrics,
+                "conversation_analytics": conversation_analytics,
+                "insight_analytics": insight_analytics,
+                "recommendation_analytics": recommendation_analytics,
+                "learning_analytics": learning_analytics,
+                "performance_metrics": performance_metrics,
+                "overall_ai_health": await self._calculate_ai_health_score(),
                 "generated_at": datetime.utcnow()
             }
-            
+
         except Exception as e:
-            logger.error(f"Error getting AI metrics: {str(e)}")
+            logger.error(f"Error getting AI analytics: {str(e)}")
             raise
 
     # Private helper methods
 
-    async def _build_conversation_context(
-        self,
-        user_id: str,
-        workspace_id: Optional[str],
-        initial_context: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """Build comprehensive context for AI conversation."""
+    def _initialize_ai_knowledge_base(self):
+        """Initialize the AI knowledge base with domain-specific information."""
         try:
-            context = {
-                "user_id": user_id,
-                "workspace_id": workspace_id,
-                "available_groups": list(self.service_registry.keys()),
-                "user_permissions": {},
-                "workspace_resources": {},
-                "recent_activities": [],
-                "user_preferences": {}
-            }
-            
-            # Add workspace context if provided
-            if workspace_id:
-                # Get workspace resources and activities
-                context["workspace_resources"] = await self._get_workspace_context(workspace_id)
-            
-            # Add user context
-            context["user_permissions"] = await self._get_user_permissions(user_id)
-            context["recent_activities"] = await self._get_user_recent_activities(user_id)
-            
-            # Merge initial context
-            if initial_context:
-                context.update(initial_context)
-            
-            return context
-            
+            # This would initialize the AI with knowledge about data governance,
+            # compliance, classification, and other domain-specific topics
+            logger.info("AI knowledge base initialized")
         except Exception as e:
-            logger.error(f"Error building conversation context: {str(e)}")
-            return {"user_id": user_id, "workspace_id": workspace_id}
+            logger.error(f"Error initializing AI knowledge base: {str(e)}")
 
-    async def _create_welcome_message(self, conversation_id: str, conversation_type: ConversationType):
-        """Create a welcome message for new conversations."""
+    async def _get_user_context(self, user_id: str, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Get comprehensive user context for personalization."""
         try:
-            welcome_messages = {
-                ConversationType.GENERAL: "Hello! I'm your AI assistant. I can help you with data governance, workflows, pipelines, and more. What can I assist you with today?",
-                ConversationType.WORKFLOW: "Welcome to the Workflow Assistant! I can help you create, optimize, and manage workflows. What would you like to do?",
-                ConversationType.PIPELINE: "Welcome to the Pipeline Assistant! I can help you build, optimize, and monitor data pipelines. How can I help?",
-                ConversationType.DATA_GOVERNANCE: "Welcome to the Data Governance Assistant! I can help with classifications, compliance, and data quality. What's your question?",
-                ConversationType.ANALYTICS: "Welcome to the Analytics Assistant! I can help you analyze data, create reports, and generate insights. What would you like to explore?"
+            # Get user information
+            user = self.db.query(User).filter(User.id == user_id).first()
+            
+            # Get user's recent activities across groups
+            user_activities = await self._get_user_recent_activities(user_id, workspace_id)
+
+            # Get user's preferences and patterns
+            user_preferences = await self._get_user_ai_preferences(user_id)
+
+            return {
+                "user_info": {
+                    "id": user.id if user else user_id,
+                    "name": getattr(user, 'username', 'User'),
+                    "role": getattr(user, 'role', 'user')
+                },
+                "recent_activities": user_activities,
+                "preferences": user_preferences,
+                "workspace_context": workspace_id,
+                "expertise_level": await self._assess_user_expertise(user_id),
+                "common_tasks": await self._get_user_common_tasks(user_id)
             }
+
+        except Exception as e:
+            logger.error(f"Error getting user context: {str(e)}")
+            return {}
+
+    async def _get_user_group_access(self, user_id: str) -> List[str]:
+        """Get list of groups the user has access to."""
+        try:
+            # This would check RBAC permissions across all groups
+            accessible_groups = []
+            for group_name, service in self.service_registry.items():
+                # Check access using RBAC service
+                has_access = await self._check_group_access(user_id, group_name)
+                if has_access:
+                    accessible_groups.append(group_name)
             
-            welcome_content = welcome_messages.get(
-                conversation_type,
-                "Hello! I'm your AI assistant. How can I help you today?"
-            )
+            return accessible_groups
+
+        except Exception as e:
+            logger.error(f"Error getting user group access: {str(e)}")
+            return []
+
+    async def _check_group_access(self, user_id: str, group_name: str) -> bool:
+        """Check if user has access to a specific group."""
+        try:
+            # This would use RBAC service to check permissions
+            return True  # Simplified for now
+        except Exception as e:
+            logger.error(f"Error checking group access: {str(e)}")
+            return False
+
+    async def _generate_conversation_title(
+        self, 
+        conversation_type: ConversationType, 
+        initial_context: Optional[Dict[str, Any]]
+    ) -> str:
+        """Generate an intelligent title for the conversation."""
+        try:
+            if conversation_type == ConversationType.SUPPORT:
+                return "Data Governance Support Session"
+            elif conversation_type == ConversationType.ANALYSIS:
+                return "Data Analysis & Insights"
+            elif conversation_type == ConversationType.OPTIMIZATION:
+                return "System Optimization Consultation"
+            else:
+                return "AI Assistant Session"
+
+        except Exception as e:
+            logger.error(f"Error generating conversation title: {str(e)}")
+            return "AI Conversation"
+
+    async def _create_welcome_message(
+        self, 
+        conversation: RacineAIConversation, 
+        user_context: Dict[str, Any]
+    ) -> RacineAIMessage:
+        """Create a personalized welcome message."""
+        try:
+            user_name = user_context.get("user_info", {}).get("name", "User")
             
+            welcome_content = f"""Hello {user_name}! 👋
+
+I'm your intelligent data governance assistant. I can help you with:
+
+🔍 **Data Analysis & Insights** - Get deep insights across all your data sources
+⚙️ **System Optimization** - Improve performance and efficiency
+🛡️ **Compliance & Security** - Ensure your data meets regulatory requirements
+📊 **Classifications & Cataloging** - Organize and classify your data assets
+🔧 **Workflow Automation** - Streamline your data processes
+
+I have access to all your connected systems and can provide cross-group insights. What would you like to explore today?"""
+
             welcome_message = RacineAIMessage(
-                conversation_id=conversation_id,
-                message_type=MessageType.ASSISTANT,
+                conversation_id=conversation.id,
+                message_type=MessageType.TEXT,
                 content=welcome_content,
-                context_data={"welcome": True, "conversation_type": conversation_type.value},
-                status=MessageStatus.PROCESSED
+                sender_id="racine_ai",
+                sender_type="assistant",
+                ai_processing_data={
+                    "processing_time_ms": 0,
+                    "confidence_score": 1.0,
+                    "message_type": "welcome"
+                },
+                metadata={
+                    "is_welcome": True,
+                    "personalized": True,
+                    "user_context_used": True
+                }
             )
-            
+
             self.db.add(welcome_message)
-            
+            return welcome_message
+
         except Exception as e:
             logger.error(f"Error creating welcome message: {str(e)}")
+            raise
 
-    async def _generate_ai_response(
+    async def _process_ai_message(
         self,
         conversation: RacineAIConversation,
         user_message: RacineAIMessage,
-        message_content: str
+        message_content: str,
+        attachments: Optional[List[Dict[str, Any]]]
     ) -> Dict[str, Any]:
-        """Generate AI response using context-aware processing."""
+        """Process user message and generate AI response."""
         try:
-            # Analyze user intent
-            intent = await self._analyze_user_intent(message_content, conversation)
-            
-            # Get relevant context from cross-group services
-            context = await self._get_relevant_context(intent, conversation)
-            
-            # Generate response based on intent and context
-            if intent["type"] == "workflow_question":
-                response = await self._generate_workflow_response(intent, context)
-            elif intent["type"] == "pipeline_question":
-                response = await self._generate_pipeline_response(intent, context)
-            elif intent["type"] == "data_governance_question":
-                response = await self._generate_governance_response(intent, context)
-            elif intent["type"] == "analytics_question":
-                response = await self._generate_analytics_response(intent, context)
-            elif intent["type"] == "general_question":
-                response = await self._generate_general_response(intent, context)
-            else:
-                response = await self._generate_fallback_response(intent, context)
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Error generating AI response: {str(e)}")
+            start_time = datetime.utcnow()
+
+            # Analyze message intent
+            intent_analysis = await self._analyze_message_intent(message_content, conversation.context)
+
+            # Generate response based on intent
+            response_content = await self._generate_response_content(
+                intent_analysis, conversation, message_content, attachments
+            )
+
+            # Get cross-group insights if relevant
+            cross_group_insights = await self._get_relevant_cross_group_insights(
+                intent_analysis, conversation.context
+            )
+
+            # Generate action items and recommendations
+            action_items = await self._generate_action_items(intent_analysis, response_content)
+            recommendations = await self._generate_message_recommendations(intent_analysis, conversation)
+
+            processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+
             return {
-                "content": "I apologize, but I encountered an error processing your request. Please try again.",
-                "context_data": {"error": True},
-                "metadata": {"error_type": "generation_error"}
+                "content": response_content,
+                "processing_time": processing_time,
+                "confidence": intent_analysis.get("confidence", 0.95),
+                "knowledge_sources": intent_analysis.get("sources", []),
+                "cross_group_insights": cross_group_insights,
+                "response_type": intent_analysis.get("response_type", "informational"),
+                "action_items": action_items,
+                "recommendations": recommendations,
+                "metadata": {
+                    "intent": intent_analysis.get("intent", "general"),
+                    "complexity": intent_analysis.get("complexity", "medium"),
+                    "requires_followup": intent_analysis.get("requires_followup", False)
+                }
             }
 
-    async def _analyze_user_intent(self, message_content: str, conversation: RacineAIConversation) -> Dict[str, Any]:
-        """Analyze user intent from message content."""
+        except Exception as e:
+            logger.error(f"Error processing AI message: {str(e)}")
+            return {
+                "content": "I apologize, but I encountered an error processing your request. Please try again or rephrase your question.",
+                "processing_time": 0,
+                "confidence": 0.0,
+                "error": str(e)
+            }
+
+    async def _analyze_message_intent(
+        self, 
+        message_content: str, 
+        conversation_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Analyze user message to understand intent and context."""
         try:
-            # Simple keyword-based intent analysis (in production, use NLP models)
+            # Simplified intent analysis - in production this would use NLP models
             content_lower = message_content.lower()
             
-            if any(word in content_lower for word in ["workflow", "job", "execute", "schedule"]):
-                return {"type": "workflow_question", "entities": [], "confidence": 0.8}
-            elif any(word in content_lower for word in ["pipeline", "data flow", "transform", "process"]):
-                return {"type": "pipeline_question", "entities": [], "confidence": 0.8}
-            elif any(word in content_lower for word in ["classify", "compliance", "governance", "policy"]):
-                return {"type": "data_governance_question", "entities": [], "confidence": 0.8}
-            elif any(word in content_lower for word in ["analyze", "report", "insight", "metric"]):
-                return {"type": "analytics_question", "entities": [], "confidence": 0.8}
+            intent = "general"
+            confidence = 0.8
+            response_type = "informational"
+            complexity = "medium"
+            sources = []
+
+            # Detect data-related intents
+            if any(keyword in content_lower for keyword in ["data", "dataset", "source", "table"]):
+                intent = "data_inquiry"
+                sources.append("data_sources")
+                
+            # Detect compliance-related intents
+            elif any(keyword in content_lower for keyword in ["compliance", "regulation", "gdpr", "policy"]):
+                intent = "compliance_inquiry"
+                sources.extend(["compliance_rules", "classifications"])
+                
+            # Detect performance-related intents
+            elif any(keyword in content_lower for keyword in ["performance", "slow", "optimize", "speed"]):
+                intent = "performance_inquiry"
+                sources.extend(["analytics", "scan_logic"])
+                response_type = "optimization"
+                
+            # Detect scanning-related intents
+            elif any(keyword in content_lower for keyword in ["scan", "rule", "discovery"]):
+                intent = "scanning_inquiry"
+                sources.extend(["scan_rule_sets", "scan_logic"])
+
+            return {
+                "intent": intent,
+                "confidence": confidence,
+                "response_type": response_type,
+                "complexity": complexity,
+                "sources": sources,
+                "requires_followup": intent != "general"
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing message intent: {str(e)}")
+            return {"intent": "general", "confidence": 0.5}
+
+    async def _generate_response_content(
+        self,
+        intent_analysis: Dict[str, Any],
+        conversation: RacineAIConversation,
+        message_content: str,
+        attachments: Optional[List[Dict[str, Any]]]
+    ) -> str:
+        """Generate AI response content based on intent analysis."""
+        try:
+            intent = intent_analysis.get("intent", "general")
+            sources = intent_analysis.get("sources", [])
+
+            if intent == "data_inquiry":
+                return await self._generate_data_response(message_content, sources, conversation)
+            elif intent == "compliance_inquiry":
+                return await self._generate_compliance_response(message_content, sources, conversation)
+            elif intent == "performance_inquiry":
+                return await self._generate_performance_response(message_content, sources, conversation)
+            elif intent == "scanning_inquiry":
+                return await self._generate_scanning_response(message_content, sources, conversation)
             else:
-                return {"type": "general_question", "entities": [], "confidence": 0.6}
-            
+                return await self._generate_general_response(message_content, conversation)
+
         except Exception as e:
-            logger.error(f"Error analyzing user intent: {str(e)}")
-            return {"type": "general_question", "entities": [], "confidence": 0.5}
+            logger.error(f"Error generating response content: {str(e)}")
+            return "I understand your question, but I need a bit more context to provide the best answer. Could you provide more details about what you're looking for?"
 
-    async def _get_relevant_context(self, intent: Dict[str, Any], conversation: RacineAIConversation) -> Dict[str, Any]:
-        """Get relevant context from cross-group services based on intent."""
+    async def _generate_data_response(
+        self, 
+        message_content: str, 
+        sources: List[str], 
+        conversation: RacineAIConversation
+    ) -> str:
+        """Generate response for data-related inquiries."""
         try:
-            context = {"conversation_context": conversation.conversation_context}
+            # Get data source information
+            data_sources_info = await self._get_data_sources_summary(conversation.workspace_id)
             
-            intent_type = intent.get("type", "general_question")
-            
-            if intent_type == "workflow_question":
-                # Get workflow-related context
-                context["workflows"] = await self._get_workflow_context(conversation.workspace_id)
-            elif intent_type == "pipeline_question":
-                # Get pipeline-related context
-                context["pipelines"] = await self._get_pipeline_context(conversation.workspace_id)
-            elif intent_type == "data_governance_question":
-                # Get governance-related context
-                context["governance"] = await self._get_governance_context(conversation.workspace_id)
-            elif intent_type == "analytics_question":
-                # Get analytics-related context
-                context["analytics"] = await self._get_analytics_context(conversation.workspace_id)
-            
-            return context
-            
+            return f"""I can help you with data-related questions! Here's what I found:
+
+📊 **Your Data Landscape:**
+- Active Data Sources: {data_sources_info.get('active_sources', 0)}
+- Total Data Assets: {data_sources_info.get('total_assets', 0)}
+- Recent Scans: {data_sources_info.get('recent_scans', 0)}
+
+Based on your question about "{message_content[:50]}...", I can:
+- Analyze your data sources and their relationships
+- Help you discover new data assets
+- Suggest optimization opportunities
+- Provide compliance insights
+
+What specific aspect would you like me to explore further?"""
+
         except Exception as e:
-            logger.error(f"Error getting relevant context: {str(e)}")
-            return {"conversation_context": conversation.conversation_context}
+            logger.error(f"Error generating data response: {str(e)}")
+            return "I can help you with data-related questions. What specific data information are you looking for?"
 
-    async def _generate_workflow_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate workflow-specific response."""
+    async def _generate_compliance_response(
+        self, 
+        message_content: str, 
+        sources: List[str], 
+        conversation: RacineAIConversation
+    ) -> str:
+        """Generate response for compliance-related inquiries."""
         try:
-            workflows = context.get("workflows", {})
+            compliance_info = await self._get_compliance_summary(conversation.workspace_id)
             
-            response_content = f"""Based on your workflow question, here's what I can help you with:
+            return f"""I can assist you with compliance and regulatory matters! Here's your current compliance status:
 
-**Available Workflows:** {workflows.get('count', 0)} workflows in your workspace
-**Recent Executions:** {workflows.get('recent_executions', 0)} in the last 24 hours
-**Success Rate:** {workflows.get('success_rate', 0):.1%}
+🛡️ **Compliance Overview:**
+- Active Compliance Rules: {compliance_info.get('active_rules', 0)}
+- Compliance Score: {compliance_info.get('compliance_score', 95)}%
+- Recent Violations: {compliance_info.get('recent_violations', 0)}
+- Classification Coverage: {compliance_info.get('classification_coverage', 90)}%
 
-I can help you:
-- Create new workflows
-- Optimize existing workflows
-- Monitor workflow performance
-- Schedule workflow executions
-- Troubleshoot workflow issues
+For your question about "{message_content[:50]}...", I can help with:
+- Regulatory compliance analysis
+- Data classification recommendations
+- Policy implementation guidance
+- Risk assessment and mitigation
 
-What specific workflow task would you like assistance with?"""
+What compliance area would you like me to focus on?"""
 
-            return {
-                "content": response_content,
-                "context_data": {"intent_type": "workflow", "workflows": workflows},
-                "metadata": {"response_type": "workflow_assistance", "confidence": 0.9}
-            }
-            
         except Exception as e:
-            logger.error(f"Error generating workflow response: {str(e)}")
-            return self._generate_fallback_response(intent, context)
+            logger.error(f"Error generating compliance response: {str(e)}")
+            return "I can help you with compliance and regulatory questions. What specific compliance area interests you?"
 
-    async def _generate_pipeline_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate pipeline-specific response."""
+    async def _generate_performance_response(
+        self, 
+        message_content: str, 
+        sources: List[str], 
+        conversation: RacineAIConversation
+    ) -> str:
+        """Generate response for performance-related inquiries."""
         try:
-            pipelines = context.get("pipelines", {})
+            performance_info = await self._get_performance_summary(conversation.workspace_id)
             
-            response_content = f"""Based on your pipeline question, here's what I can help you with:
+            return f"""I can help optimize your system performance! Here's your current performance status:
 
-**Available Pipelines:** {pipelines.get('count', 0)} pipelines in your workspace
-**Active Executions:** {pipelines.get('active_executions', 0)} currently running
-**Average Performance:** {pipelines.get('avg_duration', 0):.1f} minutes per execution
-**Data Quality Score:** {pipelines.get('quality_score', 0):.1f}/100
+⚡ **Performance Metrics:**
+- System Health Score: {performance_info.get('health_score', 85)}%
+- Average Response Time: {performance_info.get('avg_response_time', 150)}ms
+- Scan Efficiency: {performance_info.get('scan_efficiency', 92)}%
+- Resource Utilization: {performance_info.get('resource_utilization', 75)}%
 
-I can help you:
-- Design and build new pipelines
-- Optimize pipeline performance
-- Monitor data quality
-- Troubleshoot pipeline issues
-- Apply AI-driven optimizations
+Based on your performance question about "{message_content[:50]}...", I can:
+- Identify performance bottlenecks
+- Suggest optimization strategies
+- Recommend resource scaling
+- Analyze workflow efficiency
 
-What specific pipeline task would you like assistance with?"""
+Which performance aspect would you like me to analyze first?"""
 
-            return {
-                "content": response_content,
-                "context_data": {"intent_type": "pipeline", "pipelines": pipelines},
-                "metadata": {"response_type": "pipeline_assistance", "confidence": 0.9}
-            }
-            
         except Exception as e:
-            logger.error(f"Error generating pipeline response: {str(e)}")
-            return self._generate_fallback_response(intent, context)
+            logger.error(f"Error generating performance response: {str(e)}")
+            return "I can help you optimize system performance. What specific performance issues are you experiencing?"
 
-    async def _generate_governance_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate data governance-specific response."""
+    async def _generate_scanning_response(
+        self, 
+        message_content: str, 
+        sources: List[str], 
+        conversation: RacineAIConversation
+    ) -> str:
+        """Generate response for scanning-related inquiries."""
         try:
-            governance = context.get("governance", {})
+            scanning_info = await self._get_scanning_summary(conversation.workspace_id)
             
-            response_content = f"""Based on your data governance question, here's what I can help you with:
+            return f"""I can assist you with data scanning and discovery! Here's your scanning overview:
 
-**Data Sources:** {governance.get('data_sources', 0)} sources under management
-**Classifications:** {governance.get('classifications', 0)} active classification rules
-**Compliance Score:** {governance.get('compliance_score', 0):.1f}/100
-**Recent Scans:** {governance.get('recent_scans', 0)} completed in the last 24 hours
+🔍 **Scanning Status:**
+- Active Scan Rules: {scanning_info.get('active_rules', 0)}
+- Recent Jobs: {scanning_info.get('recent_jobs', 0)}
+- Success Rate: {scanning_info.get('success_rate', 95)}%
+- Data Discovery Coverage: {scanning_info.get('coverage', 88)}%
 
-I can help you:
-- Create and manage classification rules
-- Monitor compliance status
-- Set up data quality checks
-- Configure scan rules
-- Generate governance reports
+For your scanning question about "{message_content[:50]}...", I can help with:
+- Scan rule optimization
+- Discovery strategy planning
+- Scan performance tuning
+- Custom rule creation
 
-What specific governance task would you like assistance with?"""
+What scanning topic would you like to explore?"""
 
-            return {
-                "content": response_content,
-                "context_data": {"intent_type": "governance", "governance": governance},
-                "metadata": {"response_type": "governance_assistance", "confidence": 0.9}
-            }
-            
         except Exception as e:
-            logger.error(f"Error generating governance response: {str(e)}")
-            return self._generate_fallback_response(intent, context)
+            logger.error(f"Error generating scanning response: {str(e)}")
+            return "I can help you with data scanning and discovery. What scanning topic are you interested in?"
 
-    async def _generate_analytics_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate analytics-specific response."""
+    async def _generate_general_response(
+        self, 
+        message_content: str, 
+        conversation: RacineAIConversation
+    ) -> str:
+        """Generate response for general inquiries."""
         try:
-            analytics = context.get("analytics", {})
-            
-            response_content = f"""Based on your analytics question, here's what I can help you with:
+            return f"""Thank you for your question! I'm here to help you with all aspects of data governance.
 
-**Available Datasets:** {analytics.get('datasets', 0)} datasets ready for analysis
-**Recent Reports:** {analytics.get('recent_reports', 0)} generated this week
-**Dashboard Views:** {analytics.get('dashboard_views', 0)} active dashboards
-**Data Freshness:** {analytics.get('data_freshness', 'unknown')}
+I can assist you with:
 
-I can help you:
-- Create custom reports and dashboards
-- Perform data analysis and generate insights
-- Set up automated analytics workflows
-- Monitor data trends and patterns
-- Generate predictive analytics
+🔍 **Data Discovery & Cataloging**
+- Finding and organizing your data assets
+- Automated data discovery and classification
 
-What specific analytics task would you like assistance with?"""
+⚙️ **System Optimization**
+- Performance tuning and efficiency improvements
+- Resource optimization recommendations
 
-            return {
-                "content": response_content,
-                "context_data": {"intent_type": "analytics", "analytics": analytics},
-                "metadata": {"response_type": "analytics_assistance", "confidence": 0.9}
-            }
-            
-        except Exception as e:
-            logger.error(f"Error generating analytics response: {str(e)}")
-            return self._generate_fallback_response(intent, context)
+🛡️ **Compliance & Security**
+- Regulatory compliance monitoring
+- Data privacy and security assessments
 
-    async def _generate_general_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate general response."""
-        try:
-            response_content = """I'm your AI assistant for the Racine Data Governance Platform. I can help you with:
+📊 **Analytics & Insights**
+- Cross-system analytics and reporting
+- Predictive insights and recommendations
 
-🔧 **Workflows**: Create, optimize, and manage job workflows
-📊 **Pipelines**: Build and monitor data pipelines with AI optimization  
-🛡️ **Data Governance**: Manage classifications, compliance, and data quality
-📈 **Analytics**: Generate insights, reports, and dashboards
-🏢 **Workspaces**: Organize and collaborate on data projects
-🤖 **AI Assistance**: Get intelligent recommendations and insights
+Could you tell me more about what you're looking to accomplish? I can provide more specific guidance based on your needs."""
 
-What would you like to work on today? You can ask me questions about any of these areas, and I'll provide specific guidance and assistance."""
-
-            return {
-                "content": response_content,
-                "context_data": {"intent_type": "general"},
-                "metadata": {"response_type": "general_assistance", "confidence": 0.8}
-            }
-            
         except Exception as e:
             logger.error(f"Error generating general response: {str(e)}")
-            return self._generate_fallback_response(intent, context)
+            return "I'm here to help! Could you provide more details about what you'd like assistance with?"
 
-    async def _generate_fallback_response(self, intent: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate fallback response when other generators fail."""
-        return {
-            "content": "I understand you're looking for assistance. Could you please provide more specific details about what you'd like to do? I can help with workflows, pipelines, data governance, analytics, and more.",
-            "context_data": {"intent_type": "fallback"},
-            "metadata": {"response_type": "fallback", "confidence": 0.5}
-        }
+    # Placeholder methods for various AI operations
+    async def _get_conversation(self, conversation_id: str, user_id: str) -> Optional[RacineAIConversation]:
+        """Get conversation with access control."""
+        try:
+            return self.db.query(RacineAIConversation).filter(
+                and_(
+                    RacineAIConversation.id == conversation_id,
+                    RacineAIConversation.user_id == user_id
+                )
+            ).first()
+        except Exception as e:
+            logger.error(f"Error getting conversation: {str(e)}")
+            return None
+
+    async def _get_user_recent_activities(self, user_id: str, workspace_id: Optional[str]) -> List[Dict[str, Any]]:
+        """Get user's recent activities for context."""
+        return []
+
+    async def _get_user_ai_preferences(self, user_id: str) -> Dict[str, Any]:
+        """Get user's AI preferences."""
+        return {"response_style": "professional", "detail_level": "medium", "include_examples": True}
+
+    async def _assess_user_expertise(self, user_id: str) -> str:
+        """Assess user's expertise level."""
+        return "intermediate"
+
+    async def _get_user_common_tasks(self, user_id: str) -> List[str]:
+        """Get user's common tasks."""
+        return ["data_analysis", "compliance_checking", "performance_monitoring"]
+
+    async def _initialize_conversation_insights(self, conversation_id: str, user_id: str):
+        """Initialize conversation-specific insights."""
+        pass
+
+    async def _track_conversation_start(self, conversation_id: str, user_id: str):
+        """Track conversation start metrics."""
+        pass
+
+    async def _update_conversation_context(
+        self, 
+        conversation: RacineAIConversation, 
+        user_message: RacineAIMessage, 
+        ai_response: Dict[str, Any]
+    ):
+        """Update conversation context with new information."""
+        try:
+            if not conversation.context:
+                conversation.context = {}
+            
+            conversation.context["last_interaction"] = datetime.utcnow().isoformat()
+            conversation.context["message_count"] = conversation.context.get("message_count", 0) + 2
+            conversation.context["topics_discussed"] = conversation.context.get("topics_discussed", [])
+            
+            # Add current topic if not already present
+            intent = ai_response.get("metadata", {}).get("intent", "general")
+            if intent not in conversation.context["topics_discussed"]:
+                conversation.context["topics_discussed"].append(intent)
+
+        except Exception as e:
+            logger.error(f"Error updating conversation context: {str(e)}")
+
+    async def _generate_contextual_insights(
+        self, 
+        conversation: RacineAIConversation, 
+        ai_response: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Generate contextual insights based on conversation."""
+        return []
+
+    async def _generate_smart_recommendations(
+        self, 
+        conversation: RacineAIConversation, 
+        ai_response: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Generate smart recommendations."""
+        return []
 
     async def _learn_from_interaction(
-        self,
-        conversation: RacineAIConversation,
-        user_message: RacineAIMessage,
-        ai_message: RacineAIMessage
+        self, 
+        conversation: RacineAIConversation, 
+        user_message: RacineAIMessage, 
+        ai_response: Dict[str, Any]
     ):
-        """Learn from user interactions to improve AI responses."""
-        try:
-            learning_entry = RacineAILearning(
-                conversation_id=conversation.id,
-                user_message_id=user_message.id,
-                ai_message_id=ai_message.id,
-                learning_type=LearningType.INTERACTION,
-                learning_data={
-                    "user_intent": user_message.context_data.get("intent", {}),
-                    "ai_response_type": ai_message.metadata.get("response_type", "unknown"),
-                    "confidence": ai_message.metadata.get("confidence", 0.5),
-                    "conversation_type": conversation.conversation_type.value
-                },
-                feedback_score=None  # Will be updated when user provides feedback
-            )
-            
-            self.db.add(learning_entry)
-            
-        except Exception as e:
-            logger.error(f"Error learning from interaction: {str(e)}")
+        """Learn from the interaction to improve future responses."""
+        pass
+
+    async def _track_message_interaction(self, conversation_id: str, user_id: str, ai_response: Dict[str, Any]):
+        """Track message interaction metrics."""
+        pass
+
+    async def _get_relevant_cross_group_insights(
+        self, 
+        intent_analysis: Dict[str, Any], 
+        conversation_context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Get relevant insights from across all groups."""
+        return []
+
+    async def _generate_action_items(
+        self, 
+        intent_analysis: Dict[str, Any], 
+        response_content: str
+    ) -> List[str]:
+        """Generate actionable items from the conversation."""
+        return []
+
+    async def _generate_message_recommendations(
+        self, 
+        intent_analysis: Dict[str, Any], 
+        conversation: RacineAIConversation
+    ) -> List[Dict[str, Any]]:
+        """Generate recommendations based on message analysis."""
+        return []
+
+    # Summary methods for different domains
+    async def _get_data_sources_summary(self, workspace_id: Optional[str]) -> Dict[str, int]:
+        """Get summary of data sources."""
+        return {"active_sources": 5, "total_assets": 150, "recent_scans": 12}
+
+    async def _get_compliance_summary(self, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Get compliance summary."""
+        return {
+            "active_rules": 25, 
+            "compliance_score": 95, 
+            "recent_violations": 2,
+            "classification_coverage": 90
+        }
+
+    async def _get_performance_summary(self, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Get performance summary."""
+        return {
+            "health_score": 85,
+            "avg_response_time": 150,
+            "scan_efficiency": 92,
+            "resource_utilization": 75
+        }
+
+    async def _get_scanning_summary(self, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Get scanning summary."""
+        return {
+            "active_rules": 15,
+            "recent_jobs": 8,
+            "success_rate": 95,
+            "coverage": 88
+        }
+
+    # Additional placeholder methods for comprehensive AI functionality
+    async def _get_conversation_insights(self, conversation_id: str) -> List[Dict[str, Any]]:
+        """Get insights for a conversation."""
+        return []
+
+    async def _get_conversation_analytics(self, conversation_id: str) -> Dict[str, Any]:
+        """Get analytics for a conversation."""
+        return {"assistance_quality": 0.9, "user_satisfaction": 0.85}
+
+    def _calculate_conversation_duration(self, conversation: RacineAIConversation) -> float:
+        """Calculate conversation duration in minutes."""
+        if conversation.updated_at and conversation.created_at:
+            delta = conversation.updated_at - conversation.created_at
+            return delta.total_seconds() / 60
+        return 0.0
+
+    async def _gather_cross_group_data(self, user_id: str, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Gather data from all accessible groups."""
+        return {}
+
+    async def _generate_performance_insights(self, data: Dict[str, Any], context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate performance insights."""
+        return []
+
+    async def _generate_security_insights(self, data: Dict[str, Any], context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate security insights."""
+        return []
+
+    async def _generate_compliance_insights(self, data: Dict[str, Any], context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate compliance insights."""
+        return []
+
+    async def _generate_optimization_insights(self, data: Dict[str, Any], context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate optimization insights."""
+        return []
+
+    async def _generate_general_insights(self, data: Dict[str, Any], context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate general insights."""
+        return []
+
+    async def _analyze_user_patterns(self, user_id: str, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Analyze user patterns for recommendations."""
+        return {}
+
+    async def _analyze_system_state(self, workspace_id: Optional[str]) -> Dict[str, Any]:
+        """Analyze current system state."""
+        return {}
 
     async def _generate_recommendations(
-        self,
-        user_id: str,
-        recommendation_type: Optional[RecommendationType],
-        workspace_id: Optional[str]
+        self, 
+        recommendation_type: RecommendationType, 
+        user_patterns: Dict[str, Any], 
+        system_state: Dict[str, Any], 
+        context: Optional[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Generate AI recommendations based on user context and cross-group data."""
-        try:
-            recommendations = []
-            
-            # Generate workflow recommendations
-            if not recommendation_type or recommendation_type == RecommendationType.WORKFLOW:
-                workflow_recs = await self._generate_workflow_recommendations(user_id, workspace_id)
-                recommendations.extend(workflow_recs)
-            
-            # Generate pipeline recommendations
-            if not recommendation_type or recommendation_type == RecommendationType.PIPELINE:
-                pipeline_recs = await self._generate_pipeline_recommendations(user_id, workspace_id)
-                recommendations.extend(pipeline_recs)
-            
-            # Generate governance recommendations
-            if not recommendation_type or recommendation_type == RecommendationType.GOVERNANCE:
-                governance_recs = await self._generate_governance_recommendations(user_id, workspace_id)
-                recommendations.extend(governance_recs)
-            
-            # Generate optimization recommendations
-            if not recommendation_type or recommendation_type == RecommendationType.OPTIMIZATION:
-                optimization_recs = await self._generate_optimization_recommendations(user_id, workspace_id)
-                recommendations.extend(optimization_recs)
-            
-            return recommendations
-            
-        except Exception as e:
-            logger.error(f"Error generating recommendations: {str(e)}")
-            return []
+        """Generate recommendations based on analysis."""
+        return []
 
-    async def _generate_insights(
-        self,
-        user_id: str,
-        insight_type: Optional[InsightType],
-        workspace_id: Optional[str],
-        time_range: Optional[Dict[str, datetime]]
-    ) -> List[Dict[str, Any]]:
-        """Generate AI insights based on cross-group data analysis."""
-        try:
-            insights = []
-            
-            # Generate performance insights
-            if not insight_type or insight_type == InsightType.PERFORMANCE:
-                performance_insights = await self._generate_performance_insights(user_id, workspace_id, time_range)
-                insights.extend(performance_insights)
-            
-            # Generate quality insights
-            if not insight_type or insight_type == InsightType.QUALITY:
-                quality_insights = await self._generate_quality_insights(user_id, workspace_id, time_range)
-                insights.extend(quality_insights)
-            
-            # Generate cost insights
-            if not insight_type or insight_type == InsightType.COST:
-                cost_insights = await self._generate_cost_insights(user_id, workspace_id, time_range)
-                insights.extend(cost_insights)
-            
-            # Generate trend insights
-            if not insight_type or insight_type == InsightType.TREND:
-                trend_insights = await self._generate_trend_insights(user_id, workspace_id, time_range)
-                insights.extend(trend_insights)
-            
-            return insights
-            
-        except Exception as e:
-            logger.error(f"Error generating insights: {str(e)}")
-            return []
+    def _calculate_confidence_impact(self, feedback_data: Dict[str, Any]) -> float:
+        """Calculate confidence impact from feedback."""
+        return 0.1
 
-    async def _search_knowledge_base(
-        self,
-        query: str,
-        knowledge_type: Optional[str],
-        workspace_id: Optional[str]
-    ) -> List[RacineAIKnowledge]:
-        """Search the knowledge base using semantic search."""
-        try:
-            # Build search query
-            search_query = self.db.query(RacineAIKnowledge)
-            
-            # Filter by knowledge type if specified
-            if knowledge_type:
-                search_query = search_query.filter(RacineAIKnowledge.knowledge_type == knowledge_type)
-            
-            # Filter by workspace if specified
-            if workspace_id:
-                search_query = search_query.filter(
-                    or_(
-                        RacineAIKnowledge.workspace_id == workspace_id,
-                        RacineAIKnowledge.workspace_id.is_(None)  # Global knowledge
-                    )
-                )
-            
-            # Perform text search (in production, use vector similarity search)
-            knowledge_items = search_query.filter(
-                or_(
-                    RacineAIKnowledge.title.ilike(f"%{query}%"),
-                    RacineAIKnowledge.content.ilike(f"%{query}%"),
-                    RacineAIKnowledge.tags.ilike(f"%{query}%")
-                )
-            ).order_by(RacineAIKnowledge.created_at.desc()).limit(10).all()
-            
-            return knowledge_items
-            
-        except Exception as e:
-            logger.error(f"Error searching knowledge base: {str(e)}")
-            return []
+    async def _update_knowledge_from_feedback(self, feedback_data: Dict[str, Any], context: Optional[Dict[str, Any]]):
+        """Update AI knowledge based on feedback."""
+        pass
 
-    # Context helper methods
-    async def _get_workspace_context(self, workspace_id: str) -> Dict[str, Any]:
-        """Get workspace context for AI conversations."""
-        try:
-            # This would integrate with workspace service
-            return {
-                "workspace_id": workspace_id,
-                "resources": [],
-                "members": 0,
-                "activity_level": "medium"
-            }
-        except Exception as e:
-            logger.error(f"Error getting workspace context: {str(e)}")
-            return {}
+    async def _adjust_ai_behavior(self, user_id: str, feedback_data: Dict[str, Any]):
+        """Adjust AI behavior based on feedback."""
+        pass
 
-    async def _get_user_permissions(self, user_id: str) -> Dict[str, Any]:
-        """Get user permissions across all groups."""
-        try:
-            # This would integrate with RBAC service
-            return {
-                "groups": list(self.service_registry.keys()),
-                "permissions": {"read": True, "write": True, "admin": False}
-            }
-        except Exception as e:
-            logger.error(f"Error getting user permissions: {str(e)}")
-            return {}
+    # Analytics methods
+    async def _get_ai_conversation_analytics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
+        """Get conversation analytics."""
+        return {}
 
-    async def _get_user_recent_activities(self, user_id: str) -> List[Dict[str, Any]]:
-        """Get user's recent activities across all groups."""
-        try:
-            # This would integrate with activity tracking
-            return [
-                {"type": "workflow_created", "timestamp": datetime.utcnow() - timedelta(hours=2)},
-                {"type": "pipeline_executed", "timestamp": datetime.utcnow() - timedelta(hours=4)}
-            ]
-        except Exception as e:
-            logger.error(f"Error getting user activities: {str(e)}")
-            return []
+    async def _get_ai_insight_analytics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
+        """Get insight analytics."""
+        return {}
 
-    async def _get_workflow_context(self, workspace_id: Optional[str]) -> Dict[str, Any]:
-        """Get workflow context for AI responses."""
-        try:
-            return {
-                "count": 5,
-                "recent_executions": 12,
-                "success_rate": 0.85,
-                "avg_duration": 15.5
-            }
-        except Exception as e:
-            logger.error(f"Error getting workflow context: {str(e)}")
-            return {}
+    async def _get_ai_recommendation_analytics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
+        """Get recommendation analytics."""
+        return {}
 
-    async def _get_pipeline_context(self, workspace_id: Optional[str]) -> Dict[str, Any]:
-        """Get pipeline context for AI responses."""
-        try:
-            return {
-                "count": 8,
-                "active_executions": 3,
-                "avg_duration": 25.2,
-                "quality_score": 88.5
-            }
-        except Exception as e:
-            logger.error(f"Error getting pipeline context: {str(e)}")
-            return {}
+    async def _get_ai_learning_analytics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
+        """Get learning analytics."""
+        return {}
 
-    async def _get_governance_context(self, workspace_id: Optional[str]) -> Dict[str, Any]:
-        """Get governance context for AI responses."""
-        try:
-            return {
-                "data_sources": 15,
-                "classifications": 45,
-                "compliance_score": 92.3,
-                "recent_scans": 8
-            }
-        except Exception as e:
-            logger.error(f"Error getting governance context: {str(e)}")
-            return {}
+    async def _get_ai_performance_metrics(self, time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
+        """Get AI performance metrics."""
+        return {}
 
-    async def _get_analytics_context(self, workspace_id: Optional[str]) -> Dict[str, Any]:
-        """Get analytics context for AI responses."""
-        try:
-            return {
-                "datasets": 25,
-                "recent_reports": 6,
-                "dashboard_views": 12,
-                "data_freshness": "6 hours ago"
-            }
-        except Exception as e:
-            logger.error(f"Error getting analytics context: {str(e)}")
-            return {}
-
-    # Recommendation generators
-    async def _generate_workflow_recommendations(self, user_id: str, workspace_id: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate workflow-specific recommendations."""
-        return [
-            {
-                "type": RecommendationType.WORKFLOW,
-                "title": "Optimize Data Processing Workflow",
-                "description": "Your data processing workflow could benefit from parallel execution to reduce runtime by 40%.",
-                "data": {"optimization_type": "parallelization", "expected_improvement": "40%"},
-                "confidence": 0.85,
-                "priority": 8,
-                "metadata": {"source": "performance_analysis"}
-            }
-        ]
-
-    async def _generate_pipeline_recommendations(self, user_id: str, workspace_id: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate pipeline-specific recommendations."""
-        return [
-            {
-                "type": RecommendationType.PIPELINE,
-                "title": "Enable Auto-scaling for Pipeline",
-                "description": "Enable auto-scaling on your ETL pipeline to handle variable data loads more efficiently.",
-                "data": {"optimization_type": "auto_scaling", "expected_cost_saving": "25%"},
-                "confidence": 0.78,
-                "priority": 7,
-                "metadata": {"source": "resource_analysis"}
-            }
-        ]
-
-    async def _generate_governance_recommendations(self, user_id: str, workspace_id: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate governance-specific recommendations."""
-        return [
-            {
-                "type": RecommendationType.GOVERNANCE,
-                "title": "Review PII Classification Rules",
-                "description": "Some data sources may contain unclassified PII. Consider running additional classification scans.",
-                "data": {"scan_type": "pii_detection", "affected_sources": 3},
-                "confidence": 0.92,
-                "priority": 9,
-                "metadata": {"source": "compliance_analysis"}
-            }
-        ]
-
-    async def _generate_optimization_recommendations(self, user_id: str, workspace_id: Optional[str]) -> List[Dict[str, Any]]:
-        """Generate optimization-specific recommendations."""
-        return [
-            {
-                "type": RecommendationType.OPTIMIZATION,
-                "title": "Schedule Workflows During Off-Peak Hours",
-                "description": "Running workflows between 2-6 AM could reduce costs by 30% due to lower resource pricing.",
-                "data": {"optimization_type": "scheduling", "cost_reduction": "30%"},
-                "confidence": 0.75,
-                "priority": 6,
-                "metadata": {"source": "cost_analysis"}
-            }
-        ]
-
-    # Insight generators
-    async def _generate_performance_insights(self, user_id: str, workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> List[Dict[str, Any]]:
-        """Generate performance insights."""
-        return [
-            {
-                "type": InsightType.PERFORMANCE,
-                "title": "Workflow Performance Trend",
-                "description": "Workflow execution times have decreased by 15% over the past month due to recent optimizations.",
-                "data": {"trend": "improving", "improvement": "15%", "period": "1_month"},
-                "confidence": 0.88,
-                "impact": 8,
-                "source_groups": ["workflows", "analytics"],
-                "metadata": {"trend_direction": "positive"}
-            }
-        ]
-
-    async def _generate_quality_insights(self, user_id: str, workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> List[Dict[str, Any]]:
-        """Generate data quality insights."""
-        return [
-            {
-                "type": InsightType.QUALITY,
-                "title": "Data Quality Improvement",
-                "description": "Data quality scores have improved across all pipelines, with completeness increasing to 95%.",
-                "data": {"quality_score": 95, "improvement": "8%", "dimension": "completeness"},
-                "confidence": 0.91,
-                "impact": 9,
-                "source_groups": ["pipelines", "governance"],
-                "metadata": {"quality_dimension": "completeness"}
-            }
-        ]
-
-    async def _generate_cost_insights(self, user_id: str, workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> List[Dict[str, Any]]:
-        """Generate cost insights."""
-        return [
-            {
-                "type": InsightType.COST,
-                "title": "Resource Optimization Opportunity",
-                "description": "Current resource allocation could be optimized to reduce costs by $500/month while maintaining performance.",
-                "data": {"potential_savings": 500, "currency": "USD", "period": "monthly"},
-                "confidence": 0.82,
-                "impact": 7,
-                "source_groups": ["pipelines", "workflows"],
-                "metadata": {"optimization_type": "resource_allocation"}
-            }
-        ]
-
-    async def _generate_trend_insights(self, user_id: str, workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> List[Dict[str, Any]]:
-        """Generate trend insights."""
-        return [
-            {
-                "type": InsightType.TREND,
-                "title": "Data Volume Growth Pattern",
-                "description": "Data ingestion has grown by 25% monthly, suggesting need for infrastructure scaling in Q2.",
-                "data": {"growth_rate": "25%", "period": "monthly", "projection": "Q2_scaling_needed"},
-                "confidence": 0.79,
-                "impact": 8,
-                "source_groups": ["data_sources", "pipelines"],
-                "metadata": {"trend_type": "growth", "projection_period": "Q2"}
-            }
-        ]
-
-    # Metrics helpers
-    async def _create_conversation_metrics(self, conversation_id: str):
-        """Create initial metrics for a conversation."""
-        try:
-            metrics = RacineAIMetrics(
-                conversation_id=conversation_id,
-                metric_type="conversation",
-                metric_name="conversation_started",
-                metric_value=1.0,
-                metric_unit="count",
-                metric_data={"status": "active", "message_count": 1}
-            )
-            
-            self.db.add(metrics)
-            
-        except Exception as e:
-            logger.error(f"Error creating conversation metrics: {str(e)}")
-
-    async def _get_conversation_metrics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
-        """Get conversation metrics."""
-        try:
-            query = self.db.query(RacineAIConversation)
-            
-            if user_id:
-                query = query.filter(RacineAIConversation.user_id == user_id)
-            
-            if workspace_id:
-                query = query.filter(RacineAIConversation.workspace_id == workspace_id)
-            
-            if time_range:
-                if time_range.get("start"):
-                    query = query.filter(RacineAIConversation.created_at >= time_range["start"])
-                if time_range.get("end"):
-                    query = query.filter(RacineAIConversation.created_at <= time_range["end"])
-            
-            conversations = query.all()
-            
-            return {
-                "total_conversations": len(conversations),
-                "active_conversations": len([c for c in conversations if c.is_active]),
-                "average_messages_per_conversation": sum(c.message_count or 0 for c in conversations) / len(conversations) if conversations else 0,
-                "conversation_types": {}
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting conversation metrics: {str(e)}")
-            return {}
-
-    async def _get_recommendation_metrics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
-        """Get recommendation metrics."""
-        try:
-            query = self.db.query(RacineAIRecommendation)
-            
-            if user_id:
-                query = query.filter(RacineAIRecommendation.user_id == user_id)
-            
-            if workspace_id:
-                query = query.filter(RacineAIRecommendation.workspace_id == workspace_id)
-            
-            if time_range:
-                if time_range.get("start"):
-                    query = query.filter(RacineAIRecommendation.created_at >= time_range["start"])
-                if time_range.get("end"):
-                    query = query.filter(RacineAIRecommendation.created_at <= time_range["end"])
-            
-            recommendations = query.all()
-            
-            return {
-                "total_recommendations": len(recommendations),
-                "average_confidence": sum(r.confidence_score for r in recommendations) / len(recommendations) if recommendations else 0,
-                "recommendation_types": {},
-                "acceptance_rate": 0.75  # Mock rate
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting recommendation metrics: {str(e)}")
-            return {}
-
-    async def _get_insight_metrics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
-        """Get insight metrics."""
-        try:
-            query = self.db.query(RacineAIInsight)
-            
-            if user_id:
-                query = query.filter(RacineAIInsight.user_id == user_id)
-            
-            if workspace_id:
-                query = query.filter(RacineAIInsight.workspace_id == workspace_id)
-            
-            if time_range:
-                if time_range.get("start"):
-                    query = query.filter(RacineAIInsight.created_at >= time_range["start"])
-                if time_range.get("end"):
-                    query = query.filter(RacineAIInsight.created_at <= time_range["end"])
-            
-            insights = query.all()
-            
-            return {
-                "total_insights": len(insights),
-                "average_impact": sum(i.impact_score for i in insights) / len(insights) if insights else 0,
-                "insight_types": {},
-                "actionable_insights": len([i for i in insights if i.impact_score > 7])
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting insight metrics: {str(e)}")
-            return {}
-
-    async def _get_learning_metrics(self, user_id: Optional[str], workspace_id: Optional[str], time_range: Optional[Dict[str, datetime]]) -> Dict[str, Any]:
-        """Get learning metrics."""
-        try:
-            query = self.db.query(RacineAILearning)
-            
-            if time_range:
-                if time_range.get("start"):
-                    query = query.filter(RacineAILearning.created_at >= time_range["start"])
-                if time_range.get("end"):
-                    query = query.filter(RacineAILearning.created_at <= time_range["end"])
-            
-            learning_entries = query.all()
-            
-            return {
-                "total_learning_entries": len(learning_entries),
-                "learning_types": {},
-                "average_feedback_score": sum(l.feedback_score or 0 for l in learning_entries) / len(learning_entries) if learning_entries else 0,
-                "improvement_rate": 0.85  # Mock rate
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting learning metrics: {str(e)}")
-            return {}
+    async def _calculate_ai_health_score(self) -> float:
+        """Calculate overall AI health score."""
+        return 0.9

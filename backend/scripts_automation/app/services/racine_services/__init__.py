@@ -1,28 +1,18 @@
-"""
-Racine Services Package
-======================
-
-This package contains all Racine Main Manager services that provide enterprise-grade
-functionality for the next-generation data governance platform.
-
-Services:
-- Orchestration Service: Master coordination and system health management
-- Workspace Service: Multi-workspace management and collaboration
-- Workflow Service: Databricks-style job workflow management 
-- Pipeline Service: AI-driven pipeline management and optimization
-- AI Assistant Service: Context-aware intelligent assistance
-"""
+# Racine Services - Next-generation data governance orchestration services
+# These services provide advanced cross-group integration and AI-driven capabilities
 
 from .racine_orchestration_service import RacineOrchestrationService
 from .racine_workspace_service import RacineWorkspaceService
 from .racine_workflow_service import RacineWorkflowService
 from .racine_pipeline_service import RacinePipelineService
-from .racine_ai_service import RacineAIAssistantService
+from .racine_ai_service import RacineAIService
+from .racine_activity_service import RacineActivityService
 
 __all__ = [
     "RacineOrchestrationService",
     "RacineWorkspaceService", 
     "RacineWorkflowService",
     "RacinePipelineService",
-    "RacineAIAssistantService"
+    "RacineAIService",
+    "RacineActivityService"
 ]
