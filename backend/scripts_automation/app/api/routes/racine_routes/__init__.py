@@ -22,14 +22,40 @@ while providing enterprise-grade scalability, performance, and security.
 
 # Import all racine route modules for easy access
 from .racine_orchestration_routes import router as orchestration_router
-from .racine_workspace_routes import router as workspace_router
-from .racine_workflow_routes import router as workflow_router
-from .racine_pipeline_routes import router as pipeline_router
-from .racine_ai_routes import router as ai_router
-from .racine_activity_routes import router as activity_router
-from .racine_dashboard_routes import router as dashboard_router
-from .racine_collaboration_routes import router as collaboration_router
-from .racine_integration_routes import router as integration_router
+
+# Import implemented routes
+try:
+    from .racine_workspace_routes import router as workspace_router
+except ImportError:
+    workspace_router = None
+
+try:
+    from .racine_dashboard_routes import router as dashboard_router
+except ImportError:
+    dashboard_router = None
+
+try:
+    from .racine_collaboration_routes import router as collaboration_router
+except ImportError:
+    collaboration_router = None
+
+# Placeholder for routes not yet implemented
+workflow_router = None
+pipeline_router = None
+ai_router = None
+activity_router = None
+integration_router = None
+
+# Export available routers
+available_routers = [
+    ("orchestration", orchestration_router),
+    ("workspace", workspace_router),
+    ("dashboard", dashboard_router),
+    ("collaboration", collaboration_router),
+]
+
+# Filter out None routers
+available_routers = [(name, router) for name, router in available_routers if router is not None]
 
 __all__ = [
     "orchestration_router",
@@ -40,5 +66,6 @@ __all__ = [
     "activity_router",
     "dashboard_router",
     "collaboration_router",
-    "integration_router"
+    "integration_router",
+    "available_routers"
 ]
