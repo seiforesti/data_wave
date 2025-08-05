@@ -1,1194 +1,1727 @@
 /**
- * Racine Security Utilities
- * =========================
- * 
- * Advanced security utility functions for the Racine Main Manager system
- * that provide comprehensive security management, RBAC enforcement, and
- * security analytics across all 7 data governance groups.
- * 
- * Features:
- * - Multi-layer RBAC enforcement
- * - Cross-group security policies
- * - Real-time security monitoring
- * - Threat detection and prevention
- * - Security audit trails
- * - Compliance validation
- * - Risk assessment and scoring
- * - Security incident management
+ * Advanced Security Utilities
+ * Provides comprehensive security utilities for the Racine Main Manager system
  */
 
 import {
-  UserProfile,
-  RoleDefinition,
-  PermissionSet,
-  SecurityPolicy,
+  RBACRole,
+  RBACPermission,
+  RBACPolicy,
   SecurityAuditLog,
+  SecurityThreat,
+  ComplianceCheck,
+  AccessControlList,
+  SecurityConfiguration,
   ThreatDetection,
-  ComplianceRule,
-  UUID,
-  ISODateString
-} from '../types/racine-core.types';
+  SecurityAlert,
+  AuthenticationEvent,
+  AuthorizationEvent,
+  SecurityMetrics,
+  DataClassification,
+  EncryptionConfig
+} from '../types/security.types';
 
-// =============================================================================
-// TYPES AND INTERFACES
-// =============================================================================
+import { UUID, ISODateString } from '../types/racine-core.types';
 
-export interface SecurityContext {
-  userId: string;
-  roles: string[];
-  permissions: string[];
-  groups: string[];
-  sessionId: string;
-  ipAddress: string;
-  userAgent: string;
-  timestamp: ISODateString;
-  riskScore: number;
-  authenticatedAt: ISODateString;
-  lastActivity: ISODateString;
+// ============================================================================
+// RBAC MANAGEMENT UTILITIES
+// ============================================================================
+
+export class RBACManager {
+  private roles: Map<UUID, RBACRole> = new Map();
+  private permissions: Map<UUID, RBACPermission> = new Map();
+  private policies: Map<UUID, RBACPolicy> = new Map();
+  private userRoles: Map<UUID, UUID[]> = new Map();
+
+  /**
+   * Create new RBAC role
+   */
+  createRole(
+    name: string,
+    description: string,
+    permissions: UUID[],
+    config: {
+      level: 'system' | 'group' | 'resource';
+      priority: number;
+      inheritsFrom?: UUID[];
+      constraints?: Record<string, any>;
+      isActive?: boolean;
+    }
+  ): RBACRole {
+    const roleId = this.generateRoleId();
+    
+    const role: RBACRole = {
+      id: roleId,
+      name,
+      description,
+      permissions,
+      level: config.level,
+      priority: config.priority,
+      inheritsFrom: config.inheritsFrom || [],
+      constraints: config.constraints || {},
+      isActive: config.isActive !== false,
+      metadata: {
+        createdBy: 'system',
+        approvedBy: 'system',
+        lastReviewed: new Date().toISOString() as ISODateString,
+        reviewFrequency: 90, // days
+        usageCount: 0,
+        riskLevel: this.calculateRoleRiskLevel(permissions)
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.roles.set(roleId, role);
+    return role;
+  }
+
+  /**
+   * Create new permission
+   */
+  createPermission(
+    name: string,
+    resource: string,
+    actions: string[],
+    config: {
+      scope: 'global' | 'group' | 'resource' | 'user';
+      conditions?: Record<string, any>;
+      constraints?: Record<string, any>;
+      riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+    }
+  ): RBACPermission {
+    const permissionId = this.generatePermissionId();
+    
+    const permission: RBACPermission = {
+      id: permissionId,
+      name,
+      resource,
+      actions,
+      scope: config.scope,
+      conditions: config.conditions || {},
+      constraints: config.constraints || {},
+      riskLevel: config.riskLevel || 'medium',
+      isActive: true,
+      metadata: {
+        category: this.categorizePermission(resource, actions),
+        dependencies: [],
+        conflicts: [],
+        usageCount: 0,
+        lastUsed: null
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    this.permissions.set(permissionId, permission);
+    return permission;
+  }
+
+  /**
+   * Assign role to user
+   */
+  assignRole(userId: UUID, roleId: UUID, config?: {
+    expiresAt?: Date;
+    conditions?: Record<string, any>;
+    approvedBy?: UUID;
+  }): boolean {
+    const role = this.roles.get(roleId);
+    if (!role || !role.isActive) {
+      throw new Error('Role not found or inactive');
+    }
+
+    const userRoles = this.userRoles.get(userId) || [];
+    if (!userRoles.includes(roleId)) {
+      userRoles.push(roleId);
+      this.userRoles.set(userId, userRoles);
+      
+      // Update role usage
+      role.metadata.usageCount++;
+      role.updatedAt = new Date();
+      
+      return true;
+    }
+
+    return false; // Role already assigned
+  }
+
+  /**
+   * Check if user has permission
+   */
+  hasPermission(
+    userId: UUID,
+    resource: string,
+    action: string,
+    context?: Record<string, any>
+  ): {
+    granted: boolean;
+    reason: string;
+    roles: UUID[];
+    permissions: UUID[];
+  } {
+    const userRoles = this.userRoles.get(userId) || [];
+    const grantedRoles: UUID[] = [];
+    const grantedPermissions: UUID[] = [];
+
+    // Check each role
+    for (const roleId of userRoles) {
+      const role = this.roles.get(roleId);
+      if (!role || !role.isActive) continue;
+
+      // Check role constraints
+      if (!this.evaluateConstraints(role.constraints, context)) continue;
+
+      // Check permissions in role
+      for (const permissionId of role.permissions) {
+        const permission = this.permissions.get(permissionId);
+        if (!permission || !permission.isActive) continue;
+
+        // Check if permission matches resource and action
+        if (this.matchesPermission(permission, resource, action, context)) {
+          grantedRoles.push(roleId);
+          grantedPermissions.push(permissionId);
+          
+          // Update usage tracking
+          permission.metadata.usageCount++;
+          permission.metadata.lastUsed = new Date().toISOString() as ISODateString;
+          
+          return {
+            granted: true,
+            reason: `Granted via role '${role.name}' with permission '${permission.name}'`,
+            roles: grantedRoles,
+            permissions: grantedPermissions
+          };
+        }
+      }
+    }
+
+    return {
+      granted: false,
+      reason: `No matching permissions found for ${action} on ${resource}`,
+      roles: [],
+      permissions: []
+    };
+  }
+
+  /**
+   * Get effective permissions for user
+   */
+  getEffectivePermissions(userId: UUID): {
+    permissions: RBACPermission[];
+    roles: RBACRole[];
+    inheritanceChain: Record<UUID, UUID[]>;
+  } {
+    const userRoles = this.userRoles.get(userId) || [];
+    const effectivePermissions: RBACPermission[] = [];
+    const effectiveRoles: RBACRole[] = [];
+    const inheritanceChain: Record<UUID, UUID[]> = {};
+
+    // Process each role and its inheritance
+    for (const roleId of userRoles) {
+      const role = this.roles.get(roleId);
+      if (!role || !role.isActive) continue;
+
+      const roleChain = this.resolveRoleInheritance(roleId);
+      inheritanceChain[roleId] = roleChain;
+
+      for (const chainRoleId of roleChain) {
+        const chainRole = this.roles.get(chainRoleId);
+        if (!chainRole) continue;
+
+        if (!effectiveRoles.find(r => r.id === chainRoleId)) {
+          effectiveRoles.push(chainRole);
+        }
+
+        // Add permissions from this role
+        for (const permissionId of chainRole.permissions) {
+          const permission = this.permissions.get(permissionId);
+          if (permission && permission.isActive && 
+              !effectivePermissions.find(p => p.id === permissionId)) {
+            effectivePermissions.push(permission);
+          }
+        }
+      }
+    }
+
+    return {
+      permissions: effectivePermissions,
+      roles: effectiveRoles,
+      inheritanceChain
+    };
+  }
+
+  /**
+   * Validate role assignment
+   */
+  validateRoleAssignment(
+    userId: UUID,
+    roleId: UUID,
+    context?: Record<string, any>
+  ): {
+    valid: boolean;
+    issues: string[];
+    recommendations: string[];
+  } {
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+
+    const role = this.roles.get(roleId);
+    if (!role) {
+      issues.push('Role does not exist');
+      return { valid: false, issues, recommendations };
+    }
+
+    if (!role.isActive) {
+      issues.push('Role is inactive');
+      return { valid: false, issues, recommendations };
+    }
+
+    // Check for conflicts with existing roles
+    const userRoles = this.userRoles.get(userId) || [];
+    for (const existingRoleId of userRoles) {
+      const existingRole = this.roles.get(existingRoleId);
+      if (existingRole && this.hasRoleConflict(role, existingRole)) {
+        issues.push(`Conflicts with existing role: ${existingRole.name}`);
+      }
+    }
+
+    // Check for excessive permissions
+    const riskLevel = role.metadata.riskLevel;
+    if (riskLevel === 'critical' || riskLevel === 'high') {
+      recommendations.push('Consider using a role with lower privileges');
+      recommendations.push('Ensure proper approval process is followed');
+    }
+
+    // Check constraints
+    if (!this.evaluateConstraints(role.constraints, context)) {
+      issues.push('Role constraints not satisfied');
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      recommendations
+    };
+  }
+
+  private generateRoleId(): UUID {
+    return `role_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+
+  private generatePermissionId(): UUID {
+    return `perm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+
+  private calculateRoleRiskLevel(permissions: UUID[]): 'low' | 'medium' | 'high' | 'critical' {
+    let riskScore = 0;
+    
+    for (const permissionId of permissions) {
+      const permission = this.permissions.get(permissionId);
+      if (permission) {
+        switch (permission.riskLevel) {
+          case 'critical': riskScore += 4; break;
+          case 'high': riskScore += 3; break;
+          case 'medium': riskScore += 2; break;
+          case 'low': riskScore += 1; break;
+        }
+      }
+    }
+
+    if (riskScore >= 10) return 'critical';
+    if (riskScore >= 6) return 'high';
+    if (riskScore >= 3) return 'medium';
+    return 'low';
+  }
+
+  private categorizePermission(resource: string, actions: string[]): string {
+    if (actions.includes('delete') || actions.includes('admin')) return 'administrative';
+    if (actions.includes('write') || actions.includes('update')) return 'modification';
+    if (actions.includes('read') || actions.includes('view')) return 'read-only';
+    return 'other';
+  }
+
+  private evaluateConstraints(constraints: Record<string, any>, context?: Record<string, any>): boolean {
+    if (!context || Object.keys(constraints).length === 0) return true;
+
+    return Object.entries(constraints).every(([key, value]) => {
+      const contextValue = context[key];
+      
+      if (Array.isArray(value)) {
+        return value.includes(contextValue);
+      }
+      
+      if (typeof value === 'object' && value !== null) {
+        if (value.min !== undefined && contextValue < value.min) return false;
+        if (value.max !== undefined && contextValue > value.max) return false;
+        return true;
+      }
+      
+      return contextValue === value;
+    });
+  }
+
+  private matchesPermission(
+    permission: RBACPermission,
+    resource: string,
+    action: string,
+    context?: Record<string, any>
+  ): boolean {
+    // Check resource match (exact or wildcard)
+    if (permission.resource !== '*' && permission.resource !== resource) {
+      // Check for pattern matching
+      if (!this.matchesPattern(permission.resource, resource)) {
+        return false;
+      }
+    }
+
+    // Check action match
+    if (!permission.actions.includes('*') && !permission.actions.includes(action)) {
+      return false;
+    }
+
+    // Check conditions
+    if (!this.evaluateConstraints(permission.conditions, context)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private matchesPattern(pattern: string, value: string): boolean {
+    // Simple wildcard matching
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    return regex.test(value);
+  }
+
+  private resolveRoleInheritance(roleId: UUID, visited: Set<UUID> = new Set()): UUID[] {
+    if (visited.has(roleId)) {
+      return []; // Circular dependency
+    }
+
+    visited.add(roleId);
+    const role = this.roles.get(roleId);
+    if (!role) return [];
+
+    const chain = [roleId];
+    
+    for (const parentRoleId of role.inheritsFrom) {
+      const parentChain = this.resolveRoleInheritance(parentRoleId, new Set(visited));
+      chain.push(...parentChain);
+    }
+
+    return chain;
+  }
+
+  private hasRoleConflict(role1: RBACRole, role2: RBACRole): boolean {
+    // Check for mutually exclusive roles
+    const conflictingPairs = [
+      ['admin', 'user'],
+      ['read-only', 'write'],
+      ['system', 'guest']
+    ];
+
+    return conflictingPairs.some(([type1, type2]) =>
+      (role1.name.toLowerCase().includes(type1) && role2.name.toLowerCase().includes(type2)) ||
+      (role1.name.toLowerCase().includes(type2) && role2.name.toLowerCase().includes(type1))
+    );
+  }
 }
 
-export interface AccessRequest {
-  userId: string;
-  resource: string;
-  action: string;
-  context: Record<string, any>;
-  timestamp: ISODateString;
-  metadata: Record<string, any>;
+// ============================================================================
+// ACCESS CONTROL UTILITIES
+// ============================================================================
+
+export class AccessControlManager {
+  private acls: Map<string, AccessControlList> = new Map();
+  private accessHistory: Map<UUID, AuthorizationEvent[]> = new Map();
+
+  /**
+   * Create access control list for resource
+   */
+  createACL(
+    resourceId: string,
+    resourceType: string,
+    ownerId: UUID,
+    config: {
+      inheritFrom?: string;
+      defaultPermissions?: Record<string, string[]>;
+      restrictions?: Record<string, any>;
+    }
+  ): AccessControlList {
+    const acl: AccessControlList = {
+      resourceId,
+      resourceType,
+      ownerId,
+      permissions: {
+        read: [ownerId],
+        write: [ownerId],
+        delete: [ownerId],
+        admin: [ownerId]
+      },
+      inheritFrom: config.inheritFrom,
+      restrictions: config.restrictions || {},
+      metadata: {
+        createdBy: ownerId,
+        lastModified: new Date().toISOString() as ISODateString,
+        version: 1,
+        accessCount: 0,
+        lastAccessed: null
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Apply default permissions
+    if (config.defaultPermissions) {
+      Object.entries(config.defaultPermissions).forEach(([permission, users]) => {
+        acl.permissions[permission] = [...new Set([...acl.permissions[permission] || [], ...users])];
+      });
+    }
+
+    this.acls.set(resourceId, acl);
+    return acl;
+  }
+
+  /**
+   * Check resource access
+   */
+  checkAccess(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): {
+    granted: boolean;
+    reason: string;
+    effectivePermissions: string[];
+    inheritanceChain?: string[];
+  } {
+    const acl = this.acls.get(resourceId);
+    if (!acl) {
+      return {
+        granted: false,
+        reason: 'Resource not found',
+        effectivePermissions: []
+      };
+    }
+
+    // Check direct permissions
+    const directPermissions = this.getDirectPermissions(acl, userId);
+    if (directPermissions.includes(permission)) {
+      this.logAccess(resourceId, userId, permission, true, 'Direct permission');
+      return {
+        granted: true,
+        reason: 'Direct permission granted',
+        effectivePermissions: directPermissions
+      };
+    }
+
+    // Check inherited permissions
+    if (acl.inheritFrom) {
+      const inheritedResult = this.checkInheritedAccess(acl.inheritFrom, userId, permission, context);
+      if (inheritedResult.granted) {
+        this.logAccess(resourceId, userId, permission, true, 'Inherited permission');
+        return {
+          granted: true,
+          reason: 'Inherited permission granted',
+          effectivePermissions: [...directPermissions, ...inheritedResult.effectivePermissions],
+          inheritanceChain: [acl.inheritFrom, ...(inheritedResult.inheritanceChain || [])]
+        };
+      }
+    }
+
+    // Check restrictions
+    if (this.hasRestriction(acl, userId, permission, context)) {
+      this.logAccess(resourceId, userId, permission, false, 'Access restricted');
+      return {
+        granted: false,
+        reason: 'Access restricted by policy',
+        effectivePermissions: directPermissions
+      };
+    }
+
+    this.logAccess(resourceId, userId, permission, false, 'Permission not found');
+    return {
+      granted: false,
+      reason: 'Permission not granted',
+      effectivePermissions: directPermissions
+    };
+  }
+
+  /**
+   * Grant permission to user
+   */
+  grantPermission(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    grantedBy: UUID,
+    config?: {
+      expiresAt?: Date;
+      conditions?: Record<string, any>;
+    }
+  ): boolean {
+    const acl = this.acls.get(resourceId);
+    if (!acl) throw new Error('Resource not found');
+
+    if (!acl.permissions[permission]) {
+      acl.permissions[permission] = [];
+    }
+
+    if (!acl.permissions[permission].includes(userId)) {
+      acl.permissions[permission].push(userId);
+      acl.metadata.lastModified = new Date().toISOString() as ISODateString;
+      acl.metadata.version++;
+      acl.updatedAt = new Date();
+      
+      this.logAccess(resourceId, grantedBy, 'grant_permission', true, `Granted ${permission} to ${userId}`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Revoke permission from user
+   */
+  revokePermission(
+    resourceId: string,
+    userId: UUID,
+    permission: string,
+    revokedBy: UUID
+  ): boolean {
+    const acl = this.acls.get(resourceId);
+    if (!acl) throw new Error('Resource not found');
+
+    if (acl.permissions[permission]) {
+      const index = acl.permissions[permission].indexOf(userId);
+      if (index > -1) {
+        acl.permissions[permission].splice(index, 1);
+        acl.metadata.lastModified = new Date().toISOString() as ISODateString;
+        acl.metadata.version++;
+        acl.updatedAt = new Date();
+        
+        this.logAccess(resourceId, revokedBy, 'revoke_permission', true, `Revoked ${permission} from ${userId}`);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get user's access summary
+   */
+  getUserAccessSummary(userId: UUID): {
+    resources: Array<{
+      resourceId: string;
+      resourceType: string;
+      permissions: string[];
+      source: 'direct' | 'inherited';
+    }>;
+    totalResources: number;
+    permissionCounts: Record<string, number>;
+    recentAccess: AuthorizationEvent[];
+  } {
+    const resources: Array<{
+      resourceId: string;
+      resourceType: string;
+      permissions: string[];
+      source: 'direct' | 'inherited';
+    }> = [];
+
+    const permissionCounts: Record<string, number> = {};
+
+    // Check all ACLs
+    this.acls.forEach((acl, resourceId) => {
+      const directPermissions = this.getDirectPermissions(acl, userId);
+      
+      if (directPermissions.length > 0) {
+        resources.push({
+          resourceId,
+          resourceType: acl.resourceType,
+          permissions: directPermissions,
+          source: 'direct'
+        });
+
+        directPermissions.forEach(permission => {
+          permissionCounts[permission] = (permissionCounts[permission] || 0) + 1;
+        });
+      }
+    });
+
+    const recentAccess = this.accessHistory.get(userId) || [];
+
+    return {
+      resources,
+      totalResources: resources.length,
+      permissionCounts,
+      recentAccess: recentAccess.slice(-50) // Last 50 access events
+    };
+  }
+
+  private getDirectPermissions(acl: AccessControlList, userId: UUID): string[] {
+    const permissions: string[] = [];
+    
+    Object.entries(acl.permissions).forEach(([permission, users]) => {
+      if (users.includes(userId)) {
+        permissions.push(permission);
+      }
+    });
+
+    return permissions;
+  }
+
+  private checkInheritedAccess(
+    parentResourceId: string,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): {
+    granted: boolean;
+    effectivePermissions: string[];
+    inheritanceChain?: string[];
+  } {
+    const parentResult = this.checkAccess(parentResourceId, userId, permission, context);
+    return {
+      granted: parentResult.granted,
+      effectivePermissions: parentResult.effectivePermissions,
+      inheritanceChain: parentResult.inheritanceChain
+    };
+  }
+
+  private hasRestriction(
+    acl: AccessControlList,
+    userId: UUID,
+    permission: string,
+    context?: Record<string, any>
+  ): boolean {
+    if (!acl.restrictions || Object.keys(acl.restrictions).length === 0) {
+      return false;
+    }
+
+    // Check time-based restrictions
+    if (acl.restrictions.timeRestrictions) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDay = now.getDay();
+      
+      const timeRestrictions = acl.restrictions.timeRestrictions;
+      if (timeRestrictions.allowedHours && !timeRestrictions.allowedHours.includes(currentHour)) {
+        return true;
+      }
+      if (timeRestrictions.allowedDays && !timeRestrictions.allowedDays.includes(currentDay)) {
+        return true;
+      }
+    }
+
+    // Check IP-based restrictions
+    if (acl.restrictions.ipRestrictions && context?.clientIP) {
+      const allowedIPs = acl.restrictions.ipRestrictions.allowedIPs || [];
+      const blockedIPs = acl.restrictions.ipRestrictions.blockedIPs || [];
+      
+      if (blockedIPs.includes(context.clientIP)) {
+        return true;
+      }
+      if (allowedIPs.length > 0 && !allowedIPs.includes(context.clientIP)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private logAccess(
+    resourceId: string,
+    userId: UUID,
+    action: string,
+    granted: boolean,
+    reason: string
+  ): void {
+    const event: AuthorizationEvent = {
+      id: `auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+      userId,
+      resourceId,
+      action,
+      granted,
+      reason,
+      timestamp: new Date().toISOString() as ISODateString,
+      metadata: {
+        userAgent: 'system',
+        ipAddress: 'unknown',
+        sessionId: 'system'
+      }
+    };
+
+    const userHistory = this.accessHistory.get(userId) || [];
+    userHistory.push(event);
+    
+    // Keep only last 1000 events per user
+    if (userHistory.length > 1000) {
+      userHistory.splice(0, userHistory.length - 1000);
+    }
+    
+    this.accessHistory.set(userId, userHistory);
+
+    // Update ACL access tracking
+    const acl = this.acls.get(resourceId);
+    if (acl) {
+      acl.metadata.accessCount++;
+      acl.metadata.lastAccessed = new Date().toISOString() as ISODateString;
+    }
+  }
 }
 
-export interface AccessDecision {
-  granted: boolean;
-  reason: string;
-  conditions: string[];
-  expiry?: ISODateString;
-  auditRequired: boolean;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-}
+// ============================================================================
+// SECURITY AUDIT UTILITIES
+// ============================================================================
 
-export interface SecurityThreat {
-  id: string;
-  type: 'brute_force' | 'anomalous_access' | 'privilege_escalation' | 'data_exfiltration' | 'suspicious_behavior';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  userId?: string;
-  resource?: string;
-  indicators: ThreatIndicator[];
-  confidence: number;
-  detectedAt: ISODateString;
-  status: 'detected' | 'investigating' | 'mitigated' | 'false_positive';
-  mitigationActions: string[];
-}
+export class SecurityAuditManager {
+  private auditLogs: Map<UUID, SecurityAuditLog> = new Map();
+  private auditConfig: Record<string, any> = {};
 
-export interface ThreatIndicator {
-  type: string;
-  value: string;
-  confidence: number;
-  source: string;
-  timestamp: ISODateString;
-}
+  /**
+   * Log security event
+   */
+  logSecurityEvent(
+    eventType: 'authentication' | 'authorization' | 'data_access' | 'configuration_change' | 'security_violation',
+    severity: 'low' | 'medium' | 'high' | 'critical',
+    description: string,
+    config: {
+      userId?: UUID;
+      resourceId?: string;
+      action?: string;
+      outcome: 'success' | 'failure' | 'warning';
+      metadata?: Record<string, any>;
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ): SecurityAuditLog {
+    const logId = this.generateAuditId();
+    
+    const auditLog: SecurityAuditLog = {
+      id: logId,
+      eventType,
+      severity,
+      description,
+      userId: config.userId,
+      resourceId: config.resourceId,
+      action: config.action,
+      outcome: config.outcome,
+      timestamp: new Date().toISOString() as ISODateString,
+      ipAddress: config.ipAddress || 'unknown',
+      userAgent: config.userAgent || 'unknown',
+      metadata: config.metadata || {},
+      tags: this.generateTags(eventType, severity, config.outcome),
+      retention: this.calculateRetention(severity, eventType),
+      indexed: true,
+      processed: false
+    };
 
-export interface SecurityMetrics {
-  totalUsers: number;
-  activeUsers: number;
-  failedLogins: number;
-  successfulLogins: number;
-  privilegedAccess: number;
-  threatsDetected: number;
-  incidentsResolved: number;
-  complianceScore: number;
-  riskScore: number;
-  auditCoverage: number;
-}
+    this.auditLogs.set(logId, auditLog);
+    
+    // Trigger alerts for high-severity events
+    if (severity === 'critical' || severity === 'high') {
+      this.triggerSecurityAlert(auditLog);
+    }
 
-export interface RiskAssessment {
-  userId: string;
-  overallRisk: number;
-  riskFactors: RiskFactor[];
-  recommendations: SecurityRecommendation[];
-  lastAssessed: ISODateString;
-  validUntil: ISODateString;
-}
+    return auditLog;
+  }
 
-export interface RiskFactor {
-  type: string;
-  description: string;
-  weight: number;
-  score: number;
-  mitigations: string[];
-}
-
-export interface SecurityRecommendation {
-  type: 'policy' | 'training' | 'technical' | 'procedural';
-  priority: number;
-  title: string;
-  description: string;
-  actionable: boolean;
-  estimatedEffort: string;
-  expectedImpact: string;
-}
-
-export interface ComplianceValidation {
-  ruleId: string;
-  ruleName: string;
-  status: 'compliant' | 'non_compliant' | 'warning' | 'unknown';
-  score: number;
-  findings: ComplianceFinding[];
-  lastChecked: ISODateString;
-  nextCheck: ISODateString;
-}
-
-export interface ComplianceFinding {
-  type: 'violation' | 'gap' | 'risk' | 'improvement';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  description: string;
-  remediation: string;
-  dueDate?: ISODateString;
-}
-
-export interface SecurityIncident {
-  id: string;
-  type: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  title: string;
-  description: string;
-  affectedUsers: string[];
-  affectedResources: string[];
-  detectedAt: ISODateString;
-  reportedBy: string;
-  assignedTo?: string;
-  status: 'open' | 'investigating' | 'contained' | 'resolved' | 'closed';
-  timeline: IncidentTimelineEntry[];
-  impact: IncidentImpact;
-  rootCause?: string;
-  lessons: string[];
-}
-
-export interface IncidentTimelineEntry {
-  timestamp: ISODateString;
-  action: string;
-  actor: string;
-  description: string;
-  evidence?: string[];
-}
-
-export interface IncidentImpact {
-  usersAffected: number;
-  dataCompromised: boolean;
-  servicesImpacted: string[];
-  financialImpact?: number;
-  reputationalImpact: 'none' | 'low' | 'medium' | 'high';
-  regulatoryImpact: boolean;
-}
-
-// =============================================================================
-// RBAC ENFORCEMENT UTILITIES
-// =============================================================================
-
-/**
- * Check if user has permission to perform action on resource
- */
-export const checkPermission = (
-  securityContext: SecurityContext,
-  resource: string,
-  action: string,
-  roleDefinitions: RoleDefinition[],
-  securityPolicies: SecurityPolicy[]
-): AccessDecision => {
-  const accessRequest: AccessRequest = {
-    userId: securityContext.userId,
-    resource,
-    action,
-    context: {
-      roles: securityContext.roles,
-      groups: securityContext.groups,
-      sessionId: securityContext.sessionId,
-      ipAddress: securityContext.ipAddress
+  /**
+   * Query audit logs
+   */
+  queryAuditLogs(
+    filters: {
+      eventType?: string[];
+      severity?: string[];
+      userId?: UUID;
+      resourceId?: string;
+      outcome?: string[];
+      dateRange?: { start: Date; end: Date };
+      ipAddress?: string;
+      tags?: string[];
     },
-    timestamp: new Date().toISOString(),
-    metadata: {}
-  };
+    options: {
+      limit?: number;
+      offset?: number;
+      sortBy?: 'timestamp' | 'severity';
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ): {
+    logs: SecurityAuditLog[];
+    total: number;
+    aggregations: {
+      eventTypes: Record<string, number>;
+      severities: Record<string, number>;
+      outcomes: Record<string, number>;
+      topUsers: Array<{ userId: UUID; count: number }>;
+    };
+  } {
+    let filteredLogs = Array.from(this.auditLogs.values());
 
-  // Check role-based permissions
-  const rolePermissions = getRolePermissions(securityContext.roles, roleDefinitions);
-  const hasRolePermission = checkRolePermission(rolePermissions, resource, action);
+    // Apply filters
+    if (filters.eventType) {
+      filteredLogs = filteredLogs.filter(log => filters.eventType!.includes(log.eventType));
+    }
+    
+    if (filters.severity) {
+      filteredLogs = filteredLogs.filter(log => filters.severity!.includes(log.severity));
+    }
+    
+    if (filters.userId) {
+      filteredLogs = filteredLogs.filter(log => log.userId === filters.userId);
+    }
+    
+    if (filters.resourceId) {
+      filteredLogs = filteredLogs.filter(log => log.resourceId === filters.resourceId);
+    }
+    
+    if (filters.outcome) {
+      filteredLogs = filteredLogs.filter(log => filters.outcome!.includes(log.outcome));
+    }
+    
+    if (filters.dateRange) {
+      filteredLogs = filteredLogs.filter(log => {
+        const logDate = new Date(log.timestamp);
+        return logDate >= filters.dateRange!.start && logDate <= filters.dateRange!.end;
+      });
+    }
+    
+    if (filters.ipAddress) {
+      filteredLogs = filteredLogs.filter(log => log.ipAddress === filters.ipAddress);
+    }
+    
+    if (filters.tags) {
+      filteredLogs = filteredLogs.filter(log => 
+        filters.tags!.some(tag => log.tags.includes(tag))
+      );
+    }
 
-  // Check policy-based permissions
-  const policyDecision = evaluateSecurityPolicies(accessRequest, securityPolicies);
+    // Sort logs
+    const sortBy = options.sortBy || 'timestamp';
+    const sortOrder = options.sortOrder || 'desc';
+    
+    filteredLogs.sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'timestamp') {
+        comparison = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      } else if (sortBy === 'severity') {
+        const severityOrder = { low: 1, medium: 2, high: 3, critical: 4 };
+        comparison = severityOrder[a.severity] - severityOrder[b.severity];
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
 
-  // Check risk-based conditions
-  const riskAssessment = assessAccessRisk(securityContext, resource, action);
+    // Calculate aggregations
+    const aggregations = this.calculateAggregations(filteredLogs);
 
-  // Make final decision
-  const granted = hasRolePermission && policyDecision.allowed && riskAssessment.acceptable;
+    // Apply pagination
+    const offset = options.offset || 0;
+    const limit = options.limit || 100;
+    const paginatedLogs = filteredLogs.slice(offset, offset + limit);
 
-  return {
-    granted,
-    reason: granted 
-      ? 'Access granted' 
-      : `Access denied: ${!hasRolePermission ? 'Insufficient role permissions' : !policyDecision.allowed ? policyDecision.reason : riskAssessment.reason}`,
-    conditions: [...(policyDecision.conditions || []), ...(riskAssessment.conditions || [])],
-    expiry: calculateAccessExpiry(securityContext, resource, action),
-    auditRequired: isAuditRequired(resource, action, securityContext.roles),
-    riskLevel: riskAssessment.level
-  };
-};
+    return {
+      logs: paginatedLogs,
+      total: filteredLogs.length,
+      aggregations
+    };
+  }
 
-/**
- * Validate cross-group access permissions
- */
-export const validateCrossGroupAccess = (
-  securityContext: SecurityContext,
-  sourceGroup: string,
-  targetGroup: string,
-  operation: string,
-  roleDefinitions: RoleDefinition[]
-): AccessDecision => {
-  // Check if user has permissions in both groups
-  const sourcePermissions = getUserGroupPermissions(securityContext, sourceGroup, roleDefinitions);
-  const targetPermissions = getUserGroupPermissions(securityContext, targetGroup, roleDefinitions);
+  /**
+   * Generate security report
+   */
+  generateSecurityReport(
+    timeframe: { start: Date; end: Date },
+    config: {
+      includeMetrics?: boolean;
+      includeTrends?: boolean;
+      includeRecommendations?: boolean;
+      format?: 'summary' | 'detailed';
+    } = {}
+  ): {
+    summary: {
+      totalEvents: number;
+      criticalEvents: number;
+      failureRate: number;
+      topThreats: string[];
+      affectedUsers: number;
+      affectedResources: number;
+    };
+    metrics?: SecurityMetrics;
+    trends?: Array<{
+      metric: string;
+      trend: 'increasing' | 'decreasing' | 'stable';
+      change: number;
+    }>;
+    recommendations?: string[];
+    details?: {
+      eventBreakdown: Record<string, number>;
+      severityDistribution: Record<string, number>;
+      timelineAnalysis: Array<{ date: string; events: number; failures: number }>;
+    };
+  } {
+    const logs = this.queryAuditLogs({
+      dateRange: timeframe
+    }, { limit: 10000 });
 
-  // Check cross-group operation permissions
-  const crossGroupPermission = `cross-group:${operation}`;
-  const hasCrossGroupPermission = sourcePermissions.includes(crossGroupPermission) ||
-                                  targetPermissions.includes(crossGroupPermission) ||
-                                  securityContext.permissions.includes(crossGroupPermission);
+    const summary = {
+      totalEvents: logs.total,
+      criticalEvents: logs.logs.filter(log => log.severity === 'critical').length,
+      failureRate: logs.total > 0 ? 
+        logs.logs.filter(log => log.outcome === 'failure').length / logs.total * 100 : 0,
+      topThreats: this.identifyTopThreats(logs.logs),
+      affectedUsers: new Set(logs.logs.map(log => log.userId).filter(Boolean)).size,
+      affectedResources: new Set(logs.logs.map(log => log.resourceId).filter(Boolean)).size
+    };
 
-  // Assess risk of cross-group operation
-  const riskScore = calculateCrossGroupRisk(sourceGroup, targetGroup, operation, securityContext);
+    const result: any = { summary };
 
-  const granted = hasCrossGroupPermission && riskScore < 0.7; // Risk threshold
+    if (config.includeMetrics) {
+      result.metrics = this.calculateSecurityMetrics(logs.logs);
+    }
 
-  return {
-    granted,
-    reason: granted 
-      ? 'Cross-group access granted'
-      : !hasCrossGroupPermission 
-        ? 'Insufficient cross-group permissions'
-        : 'Risk level too high for cross-group operation',
-    conditions: riskScore > 0.5 ? ['Additional monitoring required'] : [],
-    auditRequired: true, // Always audit cross-group operations
-    riskLevel: riskScore > 0.8 ? 'critical' : riskScore > 0.6 ? 'high' : riskScore > 0.4 ? 'medium' : 'low'
-  };
-};
+    if (config.includeTrends) {
+      result.trends = this.analyzeTrends(logs.logs, timeframe);
+    }
 
-/**
- * Enforce data classification access controls
- */
-export const enforceDataClassificationAccess = (
-  securityContext: SecurityContext,
-  dataClassification: string,
-  operation: 'read' | 'write' | 'delete' | 'share',
-  roleDefinitions: RoleDefinition[]
-): AccessDecision => {
-  const requiredClearance = getRequiredClearanceLevel(dataClassification, operation);
-  const userClearance = getUserClearanceLevel(securityContext, roleDefinitions);
+    if (config.includeRecommendations) {
+      result.recommendations = this.generateRecommendations(logs.logs, summary);
+    }
 
-  const granted = userClearance >= requiredClearance;
+    if (config.format === 'detailed') {
+      result.details = {
+        eventBreakdown: logs.aggregations.eventTypes,
+        severityDistribution: logs.aggregations.severities,
+        timelineAnalysis: this.generateTimelineAnalysis(logs.logs, timeframe)
+      };
+    }
 
-  return {
-    granted,
-    reason: granted 
-      ? `Access granted for ${dataClassification} data`
-      : `Insufficient clearance level for ${dataClassification} data`,
-    conditions: granted && requiredClearance > 2 ? ['Data handling restrictions apply'] : [],
-    auditRequired: requiredClearance > 1, // Audit sensitive data access
-    riskLevel: requiredClearance > 3 ? 'high' : requiredClearance > 2 ? 'medium' : 'low'
-  };
-};
+    return result;
+  }
 
-// =============================================================================
+  private generateAuditId(): UUID {
+    return `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+
+  private generateTags(
+    eventType: string,
+    severity: string,
+    outcome: string
+  ): string[] {
+    const tags = [eventType, severity, outcome];
+    
+    // Add contextual tags
+    if (severity === 'critical' || severity === 'high') {
+      tags.push('high-priority');
+    }
+    
+    if (outcome === 'failure') {
+      tags.push('security-incident');
+    }
+    
+    if (eventType === 'authentication' && outcome === 'failure') {
+      tags.push('auth-failure');
+    }
+
+    return tags;
+  }
+
+  private calculateRetention(severity: string, eventType: string): number {
+    // Retention in days
+    const retentionPolicies: Record<string, number> = {
+      critical: 2555, // 7 years
+      high: 1825,     // 5 years
+      medium: 1095,   // 3 years
+      low: 365        // 1 year
+    };
+
+    return retentionPolicies[severity] || 365;
+  }
+
+  private triggerSecurityAlert(auditLog: SecurityAuditLog): void {
+    // Implementation would trigger real-time alerts
+    console.warn(`SECURITY ALERT: ${auditLog.severity.toUpperCase()} - ${auditLog.description}`);
+  }
+
+  private calculateAggregations(logs: SecurityAuditLog[]): {
+    eventTypes: Record<string, number>;
+    severities: Record<string, number>;
+    outcomes: Record<string, number>;
+    topUsers: Array<{ userId: UUID; count: number }>;
+  } {
+    const eventTypes: Record<string, number> = {};
+    const severities: Record<string, number> = {};
+    const outcomes: Record<string, number> = {};
+    const userCounts: Record<string, number> = {};
+
+    logs.forEach(log => {
+      eventTypes[log.eventType] = (eventTypes[log.eventType] || 0) + 1;
+      severities[log.severity] = (severities[log.severity] || 0) + 1;
+      outcomes[log.outcome] = (outcomes[log.outcome] || 0) + 1;
+      
+      if (log.userId) {
+        userCounts[log.userId] = (userCounts[log.userId] || 0) + 1;
+      }
+    });
+
+    const topUsers = Object.entries(userCounts)
+      .map(([userId, count]) => ({ userId: userId as UUID, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return { eventTypes, severities, outcomes, topUsers };
+  }
+
+  private identifyTopThreats(logs: SecurityAuditLog[]): string[] {
+    const threatCounts: Record<string, number> = {};
+    
+    logs.forEach(log => {
+      if (log.outcome === 'failure' || log.severity === 'critical' || log.severity === 'high') {
+        const threat = `${log.eventType}_${log.action || 'unknown'}`;
+        threatCounts[threat] = (threatCounts[threat] || 0) + 1;
+      }
+    });
+
+    return Object.entries(threatCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([threat]) => threat);
+  }
+
+  private calculateSecurityMetrics(logs: SecurityAuditLog[]): SecurityMetrics {
+    const total = logs.length;
+    const failures = logs.filter(log => log.outcome === 'failure').length;
+    const criticalEvents = logs.filter(log => log.severity === 'critical').length;
+    const highEvents = logs.filter(log => log.severity === 'high').length;
+
+    return {
+      totalEvents: total,
+      failureRate: total > 0 ? (failures / total) * 100 : 0,
+      criticalEventRate: total > 0 ? (criticalEvents / total) * 100 : 0,
+      highRiskEventRate: total > 0 ? ((criticalEvents + highEvents) / total) * 100 : 0,
+      averageEventsPerDay: total / 30, // Assuming 30-day period
+      uniqueUsers: new Set(logs.map(log => log.userId).filter(Boolean)).size,
+      uniqueResources: new Set(logs.map(log => log.resourceId).filter(Boolean)).size,
+      authenticationFailures: logs.filter(log => 
+        log.eventType === 'authentication' && log.outcome === 'failure'
+      ).length,
+      authorizationFailures: logs.filter(log => 
+        log.eventType === 'authorization' && log.outcome === 'failure'
+      ).length
+    };
+  }
+
+  private analyzeTrends(
+    logs: SecurityAuditLog[],
+    timeframe: { start: Date; end: Date }
+  ): Array<{ metric: string; trend: 'increasing' | 'decreasing' | 'stable'; change: number }> {
+    // Simplified trend analysis - would be more sophisticated in production
+    const midpoint = new Date((timeframe.start.getTime() + timeframe.end.getTime()) / 2);
+    
+    const firstHalf = logs.filter(log => new Date(log.timestamp) < midpoint);
+    const secondHalf = logs.filter(log => new Date(log.timestamp) >= midpoint);
+
+    const trends = [];
+
+    // Total events trend
+    const totalChange = ((secondHalf.length - firstHalf.length) / Math.max(firstHalf.length, 1)) * 100;
+    trends.push({
+      metric: 'Total Events',
+      trend: Math.abs(totalChange) < 5 ? 'stable' : totalChange > 0 ? 'increasing' : 'decreasing',
+      change: Math.abs(totalChange)
+    });
+
+    // Failure rate trend
+    const firstHalfFailures = firstHalf.filter(log => log.outcome === 'failure').length;
+    const secondHalfFailures = secondHalf.filter(log => log.outcome === 'failure').length;
+    const failureChange = ((secondHalfFailures - firstHalfFailures) / Math.max(firstHalfFailures, 1)) * 100;
+    
+    trends.push({
+      metric: 'Failure Rate',
+      trend: Math.abs(failureChange) < 5 ? 'stable' : failureChange > 0 ? 'increasing' : 'decreasing',
+      change: Math.abs(failureChange)
+    });
+
+    return trends;
+  }
+
+  private generateRecommendations(logs: SecurityAuditLog[], summary: any): string[] {
+    const recommendations: string[] = [];
+
+    if (summary.failureRate > 10) {
+      recommendations.push('High failure rate detected - review authentication and authorization mechanisms');
+    }
+
+    if (summary.criticalEvents > 0) {
+      recommendations.push('Critical security events detected - immediate investigation required');
+    }
+
+    const authFailures = logs.filter(log => 
+      log.eventType === 'authentication' && log.outcome === 'failure'
+    ).length;
+    
+    if (authFailures > 50) {
+      recommendations.push('High authentication failure rate - consider implementing rate limiting and account lockout policies');
+    }
+
+    const uniqueIPs = new Set(logs.map(log => log.ipAddress)).size;
+    if (uniqueIPs > summary.affectedUsers * 2) {
+      recommendations.push('Unusual IP activity detected - review for potential distributed attacks');
+    }
+
+    return recommendations;
+  }
+
+  private generateTimelineAnalysis(
+    logs: SecurityAuditLog[],
+    timeframe: { start: Date; end: Date }
+  ): Array<{ date: string; events: number; failures: number }> {
+    const timeline: Array<{ date: string; events: number; failures: number }> = [];
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    for (let date = new Date(timeframe.start); date <= timeframe.end; date = new Date(date.getTime() + dayMs)) {
+      const dateStr = date.toISOString().split('T')[0];
+      const dayLogs = logs.filter(log => log.timestamp.startsWith(dateStr));
+      
+      timeline.push({
+        date: dateStr,
+        events: dayLogs.length,
+        failures: dayLogs.filter(log => log.outcome === 'failure').length
+      });
+    }
+
+    return timeline;
+  }
+}
+
+// ============================================================================
 // THREAT DETECTION UTILITIES
-// =============================================================================
+// ============================================================================
 
-/**
- * Detect security threats based on user behavior
- */
-export const detectSecurityThreats = (
-  securityContext: SecurityContext,
-  recentActivities: SecurityAuditLog[],
-  baselineProfile: any
-): SecurityThreat[] => {
-  const threats: SecurityThreat[] = [];
+export class ThreatDetectionEngine {
+  private threats: Map<UUID, SecurityThreat> = new Map();
+  private detectionRules: Map<string, any> = new Map();
 
-  // Detect brute force attempts
-  const bruteForceThreats = detectBruteForceAttempts(recentActivities);
-  threats.push(...bruteForceThreats);
+  /**
+   * Analyze events for security threats
+   */
+  analyzeEvents(
+    events: SecurityAuditLog[],
+    config: {
+      sensitivity: 'low' | 'medium' | 'high';
+      timeWindow: number; // minutes
+      enableMLDetection?: boolean;
+    }
+  ): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    
+    // Brute force detection
+    const bruteForceThreats = this.detectBruteForce(events, config.timeWindow);
+    threats.push(...bruteForceThreats);
 
-  // Detect anomalous access patterns
-  const anomalousThreats = detectAnomalousAccess(securityContext, recentActivities, baselineProfile);
-  threats.push(...anomalousThreats);
+    // Suspicious access patterns
+    const accessThreats = this.detectSuspiciousAccess(events, config.sensitivity);
+    threats.push(...accessThreats);
 
-  // Detect privilege escalation attempts
-  const privilegeThreats = detectPrivilegeEscalation(securityContext, recentActivities);
-  threats.push(...privilegeThreats);
+    // Privilege escalation
+    const privilegeThreats = this.detectPrivilegeEscalation(events);
+    threats.push(...privilegeThreats);
 
-  // Detect suspicious data access
-  const dataThreats = detectSuspiciousDataAccess(recentActivities);
-  threats.push(...dataThreats);
+    // Data exfiltration
+    const exfiltrationThreats = this.detectDataExfiltration(events);
+    threats.push(...exfiltrationThreats);
 
-  return threats.sort((a, b) => {
-    const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-    return severityOrder[b.severity] - severityOrder[a.severity];
-  });
+    // Store detected threats
+    threats.forEach(threat => {
+      this.threats.set(threat.id, threat);
+    });
+
+    return threats;
+  }
+
+  /**
+   * Get threat summary
+   */
+  getThreatSummary(timeframe?: { start: Date; end: Date }): {
+    totalThreats: number;
+    activethreats: number;
+    threatsByType: Record<string, number>;
+    threatsBySeverity: Record<string, number>;
+    topThreats: SecurityThreat[];
+    riskScore: number;
+  } {
+    let threats = Array.from(this.threats.values());
+    
+    if (timeframe) {
+      threats = threats.filter(threat => {
+        const threatTime = new Date(threat.detectedAt);
+        return threatTime >= timeframe.start && threatTime <= timeframe.end;
+      });
+    }
+
+    const activeThreats = threats.filter(threat => threat.status === 'active');
+    
+    const threatsByType: Record<string, number> = {};
+    const threatsBySeverity: Record<string, number> = {};
+    
+    threats.forEach(threat => {
+      threatsByType[threat.type] = (threatsByType[threat.type] || 0) + 1;
+      threatsBySeverity[threat.severity] = (threatsBySeverity[threat.severity] || 0) + 1;
+    });
+
+    const topThreats = threats
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 10);
+
+    const riskScore = this.calculateOverallRiskScore(threats);
+
+    return {
+      totalThreats: threats.length,
+      activethreats: activeThreats.length,
+      threatsByType,
+      threatsBySeverity,
+      topThreats,
+      riskScore
+    };
+  }
+
+  private detectBruteForce(events: SecurityAuditLog[], timeWindowMinutes: number): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    const timeWindow = timeWindowMinutes * 60 * 1000; // Convert to milliseconds
+    const threshold = 10; // Failed attempts threshold
+
+    // Group by user and IP
+    const attempts: Record<string, SecurityAuditLog[]> = {};
+    
+    events.forEach(event => {
+      if (event.eventType === 'authentication' && event.outcome === 'failure') {
+        const key = `${event.userId || 'unknown'}_${event.ipAddress}`;
+        if (!attempts[key]) attempts[key] = [];
+        attempts[key].push(event);
+      }
+    });
+
+    // Check for brute force patterns
+    Object.entries(attempts).forEach(([key, userAttempts]) => {
+      const [userId, ipAddress] = key.split('_');
+      
+      // Sort by timestamp
+      userAttempts.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // Check for rapid failed attempts
+      for (let i = 0; i < userAttempts.length - threshold + 1; i++) {
+        const windowAttempts = userAttempts.slice(i, i + threshold);
+        const firstAttempt = new Date(windowAttempts[0].timestamp);
+        const lastAttempt = new Date(windowAttempts[windowAttempts.length - 1].timestamp);
+        
+        if (lastAttempt.getTime() - firstAttempt.getTime() <= timeWindow) {
+          const threat: SecurityThreat = {
+            id: `threat_brute_force_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'brute_force',
+            severity: 'high',
+            title: 'Brute Force Attack Detected',
+            description: `${threshold} failed authentication attempts from ${ipAddress} for user ${userId} within ${timeWindowMinutes} minutes`,
+            riskScore: 85,
+            status: 'active',
+            affectedResources: ['authentication_system'],
+            affectedUsers: userId !== 'unknown' ? [userId as UUID] : [],
+            sourceIPs: [ipAddress],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: lastAttempt.toISOString() as ISODateString,
+            evidence: windowAttempts.map(attempt => ({
+              type: 'audit_log',
+              id: attempt.id,
+              timestamp: attempt.timestamp,
+              description: attempt.description
+            })),
+            recommendations: [
+              'Block source IP address',
+              'Lock affected user account',
+              'Enable account lockout policies',
+              'Implement rate limiting'
+            ],
+            metadata: {
+              attemptCount: windowAttempts.length,
+              timeWindow: timeWindowMinutes,
+              detectionMethod: 'rule-based'
+            }
+          };
+          
+          threats.push(threat);
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private detectSuspiciousAccess(
+    events: SecurityAuditLog[],
+    sensitivity: 'low' | 'medium' | 'high'
+  ): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+    
+    // Detect unusual access patterns
+    const accessPatterns: Record<string, {
+      ips: Set<string>;
+      resources: Set<string>;
+      times: Date[];
+    }> = {};
+
+    events.forEach(event => {
+      if (event.userId && event.eventType === 'data_access') {
+        if (!accessPatterns[event.userId]) {
+          accessPatterns[event.userId] = {
+            ips: new Set(),
+            resources: new Set(),
+            times: []
+          };
+        }
+        
+        accessPatterns[event.userId].ips.add(event.ipAddress);
+        if (event.resourceId) {
+          accessPatterns[event.userId].resources.add(event.resourceId);
+        }
+        accessPatterns[event.userId].times.push(new Date(event.timestamp));
+      }
+    });
+
+    // Analyze patterns
+    Object.entries(accessPatterns).forEach(([userId, pattern]) => {
+      const uniqueIPs = pattern.ips.size;
+      const uniqueResources = pattern.resources.size;
+      
+      // Multiple IP addresses
+      const ipThreshold = sensitivity === 'high' ? 3 : sensitivity === 'medium' ? 5 : 10;
+      if (uniqueIPs >= ipThreshold) {
+        threats.push({
+          id: `threat_multi_ip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+          type: 'suspicious_access',
+          severity: 'medium',
+          title: 'Multiple IP Access Pattern',
+          description: `User ${userId} accessed resources from ${uniqueIPs} different IP addresses`,
+          riskScore: 60,
+          status: 'active',
+          affectedResources: Array.from(pattern.resources),
+          affectedUsers: [userId as UUID],
+          sourceIPs: Array.from(pattern.ips),
+          detectedAt: new Date().toISOString() as ISODateString,
+          lastActivity: Math.max(...pattern.times.map(t => t.getTime())).toString() as ISODateString,
+          evidence: [],
+          recommendations: [
+            'Verify user identity',
+            'Check for compromised credentials',
+            'Review access patterns'
+          ],
+          metadata: {
+            uniqueIPs,
+            uniqueResources,
+            detectionMethod: 'pattern-analysis'
+          }
+        });
+      }
+
+      // Unusual time access
+      const offHoursAccess = pattern.times.filter(time => {
+        const hour = time.getHours();
+        return hour < 6 || hour > 22; // Outside 6 AM - 10 PM
+      });
+
+      if (offHoursAccess.length > 5) {
+        threats.push({
+          id: `threat_off_hours_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+          type: 'suspicious_access',
+          severity: 'low',
+          title: 'Off-Hours Access Pattern',
+          description: `User ${userId} accessed resources ${offHoursAccess.length} times outside normal hours`,
+          riskScore: 40,
+          status: 'active',
+          affectedResources: Array.from(pattern.resources),
+          affectedUsers: [userId as UUID],
+          sourceIPs: Array.from(pattern.ips),
+          detectedAt: new Date().toISOString() as ISODateString,
+          lastActivity: Math.max(...offHoursAccess.map(t => t.getTime())).toString() as ISODateString,
+          evidence: [],
+          recommendations: [
+            'Verify legitimate business need',
+            'Review access policies',
+            'Consider time-based restrictions'
+          ],
+          metadata: {
+            offHoursCount: offHoursAccess.length,
+            detectionMethod: 'temporal-analysis'
+          }
+        });
+      }
+    });
+
+    return threats;
+  }
+
+  private detectPrivilegeEscalation(events: SecurityAuditLog[]): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+
+    // Look for rapid permission changes
+    const permissionChanges = events.filter(event => 
+      event.action === 'grant_permission' || event.action === 'assign_role'
+    );
+
+    // Group by user
+    const userChanges: Record<string, SecurityAuditLog[]> = {};
+    permissionChanges.forEach(event => {
+      if (event.userId) {
+        if (!userChanges[event.userId]) userChanges[event.userId] = [];
+        userChanges[event.userId].push(event);
+      }
+    });
+
+    // Detect rapid escalation
+    Object.entries(userChanges).forEach(([userId, changes]) => {
+      if (changes.length >= 3) {
+        changes.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        
+        const firstChange = new Date(changes[0].timestamp);
+        const lastChange = new Date(changes[changes.length - 1].timestamp);
+        const timeSpan = lastChange.getTime() - firstChange.getTime();
+        
+        // If multiple permission changes within 1 hour
+        if (timeSpan <= 60 * 60 * 1000) {
+          threats.push({
+            id: `threat_privilege_escalation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'privilege_escalation',
+            severity: 'high',
+            title: 'Rapid Privilege Escalation',
+            description: `User ${userId} received ${changes.length} permission changes within 1 hour`,
+            riskScore: 80,
+            status: 'active',
+            affectedResources: changes.map(c => c.resourceId).filter(Boolean) as string[],
+            affectedUsers: [userId as UUID],
+            sourceIPs: [...new Set(changes.map(c => c.ipAddress))],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: lastChange.toISOString() as ISODateString,
+            evidence: changes.map(change => ({
+              type: 'audit_log',
+              id: change.id,
+              timestamp: change.timestamp,
+              description: change.description
+            })),
+            recommendations: [
+              'Review permission changes',
+              'Verify authorization for changes',
+              'Check for compromised admin accounts'
+            ],
+            metadata: {
+              changeCount: changes.length,
+              timeSpan: timeSpan / 1000, // seconds
+              detectionMethod: 'privilege-analysis'
+            }
+          });
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private detectDataExfiltration(events: SecurityAuditLog[]): SecurityThreat[] {
+    const threats: SecurityThreat[] = [];
+
+    // Look for unusual data access patterns
+    const dataAccess = events.filter(event => 
+      event.eventType === 'data_access' && event.outcome === 'success'
+    );
+
+    // Group by user and analyze volume
+    const userAccess: Record<string, SecurityAuditLog[]> = {};
+    dataAccess.forEach(event => {
+      if (event.userId) {
+        if (!userAccess[event.userId]) userAccess[event.userId] = [];
+        userAccess[event.userId].push(event);
+      }
+    });
+
+    // Detect high-volume access
+    Object.entries(userAccess).forEach(([userId, accesses]) => {
+      if (accesses.length >= 100) { // Threshold for suspicious volume
+        const uniqueResources = new Set(accesses.map(a => a.resourceId)).size;
+        const timeSpan = Math.max(...accesses.map(a => new Date(a.timestamp).getTime())) - 
+                        Math.min(...accesses.map(a => new Date(a.timestamp).getTime()));
+        
+        if (timeSpan <= 24 * 60 * 60 * 1000) { // Within 24 hours
+          threats.push({
+            id: `threat_data_exfiltration_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+            type: 'data_exfiltration',
+            severity: 'critical',
+            title: 'Potential Data Exfiltration',
+            description: `User ${userId} accessed ${accesses.length} resources (${uniqueResources} unique) within 24 hours`,
+            riskScore: 95,
+            status: 'active',
+            affectedResources: [...new Set(accesses.map(a => a.resourceId).filter(Boolean))] as string[],
+            affectedUsers: [userId as UUID],
+            sourceIPs: [...new Set(accesses.map(a => a.ipAddress))],
+            detectedAt: new Date().toISOString() as ISODateString,
+            lastActivity: new Date(Math.max(...accesses.map(a => new Date(a.timestamp).getTime()))).toISOString() as ISODateString,
+            evidence: accesses.slice(0, 10).map(access => ({
+              type: 'audit_log',
+              id: access.id,
+              timestamp: access.timestamp,
+              description: access.description
+            })),
+            recommendations: [
+              'Immediately suspend user account',
+              'Review all accessed data',
+              'Check for data loss prevention alerts',
+              'Investigate user activity'
+            ],
+            metadata: {
+              accessCount: accesses.length,
+              uniqueResources,
+              timeSpan: timeSpan / 1000,
+              detectionMethod: 'volume-analysis'
+            }
+          });
+        }
+      }
+    });
+
+    return threats;
+  }
+
+  private calculateOverallRiskScore(threats: SecurityThreat[]): number {
+    if (threats.length === 0) return 0;
+
+    const totalRisk = threats.reduce((sum, threat) => sum + threat.riskScore, 0);
+    const averageRisk = totalRisk / threats.length;
+
+    // Weight by severity
+    const criticalCount = threats.filter(t => t.severity === 'critical').length;
+    const highCount = threats.filter(t => t.severity === 'high').length;
+    
+    const severityBonus = (criticalCount * 20) + (highCount * 10);
+    
+    return Math.min(100, averageRisk + severityBonus);
+  }
+}
+
+// ============================================================================
+// MAIN SECURITY UTILITIES EXPORT
+// ============================================================================
+
+export const securityUtils = {
+  rbacManager: new RBACManager(),
+  accessControlManager: new AccessControlManager(),
+  auditManager: new SecurityAuditManager(),
+  threatDetection: new ThreatDetectionEngine()
 };
 
-/**
- * Analyze user behavior patterns
- */
-export const analyzeUserBehavior = (
-  userId: string,
-  activities: SecurityAuditLog[],
-  timeWindow: number = 30 // days
-): {
-  normalPatterns: any;
-  anomalies: any[];
-  riskScore: number;
+// Utility functions for common operations
+export const generateSecurityId = (): UUID => {
+  return `sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+};
+
+export const hashPassword = (password: string, salt?: string): string => {
+  // In production, use a proper cryptographic library like bcrypt
+  const actualSalt = salt || Math.random().toString(36).substr(2, 16);
+  const hash = btoa(password + actualSalt); // Simple base64 encoding for demo
+  return `${hash}:${actualSalt}`;
+};
+
+export const verifyPassword = (password: string, hashedPassword: string): boolean => {
+  const [hash, salt] = hashedPassword.split(':');
+  const newHash = btoa(password + salt);
+  return hash === newHash;
+};
+
+export const generateSecureToken = (length: number = 32): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+export const validateIPAddress = (ip: string): boolean => {
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+};
+
+export const calculatePasswordStrength = (password: string): {
+  score: number;
+  strength: 'weak' | 'fair' | 'good' | 'strong';
   recommendations: string[];
 } => {
-  const userActivities = activities.filter(
-    activity => activity.userId === userId &&
-    new Date(activity.timestamp).getTime() > Date.now() - (timeWindow * 24 * 60 * 60 * 1000)
+  let score = 0;
+  const recommendations: string[] = [];
+
+  // Length check
+  if (password.length >= 8) score += 2;
+  else recommendations.push('Use at least 8 characters');
+
+  if (password.length >= 12) score += 1;
+  if (password.length >= 16) score += 1;
+
+  // Character variety
+  if (/[a-z]/.test(password)) score += 1;
+  else recommendations.push('Include lowercase letters');
+
+  if (/[A-Z]/.test(password)) score += 1;
+  else recommendations.push('Include uppercase letters');
+
+  if (/[0-9]/.test(password)) score += 1;
+  else recommendations.push('Include numbers');
+
+  if (/[^a-zA-Z0-9]/.test(password)) score += 2;
+  else recommendations.push('Include special characters');
+
+  // Pattern checks
+  if (!/(.)\1{2,}/.test(password)) score += 1;
+  else recommendations.push('Avoid repeating characters');
+
+  if (!/123|abc|qwe|password|admin/i.test(password)) score += 1;
+  else recommendations.push('Avoid common patterns');
+
+  let strength: 'weak' | 'fair' | 'good' | 'strong';
+  if (score >= 8) strength = 'strong';
+  else if (score >= 6) strength = 'good';
+  else if (score >= 4) strength = 'fair';
+  else strength = 'weak';
+
+  return { score, strength, recommendations };
+};
+
+export const sanitizeInput = (input: string): string => {
+  return input
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/['"]/g, '') // Remove quotes
+    .replace(/[&]/g, '&amp;') // Escape ampersands
+    .trim();
+};
+
+export const isSecureContext = (request: { protocol?: string; headers?: Record<string, string> }): boolean => {
+  // Check for HTTPS
+  if (request.protocol === 'https') return true;
+  
+  // Check for secure headers
+  const secureHeaders = [
+    'x-forwarded-proto',
+    'x-forwarded-ssl',
+    'x-url-scheme'
+  ];
+  
+  return secureHeaders.some(header => 
+    request.headers?.[header]?.toLowerCase() === 'https'
   );
-
-  // Analyze access patterns
-  const accessPatterns = analyzeAccessPatterns(userActivities);
-  
-  // Analyze time patterns
-  const timePatterns = analyzeTimePatterns(userActivities);
-  
-  // Analyze resource usage patterns
-  const resourcePatterns = analyzeResourcePatterns(userActivities);
-
-  // Detect anomalies
-  const anomalies = detectBehaviorAnomalies(accessPatterns, timePatterns, resourcePatterns);
-
-  // Calculate risk score
-  const riskScore = calculateBehaviorRiskScore(anomalies, userActivities.length);
-
-  // Generate recommendations
-  const recommendations = generateBehaviorRecommendations(anomalies, riskScore);
-
-  return {
-    normalPatterns: {
-      access: accessPatterns,
-      time: timePatterns,
-      resources: resourcePatterns
-    },
-    anomalies,
-    riskScore,
-    recommendations
-  };
 };
 
-// =============================================================================
-// COMPLIANCE VALIDATION UTILITIES
-// =============================================================================
-
-/**
- * Validate compliance with security rules
- */
-export const validateCompliance = (
-  complianceRules: ComplianceRule[],
-  securityContext: SecurityContext,
-  systemState: any
-): ComplianceValidation[] => {
-  return complianceRules.map(rule => {
-    const validation = validateComplianceRule(rule, securityContext, systemState);
-    
-    return {
-      ruleId: rule.id,
-      ruleName: rule.name,
-      status: validation.compliant ? 'compliant' : 'non_compliant',
-      score: validation.score,
-      findings: validation.findings,
-      lastChecked: new Date().toISOString(),
-      nextCheck: new Date(Date.now() + rule.checkInterval * 1000).toISOString()
-    };
-  });
+export const generateCSRFToken = (): string => {
+  return generateSecureToken(64);
 };
 
-/**
- * Generate compliance report
- */
-export const generateComplianceReport = (
-  validations: ComplianceValidation[],
-  timeRange: { start: string; end: string }
-): {
-  overallScore: number;
-  compliantRules: number;
-  nonCompliantRules: number;
-  criticalFindings: ComplianceFinding[];
-  trends: any;
-  recommendations: SecurityRecommendation[];
-} => {
-  const compliantRules = validations.filter(v => v.status === 'compliant').length;
-  const nonCompliantRules = validations.filter(v => v.status === 'non_compliant').length;
-  
-  const overallScore = validations.reduce((sum, v) => sum + v.score, 0) / validations.length;
-  
-  const criticalFindings = validations
-    .flatMap(v => v.findings)
-    .filter(f => f.severity === 'critical' || f.severity === 'high')
-    .sort((a, b) => {
-      const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-      return severityOrder[b.severity] - severityOrder[a.severity];
-    });
-
-  const recommendations = generateComplianceRecommendations(validations, criticalFindings);
-
-  return {
-    overallScore,
-    compliantRules,
-    nonCompliantRules,
-    criticalFindings,
-    trends: analyzeComplianceTrends(validations, timeRange),
-    recommendations
-  };
-};
-
-// =============================================================================
-// RISK ASSESSMENT UTILITIES
-// =============================================================================
-
-/**
- * Assess user security risk
- */
-export const assessUserSecurityRisk = (
-  securityContext: SecurityContext,
-  userProfile: UserProfile,
-  recentActivities: SecurityAuditLog[]
-): RiskAssessment => {
-  const riskFactors: RiskFactor[] = [];
-
-  // Assess role-based risk
-  const roleRisk = assessRoleBasedRisk(securityContext.roles);
-  if (roleRisk.score > 0) {
-    riskFactors.push(roleRisk);
-  }
-
-  // Assess access pattern risk
-  const accessRisk = assessAccessPatternRisk(recentActivities);
-  if (accessRisk.score > 0) {
-    riskFactors.push(accessRisk);
-  }
-
-  // Assess geographic risk
-  const geoRisk = assessGeographicRisk(securityContext.ipAddress, userProfile);
-  if (geoRisk.score > 0) {
-    riskFactors.push(geoRisk);
-  }
-
-  // Assess time-based risk
-  const timeRisk = assessTimeBasedRisk(securityContext.timestamp, userProfile);
-  if (timeRisk.score > 0) {
-    riskFactors.push(timeRisk);
-  }
-
-  // Calculate overall risk score
-  const overallRisk = calculateOverallRisk(riskFactors);
-
-  // Generate recommendations
-  const recommendations = generateRiskRecommendations(riskFactors, overallRisk);
-
-  return {
-    userId: securityContext.userId,
-    overallRisk,
-    riskFactors,
-    recommendations,
-    lastAssessed: new Date().toISOString(),
-    validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-  };
-};
-
-/**
- * Calculate system-wide security risk
- */
-export const calculateSystemSecurityRisk = (
-  users: SecurityContext[],
-  threats: SecurityThreat[],
-  incidents: SecurityIncident[],
-  complianceValidations: ComplianceValidation[]
-): {
-  overallRisk: number;
-  riskBreakdown: Record<string, number>;
-  criticalIssues: string[];
-  recommendations: SecurityRecommendation[];
-} => {
-  // Calculate user risk component
-  const userRiskScores = users.map(user => user.riskScore || 0);
-  const avgUserRisk = userRiskScores.reduce((sum, score) => sum + score, 0) / userRiskScores.length;
-
-  // Calculate threat risk component
-  const activeThreatScore = calculateThreatRiskScore(threats);
-
-  // Calculate incident risk component
-  const incidentRiskScore = calculateIncidentRiskScore(incidents);
-
-  // Calculate compliance risk component
-  const complianceRiskScore = calculateComplianceRiskScore(complianceValidations);
-
-  const riskBreakdown = {
-    users: avgUserRisk * 0.25,
-    threats: activeThreatScore * 0.30,
-    incidents: incidentRiskScore * 0.25,
-    compliance: complianceRiskScore * 0.20
-  };
-
-  const overallRisk = Object.values(riskBreakdown).reduce((sum, score) => sum + score, 0);
-
-  const criticalIssues = identifyCriticalSecurityIssues(
-    users, threats, incidents, complianceValidations
-  );
-
-  const recommendations = generateSystemSecurityRecommendations(
-    riskBreakdown, criticalIssues, overallRisk
-  );
-
-  return {
-    overallRisk,
-    riskBreakdown,
-    criticalIssues,
-    recommendations
-  };
-};
-
-// =============================================================================
-// SECURITY MONITORING UTILITIES
-// =============================================================================
-
-/**
- * Monitor security events in real-time
- */
-export const monitorSecurityEvents = (
-  events: SecurityAuditLog[],
-  monitoringRules: any[]
-): {
-  alerts: SecurityThreat[];
-  metrics: SecurityMetrics;
-  insights: string[];
-} => {
-  const alerts: SecurityThreat[] = [];
-  
-  // Apply monitoring rules
-  monitoringRules.forEach(rule => {
-    const ruleAlerts = evaluateMonitoringRule(rule, events);
-    alerts.push(...ruleAlerts);
-  });
-
-  // Calculate security metrics
-  const metrics = calculateSecurityMetrics(events);
-
-  // Generate insights
-  const insights = generateSecurityInsights(events, alerts, metrics);
-
-  return {
-    alerts,
-    metrics,
-    insights
-  };
-};
-
-/**
- * Generate security audit trail
- */
-export const generateSecurityAuditTrail = (
-  userId: string,
-  action: string,
-  resource: string,
-  outcome: 'success' | 'failure' | 'denied',
-  securityContext: SecurityContext,
-  additionalData?: Record<string, any>
-): SecurityAuditLog => {
-  return {
-    id: generateUUID(),
-    userId,
-    action,
-    resource,
-    outcome,
-    timestamp: new Date().toISOString(),
-    ipAddress: securityContext.ipAddress,
-    userAgent: securityContext.userAgent,
-    sessionId: securityContext.sessionId,
-    riskScore: securityContext.riskScore,
-    metadata: {
-      roles: securityContext.roles,
-      groups: securityContext.groups,
-      ...additionalData
-    }
-  };
-};
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Generate UUID
- */
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
-
-/**
- * Get role permissions
- */
-const getRolePermissions = (roles: string[], roleDefinitions: RoleDefinition[]): string[] => {
-  const permissions = new Set<string>();
-  
-  roles.forEach(roleName => {
-    const role = roleDefinitions.find(r => r.name === roleName);
-    if (role) {
-      role.permissions.forEach(permission => permissions.add(permission));
-    }
-  });
-
-  return Array.from(permissions);
-};
-
-/**
- * Check role permission
- */
-const checkRolePermission = (permissions: string[], resource: string, action: string): boolean => {
-  const requiredPermission = `${resource}:${action}`;
-  const wildcardPermission = `${resource}:*`;
-  const globalPermission = '*:*';
-
-  return permissions.includes(requiredPermission) ||
-         permissions.includes(wildcardPermission) ||
-         permissions.includes(globalPermission);
-};
-
-/**
- * Evaluate security policies
- */
-const evaluateSecurityPolicies = (
-  request: AccessRequest,
-  policies: SecurityPolicy[]
-): { allowed: boolean; reason?: string; conditions?: string[] } => {
-  for (const policy of policies) {
-    if (policyApplies(policy, request)) {
-      const evaluation = evaluatePolicy(policy, request);
-      if (!evaluation.allowed) {
-        return evaluation;
-      }
-    }
-  }
-
-  return { allowed: true };
-};
-
-/**
- * Check if policy applies to request
- */
-const policyApplies = (policy: SecurityPolicy, request: AccessRequest): boolean => {
-  // Check resource match
-  if (policy.resources && policy.resources.length > 0) {
-    const resourceMatch = policy.resources.some(resource => 
-      request.resource.startsWith(resource) || resource === '*'
-    );
-    if (!resourceMatch) return false;
-  }
-
-  // Check action match
-  if (policy.actions && policy.actions.length > 0) {
-    const actionMatch = policy.actions.includes(request.action) || policy.actions.includes('*');
-    if (!actionMatch) return false;
-  }
-
-  // Check user/role match
-  if (policy.principals && policy.principals.length > 0) {
-    const principalMatch = policy.principals.some(principal => 
-      principal === request.userId || 
-      (request.context.roles as string[]).includes(principal)
-    );
-    if (!principalMatch) return false;
-  }
-
-  return true;
-};
-
-/**
- * Evaluate policy conditions
- */
-const evaluatePolicy = (
-  policy: SecurityPolicy,
-  request: AccessRequest
-): { allowed: boolean; reason?: string; conditions?: string[] } => {
-  // Simplified policy evaluation - in production, use a proper policy engine
-  if (policy.effect === 'deny') {
-    return { 
-      allowed: false, 
-      reason: `Access denied by policy: ${policy.name}` 
-    };
-  }
-
-  const conditions: string[] = [];
-  
-  // Check time-based conditions
-  if (policy.conditions?.timeRange) {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const [startHour, endHour] = policy.conditions.timeRange;
-    
-    if (currentHour < startHour || currentHour > endHour) {
-      return { 
-        allowed: false, 
-        reason: 'Access denied: Outside allowed time range' 
-      };
-    }
-  }
-
-  // Check IP-based conditions
-  if (policy.conditions?.allowedIPs) {
-    const clientIP = request.context.ipAddress as string;
-    const ipAllowed = policy.conditions.allowedIPs.some((allowedIP: string) => 
-      clientIP.startsWith(allowedIP)
-    );
-    
-    if (!ipAllowed) {
-      return { 
-        allowed: false, 
-        reason: 'Access denied: IP address not allowed' 
-      };
-    }
-  }
-
-  return { allowed: true, conditions };
-};
-
-/**
- * Assess access risk
- */
-const assessAccessRisk = (
-  securityContext: SecurityContext,
-  resource: string,
-  action: string
-): { acceptable: boolean; level: 'low' | 'medium' | 'high' | 'critical'; reason?: string; conditions?: string[] } => {
-  let riskScore = 0;
-  const conditions: string[] = [];
-
-  // Base risk from user's current risk score
-  riskScore += securityContext.riskScore * 0.4;
-
-  // Resource sensitivity risk
-  const resourceRisk = getResourceRiskScore(resource);
-  riskScore += resourceRisk * 0.3;
-
-  // Action risk
-  const actionRisk = getActionRiskScore(action);
-  riskScore += actionRisk * 0.2;
-
-  // Time-based risk
-  const timeRisk = getTimeBasedRiskScore(securityContext.timestamp);
-  riskScore += timeRisk * 0.1;
-
-  // Determine risk level
-  let level: 'low' | 'medium' | 'high' | 'critical';
-  if (riskScore > 0.8) level = 'critical';
-  else if (riskScore > 0.6) level = 'high';
-  else if (riskScore > 0.4) level = 'medium';
-  else level = 'low';
-
-  // Add conditions based on risk level
-  if (level === 'high') {
-    conditions.push('Additional authentication required');
-  } else if (level === 'critical') {
-    conditions.push('Manager approval required');
-  }
-
-  return {
-    acceptable: riskScore < 0.7, // Risk threshold
-    level,
-    reason: riskScore >= 0.7 ? `Risk level too high (${Math.round(riskScore * 100)}%)` : undefined,
-    conditions
-  };
-};
-
-/**
- * Calculate access expiry
- */
-const calculateAccessExpiry = (
-  securityContext: SecurityContext,
-  resource: string,
-  action: string
-): ISODateString | undefined => {
-  // High-risk resources get shorter access duration
-  const resourceRisk = getResourceRiskScore(resource);
-  
-  if (resourceRisk > 0.7) {
-    // 1 hour for high-risk resources
-    return new Date(Date.now() + 60 * 60 * 1000).toISOString();
-  } else if (resourceRisk > 0.4) {
-    // 8 hours for medium-risk resources
-    return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-  }
-
-  // No expiry for low-risk resources
-  return undefined;
-};
-
-/**
- * Check if audit is required
- */
-const isAuditRequired = (resource: string, action: string, roles: string[]): boolean => {
-  // Always audit admin actions
-  if (roles.includes('admin') || roles.includes('super_admin')) {
-    return true;
-  }
-
-  // Audit sensitive resources
-  const sensitiveResources = ['user-management', 'security-policies', 'audit-logs'];
-  if (sensitiveResources.some(sr => resource.includes(sr))) {
-    return true;
-  }
-
-  // Audit destructive actions
-  const destructiveActions = ['delete', 'modify', 'create'];
-  if (destructiveActions.includes(action)) {
-    return true;
-  }
-
-  return false;
-};
-
-/**
- * Get user group permissions
- */
-const getUserGroupPermissions = (
-  securityContext: SecurityContext,
-  group: string,
-  roleDefinitions: RoleDefinition[]
-): string[] => {
-  const groupRoles = securityContext.roles.filter(role => role.includes(group));
-  return getRolePermissions(groupRoles, roleDefinitions);
-};
-
-/**
- * Calculate cross-group risk
- */
-const calculateCrossGroupRisk = (
-  sourceGroup: string,
-  targetGroup: string,
-  operation: string,
-  securityContext: SecurityContext
-): number => {
-  let risk = 0.3; // Base cross-group risk
-
-  // Higher risk for sensitive groups
-  const sensitiveGroups = ['rbac', 'security', 'audit'];
-  if (sensitiveGroups.includes(sourceGroup) || sensitiveGroups.includes(targetGroup)) {
-    risk += 0.2;
-  }
-
-  // Higher risk for destructive operations
-  const destructiveOps = ['delete', 'modify', 'transfer'];
-  if (destructiveOps.includes(operation)) {
-    risk += 0.2;
-  }
-
-  // User risk factor
-  risk += securityContext.riskScore * 0.3;
-
-  return Math.min(1.0, risk);
-};
-
-/**
- * Get required clearance level for data classification
- */
-const getRequiredClearanceLevel = (classification: string, operation: string): number => {
-  const classificationLevels: Record<string, number> = {
-    'public': 0,
-    'internal': 1,
-    'confidential': 2,
-    'restricted': 3,
-    'top_secret': 4
-  };
-
-  const operationMultiplier: Record<string, number> = {
-    'read': 1.0,
-    'write': 1.2,
-    'share': 1.5,
-    'delete': 1.8
-  };
-
-  const baseLevel = classificationLevels[classification] || 1;
-  const multiplier = operationMultiplier[operation] || 1.0;
-
-  return Math.ceil(baseLevel * multiplier);
-};
-
-/**
- * Get user clearance level
- */
-const getUserClearanceLevel = (securityContext: SecurityContext, roleDefinitions: RoleDefinition[]): number => {
-  let maxClearance = 0;
-
-  securityContext.roles.forEach(roleName => {
-    const role = roleDefinitions.find(r => r.name === roleName);
-    if (role && role.clearanceLevel) {
-      maxClearance = Math.max(maxClearance, role.clearanceLevel);
-    }
-  });
-
-  return maxClearance;
-};
-
-/**
- * Detect brute force attempts
- */
-const detectBruteForceAttempts = (activities: SecurityAuditLog[]): SecurityThreat[] => {
-  const threats: SecurityThreat[] = [];
-  const failedLogins = new Map<string, SecurityAuditLog[]>();
-
-  // Group failed login attempts by user
-  activities
-    .filter(activity => activity.action === 'login' && activity.outcome === 'failure')
-    .forEach(activity => {
-      if (!failedLogins.has(activity.userId)) {
-        failedLogins.set(activity.userId, []);
-      }
-      failedLogins.get(activity.userId)!.push(activity);
-    });
-
-  // Check for brute force patterns
-  failedLogins.forEach((attempts, userId) => {
-    if (attempts.length >= 5) { // Threshold for brute force
-      const recentAttempts = attempts.filter(
-        attempt => new Date(attempt.timestamp).getTime() > Date.now() - 60 * 60 * 1000 // Last hour
-      );
-
-      if (recentAttempts.length >= 3) {
-        threats.push({
-          id: generateUUID(),
-          type: 'brute_force',
-          severity: recentAttempts.length >= 10 ? 'critical' : 'high',
-          description: `Brute force attack detected against user ${userId}`,
-          userId,
-          indicators: recentAttempts.map(attempt => ({
-            type: 'failed_login',
-            value: attempt.ipAddress,
-            confidence: 0.9,
-            source: 'audit_log',
-            timestamp: attempt.timestamp
-          })),
-          confidence: 0.95,
-          detectedAt: new Date().toISOString(),
-          status: 'detected',
-          mitigationActions: ['Account lockout', 'IP blocking', 'Alert security team']
-        });
-      }
-    }
-  });
-
-  return threats;
-};
-
-/**
- * Detect anomalous access patterns
- */
-const detectAnomalousAccess = (
-  securityContext: SecurityContext,
-  activities: SecurityAuditLog[],
-  baselineProfile: any
-): SecurityThreat[] => {
-  const threats: SecurityThreat[] = [];
-
-  // Check for unusual access times
-  const currentHour = new Date().getHours();
-  const normalHours = baselineProfile?.normalAccessHours || [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-  
-  if (!normalHours.includes(currentHour)) {
-    threats.push({
-      id: generateUUID(),
-      type: 'anomalous_access',
-      severity: 'medium',
-      description: 'Access outside normal hours detected',
-      userId: securityContext.userId,
-      indicators: [{
-        type: 'unusual_time',
-        value: currentHour.toString(),
-        confidence: 0.7,
-        source: 'behavioral_analysis',
-        timestamp: new Date().toISOString()
-      }],
-      confidence: 0.7,
-      detectedAt: new Date().toISOString(),
-      status: 'detected',
-      mitigationActions: ['Monitor closely', 'Require additional authentication']
-    });
-  }
-
-  // Check for unusual resource access
-  const recentResources = activities
-    .filter(activity => activity.userId === securityContext.userId)
-    .slice(-10)
-    .map(activity => activity.resource);
-
-  const normalResources = baselineProfile?.normalResources || [];
-  const unusualResources = recentResources.filter(resource => !normalResources.includes(resource));
-
-  if (unusualResources.length > 3) {
-    threats.push({
-      id: generateUUID(),
-      type: 'anomalous_access',
-      severity: 'medium',
-      description: 'Access to unusual resources detected',
-      userId: securityContext.userId,
-      indicators: unusualResources.map(resource => ({
-        type: 'unusual_resource',
-        value: resource,
-        confidence: 0.6,
-        source: 'behavioral_analysis',
-        timestamp: new Date().toISOString()
-      })),
-      confidence: 0.6,
-      detectedAt: new Date().toISOString(),
-      status: 'detected',
-      mitigationActions: ['Monitor resource access', 'Verify user identity']
-    });
-  }
-
-  return threats;
-};
-
-/**
- * Detect privilege escalation attempts
- */
-const detectPrivilegeEscalation = (
-  securityContext: SecurityContext,
-  activities: SecurityAuditLog[]
-): SecurityThreat[] => {
-  const threats: SecurityThreat[] = [];
-
-  // Check for rapid role changes
-  const roleChanges = activities.filter(
-    activity => activity.action === 'role_change' && 
-    activity.userId === securityContext.userId
-  );
-
-  if (roleChanges.length > 2) { // Multiple role changes
-    threats.push({
-      id: generateUUID(),
-      type: 'privilege_escalation',
-      severity: 'high',
-      description: 'Multiple role changes detected',
-      userId: securityContext.userId,
-      indicators: roleChanges.map(change => ({
-        type: 'role_change',
-        value: change.metadata?.newRole || 'unknown',
-        confidence: 0.8,
-        source: 'audit_log',
-        timestamp: change.timestamp
-      })),
-      confidence: 0.8,
-      detectedAt: new Date().toISOString(),
-      status: 'detected',
-      mitigationActions: ['Review role changes', 'Verify authorization', 'Alert administrators']
-    });
-  }
-
-  return threats;
-};
-
-/**
- * Detect suspicious data access
- */
-const detectSuspiciousDataAccess = (activities: SecurityAuditLog[]): SecurityThreat[] => {
-  const threats: SecurityThreat[] = [];
-
-  // Check for bulk data access
-  const dataAccess = activities.filter(activity => 
-    activity.action === 'read' && activity.resource.includes('data')
-  );
-
-  const bulkAccess = dataAccess.filter(access => 
-    new Date(access.timestamp).getTime() > Date.now() - 60 * 60 * 1000 // Last hour
-  );
-
-  if (bulkAccess.length > 100) { // Threshold for bulk access
-    const uniqueUsers = new Set(bulkAccess.map(access => access.userId));
-    
-    uniqueUsers.forEach(userId => {
-      const userAccess = bulkAccess.filter(access => access.userId === userId);
-      
-      if (userAccess.length > 50) {
-        threats.push({
-          id: generateUUID(),
-          type: 'data_exfiltration',
-          severity: 'critical',
-          description: 'Potential data exfiltration detected',
-          userId,
-          indicators: [{
-            type: 'bulk_data_access',
-            value: userAccess.length.toString(),
-            confidence: 0.9,
-            source: 'audit_log',
-            timestamp: new Date().toISOString()
-          }],
-          confidence: 0.9,
-          detectedAt: new Date().toISOString(),
-          status: 'detected',
-          mitigationActions: ['Block user access', 'Investigate immediately', 'Alert security team']
-        });
-      }
-    });
-  }
-
-  return threats;
-};
-
-/**
- * Additional helper functions would continue here...
- * Due to length constraints, I'm providing the core structure and key functions.
- * In a real implementation, all helper functions would be fully implemented.
- */
-
-// Placeholder implementations for remaining helper functions
-const analyzeAccessPatterns = (activities: SecurityAuditLog[]) => ({ /* implementation */ });
-const analyzeTimePatterns = (activities: SecurityAuditLog[]) => ({ /* implementation */ });
-const analyzeResourcePatterns = (activities: SecurityAuditLog[]) => ({ /* implementation */ });
-const detectBehaviorAnomalies = (access: any, time: any, resource: any) => [];
-const calculateBehaviorRiskScore = (anomalies: any[], activityCount: number) => 0;
-const generateBehaviorRecommendations = (anomalies: any[], riskScore: number) => [];
-const validateComplianceRule = (rule: ComplianceRule, context: SecurityContext, state: any) => ({ compliant: true, score: 100, findings: [] });
-const analyzeComplianceTrends = (validations: ComplianceValidation[], timeRange: any) => ({});
-const generateComplianceRecommendations = (validations: ComplianceValidation[], findings: ComplianceFinding[]) => [];
-const assessRoleBasedRisk = (roles: string[]) => ({ type: 'role', description: '', weight: 0, score: 0, mitigations: [] });
-const assessAccessPatternRisk = (activities: SecurityAuditLog[]) => ({ type: 'access', description: '', weight: 0, score: 0, mitigations: [] });
-const assessGeographicRisk = (ip: string, profile: UserProfile) => ({ type: 'geographic', description: '', weight: 0, score: 0, mitigations: [] });
-const assessTimeBasedRisk = (timestamp: string, profile: UserProfile) => ({ type: 'time', description: '', weight: 0, score: 0, mitigations: [] });
-const calculateOverallRisk = (factors: RiskFactor[]) => 0;
-const generateRiskRecommendations = (factors: RiskFactor[], overallRisk: number) => [];
-const calculateThreatRiskScore = (threats: SecurityThreat[]) => 0;
-const calculateIncidentRiskScore = (incidents: SecurityIncident[]) => 0;
-const calculateComplianceRiskScore = (validations: ComplianceValidation[]) => 0;
-const identifyCriticalSecurityIssues = (users: SecurityContext[], threats: SecurityThreat[], incidents: SecurityIncident[], validations: ComplianceValidation[]) => [];
-const generateSystemSecurityRecommendations = (breakdown: Record<string, number>, issues: string[], risk: number) => [];
-const evaluateMonitoringRule = (rule: any, events: SecurityAuditLog[]) => [];
-const calculateSecurityMetrics = (events: SecurityAuditLog[]) => ({} as SecurityMetrics);
-const generateSecurityInsights = (events: SecurityAuditLog[], alerts: SecurityThreat[], metrics: SecurityMetrics) => [];
-const getResourceRiskScore = (resource: string) => 0;
-const getActionRiskScore = (action: string) => 0;
-const getTimeBasedRiskScore = (timestamp: string) => 0;
-
-// =============================================================================
-// EXPORTS
-// =============================================================================
-
-export {
-  checkPermission,
-  validateCrossGroupAccess,
-  enforceDataClassificationAccess,
-  detectSecurityThreats,
-  analyzeUserBehavior,
-  validateCompliance,
-  generateComplianceReport,
-  assessUserSecurityRisk,
-  calculateSystemSecurityRisk,
-  monitorSecurityEvents,
-  generateSecurityAuditTrail
+export const validateCSRFToken = (token: string, expectedToken: string): boolean => {
+  return token === expectedToken && token.length === 64;
 };

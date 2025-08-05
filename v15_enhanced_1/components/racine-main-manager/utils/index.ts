@@ -64,89 +64,52 @@ export type {
 // Collaboration utilities
 export * from './collaboration-utils';
 export {
-  createCollaborationHub,
-  startCollaborationSession,
-  addParticipantToSession,
-  createCollaborationWorkflow,
-  advanceWorkflowStage,
-  findExperts,
-  generateExpertRecommendations,
-  createKnowledgeArticle,
-  extractSessionInsights,
-  searchKnowledgeBase,
-  calculateCollaborationMetrics,
-  identifyCollaborationPatterns,
-  detectCollaborationConflicts
-} from './collaboration-utils';
-export type {
-  CollaborationMetrics,
-  CollaborationRecommendation,
-  CollaborationPattern,
-  ConflictResolution,
-  ExpertMatch,
-  CollaborationWorkflow,
-  CollaborationStage
+  collaborationUtils,
+  CollaborationSessionManager,
+  DocumentCollaborationManager,
+  WorkflowCoAuthoringManager,
+  ExpertNetworkManager,
+  CollaborationAnalyticsManager,
+  createCollaborationId,
+  validateCollaborationPermissions,
+  formatCollaborationDuration,
+  generateCollaborationSummary
 } from './collaboration-utils';
 
 // Dashboard utilities
 export * from './dashboard-utils';
 export {
-  createDashboard,
-  addWidgetToDashboard,
-  createCrossGroupKPI,
-  createPredictiveWidget,
-  calculateWidgetDependencies,
-  optimizeRefreshIntervals,
-  generateLayoutSuggestions,
-  calculateCrossGroupKPI,
-  generateKPIRecommendations,
-  detectDataAnomalies,
-  generatePredictiveInsights,
-  calculateDashboardMetrics,
-  exportDashboard
-} from './dashboard-utils';
-export type {
-  DashboardMetrics,
-  WidgetConfiguration,
-  VisualizationConfig,
-  KPICalculation,
-  DashboardTheme,
-  DrillDownConfig,
-  DrillDownLevel,
-  DashboardInsight,
-  DashboardExport
+  dashboardUtils,
+  DashboardConfigurationManager,
+  DashboardWidgetManager,
+  DashboardKPICalculator,
+  DashboardAlertProcessor,
+  PredictiveInsightsEngine,
+  createDashboardId,
+  createWidgetId,
+  formatDashboardValue,
+  calculateWidgetPerformance,
+  generateDashboardReport
 } from './dashboard-utils';
 
 // Security utilities
 export * from './security-utils';
 export {
-  checkPermission,
-  validateCrossGroupAccess,
-  enforceDataClassificationAccess,
-  detectSecurityThreats,
-  analyzeUserBehavior,
-  validateCompliance,
-  generateComplianceReport,
-  assessUserSecurityRisk,
-  calculateSystemSecurityRisk,
-  monitorSecurityEvents,
-  generateSecurityAuditTrail
-} from './security-utils';
-export type {
-  SecurityContext,
-  AccessRequest,
-  AccessDecision,
-  SecurityThreat,
-  ThreatIndicator,
-  SecurityMetrics,
-  RiskAssessment,
-  RiskFactor,
-  SecurityRecommendation,
-  ComplianceValidation,
-  ComplianceFinding,
-  SecurityIncident,
-  IncidentTimelineEntry,
-  IncidentImpact
+  securityUtils,
+  RBACManager,
+  AccessControlManager,
+  SecurityAuditManager,
+  ThreatDetectionEngine,
+  generateSecurityId,
+  hashPassword,
+  verifyPassword,
+  generateSecureToken,
+  validateIPAddress,
+  calculatePasswordStrength,
+  sanitizeInput,
+  isSecureContext,
+  generateCSRFToken,
+  validateCSRFToken
 } from './security-utils';
 
 // Utility type definitions

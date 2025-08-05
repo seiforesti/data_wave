@@ -1,1264 +1,1533 @@
 /**
- * Racine Dashboard Utilities
- * ==========================
- * 
- * Advanced dashboard utility functions for the Racine Main Manager system
- * that provide intelligent dashboard management, widget orchestration, and
- * real-time analytics across all 7 data governance groups.
- * 
- * Features:
- * - Dynamic dashboard composition
- * - Cross-group KPI aggregation
- * - Real-time data visualization
- * - Predictive analytics integration
- * - Custom widget development
- * - Dashboard personalization
- * - Performance optimization
- * - Interactive drill-down analytics
+ * Advanced Dashboard Utilities
+ * Provides comprehensive utilities for the intelligent dashboard system
  */
 
 import {
   DashboardConfiguration,
   DashboardWidget,
+  DashboardKPI,
+  DashboardAlert,
+  DashboardAnalytics,
+  DashboardFilter,
   DashboardLayout,
-  KPIMetric,
-  AlertConfiguration,
-  AnalyticsFilter,
-  UUID,
-  ISODateString
-} from '../types/racine-core.types';
+  DashboardPersonalization,
+  PredictiveInsight,
+  CrossGroupVisualization,
+  DashboardTheme,
+  DashboardExport,
+  DashboardNotification
+} from '../types/dashboard.types';
 
-// =============================================================================
-// TYPES AND INTERFACES
-// =============================================================================
-
-export interface DashboardMetrics {
-  totalWidgets: number;
-  activeWidgets: number;
-  totalKPIs: number;
-  alertsTriggered: number;
-  averageLoadTime: number;
-  userEngagement: number;
-  dataFreshness: number;
-  performanceScore: number;
-}
-
-export interface WidgetConfiguration {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  dataSource: string;
-  query: string;
-  visualization: VisualizationConfig;
-  filters: AnalyticsFilter[];
-  refreshInterval: number;
-  size: { width: number; height: number };
-  position: { x: number; y: number };
-  dependencies: string[];
-  permissions: string[];
-  settings: Record<string, any>;
-}
-
-export interface VisualizationConfig {
-  type: 'chart' | 'table' | 'metric' | 'gauge' | 'map' | 'heatmap' | 'treemap';
-  chartType?: 'line' | 'bar' | 'pie' | 'scatter' | 'area' | 'bubble';
-  colors: string[];
-  axes: { x: string; y: string; z?: string };
-  aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median';
-  groupBy: string[];
-  sortBy: { field: string; direction: 'asc' | 'desc' };
-  limit: number;
-  animations: boolean;
-  interactive: boolean;
-}
-
-export interface KPICalculation {
-  id: string;
-  name: string;
-  formula: string;
-  inputs: string[];
-  target: number;
-  threshold: { warning: number; critical: number };
-  trend: 'up' | 'down' | 'stable';
-  variance: number;
-  historicalData: { date: string; value: number }[];
-}
-
-export interface DashboardTheme {
-  id: string;
-  name: string;
-  colors: {
-    primary: string;
-    secondary: string;
-    success: string;
-    warning: string;
-    error: string;
-    background: string;
-    surface: string;
-    text: string;
-  };
-  fonts: {
-    primary: string;
-    secondary: string;
-    sizes: Record<string, string>;
-  };
-  spacing: Record<string, string>;
-  borderRadius: string;
-  shadows: Record<string, string>;
-}
-
-export interface DrillDownConfig {
-  enabled: boolean;
-  levels: DrillDownLevel[];
-  navigation: 'modal' | 'sidebar' | 'new_tab';
-  breadcrumbs: boolean;
-  filters: boolean;
-}
-
-export interface DrillDownLevel {
-  id: string;
-  name: string;
-  dimension: string;
-  aggregation: string;
-  visualization: VisualizationConfig;
-  filters: AnalyticsFilter[];
-}
-
-export interface DashboardInsight {
-  id: string;
-  type: 'trend' | 'anomaly' | 'correlation' | 'prediction' | 'recommendation';
-  title: string;
-  description: string;
-  confidence: number;
-  impact: 'low' | 'medium' | 'high' | 'critical';
-  actionable: boolean;
-  relatedWidgets: string[];
-  metadata: Record<string, any>;
-  createdAt: ISODateString;
-}
-
-export interface DashboardExport {
-  format: 'pdf' | 'excel' | 'csv' | 'json' | 'png';
-  options: {
-    includeCharts: boolean;
-    includeData: boolean;
-    includeInsights: boolean;
-    dateRange: { start: string; end: string };
-    filters: AnalyticsFilter[];
-    template?: string;
-  };
-}
-
-// =============================================================================
-// DASHBOARD COMPOSITION UTILITIES
-// =============================================================================
+import { UUID, ISODateString } from '../types/racine-core.types';
 
 /**
- * Create a new dashboard configuration
+ * Advanced Dashboard Utilities
+ * Provides comprehensive utilities for the intelligent dashboard system
  */
-export const createDashboard = (
-  name: string,
-  type: string,
-  owner: string,
-  groups: string[],
-  settings: Partial<DashboardConfiguration> = {}
-): DashboardConfiguration => {
-  return {
-    id: generateUUID(),
-    name,
-    type,
-    description: settings.description || `Dashboard for ${groups.join(', ')}`,
-    owner,
-    groups,
-    widgets: [],
-    layout: {
+
+// ============================================================================
+// DASHBOARD CONFIGURATION MANAGEMENT
+// ============================================================================
+
+export class DashboardConfigurationManager {
+  private dashboards: Map<UUID, DashboardConfiguration> = new Map();
+  private templates: Map<string, DashboardConfiguration> = new Map();
+
+  /**
+   * Create new dashboard configuration
+   */
+  createDashboard(
+    name: string,
+    type: 'executive' | 'operational' | 'analytical' | 'compliance' | 'custom',
+    ownerId: UUID,
+    config: {
+      description?: string;
+      groups: string[];
+      refreshInterval?: number;
+      isPublic?: boolean;
+      allowSharing?: boolean;
+      enableRealTime?: boolean;
+    }
+  ): DashboardConfiguration {
+    const dashboardId = this.generateDashboardId();
+    
+    const dashboard: DashboardConfiguration = {
+      id: dashboardId,
+      name,
+      description: config.description || '',
+      type,
+      ownerId,
+      groups: config.groups,
+      widgets: [],
+      layout: this.createDefaultLayout(type),
+      filters: [],
+      theme: this.getDefaultTheme(),
+      personalization: {
+        userId: ownerId,
+        customizations: {},
+        preferences: {
+          defaultView: 'grid',
+          refreshInterval: config.refreshInterval || 300000, // 5 minutes
+          enableAnimations: true,
+          compactMode: false,
+          showLegends: true
+        },
+        savedViews: [],
+        bookmarks: [],
+        notifications: {
+          enabled: true,
+          types: ['alerts', 'updates', 'insights'],
+          channels: ['in-app', 'email']
+        }
+      },
+      permissions: {
+        read: config.isPublic ? ['*'] : [ownerId],
+        write: [ownerId],
+        share: config.allowSharing ? [ownerId] : [],
+        admin: [ownerId]
+      },
+      settings: {
+        refreshInterval: config.refreshInterval || 300000,
+        enableRealTime: config.enableRealTime || false,
+        enableExport: true,
+        enableFilters: true,
+        enableDrillDown: true,
+        maxWidgets: 50,
+        cacheTimeout: 60000
+      },
+      analytics: this.initializeDashboardAnalytics(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastViewed: new Date(),
+      version: 1
+    };
+
+    this.dashboards.set(dashboardId, dashboard);
+    return dashboard;
+  }
+
+  /**
+   * Clone dashboard with modifications
+   */
+  cloneDashboard(
+    sourceId: UUID,
+    newName: string,
+    ownerId: UUID,
+    modifications?: Partial<DashboardConfiguration>
+  ): DashboardConfiguration {
+    const source = this.dashboards.get(sourceId);
+    if (!source) throw new Error('Source dashboard not found');
+
+    const clonedDashboard: DashboardConfiguration = {
+      ...source,
+      id: this.generateDashboardId(),
+      name: newName,
+      ownerId,
+      widgets: source.widgets.map(widget => ({ ...widget, id: this.generateWidgetId() })),
+      permissions: {
+        read: [ownerId],
+        write: [ownerId],
+        share: [ownerId],
+        admin: [ownerId]
+      },
+      analytics: this.initializeDashboardAnalytics(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastViewed: new Date(),
+      version: 1,
+      ...modifications
+    };
+
+    this.dashboards.set(clonedDashboard.id, clonedDashboard);
+    return clonedDashboard;
+  }
+
+  /**
+   * Create dashboard template
+   */
+  createTemplate(
+    name: string,
+    type: string,
+    configuration: Partial<DashboardConfiguration>
+  ): void {
+    const template: DashboardConfiguration = {
+      id: this.generateDashboardId(),
+      name,
+      description: `Template for ${type} dashboards`,
+      type: 'custom',
+      ownerId: 'system' as UUID,
+      groups: [],
+      widgets: [],
+      layout: this.createDefaultLayout('custom'),
+      filters: [],
+      theme: this.getDefaultTheme(),
+      personalization: {
+        userId: 'system' as UUID,
+        customizations: {},
+        preferences: {
+          defaultView: 'grid',
+          refreshInterval: 300000,
+          enableAnimations: true,
+          compactMode: false,
+          showLegends: true
+        },
+        savedViews: [],
+        bookmarks: [],
+        notifications: {
+          enabled: true,
+          types: ['alerts', 'updates', 'insights'],
+          channels: ['in-app']
+        }
+      },
+      permissions: {
+        read: ['*'],
+        write: [],
+        share: [],
+        admin: ['system' as UUID]
+      },
+      settings: {
+        refreshInterval: 300000,
+        enableRealTime: false,
+        enableExport: true,
+        enableFilters: true,
+        enableDrillDown: true,
+        maxWidgets: 50,
+        cacheTimeout: 60000
+      },
+      analytics: this.initializeDashboardAnalytics(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastViewed: new Date(),
+      version: 1,
+      ...configuration
+    };
+
+    this.templates.set(name, template);
+  }
+
+  private createDefaultLayout(type: string): DashboardLayout {
+    const layouts: Record<string, DashboardLayout> = {
+      executive: {
+        type: 'grid',
+        columns: 4,
+        rows: 3,
+        responsive: true,
+        breakpoints: {
+          lg: { columns: 4, width: 1200 },
+          md: { columns: 3, width: 996 },
+          sm: { columns: 2, width: 768 },
+          xs: { columns: 1, width: 480 }
+        },
+        widgets: []
+      },
+      operational: {
+        type: 'masonry',
+        columns: 3,
+        rows: 4,
+        responsive: true,
+        breakpoints: {
+          lg: { columns: 3, width: 1200 },
+          md: { columns: 2, width: 996 },
+          sm: { columns: 2, width: 768 },
+          xs: { columns: 1, width: 480 }
+        },
+        widgets: []
+      },
+      analytical: {
+        type: 'flex',
+        columns: 2,
+        rows: 2,
+        responsive: true,
+        breakpoints: {
+          lg: { columns: 2, width: 1200 },
+          md: { columns: 2, width: 996 },
+          sm: { columns: 1, width: 768 },
+          xs: { columns: 1, width: 480 }
+        },
+        widgets: []
+      },
+      compliance: {
+        type: 'grid',
+        columns: 3,
+        rows: 4,
+        responsive: true,
+        breakpoints: {
+          lg: { columns: 3, width: 1200 },
+          md: { columns: 2, width: 996 },
+          sm: { columns: 2, width: 768 },
+          xs: { columns: 1, width: 480 }
+        },
+        widgets: []
+      }
+    };
+
+    return layouts[type] || layouts.custom || {
       type: 'grid',
-      columns: 12,
-      rows: 'auto',
-      gap: 16,
+      columns: 3,
+      rows: 3,
       responsive: true,
       breakpoints: {
-        xs: 480,
-        sm: 768,
-        md: 1024,
-        lg: 1280,
-        xl: 1920
+        lg: { columns: 3, width: 1200 },
+        md: { columns: 2, width: 996 },
+        sm: { columns: 2, width: 768 },
+        xs: { columns: 1, width: 480 }
+      },
+      widgets: []
+    };
+  }
+
+  private getDefaultTheme(): DashboardTheme {
+    return {
+      name: 'default',
+      colors: {
+        primary: '#2563eb',
+        secondary: '#64748b',
+        success: '#10b981',
+        warning: '#f59e0b',
+        error: '#ef4444',
+        info: '#3b82f6',
+        background: '#ffffff',
+        surface: '#f8fafc',
+        text: '#1e293b',
+        border: '#e2e8f0'
+      },
+      typography: {
+        fontFamily: 'Inter, sans-serif',
+        fontSize: {
+          xs: '0.75rem',
+          sm: '0.875rem',
+          base: '1rem',
+          lg: '1.125rem',
+          xl: '1.25rem',
+          '2xl': '1.5rem',
+          '3xl': '1.875rem'
+        },
+        fontWeight: {
+          normal: 400,
+          medium: 500,
+          semibold: 600,
+          bold: 700
+        }
+      },
+      spacing: {
+        xs: '0.25rem',
+        sm: '0.5rem',
+        md: '1rem',
+        lg: '1.5rem',
+        xl: '2rem',
+        '2xl': '3rem'
+      },
+      borderRadius: {
+        none: '0',
+        sm: '0.125rem',
+        md: '0.375rem',
+        lg: '0.5rem',
+        xl: '0.75rem',
+        full: '9999px'
+      },
+      shadows: {
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+        lg: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        xl: '0 20px 25px -5px rgb(0 0 0 / 0.1)'
       }
-    },
-    filters: [],
-    kpis: [],
-    alerts: [],
-    theme: settings.theme || 'default',
-    settings: {
-      autoRefresh: true,
-      refreshInterval: 300, // 5 minutes
-      showFilters: true,
-      showExport: true,
-      allowDrillDown: true,
-      enableInsights: true,
-      ...settings.settings
-    },
-    permissions: settings.permissions || {
-      view: ['authenticated'],
-      edit: [owner],
-      share: [owner],
-      export: ['authenticated']
-    },
-    analytics: {
+    };
+  }
+
+  private initializeDashboardAnalytics(): DashboardAnalytics {
+    return {
       views: 0,
-      lastViewed: new Date().toISOString(),
-      averageViewTime: 0,
-      interactions: 0,
-      exports: 0,
-      shares: 0
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    lastRefresh: new Date().toISOString()
-  };
-};
-
-/**
- * Add widget to dashboard
- */
-export const addWidgetToDashboard = (
-  dashboard: DashboardConfiguration,
-  widgetConfig: Omit<WidgetConfiguration, 'id'>,
-  position?: { x: number; y: number }
-): DashboardConfiguration => {
-  const widget: DashboardWidget = {
-    id: generateUUID(),
-    type: widgetConfig.type,
-    title: widgetConfig.title,
-    description: widgetConfig.description,
-    dataSource: widgetConfig.dataSource,
-    query: widgetConfig.query,
-    visualization: widgetConfig.visualization,
-    filters: widgetConfig.filters,
-    refreshInterval: widgetConfig.refreshInterval,
-    size: widgetConfig.size,
-    position: position || findOptimalPosition(dashboard, widgetConfig.size),
-    dependencies: widgetConfig.dependencies,
-    permissions: widgetConfig.permissions,
-    settings: widgetConfig.settings,
-    data: null,
-    loading: false,
-    error: null,
-    lastUpdated: new Date().toISOString(),
-    createdAt: new Date().toISOString()
-  };
-
-  dashboard.widgets.push(widget);
-  dashboard.updatedAt = new Date().toISOString();
-
-  return dashboard;
-};
-
-/**
- * Create cross-group KPI widget
- */
-export const createCrossGroupKPI = (
-  name: string,
-  groups: string[],
-  metrics: string[],
-  aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' = 'sum'
-): WidgetConfiguration => {
-  return {
-    id: generateUUID(),
-    type: 'cross-group-kpi',
-    title: name,
-    description: `Cross-group KPI aggregating ${metrics.join(', ')} across ${groups.join(', ')}`,
-    dataSource: 'cross-group-aggregator',
-    query: buildCrossGroupQuery(groups, metrics, aggregation),
-    visualization: {
-      type: 'metric',
-      colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'],
-      axes: { x: 'group', y: 'value' },
-      aggregation,
-      groupBy: groups,
-      sortBy: { field: 'value', direction: 'desc' },
-      limit: 10,
-      animations: true,
-      interactive: true
-    },
-    filters: [],
-    refreshInterval: 300,
-    size: { width: 4, height: 2 },
-    position: { x: 0, y: 0 },
-    dependencies: groups.map(group => `${group}-service`),
-    permissions: ['view', 'export'],
-    settings: {
-      showTrend: true,
-      showComparison: true,
-      alertThreshold: 0.1,
-      precision: 2
-    }
-  };
-};
-
-/**
- * Create predictive analytics widget
- */
-export const createPredictiveWidget = (
-  name: string,
-  dataSource: string,
-  targetMetric: string,
-  predictionHorizon: number = 30
-): WidgetConfiguration => {
-  return {
-    id: generateUUID(),
-    type: 'predictive-analytics',
-    title: name,
-    description: `Predictive analysis for ${targetMetric} over ${predictionHorizon} days`,
-    dataSource,
-    query: buildPredictiveQuery(targetMetric, predictionHorizon),
-    visualization: {
-      type: 'chart',
-      chartType: 'line',
-      colors: ['#3B82F6', '#10B981', '#F59E0B'],
-      axes: { x: 'date', y: 'value' },
-      aggregation: 'avg',
-      groupBy: ['prediction_type'],
-      sortBy: { field: 'date', direction: 'asc' },
-      limit: 1000,
-      animations: true,
-      interactive: true
-    },
-    filters: [
-      {
-        field: 'date',
-        operator: 'gte',
-        value: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        type: 'date'
-      }
-    ],
-    refreshInterval: 3600, // 1 hour
-    size: { width: 8, height: 4 },
-    position: { x: 0, y: 0 },
-    dependencies: ['ml-service', 'analytics-service'],
-    permissions: ['view', 'export'],
-    settings: {
-      showConfidenceInterval: true,
-      showHistorical: true,
-      modelType: 'auto',
-      seasonality: 'auto'
-    }
-  };
-};
-
-// =============================================================================
-// WIDGET ORCHESTRATION UTILITIES
-// =============================================================================
-
-/**
- * Calculate widget dependencies and execution order
- */
-export const calculateWidgetDependencies = (
-  widgets: DashboardWidget[]
-): { executionOrder: string[]; dependencyGraph: Record<string, string[]> } => {
-  const dependencyGraph: Record<string, string[]> = {};
-  const inDegree: Record<string, number> = {};
-  
-  // Initialize graph
-  widgets.forEach(widget => {
-    dependencyGraph[widget.id] = widget.dependencies || [];
-    inDegree[widget.id] = 0;
-  });
-
-  // Calculate in-degrees
-  widgets.forEach(widget => {
-    (widget.dependencies || []).forEach(dep => {
-      if (inDegree[dep] !== undefined) {
-        inDegree[widget.id]++;
-      }
-    });
-  });
-
-  // Topological sort
-  const executionOrder: string[] = [];
-  const queue: string[] = [];
-
-  // Find widgets with no dependencies
-  Object.keys(inDegree).forEach(widgetId => {
-    if (inDegree[widgetId] === 0) {
-      queue.push(widgetId);
-    }
-  });
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    executionOrder.push(current);
-
-    // Update in-degrees of dependent widgets
-    widgets.forEach(widget => {
-      if ((widget.dependencies || []).includes(current)) {
-        inDegree[widget.id]--;
-        if (inDegree[widget.id] === 0) {
-          queue.push(widget.id);
-        }
-      }
-    });
+      uniqueUsers: 0,
+      avgViewDuration: 0,
+      interactionCount: 0,
+      exportCount: 0,
+      shareCount: 0,
+      widgetInteractions: {},
+      filterUsage: {},
+      performanceMetrics: {
+        loadTime: 0,
+        renderTime: 0,
+        dataFetchTime: 0,
+        errorRate: 0
+      },
+      userBehavior: {
+        mostViewedWidgets: [],
+        commonFilters: [],
+        peakUsageHours: [],
+        deviceTypes: {}
+      },
+      lastUpdated: new Date().toISOString() as ISODateString
+    };
   }
 
-  return { executionOrder, dependencyGraph };
-};
-
-/**
- * Optimize widget refresh intervals based on data freshness requirements
- */
-export const optimizeRefreshIntervals = (
-  widgets: DashboardWidget[],
-  constraints: {
-    maxConcurrentRequests: number;
-    priorityWeights: Record<string, number>;
-    dataFreshnessRequirements: Record<string, number>;
+  private generateDashboardId(): UUID {
+    return `dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
   }
-): Record<string, number> => {
-  const optimizedIntervals: Record<string, number> = {};
 
-  widgets.forEach(widget => {
-    const priority = constraints.priorityWeights[widget.type] || 1;
-    const freshnessReq = constraints.dataFreshnessRequirements[widget.dataSource] || 300;
-    const currentInterval = widget.refreshInterval;
+  private generateWidgetId(): UUID {
+    return `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+}
 
-    // Calculate optimal interval based on priority and freshness requirements
-    let optimalInterval = Math.max(
-      freshnessReq,
-      Math.floor(currentInterval * (2 - priority))
-    );
+// ============================================================================
+// WIDGET MANAGEMENT UTILITIES
+// ============================================================================
 
-    // Adjust for system load
-    const loadFactor = widgets.length / constraints.maxConcurrentRequests;
-    if (loadFactor > 1) {
-      optimalInterval *= Math.ceil(loadFactor);
+export class DashboardWidgetManager {
+  private widgets: Map<UUID, DashboardWidget> = new Map();
+  private widgetTemplates: Map<string, Partial<DashboardWidget>> = new Map();
+
+  /**
+   * Create new dashboard widget
+   */
+  createWidget(
+    type: 'chart' | 'table' | 'metric' | 'gauge' | 'map' | 'text' | 'iframe' | 'custom',
+    title: string,
+    config: {
+      dataSource: string;
+      query?: string;
+      visualization?: any;
+      size?: { width: number; height: number };
+      position?: { x: number; y: number };
+      refreshInterval?: number;
+      filters?: DashboardFilter[];
     }
-
-    optimizedIntervals[widget.id] = optimalInterval;
-  });
-
-  return optimizedIntervals;
-};
-
-/**
- * Generate widget layout suggestions
- */
-export const generateLayoutSuggestions = (
-  widgets: DashboardWidget[],
-  screenSize: { width: number; height: number },
-  layoutType: 'grid' | 'masonry' | 'flow' = 'grid'
-): DashboardLayout => {
-  const suggestions: DashboardLayout = {
-    type: layoutType,
-    columns: 12,
-    rows: 'auto',
-    gap: 16,
-    responsive: true,
-    breakpoints: {
-      xs: 480,
-      sm: 768,
-      md: 1024,
-      lg: 1280,
-      xl: 1920
-    }
-  };
-
-  // Sort widgets by priority and size
-  const sortedWidgets = [...widgets].sort((a, b) => {
-    const priorityA = getWidgetPriority(a);
-    const priorityB = getWidgetPriority(b);
+  ): DashboardWidget {
+    const widgetId = this.generateWidgetId();
     
-    if (priorityA !== priorityB) {
-      return priorityB - priorityA; // Higher priority first
-    }
-    
-    // Larger widgets first
-    return (b.size.width * b.size.height) - (a.size.width * a.size.height);
-  });
+    const widget: DashboardWidget = {
+      id: widgetId,
+      type,
+      title,
+      description: '',
+      dataSource: config.dataSource,
+      query: config.query || '',
+      visualization: config.visualization || this.getDefaultVisualization(type),
+      data: null,
+      loading: false,
+      error: null,
+      size: config.size || this.getDefaultSize(type),
+      position: config.position || { x: 0, y: 0 },
+      zIndex: 1,
+      visible: true,
+      interactive: true,
+      refreshInterval: config.refreshInterval || 300000,
+      lastRefresh: new Date().toISOString() as ISODateString,
+      filters: config.filters || [],
+      permissions: {
+        read: ['*'],
+        edit: [],
+        delete: []
+      },
+      settings: {
+        enableExport: true,
+        enableFullscreen: true,
+        enableRefresh: true,
+        enableFilters: true,
+        showHeader: true,
+        showBorder: true
+      },
+      analytics: {
+        views: 0,
+        interactions: 0,
+        exports: 0,
+        errors: 0,
+        avgLoadTime: 0,
+        lastInteraction: new Date().toISOString() as ISODateString
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-  // Calculate optimal positions
-  const positions = calculateOptimalPositions(sortedWidgets, suggestions.columns);
-  
-  // Update widget positions
-  sortedWidgets.forEach((widget, index) => {
-    widget.position = positions[index];
-  });
-
-  return suggestions;
-};
-
-// =============================================================================
-// KPI CALCULATION UTILITIES
-// =============================================================================
-
-/**
- * Calculate cross-group KPI
- */
-export const calculateCrossGroupKPI = (
-  kpiConfig: KPICalculation,
-  groupData: Record<string, any[]>
-): { value: number; trend: 'up' | 'down' | 'stable'; variance: number } => {
-  const values: number[] = [];
-  
-  // Extract values from all groups
-  Object.entries(groupData).forEach(([group, data]) => {
-    const groupValues = extractValuesFromData(data, kpiConfig.inputs);
-    values.push(...groupValues);
-  });
-
-  // Calculate KPI value using formula
-  const currentValue = evaluateFormula(kpiConfig.formula, values);
-  
-  // Calculate trend
-  const historicalValues = kpiConfig.historicalData.map(d => d.value);
-  const trend = calculateTrend(currentValue, historicalValues);
-  
-  // Calculate variance
-  const variance = calculateVariance(currentValue, historicalValues);
-
-  return {
-    value: currentValue,
-    trend,
-    variance
-  };
-};
-
-/**
- * Generate KPI recommendations
- */
-export const generateKPIRecommendations = (
-  kpis: KPICalculation[],
-  currentValues: Record<string, number>
-): DashboardInsight[] => {
-  const recommendations: DashboardInsight[] = [];
-
-  kpis.forEach(kpi => {
-    const currentValue = currentValues[kpi.id];
-    const target = kpi.target;
-    const threshold = kpi.threshold;
-
-    // Performance vs target
-    if (currentValue < target * 0.8) {
-      recommendations.push({
-        id: generateUUID(),
-        type: 'recommendation',
-        title: `Improve ${kpi.name}`,
-        description: `${kpi.name} is ${Math.round((1 - currentValue/target) * 100)}% below target`,
-        confidence: 0.8,
-        impact: currentValue < target * 0.5 ? 'critical' : 'high',
-        actionable: true,
-        relatedWidgets: [kpi.id],
-        metadata: {
-          currentValue,
-          target,
-          gap: target - currentValue
-        },
-        createdAt: new Date().toISOString()
-      });
-    }
-
-    // Threshold violations
-    if (currentValue < threshold.critical) {
-      recommendations.push({
-        id: generateUUID(),
-        type: 'anomaly',
-        title: `Critical Alert: ${kpi.name}`,
-        description: `${kpi.name} has fallen below critical threshold`,
-        confidence: 0.95,
-        impact: 'critical',
-        actionable: true,
-        relatedWidgets: [kpi.id],
-        metadata: {
-          currentValue,
-          threshold: threshold.critical,
-          severity: 'critical'
-        },
-        createdAt: new Date().toISOString()
-      });
-    } else if (currentValue < threshold.warning) {
-      recommendations.push({
-        id: generateUUID(),
-        type: 'anomaly',
-        title: `Warning: ${kpi.name}`,
-        description: `${kpi.name} is approaching critical levels`,
-        confidence: 0.85,
-        impact: 'medium',
-        actionable: true,
-        relatedWidgets: [kpi.id],
-        metadata: {
-          currentValue,
-          threshold: threshold.warning,
-          severity: 'warning'
-        },
-        createdAt: new Date().toISOString()
-      });
-    }
-  });
-
-  return recommendations.sort((a, b) => {
-    const impactOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-    return impactOrder[b.impact] - impactOrder[a.impact];
-  });
-};
-
-// =============================================================================
-// ANALYTICS AND INSIGHTS UTILITIES
-// =============================================================================
-
-/**
- * Detect anomalies in dashboard data
- */
-export const detectDataAnomalies = (
-  widgets: DashboardWidget[],
-  historicalData: Record<string, any[]>,
-  sensitivity: number = 0.8
-): DashboardInsight[] => {
-  const anomalies: DashboardInsight[] = [];
-
-  widgets.forEach(widget => {
-    const widgetData = widget.data;
-    const historical = historicalData[widget.id] || [];
-
-    if (!widgetData || historical.length < 10) {
-      return; // Need sufficient historical data
-    }
-
-    // Statistical anomaly detection
-    const currentValues = extractNumericValues(widgetData);
-    const historicalValues = historical.flatMap(extractNumericValues);
-
-    const anomalyScore = detectStatisticalAnomalies(currentValues, historicalValues, sensitivity);
-
-    if (anomalyScore > 0.7) {
-      anomalies.push({
-        id: generateUUID(),
-        type: 'anomaly',
-        title: `Data Anomaly in ${widget.title}`,
-        description: `Unusual patterns detected in ${widget.title} data`,
-        confidence: anomalyScore,
-        impact: anomalyScore > 0.9 ? 'critical' : anomalyScore > 0.8 ? 'high' : 'medium',
-        actionable: true,
-        relatedWidgets: [widget.id],
-        metadata: {
-          anomalyScore,
-          affectedMetrics: currentValues.length,
-          detectionMethod: 'statistical'
-        },
-        createdAt: new Date().toISOString()
-      });
-    }
-  });
-
-  return anomalies;
-};
-
-/**
- * Generate predictive insights
- */
-export const generatePredictiveInsights = (
-  widgets: DashboardWidget[],
-  forecastHorizon: number = 30
-): DashboardInsight[] => {
-  const insights: DashboardInsight[] = [];
-
-  widgets.forEach(widget => {
-    if (widget.type === 'predictive-analytics' && widget.data) {
-      const predictions = extractPredictions(widget.data);
-      
-      predictions.forEach(prediction => {
-        if (prediction.confidence > 0.7) {
-          insights.push({
-            id: generateUUID(),
-            type: 'prediction',
-            title: `Forecast: ${widget.title}`,
-            description: prediction.description,
-            confidence: prediction.confidence,
-            impact: prediction.impact,
-            actionable: true,
-            relatedWidgets: [widget.id],
-            metadata: {
-              forecastValue: prediction.value,
-              forecastDate: prediction.date,
-              confidence: prediction.confidence,
-              model: prediction.model
-            },
-            createdAt: new Date().toISOString()
-          });
-        }
-      });
-    }
-  });
-
-  return insights;
-};
-
-/**
- * Calculate dashboard performance metrics
- */
-export const calculateDashboardMetrics = (
-  dashboard: DashboardConfiguration,
-  performanceData: {
-    loadTimes: number[];
-    interactions: number;
-    errors: number;
-    refreshes: number;
+    this.widgets.set(widgetId, widget);
+    return widget;
   }
-): DashboardMetrics => {
-  const totalWidgets = dashboard.widgets.length;
-  const activeWidgets = dashboard.widgets.filter(w => !w.error && w.data).length;
-  const totalKPIs = dashboard.kpis.length;
-  const alertsTriggered = dashboard.alerts.filter(a => a.status === 'triggered').length;
-  
-  const averageLoadTime = performanceData.loadTimes.length > 0
-    ? performanceData.loadTimes.reduce((sum, time) => sum + time, 0) / performanceData.loadTimes.length
-    : 0;
 
-  const userEngagement = calculateEngagementScore(
-    performanceData.interactions,
-    dashboard.analytics.views,
-    dashboard.analytics.averageViewTime
-  );
+  /**
+   * Update widget data
+   */
+  updateWidgetData(widgetId: UUID, data: any, metadata?: any): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
 
-  const dataFreshness = calculateDataFreshness(dashboard.widgets);
-  const performanceScore = calculatePerformanceScore({
-    loadTime: averageLoadTime,
-    errorRate: performanceData.errors / performanceData.refreshes,
-    activeWidgetRatio: activeWidgets / totalWidgets,
-    engagement: userEngagement
-  });
+    widget.data = data;
+    widget.loading = false;
+    widget.error = null;
+    widget.lastRefresh = new Date().toISOString() as ISODateString;
+    widget.updatedAt = new Date();
 
-  return {
-    totalWidgets,
-    activeWidgets,
-    totalKPIs,
-    alertsTriggered,
-    averageLoadTime,
-    userEngagement,
-    dataFreshness,
-    performanceScore
-  };
-};
-
-// =============================================================================
-// EXPORT AND SHARING UTILITIES
-// =============================================================================
-
-/**
- * Export dashboard data
- */
-export const exportDashboard = (
-  dashboard: DashboardConfiguration,
-  exportConfig: DashboardExport
-): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    try {
-      let exportData: any;
-
-      switch (exportConfig.format) {
-        case 'json':
-          exportData = exportToJSON(dashboard, exportConfig.options);
-          resolve(new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }));
-          break;
-
-        case 'csv':
-          exportData = exportToCSV(dashboard, exportConfig.options);
-          resolve(new Blob([exportData], { type: 'text/csv' }));
-          break;
-
-        case 'excel':
-          exportData = exportToExcel(dashboard, exportConfig.options);
-          resolve(exportData);
-          break;
-
-        case 'pdf':
-          exportData = exportToPDF(dashboard, exportConfig.options);
-          resolve(exportData);
-          break;
-
-        case 'png':
-          exportData = exportToPNG(dashboard, exportConfig.options);
-          resolve(exportData);
-          break;
-
-        default:
-          reject(new Error(`Unsupported export format: ${exportConfig.format}`));
-      }
-    } catch (error) {
-      reject(error);
+    if (metadata) {
+      widget.metadata = { ...widget.metadata, ...metadata };
     }
-  });
-};
 
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
+    // Update analytics
+    widget.analytics.views++;
+  }
 
-/**
- * Generate UUID
- */
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
+  /**
+   * Update widget error state
+   */
+  updateWidgetError(widgetId: UUID, error: string): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
 
-/**
- * Find optimal position for new widget
- */
-const findOptimalPosition = (
-  dashboard: DashboardConfiguration,
-  size: { width: number; height: number }
-): { x: number; y: number } => {
-  const columns = dashboard.layout.columns;
-  const occupiedPositions = new Set<string>();
+    widget.loading = false;
+    widget.error = error;
+    widget.updatedAt = new Date();
+    widget.analytics.errors++;
+  }
 
-  // Mark occupied positions
-  dashboard.widgets.forEach(widget => {
-    for (let x = widget.position.x; x < widget.position.x + widget.size.width; x++) {
-      for (let y = widget.position.y; y < widget.position.y + widget.size.height; y++) {
-        occupiedPositions.add(`${x},${y}`);
-      }
-    }
-  });
+  /**
+   * Apply filters to widget
+   */
+  applyFilters(widgetId: UUID, filters: DashboardFilter[]): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
 
-  // Find first available position
-  for (let y = 0; y < 100; y++) { // Reasonable upper limit
-    for (let x = 0; x <= columns - size.width; x++) {
-      let canPlace = true;
-      
-      // Check if position is available
-      for (let dx = 0; dx < size.width && canPlace; dx++) {
-        for (let dy = 0; dy < size.height && canPlace; dy++) {
-          if (occupiedPositions.has(`${x + dx},${y + dy}`)) {
-            canPlace = false;
+    widget.filters = filters;
+    widget.updatedAt = new Date();
+    
+    // Trigger data refresh
+    this.refreshWidget(widgetId);
+  }
+
+  /**
+   * Refresh widget data
+   */
+  refreshWidget(widgetId: UUID): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
+
+    widget.loading = true;
+    widget.error = null;
+    widget.updatedAt = new Date();
+  }
+
+  /**
+   * Resize widget
+   */
+  resizeWidget(widgetId: UUID, size: { width: number; height: number }): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
+
+    widget.size = size;
+    widget.updatedAt = new Date();
+    widget.analytics.interactions++;
+  }
+
+  /**
+   * Move widget position
+   */
+  moveWidget(widgetId: UUID, position: { x: number; y: number }): void {
+    const widget = this.widgets.get(widgetId);
+    if (!widget) throw new Error('Widget not found');
+
+    widget.position = position;
+    widget.updatedAt = new Date();
+    widget.analytics.interactions++;
+  }
+
+  private getDefaultVisualization(type: string): any {
+    const visualizations: Record<string, any> = {
+      chart: {
+        type: 'line',
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { display: true },
+            y: { display: true }
+          },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { enabled: true }
           }
         }
+      },
+      table: {
+        columns: [],
+        pagination: true,
+        sorting: true,
+        filtering: true,
+        pageSize: 10
+      },
+      metric: {
+        format: 'number',
+        unit: '',
+        precision: 2,
+        showTrend: true,
+        trendPeriod: '7d'
+      },
+      gauge: {
+        min: 0,
+        max: 100,
+        unit: '%',
+        thresholds: [
+          { value: 70, color: '#10b981' },
+          { value: 90, color: '#f59e0b' },
+          { value: 100, color: '#ef4444' }
+        ]
+      },
+      map: {
+        center: [0, 0],
+        zoom: 2,
+        style: 'light',
+        markers: [],
+        heatmap: false
+      },
+      text: {
+        content: '',
+        markdown: true,
+        fontSize: 'base',
+        alignment: 'left'
       }
+    };
 
-      if (canPlace) {
-        return { x, y };
+    return visualizations[type] || {};
+  }
+
+  private getDefaultSize(type: string): { width: number; height: number } {
+    const sizes: Record<string, { width: number; height: number }> = {
+      chart: { width: 400, height: 300 },
+      table: { width: 600, height: 400 },
+      metric: { width: 200, height: 120 },
+      gauge: { width: 250, height: 200 },
+      map: { width: 500, height: 400 },
+      text: { width: 300, height: 150 },
+      iframe: { width: 400, height: 300 },
+      custom: { width: 300, height: 200 }
+    };
+
+    return sizes[type] || { width: 300, height: 200 };
+  }
+
+  private generateWidgetId(): UUID {
+    return `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+  }
+}
+
+// ============================================================================
+// KPI CALCULATION UTILITIES
+// ============================================================================
+
+export class DashboardKPICalculator {
+  /**
+   * Calculate KPI value with trend analysis
+   */
+  calculateKPI(
+    data: any[],
+    config: {
+      metric: string;
+      aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median';
+      timeField?: string;
+      valueField: string;
+      filters?: Record<string, any>;
+      trendPeriod?: string;
+    }
+  ): DashboardKPI {
+    // Filter data if filters provided
+    let filteredData = data;
+    if (config.filters) {
+      filteredData = this.applyFilters(data, config.filters);
+    }
+
+    // Calculate current value
+    const currentValue = this.calculateAggregation(filteredData, config.valueField, config.aggregation);
+
+    // Calculate trend if time field provided
+    let trend = null;
+    if (config.timeField && config.trendPeriod) {
+      trend = this.calculateTrend(filteredData, config.timeField, config.valueField, config.aggregation, config.trendPeriod);
+    }
+
+    return {
+      id: `kpi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+      name: config.metric,
+      value: currentValue,
+      unit: '',
+      format: 'number',
+      trend: trend ? {
+        direction: trend.direction,
+        percentage: trend.percentage,
+        period: config.trendPeriod || '7d',
+        previousValue: trend.previousValue
+      } : undefined,
+      status: this.determineKPIStatus(currentValue, trend),
+      thresholds: [],
+      description: `${config.aggregation} of ${config.valueField}`,
+      category: 'general',
+      priority: 'medium',
+      lastUpdated: new Date().toISOString() as ISODateString,
+      source: 'calculated',
+      metadata: {
+        dataPoints: filteredData.length,
+        calculation: config.aggregation,
+        filters: config.filters
+      }
+    };
+  }
+
+  /**
+   * Calculate multiple KPIs in batch
+   */
+  calculateBatchKPIs(
+    data: any[],
+    configs: Array<{
+      metric: string;
+      aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median';
+      timeField?: string;
+      valueField: string;
+      filters?: Record<string, any>;
+      trendPeriod?: string;
+    }>
+  ): DashboardKPI[] {
+    return configs.map(config => this.calculateKPI(data, config));
+  }
+
+  /**
+   * Calculate cross-group KPIs
+   */
+  calculateCrossGroupKPIs(
+    groupData: Record<string, any[]>,
+    config: {
+      groups: string[];
+      metric: string;
+      aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median';
+      valueField: string;
+      correlationAnalysis?: boolean;
+    }
+  ): {
+    individual: Record<string, DashboardKPI>;
+    combined: DashboardKPI;
+    correlations?: Array<{ group1: string; group2: string; correlation: number }>;
+  } {
+    const individual: Record<string, DashboardKPI> = {};
+    const allData: any[] = [];
+
+    // Calculate individual KPIs for each group
+    config.groups.forEach(group => {
+      if (groupData[group]) {
+        const groupKPI = this.calculateKPI(groupData[group], {
+          metric: `${config.metric} (${group})`,
+          aggregation: config.aggregation,
+          valueField: config.valueField
+        });
+        individual[group] = groupKPI;
+        allData.push(...groupData[group]);
+      }
+    });
+
+    // Calculate combined KPI
+    const combined = this.calculateKPI(allData, {
+      metric: `${config.metric} (Combined)`,
+      aggregation: config.aggregation,
+      valueField: config.valueField
+    });
+
+    // Calculate correlations if requested
+    let correlations: Array<{ group1: string; group2: string; correlation: number }> | undefined;
+    if (config.correlationAnalysis) {
+      correlations = this.calculateCorrelations(groupData, config.groups, config.valueField);
+    }
+
+    return {
+      individual,
+      combined,
+      correlations
+    };
+  }
+
+  private applyFilters(data: any[], filters: Record<string, any>): any[] {
+    return data.filter(item => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (Array.isArray(value)) {
+          return value.includes(item[key]);
+        }
+        if (typeof value === 'object' && value !== null) {
+          if (value.min !== undefined && item[key] < value.min) return false;
+          if (value.max !== undefined && item[key] > value.max) return false;
+          return true;
+        }
+        return item[key] === value;
+      });
+    });
+  }
+
+  private calculateAggregation(
+    data: any[],
+    field: string,
+    aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median'
+  ): number {
+    if (data.length === 0) return 0;
+
+    const values = data.map(item => Number(item[field]) || 0);
+
+    switch (aggregation) {
+      case 'sum':
+        return values.reduce((sum, val) => sum + val, 0);
+      case 'avg':
+        return values.reduce((sum, val) => sum + val, 0) / values.length;
+      case 'count':
+        return data.length;
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
+      case 'median':
+        const sorted = values.sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      default:
+        return 0;
+    }
+  }
+
+  private calculateTrend(
+    data: any[],
+    timeField: string,
+    valueField: string,
+    aggregation: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median',
+    period: string
+  ): { direction: 'up' | 'down' | 'stable'; percentage: number; previousValue: number } {
+    const now = new Date();
+    const periodMs = this.parsePeriod(period);
+    const cutoffDate = new Date(now.getTime() - periodMs);
+
+    const currentData = data.filter(item => new Date(item[timeField]) >= cutoffDate);
+    const previousData = data.filter(item => {
+      const itemDate = new Date(item[timeField]);
+      return itemDate >= new Date(cutoffDate.getTime() - periodMs) && itemDate < cutoffDate;
+    });
+
+    const currentValue = this.calculateAggregation(currentData, valueField, aggregation);
+    const previousValue = this.calculateAggregation(previousData, valueField, aggregation);
+
+    if (previousValue === 0) {
+      return { direction: 'stable', percentage: 0, previousValue };
+    }
+
+    const percentage = ((currentValue - previousValue) / previousValue) * 100;
+    const direction = Math.abs(percentage) < 1 ? 'stable' : percentage > 0 ? 'up' : 'down';
+
+    return { direction, percentage: Math.abs(percentage), previousValue };
+  }
+
+  private parsePeriod(period: string): number {
+    const match = period.match(/^(\d+)([hdwmy])$/);
+    if (!match) return 24 * 60 * 60 * 1000; // Default to 1 day
+
+    const value = parseInt(match[1]);
+    const unit = match[2];
+
+    switch (unit) {
+      case 'h': return value * 60 * 60 * 1000;
+      case 'd': return value * 24 * 60 * 60 * 1000;
+      case 'w': return value * 7 * 24 * 60 * 60 * 1000;
+      case 'm': return value * 30 * 24 * 60 * 60 * 1000;
+      case 'y': return value * 365 * 24 * 60 * 60 * 1000;
+      default: return 24 * 60 * 60 * 1000;
+    }
+  }
+
+  private determineKPIStatus(
+    value: number,
+    trend?: { direction: 'up' | 'down' | 'stable'; percentage: number }
+  ): 'good' | 'warning' | 'critical' | 'neutral' {
+    // Simplified status determination - real implementation would use thresholds
+    if (!trend) return 'neutral';
+    
+    if (trend.direction === 'up' && trend.percentage > 10) return 'good';
+    if (trend.direction === 'down' && trend.percentage > 10) return 'warning';
+    if (trend.direction === 'down' && trend.percentage > 25) return 'critical';
+    
+    return 'neutral';
+  }
+
+  private calculateCorrelations(
+    groupData: Record<string, any[]>,
+    groups: string[],
+    valueField: string
+  ): Array<{ group1: string; group2: string; correlation: number }> {
+    const correlations: Array<{ group1: string; group2: string; correlation: number }> = [];
+
+    for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        const group1 = groups[i];
+        const group2 = groups[j];
+        
+        if (groupData[group1] && groupData[group2]) {
+          const correlation = this.calculatePearsonCorrelation(
+            groupData[group1].map(item => Number(item[valueField]) || 0),
+            groupData[group2].map(item => Number(item[valueField]) || 0)
+          );
+          
+          correlations.push({ group1, group2, correlation });
+        }
+      }
+    }
+
+    return correlations;
+  }
+
+  private calculatePearsonCorrelation(x: number[], y: number[]): number {
+    const n = Math.min(x.length, y.length);
+    if (n === 0) return 0;
+
+    const sumX = x.slice(0, n).reduce((sum, val) => sum + val, 0);
+    const sumY = y.slice(0, n).reduce((sum, val) => sum + val, 0);
+    const sumXY = x.slice(0, n).reduce((sum, val, i) => sum + val * y[i], 0);
+    const sumX2 = x.slice(0, n).reduce((sum, val) => sum + val * val, 0);
+    const sumY2 = y.slice(0, n).reduce((sum, val) => sum + val * val, 0);
+
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+    return denominator === 0 ? 0 : numerator / denominator;
+  }
+}
+
+// ============================================================================
+// ALERT PROCESSING UTILITIES
+// ============================================================================
+
+export class DashboardAlertProcessor {
+  private alerts: Map<UUID, DashboardAlert> = new Map();
+  private alertRules: Map<UUID, any> = new Map();
+
+  /**
+   * Process alerts for dashboard data
+   */
+  processAlerts(
+    data: any,
+    rules: Array<{
+      id: string;
+      condition: string;
+      threshold: number;
+      comparison: 'gt' | 'lt' | 'eq' | 'gte' | 'lte' | 'ne';
+      field: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      message: string;
+    }>
+  ): DashboardAlert[] {
+    const alerts: DashboardAlert[] = [];
+
+    rules.forEach(rule => {
+      const value = this.extractValue(data, rule.field);
+      const triggered = this.evaluateCondition(value, rule.threshold, rule.comparison);
+
+      if (triggered) {
+        const alert: DashboardAlert = {
+          id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+          ruleId: rule.id as UUID,
+          title: rule.message,
+          message: `${rule.field} is ${value} (threshold: ${rule.threshold})`,
+          severity: rule.severity,
+          status: 'active',
+          value,
+          threshold: rule.threshold,
+          field: rule.field,
+          source: 'dashboard',
+          category: 'threshold',
+          actions: [],
+          metadata: {
+            rule: rule.condition,
+            comparison: rule.comparison,
+            triggeredAt: new Date().toISOString()
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          acknowledgedAt: undefined,
+          resolvedAt: undefined
+        };
+
+        alerts.push(alert);
+        this.alerts.set(alert.id, alert);
+      }
+    });
+
+    return alerts;
+  }
+
+  /**
+   * Create anomaly detection alert
+   */
+  createAnomalyAlert(
+    data: number[],
+    config: {
+      field: string;
+      sensitivity: number;
+      windowSize: number;
+      threshold: number;
+    }
+  ): DashboardAlert | null {
+    const anomalies = this.detectAnomalies(data, config.sensitivity, config.windowSize);
+    
+    if (anomalies.length > 0) {
+      const latestAnomaly = anomalies[anomalies.length - 1];
+      
+      return {
+        id: `anomaly_alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID,
+        ruleId: 'anomaly_detection' as UUID,
+        title: 'Anomaly Detected',
+        message: `Anomalous value detected in ${config.field}: ${latestAnomaly.value}`,
+        severity: latestAnomaly.severity,
+        status: 'active',
+        value: latestAnomaly.value,
+        threshold: config.threshold,
+        field: config.field,
+        source: 'anomaly_detection',
+        category: 'anomaly',
+        actions: ['investigate', 'acknowledge'],
+        metadata: {
+          anomalyScore: latestAnomaly.score,
+          expectedRange: latestAnomaly.expectedRange,
+          detectionMethod: 'statistical'
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        acknowledgedAt: undefined,
+        resolvedAt: undefined
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Acknowledge alert
+   */
+  acknowledgeAlert(alertId: UUID, userId: UUID, comment?: string): void {
+    const alert = this.alerts.get(alertId);
+    if (alert) {
+      alert.acknowledgedAt = new Date().toISOString() as ISODateString;
+      alert.status = 'acknowledged';
+      alert.updatedAt = new Date();
+      
+      if (comment) {
+        alert.metadata = { ...alert.metadata, acknowledgmentComment: comment, acknowledgedBy: userId };
       }
     }
   }
 
-  return { x: 0, y: 0 }; // Fallback
+  /**
+   * Resolve alert
+   */
+  resolveAlert(alertId: UUID, userId: UUID, resolution?: string): void {
+    const alert = this.alerts.get(alertId);
+    if (alert) {
+      alert.resolvedAt = new Date().toISOString() as ISODateString;
+      alert.status = 'resolved';
+      alert.updatedAt = new Date();
+      
+      if (resolution) {
+        alert.metadata = { ...alert.metadata, resolution, resolvedBy: userId };
+      }
+    }
+  }
+
+  private extractValue(data: any, field: string): number {
+    const keys = field.split('.');
+    let value = data;
+    
+    for (const key of keys) {
+      value = value?.[key];
+    }
+    
+    return Number(value) || 0;
+  }
+
+  private evaluateCondition(
+    value: number,
+    threshold: number,
+    comparison: 'gt' | 'lt' | 'eq' | 'gte' | 'lte' | 'ne'
+  ): boolean {
+    switch (comparison) {
+      case 'gt': return value > threshold;
+      case 'lt': return value < threshold;
+      case 'eq': return value === threshold;
+      case 'gte': return value >= threshold;
+      case 'lte': return value <= threshold;
+      case 'ne': return value !== threshold;
+      default: return false;
+    }
+  }
+
+  private detectAnomalies(
+    data: number[],
+    sensitivity: number,
+    windowSize: number
+  ): Array<{
+    index: number;
+    value: number;
+    score: number;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    expectedRange: { min: number; max: number };
+  }> {
+    const anomalies: Array<{
+      index: number;
+      value: number;
+      score: number;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      expectedRange: { min: number; max: number };
+    }> = [];
+
+    if (data.length < windowSize) return anomalies;
+
+    for (let i = windowSize; i < data.length; i++) {
+      const window = data.slice(i - windowSize, i);
+      const mean = window.reduce((sum, val) => sum + val, 0) / window.length;
+      const variance = window.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / window.length;
+      const stdDev = Math.sqrt(variance);
+      
+      const currentValue = data[i];
+      const zScore = Math.abs((currentValue - mean) / stdDev);
+      
+      if (zScore > sensitivity) {
+        const severity = this.determineSeverity(zScore);
+        const expectedRange = {
+          min: mean - (sensitivity * stdDev),
+          max: mean + (sensitivity * stdDev)
+        };
+        
+        anomalies.push({
+          index: i,
+          value: currentValue,
+          score: zScore,
+          severity,
+          expectedRange
+        });
+      }
+    }
+
+    return anomalies;
+  }
+
+  private determineSeverity(zScore: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (zScore > 4) return 'critical';
+    if (zScore > 3) return 'high';
+    if (zScore > 2) return 'medium';
+    return 'low';
+  }
+}
+
+// ============================================================================
+// PREDICTIVE INSIGHTS UTILITIES
+// ============================================================================
+
+export class PredictiveInsightsEngine {
+  /**
+   * Generate predictive insights from historical data
+   */
+  generateInsights(
+    historicalData: any[],
+    config: {
+      timeField: string;
+      valueField: string;
+      predictionHorizon: number; // days
+      confidence: number; // 0-1
+      includeSeasonality: boolean;
+    }
+  ): PredictiveInsight[] {
+    const insights: PredictiveInsight[] = [];
+
+    // Trend analysis
+    const trendInsight = this.analyzeTrend(historicalData, config);
+    if (trendInsight) insights.push(trendInsight);
+
+    // Seasonality analysis
+    if (config.includeSeasonality) {
+      const seasonalityInsight = this.analyzeSeasonality(historicalData, config);
+      if (seasonalityInsight) insights.push(seasonalityInsight);
+    }
+
+    // Forecast
+    const forecastInsight = this.generateForecast(historicalData, config);
+    if (forecastInsight) insights.push(forecastInsight);
+
+    // Anomaly prediction
+    const anomalyInsight = this.predictAnomalies(historicalData, config);
+    if (anomalyInsight) insights.push(anomalyInsight);
+
+    return insights;
+  }
+
+  private analyzeTrend(
+    data: any[],
+    config: { timeField: string; valueField: string; confidence: number }
+  ): PredictiveInsight | null {
+    if (data.length < 2) return null;
+
+    const sortedData = data.sort((a, b) => new Date(a[config.timeField]).getTime() - new Date(b[config.timeField]).getTime());
+    const values = sortedData.map(item => Number(item[config.valueField]) || 0);
+    
+    // Simple linear regression
+    const n = values.length;
+    const x = Array.from({ length: n }, (_, i) => i);
+    const sumX = x.reduce((sum, val) => sum + val, 0);
+    const sumY = values.reduce((sum, val) => sum + val, 0);
+    const sumXY = x.reduce((sum, val, i) => sum + val * values[i], 0);
+    const sumX2 = x.reduce((sum, val) => sum + val * val, 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    // Calculate R-squared
+    const yMean = sumY / n;
+    const totalSumSquares = values.reduce((sum, val) => sum + Math.pow(val - yMean, 2), 0);
+    const residualSumSquares = values.reduce((sum, val, i) => {
+      const predicted = slope * i + intercept;
+      return sum + Math.pow(val - predicted, 2);
+    }, 0);
+    const rSquared = 1 - (residualSumSquares / totalSumSquares);
+    
+    const direction = slope > 0 ? 'increasing' : slope < 0 ? 'decreasing' : 'stable';
+    const strength = Math.abs(slope) > 0.1 ? 'strong' : Math.abs(slope) > 0.05 ? 'moderate' : 'weak';
+    
+    return {
+      id: `trend_insight_${Date.now()}` as UUID,
+      type: 'trend',
+      title: `${direction.charAt(0).toUpperCase() + direction.slice(1)} Trend Detected`,
+      description: `The data shows a ${strength} ${direction} trend with ${(rSquared * 100).toFixed(1)}% confidence`,
+      confidence: rSquared,
+      impact: slope > 0.2 || slope < -0.2 ? 'high' : slope > 0.1 || slope < -0.1 ? 'medium' : 'low',
+      category: 'trend_analysis',
+      timeframe: 'historical',
+      predictions: [],
+      recommendations: [
+        direction === 'increasing' ? 'Monitor for potential capacity issues' : 'Investigate causes of decline',
+        'Consider adjusting thresholds based on trend'
+      ],
+      metadata: {
+        slope,
+        intercept,
+        rSquared,
+        direction,
+        strength
+      },
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    };
+  }
+
+  private analyzeSeasonality(
+    data: any[],
+    config: { timeField: string; valueField: string }
+  ): PredictiveInsight | null {
+    if (data.length < 14) return null; // Need at least 2 weeks of data
+
+    const sortedData = data.sort((a, b) => new Date(a[config.timeField]).getTime() - new Date(b[config.timeField]).getTime());
+    
+    // Group by day of week
+    const dayOfWeekData: Record<number, number[]> = {};
+    sortedData.forEach(item => {
+      const date = new Date(item[config.timeField]);
+      const dayOfWeek = date.getDay();
+      const value = Number(item[config.valueField]) || 0;
+      
+      if (!dayOfWeekData[dayOfWeek]) dayOfWeekData[dayOfWeek] = [];
+      dayOfWeekData[dayOfWeek].push(value);
+    });
+
+    // Calculate averages for each day
+    const dayAverages: Record<number, number> = {};
+    Object.entries(dayOfWeekData).forEach(([day, values]) => {
+      dayAverages[Number(day)] = values.reduce((sum, val) => sum + val, 0) / values.length;
+    });
+
+    // Check for significant variation
+    const allAverages = Object.values(dayAverages);
+    const overallAverage = allAverages.reduce((sum, val) => sum + val, 0) / allAverages.length;
+    const variance = allAverages.reduce((sum, val) => sum + Math.pow(val - overallAverage, 2), 0) / allAverages.length;
+    const coefficientOfVariation = Math.sqrt(variance) / overallAverage;
+
+    if (coefficientOfVariation > 0.1) { // Significant seasonal pattern
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const peakDay = Object.entries(dayAverages).reduce((peak, [day, avg]) => 
+        avg > peak.avg ? { day: Number(day), avg } : peak, { day: 0, avg: 0 });
+      
+      return {
+        id: `seasonality_insight_${Date.now()}` as UUID,
+        type: 'seasonality',
+        title: 'Weekly Seasonality Pattern Detected',
+        description: `Data shows significant weekly patterns with peak activity on ${dayNames[peakDay.day]}`,
+        confidence: Math.min(coefficientOfVariation * 2, 0.95),
+        impact: coefficientOfVariation > 0.3 ? 'high' : coefficientOfVariation > 0.2 ? 'medium' : 'low',
+        category: 'seasonality_analysis',
+        timeframe: 'weekly',
+        predictions: [],
+        recommendations: [
+          `Plan for increased activity on ${dayNames[peakDay.day]}`,
+          'Consider day-of-week specific thresholds',
+          'Optimize resource allocation based on weekly patterns'
+        ],
+        metadata: {
+          dayAverages,
+          coefficientOfVariation,
+          peakDay: dayNames[peakDay.day],
+          overallAverage
+        },
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+      };
+    }
+
+    return null;
+  }
+
+  private generateForecast(
+    data: any[],
+    config: { timeField: string; valueField: string; predictionHorizon: number; confidence: number }
+  ): PredictiveInsight | null {
+    if (data.length < 5) return null;
+
+    const sortedData = data.sort((a, b) => new Date(a[config.timeField]).getTime() - new Date(b[config.timeField]).getTime());
+    const values = sortedData.map(item => Number(item[config.valueField]) || 0);
+    
+    // Simple moving average forecast
+    const windowSize = Math.min(5, values.length);
+    const recentValues = values.slice(-windowSize);
+    const forecast = recentValues.reduce((sum, val) => sum + val, 0) / recentValues.length;
+    
+    // Calculate prediction interval
+    const variance = recentValues.reduce((sum, val) => sum + Math.pow(val - forecast, 2), 0) / recentValues.length;
+    const stdDev = Math.sqrt(variance);
+    const margin = stdDev * 1.96; // 95% confidence interval
+    
+    const predictions = [];
+    const lastDate = new Date(sortedData[sortedData.length - 1][config.timeField]);
+    
+    for (let i = 1; i <= config.predictionHorizon; i++) {
+      const predictionDate = new Date(lastDate.getTime() + i * 24 * 60 * 60 * 1000);
+      predictions.push({
+        date: predictionDate.toISOString(),
+        value: forecast,
+        lowerBound: forecast - margin,
+        upperBound: forecast + margin,
+        confidence: config.confidence
+      });
+    }
+
+    return {
+      id: `forecast_insight_${Date.now()}` as UUID,
+      type: 'forecast',
+      title: `${config.predictionHorizon}-Day Forecast`,
+      description: `Predicted value: ${forecast.toFixed(2)} (±${margin.toFixed(2)})`,
+      confidence: config.confidence,
+      impact: 'medium',
+      category: 'forecasting',
+      timeframe: `${config.predictionHorizon}d`,
+      predictions,
+      recommendations: [
+        'Monitor actual values against predictions',
+        'Update forecast model with new data',
+        'Consider external factors that may affect predictions'
+      ],
+      metadata: {
+        method: 'moving_average',
+        windowSize,
+        forecast,
+        margin,
+        lastDataPoint: sortedData[sortedData.length - 1]
+      },
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + config.predictionHorizon * 24 * 60 * 60 * 1000)
+    };
+  }
+
+  private predictAnomalies(
+    data: any[],
+    config: { timeField: string; valueField: string; confidence: number }
+  ): PredictiveInsight | null {
+    if (data.length < 10) return null;
+
+    const values = data.map(item => Number(item[config.valueField]) || 0);
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Count recent anomalies
+    const recentData = values.slice(-7); // Last 7 data points
+    const recentAnomalies = recentData.filter(val => Math.abs(val - mean) > 2 * stdDev).length;
+    
+    if (recentAnomalies > 0) {
+      const anomalyRate = recentAnomalies / recentData.length;
+      const riskLevel = anomalyRate > 0.3 ? 'high' : anomalyRate > 0.15 ? 'medium' : 'low';
+      
+      return {
+        id: `anomaly_prediction_${Date.now()}` as UUID,
+        type: 'anomaly_prediction',
+        title: 'Increased Anomaly Risk Detected',
+        description: `${(anomalyRate * 100).toFixed(1)}% of recent data points are anomalous`,
+        confidence: Math.min(anomalyRate * 3, 0.95),
+        impact: riskLevel === 'high' ? 'high' : 'medium',
+        category: 'anomaly_detection',
+        timeframe: 'near_term',
+        predictions: [],
+        recommendations: [
+          'Increase monitoring frequency',
+          'Review recent changes that may cause anomalies',
+          'Consider adjusting alert thresholds',
+          'Investigate root causes of anomalous behavior'
+        ],
+        metadata: {
+          anomalyRate,
+          recentAnomalies,
+          mean,
+          stdDev,
+          riskLevel
+        },
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days
+      };
+    }
+
+    return null;
+  }
+}
+
+// ============================================================================
+// MAIN DASHBOARD UTILITIES EXPORT
+// ============================================================================
+
+export const dashboardUtils = {
+  configurationManager: new DashboardConfigurationManager(),
+  widgetManager: new DashboardWidgetManager(),
+  kpiCalculator: new DashboardKPICalculator(),
+  alertProcessor: new DashboardAlertProcessor(),
+  predictiveEngine: new PredictiveInsightsEngine()
 };
 
-/**
- * Build cross-group query
- */
-const buildCrossGroupQuery = (
-  groups: string[],
-  metrics: string[],
-  aggregation: string
+// Utility functions for common operations
+export const createDashboardId = (): UUID => {
+  return `dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+};
+
+export const createWidgetId = (): UUID => {
+  return `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as UUID;
+};
+
+export const formatDashboardValue = (
+  value: number,
+  format: 'number' | 'currency' | 'percentage' | 'bytes',
+  precision: number = 2
 ): string => {
-  const groupQueries = groups.map(group => 
-    `SELECT '${group}' as group_name, ${aggregation}(${metrics.join(', ')}) as value FROM ${group}_metrics`
-  );
-
-  return `
-    WITH cross_group_data AS (
-      ${groupQueries.join(' UNION ALL ')}
-    )
-    SELECT 
-      group_name,
-      value,
-      value / SUM(value) OVER () * 100 as percentage
-    FROM cross_group_data
-    ORDER BY value DESC
-  `;
+  switch (format) {
+    case 'currency':
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision
+      }).format(value);
+    case 'percentage':
+      return `${(value * 100).toFixed(precision)}%`;
+    case 'bytes':
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = value;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+      }
+      return `${size.toFixed(precision)} ${units[unitIndex]}`;
+    case 'number':
+    default:
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision
+      }).format(value);
+  }
 };
 
-/**
- * Build predictive query
- */
-const buildPredictiveQuery = (targetMetric: string, horizon: number): string => {
-  return `
-    SELECT 
-      date,
-      actual_value,
-      predicted_value,
-      confidence_lower,
-      confidence_upper,
-      prediction_type
-    FROM ml_predictions 
-    WHERE 
-      metric = '${targetMetric}' 
-      AND date >= CURRENT_DATE - INTERVAL '90 days'
-      AND date <= CURRENT_DATE + INTERVAL '${horizon} days'
-    ORDER BY date
-  `;
-};
-
-/**
- * Get widget priority
- */
-const getWidgetPriority = (widget: DashboardWidget): number => {
-  const priorityMap: Record<string, number> = {
-    'cross-group-kpi': 10,
-    'predictive-analytics': 9,
-    'alert-summary': 8,
-    'performance-metric': 7,
-    'trend-chart': 6,
-    'data-table': 5
+export const calculateWidgetPerformance = (widget: DashboardWidget): {
+  score: number;
+  metrics: {
+    loadTime: number;
+    errorRate: number;
+    interactionRate: number;
+    viewFrequency: number;
+  };
+} => {
+  const metrics = {
+    loadTime: widget.analytics?.avgLoadTime || 0,
+    errorRate: widget.analytics?.errors / Math.max(widget.analytics?.views || 1, 1),
+    interactionRate: widget.analytics?.interactions / Math.max(widget.analytics?.views || 1, 1),
+    viewFrequency: widget.analytics?.views || 0
   };
 
-  return priorityMap[widget.type] || 1;
-};
-
-/**
- * Calculate optimal positions for widgets
- */
-const calculateOptimalPositions = (
-  widgets: DashboardWidget[],
-  columns: number
-): { x: number; y: number }[] => {
-  const positions: { x: number; y: number }[] = [];
-  const occupiedRows: boolean[][] = [];
-
-  widgets.forEach(widget => {
-    const position = findNextAvailablePosition(occupiedRows, widget.size, columns);
-    positions.push(position);
-    
-    // Mark positions as occupied
-    markPositionOccupied(occupiedRows, position, widget.size);
-  });
-
-  return positions;
-};
-
-/**
- * Find next available position
- */
-const findNextAvailablePosition = (
-  occupiedRows: boolean[][],
-  size: { width: number; height: number },
-  columns: number
-): { x: number; y: number } => {
-  for (let y = 0; y < 100; y++) {
-    if (!occupiedRows[y]) {
-      occupiedRows[y] = new Array(columns).fill(false);
-    }
-
-    for (let x = 0; x <= columns - size.width; x++) {
-      if (canPlaceWidget(occupiedRows, { x, y }, size)) {
-        return { x, y };
-      }
-    }
-  }
-
-  return { x: 0, y: 0 }; // Fallback
-};
-
-/**
- * Check if widget can be placed at position
- */
-const canPlaceWidget = (
-  occupiedRows: boolean[][],
-  position: { x: number; y: number },
-  size: { width: number; height: number }
-): boolean => {
-  for (let dy = 0; dy < size.height; dy++) {
-    const row = position.y + dy;
-    if (!occupiedRows[row]) {
-      occupiedRows[row] = new Array(12).fill(false);
-    }
-
-    for (let dx = 0; dx < size.width; dx++) {
-      const col = position.x + dx;
-      if (occupiedRows[row][col]) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-};
-
-/**
- * Mark position as occupied
- */
-const markPositionOccupied = (
-  occupiedRows: boolean[][],
-  position: { x: number; y: number },
-  size: { width: number; height: number }
-): void => {
-  for (let dy = 0; dy < size.height; dy++) {
-    const row = position.y + dy;
-    if (!occupiedRows[row]) {
-      occupiedRows[row] = new Array(12).fill(false);
-    }
-
-    for (let dx = 0; dx < size.width; dx++) {
-      const col = position.x + dx;
-      occupiedRows[row][col] = true;
-    }
-  }
-};
-
-/**
- * Extract values from data
- */
-const extractValuesFromData = (data: any[], inputs: string[]): number[] => {
-  return data.flatMap(item => 
-    inputs.map(input => parseFloat(item[input]) || 0)
-  ).filter(value => !isNaN(value));
-};
-
-/**
- * Evaluate formula
- */
-const evaluateFormula = (formula: string, values: number[]): number => {
-  // Simple formula evaluation - in production, use a proper expression parser
-  const sum = values.reduce((acc, val) => acc + val, 0);
-  const avg = sum / values.length;
-  const count = values.length;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-
-  // Replace placeholders in formula
-  const evaluatedFormula = formula
-    .replace(/SUM/g, sum.toString())
-    .replace(/AVG/g, avg.toString())
-    .replace(/COUNT/g, count.toString())
-    .replace(/MIN/g, min.toString())
-    .replace(/MAX/g, max.toString());
-
-  try {
-    return eval(evaluatedFormula);
-  } catch {
-    return 0;
-  }
-};
-
-/**
- * Calculate trend
- */
-const calculateTrend = (currentValue: number, historicalValues: number[]): 'up' | 'down' | 'stable' => {
-  if (historicalValues.length < 2) return 'stable';
-
-  const recentAvg = historicalValues.slice(-5).reduce((sum, val) => sum + val, 0) / Math.min(5, historicalValues.length);
-  const change = (currentValue - recentAvg) / recentAvg;
-
-  if (change > 0.05) return 'up';
-  if (change < -0.05) return 'down';
-  return 'stable';
-};
-
-/**
- * Calculate variance
- */
-const calculateVariance = (currentValue: number, historicalValues: number[]): number => {
-  if (historicalValues.length === 0) return 0;
-
-  const mean = historicalValues.reduce((sum, val) => sum + val, 0) / historicalValues.length;
-  return Math.abs(currentValue - mean) / mean;
-};
-
-/**
- * Extract numeric values from data
- */
-const extractNumericValues = (data: any): number[] => {
-  if (Array.isArray(data)) {
-    return data.flatMap(extractNumericValues);
-  }
-
-  if (typeof data === 'object' && data !== null) {
-    return Object.values(data).flatMap(extractNumericValues);
-  }
-
-  const num = parseFloat(data);
-  return isNaN(num) ? [] : [num];
-};
-
-/**
- * Detect statistical anomalies
- */
-const detectStatisticalAnomalies = (
-  currentValues: number[],
-  historicalValues: number[],
-  sensitivity: number
-): number => {
-  if (historicalValues.length < 10) return 0;
-
-  const mean = historicalValues.reduce((sum, val) => sum + val, 0) / historicalValues.length;
-  const stdDev = Math.sqrt(
-    historicalValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / historicalValues.length
-  );
-
-  let anomalyScore = 0;
-  currentValues.forEach(value => {
-    const zScore = Math.abs(value - mean) / stdDev;
-    if (zScore > 2 * sensitivity) {
-      anomalyScore = Math.max(anomalyScore, Math.min(1, zScore / 3));
-    }
-  });
-
-  return anomalyScore;
-};
-
-/**
- * Extract predictions from data
- */
-const extractPredictions = (data: any): any[] => {
-  if (!Array.isArray(data)) return [];
-
-  return data
-    .filter(item => item.prediction_type === 'forecast')
-    .map(item => ({
-      value: item.predicted_value,
-      date: item.date,
-      confidence: item.confidence || 0.5,
-      description: `Predicted value: ${item.predicted_value}`,
-      impact: item.predicted_value > item.actual_value ? 'high' : 'medium',
-      model: item.model || 'unknown'
-    }));
-};
-
-/**
- * Calculate engagement score
- */
-const calculateEngagementScore = (
-  interactions: number,
-  views: number,
-  averageViewTime: number
-): number => {
-  if (views === 0) return 0;
-
-  const interactionRate = interactions / views;
-  const timeScore = Math.min(1, averageViewTime / 300); // 5 minutes as ideal
+  // Calculate performance score (0-100)
+  let score = 100;
   
-  return Math.round((interactionRate * 0.6 + timeScore * 0.4) * 100);
-};
+  // Penalize slow load times
+  if (metrics.loadTime > 2000) score -= 20;
+  else if (metrics.loadTime > 1000) score -= 10;
+  
+  // Penalize high error rates
+  if (metrics.errorRate > 0.1) score -= 30;
+  else if (metrics.errorRate > 0.05) score -= 15;
+  
+  // Reward high interaction rates
+  if (metrics.interactionRate > 0.5) score += 10;
+  else if (metrics.interactionRate > 0.2) score += 5;
+  
+  // Reward high view frequency
+  if (metrics.viewFrequency > 100) score += 10;
+  else if (metrics.viewFrequency > 50) score += 5;
 
-/**
- * Calculate data freshness
- */
-const calculateDataFreshness = (widgets: DashboardWidget[]): number => {
-  if (widgets.length === 0) return 100;
-
-  const now = Date.now();
-  const freshnessScores = widgets.map(widget => {
-    const lastUpdate = new Date(widget.lastUpdated).getTime();
-    const age = now - lastUpdate;
-    const maxAge = widget.refreshInterval * 1000 * 2; // 2x refresh interval
-    
-    return Math.max(0, 1 - age / maxAge);
-  });
-
-  return Math.round(
-    freshnessScores.reduce((sum, score) => sum + score, 0) / freshnessScores.length * 100
-  );
-};
-
-/**
- * Calculate performance score
- */
-const calculatePerformanceScore = (metrics: {
-  loadTime: number;
-  errorRate: number;
-  activeWidgetRatio: number;
-  engagement: number;
-}): number => {
-  const loadTimeScore = Math.max(0, 1 - metrics.loadTime / 5000); // 5s as max acceptable
-  const errorScore = Math.max(0, 1 - metrics.errorRate);
-  const reliabilityScore = metrics.activeWidgetRatio;
-  const engagementScore = metrics.engagement / 100;
-
-  return Math.round(
-    (loadTimeScore * 0.3 + errorScore * 0.3 + reliabilityScore * 0.2 + engagementScore * 0.2) * 100
-  );
-};
-
-/**
- * Export to JSON
- */
-const exportToJSON = (dashboard: DashboardConfiguration, options: any): any => {
-  const exportData: any = {
-    dashboard: {
-      id: dashboard.id,
-      name: dashboard.name,
-      type: dashboard.type,
-      description: dashboard.description,
-      createdAt: dashboard.createdAt,
-      updatedAt: dashboard.updatedAt
-    }
+  return {
+    score: Math.max(0, Math.min(100, score)),
+    metrics
   };
-
-  if (options.includeData) {
-    exportData.widgets = dashboard.widgets.map(widget => ({
-      id: widget.id,
-      title: widget.title,
-      type: widget.type,
-      data: widget.data
-    }));
-  }
-
-  if (options.includeInsights) {
-    // Add insights if available
-    exportData.insights = []; // Would be populated from actual insights
-  }
-
-  return exportData;
 };
 
-/**
- * Export to CSV
- */
-const exportToCSV = (dashboard: DashboardConfiguration, options: any): string => {
-  let csv = 'Widget,Type,Title,Last Updated,Status\n';
+export const generateDashboardReport = (dashboard: DashboardConfiguration): {
+  summary: string;
+  performance: any;
+  recommendations: string[];
+  usage: any;
+} => {
+  const widgetCount = dashboard.widgets?.length || 0;
+  const lastViewed = dashboard.lastViewed ? new Date(dashboard.lastViewed) : new Date();
+  const daysSinceViewed = Math.floor((Date.now() - lastViewed.getTime()) / (1000 * 60 * 60 * 24));
   
-  dashboard.widgets.forEach(widget => {
-    csv += `${widget.id},${widget.type},${widget.title},${widget.lastUpdated},${widget.error ? 'Error' : 'OK'}\n`;
-  });
-
-  return csv;
-};
-
-/**
- * Export to Excel (placeholder)
- */
-const exportToExcel = (dashboard: DashboardConfiguration, options: any): Blob => {
-  // In a real implementation, use a library like xlsx
-  const data = exportToJSON(dashboard, options);
-  return new Blob([JSON.stringify(data)], { type: 'application/vnd.ms-excel' });
-};
-
-/**
- * Export to PDF (placeholder)
- */
-const exportToPDF = (dashboard: DashboardConfiguration, options: any): Blob => {
-  // In a real implementation, use a library like jsPDF
-  const data = exportToJSON(dashboard, options);
-  return new Blob([JSON.stringify(data)], { type: 'application/pdf' });
-};
-
-/**
- * Export to PNG (placeholder)
- */
-const exportToPNG = (dashboard: DashboardConfiguration, options: any): Blob => {
-  // In a real implementation, use canvas or similar
-  return new Blob([''], { type: 'image/png' });
-};
-
-// =============================================================================
-// EXPORTS
-// =============================================================================
-
-export {
-  createDashboard,
-  addWidgetToDashboard,
-  createCrossGroupKPI,
-  createPredictiveWidget,
-  calculateWidgetDependencies,
-  optimizeRefreshIntervals,
-  generateLayoutSuggestions,
-  calculateCrossGroupKPI,
-  generateKPIRecommendations,
-  detectDataAnomalies,
-  generatePredictiveInsights,
-  calculateDashboardMetrics,
-  exportDashboard
+  const summary = `Dashboard "${dashboard.name}" contains ${widgetCount} widgets, last viewed ${daysSinceViewed} days ago. Type: ${dashboard.type}, Groups: ${dashboard.groups?.join(', ') || 'none'}.`;
+  
+  const performance = {
+    totalViews: dashboard.analytics?.views || 0,
+    avgLoadTime: dashboard.analytics?.performanceMetrics?.loadTime || 0,
+    errorRate: dashboard.analytics?.performanceMetrics?.errorRate || 0,
+    interactionCount: dashboard.analytics?.interactionCount || 0
+  };
+  
+  const recommendations: string[] = [];
+  
+  if (daysSinceViewed > 30) {
+    recommendations.push('Dashboard has not been viewed recently - consider archiving or promoting');
+  }
+  
+  if (widgetCount > 20) {
+    recommendations.push('Consider splitting dashboard into multiple focused dashboards');
+  }
+  
+  if (performance.errorRate > 0.05) {
+    recommendations.push('High error rate detected - review widget configurations');
+  }
+  
+  if (performance.avgLoadTime > 3000) {
+    recommendations.push('Slow loading times - optimize queries and reduce data volume');
+  }
+  
+  const usage = {
+    dailyViews: Math.round((performance.totalViews / Math.max(daysSinceViewed, 1))),
+    popularWidgets: dashboard.analytics?.userBehavior?.mostViewedWidgets || [],
+    commonFilters: dashboard.analytics?.userBehavior?.commonFilters || []
+  };
+  
+  return {
+    summary,
+    performance,
+    recommendations,
+    usage
+  };
 };
