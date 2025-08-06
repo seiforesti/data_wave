@@ -199,6 +199,7 @@ import { SchemaDiscovery } from "./data-discovery/schema-discovery"
 
 // Import enterprise UI components
 import { EnterpriseDashboard } from "./ui/dashboard/enterprise-dashboard"
+import { AIPoweredDashboard } from "./ui/dashboard/ai-powered-dashboard"
 import { CollaborationStudio } from "./ui/collaboration/collaboration-studio"
 import { AnalyticsWorkbench } from "./ui/analytics/analytics-workbench"
 import { WorkflowDesigner } from "./ui/workflow/workflow-designer"
@@ -611,6 +612,7 @@ const enterpriseNavigationStructure = {
     category: "primary",
     items: [
       { id: "dashboard", label: "Enterprise Dashboard", icon: BarChart3, component: "enterprise-dashboard", description: "Unified enterprise dashboard with AI insights", shortcut: "⌘+D", premium: true },
+      { id: "ai-dashboard", label: "AI-Powered Dashboard", icon: Brain, component: "ai-dashboard", description: "Advanced AI analytics and predictive insights", shortcut: "⌘+Shift+D", premium: true },
       { id: "overview", label: "Overview", icon: Eye, component: "overview", description: "Comprehensive data sources overview", shortcut: "⌘+1" },
       { id: "grid", label: "Grid View", icon: Grid, component: "grid", description: "Visual grid layout with real-time updates", shortcut: "⌘+2" },
       { id: "list", label: "List View", icon: List, component: "list", description: "Advanced list view with filtering", shortcut: "⌘+3" },
@@ -812,12 +814,13 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
       const filteredItems = category.items.filter((item: any) => {
         // Map navigation items to required permissions
         switch (item.id) {
-          case 'dashboard':
-          case 'overview':
-          case 'grid':
-          case 'list':
-          case 'details':
-            return dataSourcePermissions.canView
+                  case 'dashboard':
+        case 'ai-dashboard':
+        case 'overview':
+        case 'grid':
+        case 'list':
+        case 'details':
+          return dataSourcePermissions.canView
           case 'monitoring':
           case 'dashboard-monitoring':
           case 'performance':
@@ -1461,8 +1464,13 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
             setCommandPaletteOpen(true)
             break
           case "d":
-            event.preventDefault()
-            setActiveView("enterprise-dashboard")
+            if (event.shiftKey) {
+              event.preventDefault()
+              setActiveView("ai-dashboard")
+            } else {
+              event.preventDefault()
+              setActiveView("enterprise-dashboard")
+            }
             break
           case "1":
             event.preventDefault()
@@ -1793,6 +1801,8 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
         // Enterprise Dashboard Components
         case "enterprise-dashboard":
           return <EnterpriseDashboard {...commonProps} />
+        case "ai-dashboard":
+          return <AIPoweredDashboard dataSources={dataSources} {...commonProps} />
         case "collaboration-studio":
           return <CollaborationStudio {...commonProps} />
         case "analytics-workbench":
