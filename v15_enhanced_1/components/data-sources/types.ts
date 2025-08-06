@@ -66,6 +66,10 @@ export interface DataSource {
   created_at: string;
   updated_at: string;
   
+  // User tracking fields for RBAC
+  created_by?: string;
+  updated_by?: string;
+  
   // UI-specific fields
   favorite?: boolean;
 }
@@ -142,6 +146,7 @@ export interface DataSourceUpdateParams {
   pool_size?: number;
   max_overflow?: number;
   pool_timeout?: number;
+  updated_by?: string;
 }
 
 // Enhanced filters

@@ -202,6 +202,10 @@ class DataSource(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
+    # User tracking fields for RBAC
+    created_by: Optional[str] = Field(default=None, max_length=255, index=True)
+    updated_by: Optional[str] = Field(default=None, max_length=255, index=True)
+    
     # Relationships
     scans: List["Scan"] = Relationship(back_populates="data_source")
     scan_rule_sets: List["ScanRuleSet"] = Relationship(back_populates="data_source")
