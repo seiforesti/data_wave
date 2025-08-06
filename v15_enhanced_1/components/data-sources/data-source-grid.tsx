@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import {
   Database,
   Search,
@@ -24,6 +24,25 @@ import {
   Copy,
   ExternalLink,
   ChevronDown,
+  RefreshCw,
+  Grid3X3,
+  List,
+  Users,
+  Calendar,
+  MapPin,
+  Globe,
+  Lock,
+  Unlock,
+  Star,
+  StarOff,
+  Share2,
+  History,
+  Layers,
+  Network,
+  Code,
+  Hash,
+  Type,
+  Binary,
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,6 +51,9 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +61,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -59,6 +82,14 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+
+// Import RBAC integration
+import { useRBACIntegration, DATA_SOURCE_PERMISSIONS } from "./hooks/use-rbac-integration"
+
+// Import enterprise hooks for backend integration
+import { useEnterpriseFeatures } from "./hooks/use-enterprise-features"
 
 import { DataSource, ViewMode } from "./types"
 
@@ -72,6 +103,37 @@ interface DataSourceGridProps {
   onFiltersChange?: (filters: any) => void
   onSelectDataSource?: (dataSource: DataSource) => void
   dataSource?: DataSource | null
+  className?: string
+}
+
+interface DataSourceHealth {
+  id: number
+  overallScore: number
+  connectionScore: number
+  performanceScore: number
+  securityScore: number
+  complianceScore: number
+  availabilityScore: number
+  lastUpdated: string
+  recommendations: string[]
+  issues: Array<{
+    type: 'error' | 'warning' | 'info'
+    message: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+  }>
+}
+
+interface DataSourceMetrics {
+  id: number
+  uptime: number
+  responseTime: number
+  throughput: number
+  errorRate: number
+  dataVolume: number
+  lastScanAt: string
+  scanStatus: string
+  recordCount: number
+  tableCount: number
 }
 
 const statusConfig = {
@@ -114,6 +176,82 @@ const typeIcons = {
   file: FileText,
 }
 
+// API functions for data source operations
+const dataSourceApi = {
+  async getDataSources(filters?: any) {
+    const params = new URLSearchParams(filters)
+    const response = await fetch(`/api/data-sources?${params}`)
+    if (!response.ok) throw new Error('Failed to fetch data sources')
+    return response.json()
+  },
+
+  async getDataSourceHealth(dataSourceId: number) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}/health`)
+    if (!response.ok) throw new Error('Failed to fetch data source health')
+    return response.json()
+  },
+
+  async getDataSourceMetrics(dataSourceId: number) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}/metrics`)
+    if (!response.ok) throw new Error('Failed to fetch data source metrics')
+    return response.json()
+  },
+
+  async updateDataSource(dataSourceId: number, data: any) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    if (!response.ok) throw new Error('Failed to update data source')
+    return response.json()
+  },
+
+  async deleteDataSource(dataSourceId: number) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}`, {
+      method: 'DELETE'
+    })
+    if (!response.ok) throw new Error('Failed to delete data source')
+    return response.json()
+  },
+
+  async testConnection(dataSourceId: number) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}/test-connection`, {
+      method: 'POST'
+    })
+    if (!response.ok) throw new Error('Failed to test connection')
+    return response.json()
+  },
+
+  async duplicateDataSource(dataSourceId: number) {
+    const response = await fetch(`/api/data-sources/${dataSourceId}/duplicate`, {
+      method: 'POST'
+    })
+    if (!response.ok) throw new Error('Failed to duplicate data source')
+    return response.json()
+  },
+
+  async bulkUpdate(dataSourceIds: number[], data: any) {
+    const response = await fetch('/api/data-sources/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: dataSourceIds, data })
+    })
+    if (!response.ok) throw new Error('Failed to bulk update data sources')
+    return response.json()
+  },
+
+  async bulkDelete(dataSourceIds: number[]) {
+    const response = await fetch('/api/data-sources/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: dataSourceIds })
+    })
+    if (!response.ok) throw new Error('Failed to bulk delete data sources')
+    return response.json()
+  }
+}
+
 export function DataSourceGrid({
   dataSources = [],
   viewMode = "grid",
@@ -123,16 +261,181 @@ export function DataSourceGrid({
   filters = {},
   onFiltersChange,
   onSelectDataSource,
-  dataSource
+  dataSource,
+  className = ""
 }: DataSourceGridProps) {
+  const queryClient = useQueryClient()
+
+  // RBAC Integration
+  const { 
+    currentUser, 
+    hasPermission, 
+    dataSourcePermissions, 
+    logUserAction, 
+    PermissionGuard,
+    isLoading: rbacLoading 
+  } = useRBACIntegration()
+
+  // Enterprise features integration
+  const enterpriseFeatures = useEnterpriseFeatures({
+    componentName: 'DataSourceGrid',
+    dataSourceId: dataSource?.id,
+    enableAnalytics: true,
+    enableRealTimeUpdates: true,
+    enableNotifications: true,
+    enableAuditLogging: true
+  })
+
+  // State management
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("name")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [gridSize, setGridSize] = useState<"small" | "medium" | "large">("medium")
+  const [showHealthDetails, setShowHealthDetails] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
+
+  // Backend data queries - Real API integration
+  const { 
+    data: dataSourcesData, 
+    isLoading: dataSourcesLoading,
+    error: dataSourcesError,
+    refetch: refetchDataSources 
+  } = useQuery({
+    queryKey: ['data-sources', filters, searchQuery, sortBy, sortOrder],
+    queryFn: () => dataSourceApi.getDataSources({
+      ...filters,
+      search: searchQuery || undefined,
+      sortBy,
+      sortOrder
+    }),
+    enabled: dataSourcePermissions.canView,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    staleTime: 10000
+  })
+
+  // Health data for each data source
+  const healthQueries = useQuery({
+    queryKey: ['data-sources-health', dataSources.map(ds => ds.id)],
+    queryFn: async () => {
+      const healthPromises = dataSources.map(ds => 
+        dataSourceApi.getDataSourceHealth(ds.id).catch(() => null)
+      )
+      const healthData = await Promise.all(healthPromises)
+      return healthData.reduce((acc, health, index) => {
+        if (health) {
+          acc[dataSources[index].id] = health.data
+        }
+        return acc
+      }, {} as Record<number, DataSourceHealth>)
+    },
+    enabled: dataSources.length > 0 && dataSourcePermissions.canView,
+    staleTime: 60000
+  })
+
+  // Metrics data for each data source
+  const metricsQueries = useQuery({
+    queryKey: ['data-sources-metrics', dataSources.map(ds => ds.id)],
+    queryFn: async () => {
+      const metricsPromises = dataSources.map(ds => 
+        dataSourceApi.getDataSourceMetrics(ds.id).catch(() => null)
+      )
+      const metricsData = await Promise.all(metricsPromises)
+      return metricsData.reduce((acc, metrics, index) => {
+        if (metrics) {
+          acc[dataSources[index].id] = metrics.data
+        }
+        return acc
+      }, {} as Record<number, DataSourceMetrics>)
+    },
+    enabled: dataSources.length > 0 && dataSourcePermissions.canView,
+    staleTime: 30000
+  })
+
+  // Mutations for data source operations
+  const updateDataSourceMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => 
+      dataSourceApi.updateDataSource(id, data),
+    onSuccess: () => {
+      toast.success('Data source updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+      logUserAction('datasource_updated')
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update data source: ${error.message}`)
+    }
+  })
+
+  const deleteDataSourceMutation = useMutation({
+    mutationFn: dataSourceApi.deleteDataSource,
+    onSuccess: () => {
+      toast.success('Data source deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+      logUserAction('datasource_deleted')
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete data source: ${error.message}`)
+    }
+  })
+
+  const testConnectionMutation = useMutation({
+    mutationFn: dataSourceApi.testConnection,
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success('Connection test successful')
+      } else {
+        toast.error('Connection test failed')
+      }
+      logUserAction('connection_tested')
+    },
+    onError: (error: any) => {
+      toast.error(`Connection test failed: ${error.message}`)
+    }
+  })
+
+  const duplicateDataSourceMutation = useMutation({
+    mutationFn: dataSourceApi.duplicateDataSource,
+    onSuccess: () => {
+      toast.success('Data source duplicated successfully')
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+      logUserAction('datasource_duplicated')
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to duplicate data source: ${error.message}`)
+    }
+  })
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: ({ ids, data }: { ids: number[]; data: any }) => 
+      dataSourceApi.bulkUpdate(ids, data),
+    onSuccess: () => {
+      toast.success('Data sources updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+      logUserAction('datasource_bulk_updated')
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to bulk update: ${error.message}`)
+    }
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: dataSourceApi.bulkDelete,
+    onSuccess: () => {
+      toast.success('Data sources deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+      onSelectionChange?.([])
+      logUserAction('datasource_bulk_deleted')
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to bulk delete: ${error.message}`)
+    }
+  })
+
+  // Use backend data if available, fallback to props
+  const effectiveDataSources = dataSourcesData?.data?.dataSources || dataSources
 
   // Filter and sort data sources
   const filteredDataSources = useMemo(() => {
-    let filtered = dataSources.filter(ds => {
+    let filtered = effectiveDataSources.filter((ds: DataSource) => {
       const matchesSearch = ds.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            ds.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            ds.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -145,7 +448,7 @@ export function DataSourceGrid({
     })
 
     // Sort
-    filtered.sort((a, b) => {
+    filtered.sort((a: DataSource, b: DataSource) => {
       let valueA: any, valueB: any
       
       switch (sortBy) {
@@ -160,6 +463,12 @@ export function DataSourceGrid({
         case "status":
           valueA = a.status
           valueB = b.status
+          break
+        case "health":
+          const healthA = healthQueries.data?.[a.id]?.overallScore || 0
+          const healthB = healthQueries.data?.[b.id]?.overallScore || 0
+          valueA = healthA
+          valueB = healthB
           break
         case "updated":
           valueA = new Date(a.updated_at || 0)
@@ -177,23 +486,23 @@ export function DataSourceGrid({
     })
 
     return filtered
-  }, [dataSources, searchQuery, filters, sortBy, sortOrder])
+  }, [effectiveDataSources, searchQuery, filters, sortBy, sortOrder, healthQueries.data])
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
-      onSelectionChange?.(filteredDataSources.map(ds => ds.id.toString()))
+      onSelectionChange?.(filteredDataSources.map((ds: DataSource) => ds.id.toString()))
     } else {
       onSelectionChange?.([])
     }
-  }
+  }, [filteredDataSources, onSelectionChange])
 
-  const handleSelectItem = (dataSourceId: string, checked: boolean) => {
+  const handleSelectItem = useCallback((dataSourceId: string, checked: boolean) => {
     if (checked) {
       onSelectionChange?.([...selectedItems, dataSourceId])
     } else {
       onSelectionChange?.(selectedItems.filter(id => id !== dataSourceId))
     }
-  }
+  }, [selectedItems, onSelectionChange])
 
   const getGridColumns = () => {
     switch (gridSize) {
@@ -205,11 +514,16 @@ export function DataSourceGrid({
   }
 
   const getHealthScore = (dataSource: DataSource) => {
-    // Mock health score calculation
-    const baseScore = dataSource.status === "connected" ? 85 : 
-                     dataSource.status === "warning" ? 65 : 
-                     dataSource.status === "error" ? 25 : 50
-    return Math.min(100, baseScore + Math.random() * 15)
+    // Use real backend health data instead of mock calculation
+    const healthData = healthQueries.data?.[dataSource.id]
+    return healthData?.overallScore || 0
+  }
+
+  const getHealthColor = (score: number) => {
+    if (score >= 90) return "text-green-600"
+    if (score >= 75) return "text-yellow-600" 
+    if (score >= 50) return "text-orange-600"
+    return "text-red-600"
   }
 
   const DataSourceCard = ({ dataSource }: { dataSource: DataSource }) => {
@@ -217,6 +531,8 @@ export function DataSourceGrid({
     const TypeIcon = typeIcons[dataSource.type as keyof typeof typeIcons] || Database
     const status = statusConfig[dataSource.status as keyof typeof statusConfig]
     const healthScore = getHealthScore(dataSource)
+    const healthData = healthQueries.data?.[dataSource.id]
+    const metricsData = metricsQueries.data?.[dataSource.id]
     const isSelected = selectedItems.includes(dataSource.id.toString())
 
     return (
@@ -246,27 +562,47 @@ export function DataSourceGrid({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Monitor className="h-4 w-4 mr-2" />
-                  Monitor
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Duplicate
-                </DropdownMenuItem>
+                <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.VIEW}>
+                  <DropdownMenuItem onClick={() => onSelectDataSource?.(dataSource)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Details
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.EDIT}>
+                  <DropdownMenuItem>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.TEST_CONNECTION}>
+                  <DropdownMenuItem 
+                    onClick={() => testConnectionMutation.mutate(dataSource.id)}
+                    disabled={testConnectionMutation.isPending}
+                  >
+                    <Monitor className="h-4 w-4 mr-2" />
+                    Test Connection
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.CREATE}>
+                  <DropdownMenuItem 
+                    onClick={() => duplicateDataSourceMutation.mutate(dataSource.id)}
+                    disabled={duplicateDataSourceMutation.isPending}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate
+                  </DropdownMenuItem>
+                </PermissionGuard>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
+                <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.DELETE}>
+                  <DropdownMenuItem 
+                    className="text-red-600"
+                    onClick={() => deleteDataSourceMutation.mutate(dataSource.id)}
+                    disabled={deleteDataSourceMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -283,20 +619,57 @@ export function DataSourceGrid({
               <Badge variant="outline" className="text-xs">
                 {dataSource.type}
               </Badge>
+              {dataSource.environment && (
+                <Badge variant="secondary" className="text-xs">
+                  {dataSource.environment}
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="pt-0">
           <div className="space-y-4">
-            {/* Health Score */}
+            {/* Health Score - Real backend data */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Health Score</span>
-                <span className="font-medium">{Math.round(healthScore)}%</span>
+                <span className={`font-medium ${getHealthColor(healthScore)}`}>
+                  {Math.round(healthScore)}%
+                </span>
               </div>
               <Progress value={healthScore} className="h-2" />
+              {healthData?.issues && healthData.issues.length > 0 && (
+                <div className="flex items-center gap-1 text-xs">
+                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                  <span className="text-yellow-600">
+                    {healthData.issues.filter(i => i.severity === 'high' || i.severity === 'critical').length} issues
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Real-time Metrics */}
+            {metricsData && (
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Uptime:</span>
+                  <span className="font-medium">{metricsData.uptime.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Response:</span>
+                  <span className="font-medium">{metricsData.responseTime}ms</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Records:</span>
+                  <span className="font-medium">{metricsData.recordCount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tables:</span>
+                  <span className="font-medium">{metricsData.tableCount}</span>
+                </div>
+              </div>
+            )}
 
             {/* Connection Info */}
             <div className="space-y-1 text-sm text-muted-foreground">
@@ -310,12 +683,12 @@ export function DataSourceGrid({
                 <span>Port:</span>
                 <span>{dataSource.port}</span>
               </div>
-              {dataSource.environment && (
+              {dataSource.database && (
                 <div className="flex justify-between">
-                  <span>Environment:</span>
-                  <Badge variant="outline" className="text-xs h-5">
-                    {dataSource.environment}
-                  </Badge>
+                  <span>Database:</span>
+                  <span className="truncate ml-2 max-w-[120px]" title={dataSource.database}>
+                    {dataSource.database}
+                  </span>
                 </div>
               )}
             </div>
@@ -327,36 +700,43 @@ export function DataSourceGrid({
               </p>
             )}
 
+            {/* Last Updated */}
+            {dataSource.updated_at && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Updated {new Date(dataSource.updated_at).toLocaleDateString()}</span>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div className="flex space-x-2 pt-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Activity className="h-3 w-3 mr-1" />
-                      Monitor
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>View real-time monitoring</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.VIEW_PERFORMANCE}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <Activity className="h-3 w-3 mr-1" />
+                        Monitor
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View real-time monitoring</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </PermissionGuard>
               
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                      Analytics
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>View analytics dashboard</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            {/* Last Updated */}
-            <div className="text-xs text-muted-foreground border-t pt-2">
-              Updated {dataSource.updated_at ? new Date(dataSource.updated_at).toLocaleDateString() : "Never"}
+              <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.VIEW_REPORTS}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        Analytics
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View analytics dashboard</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </PermissionGuard>
             </div>
           </div>
         </CardContent>
@@ -364,129 +744,314 @@ export function DataSourceGrid({
     )
   }
 
+  // Handle loading states
+  if (rbacLoading || dataSourcesLoading) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Handle no permissions
+  if (!dataSourcePermissions.canView) {
+    return (
+      <div className={className}>
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            You don't have permission to view data sources.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${className}`}>
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="space-y-1">
+        <div className="flex items-center space-x-4">
           <h2 className="text-2xl font-bold">Data Sources</h2>
-          <p className="text-muted-foreground">
-            {filteredDataSources.length} of {dataSources.length} data sources
-            {selectedItems.length > 0 && ` • ${selectedItems.length} selected`}
-          </p>
+          <Badge variant="outline" className="text-sm">
+            {filteredDataSources.length} total
+          </Badge>
+          {selectedItems.length > 0 && (
+            <Badge variant="default" className="text-sm">
+              {selectedItems.length} selected
+            </Badge>
+          )}
         </div>
-
-        <div className="flex items-center space-x-2">
-          <Select value={gridSize} onValueChange={(value: "small" | "medium" | "large") => setGridSize(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="small">Small</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="large">Large</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchDataSources()}
+            disabled={dataSourcesLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${dataSourcesLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
+          
+          {/* View Mode Toggle */}
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("grid")}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Grid Size Control */}
+          {viewMode === "grid" && (
+            <Select value={gridSize} onValueChange={(value: any) => setGridSize(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">Small</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="large">Large</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
-      {/* Search and Sort Controls */}
+      {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex-1">
           <Input
             placeholder="Search data sources..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="w-full"
           />
         </div>
         
-        <div className="flex space-x-2">
+        <div className="flex gap-2">
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name">Sort by Name</SelectItem>
-              <SelectItem value="type">Sort by Type</SelectItem>
-              <SelectItem value="status">Sort by Status</SelectItem>
-              <SelectItem value="updated">Sort by Updated</SelectItem>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="type">Type</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="health">Health Score</SelectItem>
+              <SelectItem value="updated">Last Updated</SelectItem>
             </SelectContent>
           </Select>
           
           <Button
             variant="outline"
-            size="sm"
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
           >
-            <ChevronDown className={`h-4 w-4 transition-transform ${
-              sortOrder === "desc" ? "rotate-180" : ""
-            }`} />
+            {sortOrder === "asc" ? "↑" : "↓"}
           </Button>
         </div>
       </div>
 
       {/* Bulk Actions */}
       {selectedItems.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              checked={selectedItems.length === filteredDataSources.length}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm font-medium">
-              {selectedItems.length} selected
-            </span>
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Play className="h-4 w-4 mr-2" />
-              Start Monitoring
-            </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Bulk Edit
-            </Button>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+        <div className="flex items-center gap-2 p-4 bg-muted rounded-lg">
+          <span className="text-sm font-medium">
+            {selectedItems.length} item(s) selected
+          </span>
+          <div className="flex gap-2 ml-auto">
+            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.EDIT}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Open bulk edit dialog
+                  toast.info('Bulk edit functionality coming soon')
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.DELETE}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  const ids = selectedItems.map(id => parseInt(id))
+                  bulkDeleteMutation.mutate(ids)
+                }}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </PermissionGuard>
           </div>
         </div>
       )}
 
-      {/* Grid */}
-      <div className={`grid gap-6 ${getGridColumns()}`}>
-        {filteredDataSources.map((dataSource) => (
-          <DataSourceCard key={dataSource.id} dataSource={dataSource} />
-        ))}
-      </div>
+      {/* Error Display */}
+      {dataSourcesError && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load data sources: {dataSourcesError.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {/* Empty State */}
-      {filteredDataSources.length === 0 && (
+      {/* Data Sources Grid/List */}
+      {filteredDataSources.length === 0 ? (
         <div className="text-center py-12">
-          <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No data sources found</h3>
-          <p className="text-muted-foreground mb-6">
-            {searchQuery || Object.keys(filters).length > 0
-              ? "Try adjusting your search or filters"
-              : "Get started by creating your first data source"
+          <Database className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No data sources found</h3>
+          <p className="text-gray-500 mb-4">
+            {searchQuery || Object.values(filters).some(f => f && f !== 'all') 
+              ? "Try adjusting your search or filters" 
+              : "Get started by adding your first data source"
             }
           </p>
-          {(!searchQuery && Object.keys(filters).length === 0) && (
-            <Button>
-              <Database className="h-4 w-4 mr-2" />
-              Add Data Source
-            </Button>
-          )}
         </div>
+      ) : (
+        <>
+          {/* Select All */}
+          <div className="flex items-center gap-2 pb-2">
+            <Checkbox
+              checked={selectedItems.length === filteredDataSources.length}
+              onCheckedChange={handleSelectAll}
+            />
+            <span className="text-sm text-muted-foreground">
+              Select all ({filteredDataSources.length})
+            </span>
+          </div>
+
+          {viewMode === "grid" ? (
+            <div className={`grid ${getGridColumns()} gap-4`}>
+              {filteredDataSources.map((dataSource: DataSource) => (
+                <DataSourceCard key={dataSource.id} dataSource={dataSource} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredDataSources.map((dataSource: DataSource) => {
+                const StatusIcon = statusConfig[dataSource.status as keyof typeof statusConfig]?.icon || AlertTriangle
+                const TypeIcon = typeIcons[dataSource.type as keyof typeof typeIcons] || Database
+                const status = statusConfig[dataSource.status as keyof typeof statusConfig]
+                const healthScore = getHealthScore(dataSource)
+                const isSelected = selectedItems.includes(dataSource.id.toString())
+
+                return (
+                  <Card 
+                    key={dataSource.id}
+                    className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${
+                      isSelected ? "border-primary shadow-sm" : ""
+                    }`}
+                    onClick={() => onSelectDataSource?.(dataSource)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleSelectItem(dataSource.id.toString(), checked as boolean)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      
+                      <div className={`p-2 rounded-lg ${status?.bg}`}>
+                        <TypeIcon className="h-5 w-5" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium truncate">{dataSource.name}</h3>
+                          <Badge variant={status?.badge} className="text-xs">
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {dataSource.status}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {dataSource.type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{dataSource.host}:{dataSource.port}</span>
+                          <span>Health: {Math.round(healthScore)}%</span>
+                          {dataSource.updated_at && (
+                            <span>Updated {new Date(dataSource.updated_at).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Progress value={healthScore} className="w-20 h-2" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.VIEW}>
+                              <DropdownMenuItem onClick={() => onSelectDataSource?.(dataSource)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.EDIT}>
+                              <DropdownMenuItem>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.TEST_CONNECTION}>
+                              <DropdownMenuItem 
+                                onClick={() => testConnectionMutation.mutate(dataSource.id)}
+                                disabled={testConnectionMutation.isPending}
+                              >
+                                <Monitor className="h-4 w-4 mr-2" />
+                                Test Connection
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <DropdownMenuSeparator />
+                            <PermissionGuard permission={DATA_SOURCE_PERMISSIONS.DELETE}>
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => deleteDataSourceMutation.mutate(dataSource.id)}
+                                disabled={deleteDataSourceMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
