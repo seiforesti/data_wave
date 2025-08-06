@@ -305,6 +305,14 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── QuickActionsPanel.tsx                # Quick actions (1600+ lines)
 │   │   ├── NotificationCenter.tsx               # Notification hub (2000+ lines)
 │   │   └── NavigationAnalytics.tsx              # Navigation analytics (1400+ lines)
+│   │   └── subcomponents/                       # 📦 NAVIGATION SUBCOMPONENTS
+│   │       ├── ProfileDropdown.tsx              # User profile dropdown (800+ lines)
+│   │       ├── WorkspaceSwitcher.tsx            # Workspace switching (700+ lines)
+│   │       ├── SystemHealthIndicator.tsx        # Health status display (600+ lines)
+│   │       ├── QuickSearchBar.tsx               # Inline search component (500+ lines)
+│   │       ├── NotificationBadge.tsx            # Notification indicator (400+ lines)
+│   │       ├── BreadcrumbItem.tsx               # Individual breadcrumb (300+ lines)
+│   │       └── NavigationMenuItem.tsx           # Navigation menu item (250+ lines)
 │   ├── layout/                                  # 🏗️ FLEXIBLE LAYOUT ENGINE
 │   │   ├── LayoutContent.tsx                    # Layout orchestrator (2800+ lines)
 │   │   ├── DynamicWorkspaceManager.tsx          # Workspace management (2600+ lines)
@@ -313,6 +321,113 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── TabManager.tsx                       # Tab management (2000+ lines)
 │   │   ├── SplitScreenManager.tsx               # Multi-pane views (1800+ lines)
 │   │   └── LayoutPersonalization.tsx            # Layout preferences (1600+ lines)
+│   │   └── subcomponents/                       # 📦 LAYOUT SUBCOMPONENTS
+│   │       ├── ResizablePanel.tsx               # Resizable panel component (600+ lines)
+│   │       ├── DragDropZone.tsx                 # Drag and drop area (500+ lines)
+│   │       ├── ViewportManager.tsx              # Viewport management (400+ lines)
+│   │       └── LayoutPresets.tsx                # Layout preset selector (300+ lines)
+│   ├── data-sources-spa/                        # 📊 DATA SOURCES SPA GROUP
+│   │   ├── DataSourcesSPA.tsx                   # Main SPA orchestrator (3500+ lines)
+│   │   ├── DataSourceExplorer.tsx               # Source exploration (2800+ lines)
+│   │   ├── ConnectionManager.tsx                # Connection management (2600+ lines)
+│   │   ├── DataDiscoveryEngine.tsx              # Discovery automation (2400+ lines)
+│   │   ├── SourceHealthMonitor.tsx              # Health monitoring (2200+ lines)
+│   │   ├── DataLineageVisualizer.tsx            # Lineage visualization (2000+ lines)
+│   │   ├── SourceAnalytics.tsx                  # Analytics dashboard (1800+ lines)
+│   │   └── SourceCollaborationHub.tsx           # Team collaboration (1600+ lines)
+│   │   └── subcomponents/                       # 📦 DATA SOURCES SUBCOMPONENTS
+│   │       ├── ConnectionTester.tsx             # Quick connection test (400+ lines)
+│   │       ├── SourcePreview.tsx                # Data source preview (350+ lines)
+│   │       ├── MetadataViewer.tsx               # Metadata display (300+ lines)
+│   │       └── SourceSelector.tsx               # Source selection (250+ lines)
+│   ├── scan-rule-sets-spa/                      # 🔍 SCAN RULE SETS SPA GROUP
+│   │   ├── ScanRuleSetsSPA.tsx                  # Main SPA orchestrator (3500+ lines)
+│   │   ├── IntelligentRuleBuilder.tsx           # Rule creation engine (3000+ lines)
+│   │   ├── RuleExecutionEngine.tsx              # Execution management (2800+ lines)
+│   │   ├── RuleMarketplace.tsx                  # Rule sharing platform (2600+ lines)
+│   │   ├── RuleOptimizer.tsx                    # Performance optimization (2400+ lines)
+│   │   ├── RuleAnalytics.tsx                    # Rule performance analytics (2200+ lines)
+│   │   ├── RuleCollaboration.tsx                # Team rule development (2000+ lines)
+│   │   └── RuleVersionControl.tsx               # Version management (1800+ lines)
+│   │   └── subcomponents/                       # 📦 SCAN RULE SETS SUBCOMPONENTS
+│   │       ├── RulePreview.tsx                  # Rule preview component (400+ lines)
+│   │       ├── RuleValidator.tsx                # Rule validation (350+ lines)
+│   │       ├── RuleMetrics.tsx                  # Rule metrics display (300+ lines)
+│   │       └── RuleSelector.tsx                 # Rule selection (250+ lines)
+│   ├── classifications-spa/                     # 🏷️ CLASSIFICATIONS SPA GROUP
+│   │   ├── ClassificationsSPA.tsx               # Main SPA orchestrator (3500+ lines)
+│   │   ├── IntelligentClassifier.tsx            # AI-powered classification (3200+ lines)
+│   │   ├── ClassificationHierarchy.tsx          # Taxonomy management (3000+ lines)
+│   │   ├── ClassificationEngine.tsx             # Classification execution (2800+ lines)
+│   │   ├── ClassificationAnalytics.tsx          # Classification insights (2600+ lines)
+│   │   ├── ClassificationWorkflows.tsx          # Workflow automation (2400+ lines)
+│   │   ├── ClassificationGovernance.tsx         # Governance controls (2200+ lines)
+│   │   └── ClassificationReporting.tsx          # Reporting dashboard (2000+ lines)
+│   │   └── subcomponents/                       # 📦 CLASSIFICATIONS SUBCOMPONENTS
+│   │       ├── ClassificationPreview.tsx        # Classification preview (400+ lines)
+│   │       ├── TaxonomyBrowser.tsx              # Taxonomy navigation (350+ lines)
+│   │       ├── ConfidenceIndicator.tsx          # Classification confidence (300+ lines)
+│   │       └── ClassificationTags.tsx           # Tag management (250+ lines)
+│   ├── compliance-rules-spa/                    # ⚖️ COMPLIANCE RULES SPA GROUP
+│   │   ├── ComplianceRulesSPA.tsx               # Main SPA orchestrator (3500+ lines)
+│   │   ├── ComplianceFrameworkManager.tsx       # Framework management (3200+ lines)
+│   │   ├── RiskAssessmentEngine.tsx             # Risk evaluation (3000+ lines)
+│   │   ├── ComplianceAuditCenter.tsx            # Audit management (2800+ lines)
+│   │   ├── ComplianceReporting.tsx              # Compliance reporting (2600+ lines)
+│   │   ├── ComplianceWorkflows.tsx              # Workflow automation (2400+ lines)
+│   │   ├── ViolationManagement.tsx              # Violation tracking (2200+ lines)
+│   │   └── ComplianceAnalytics.tsx              # Analytics dashboard (2000+ lines)
+│   │   └── subcomponents/                       # 📦 COMPLIANCE RULES SUBCOMPONENTS
+│   │       ├── ComplianceIndicator.tsx          # Compliance status (400+ lines)
+│   │       ├── RiskMeter.tsx                    # Risk level display (350+ lines)
+│   │       ├── ViolationAlert.tsx               # Violation notifications (300+ lines)
+│   │       └── ComplianceActions.tsx            # Quick compliance actions (250+ lines)
+│   ├── advanced-catalog-spa/                    # 📚 ADVANCED CATALOG SPA GROUP
+│   │   ├── AdvancedCatalogSPA.tsx               # Main SPA orchestrator (3800+ lines)
+│   │   ├── IntelligentCatalogEngine.tsx         # AI-powered cataloging (3500+ lines)
+│   │   ├── DataAssetExplorer.tsx                # Asset exploration (3200+ lines)
+│   │   ├── CatalogSearchEngine.tsx              # Advanced search (3000+ lines)
+│   │   ├── DataLineageVisualizer.tsx            # Lineage visualization (2800+ lines)
+│   │   ├── CatalogGovernance.tsx                # Governance controls (2600+ lines)
+│   │   ├── CatalogAnalytics.tsx                 # Catalog analytics (2400+ lines)
+│   │   ├── CatalogCollaboration.tsx             # Team collaboration (2200+ lines)
+│   │   └── CatalogRecommendations.tsx           # AI recommendations (2000+ lines)
+│   │   └── subcomponents/                       # 📦 ADVANCED CATALOG SUBCOMPONENTS
+│   │       ├── AssetPreview.tsx                 # Asset preview card (500+ lines)
+│   │       ├── LineageNode.tsx                  # Lineage visualization node (400+ lines)
+│   │       ├── CatalogBrowser.tsx               # Catalog navigation (350+ lines)
+│   │       ├── AssetMetrics.tsx                 # Asset metrics display (300+ lines)
+│   │       └── AssetActions.tsx                 # Quick asset actions (250+ lines)
+│   ├── scan-logic-spa/                          # 🔬 SCAN LOGIC SPA GROUP
+│   │   ├── ScanLogicSPA.tsx                     # Main SPA orchestrator (3800+ lines)
+│   │   ├── UnifiedScanOrchestrator.tsx          # Master scan orchestration (3500+ lines)
+│   │   ├── IntelligentScanEngine.tsx            # AI-powered scanning (3200+ lines)
+│   │   ├── ScanPerformanceOptimizer.tsx         # Performance optimization (3000+ lines)
+│   │   ├── ScanResultsAnalyzer.tsx              # Results analysis (2800+ lines)
+│   │   ├── ScanSchedulingEngine.tsx             # Scheduling management (2600+ lines)
+│   │   ├── ScanMonitoringDashboard.tsx          # Real-time monitoring (2400+ lines)
+│   │   ├── ScanCollaboration.tsx                # Team collaboration (2200+ lines)
+│   │   └── ScanReporting.tsx                    # Reporting dashboard (2000+ lines)
+│   │   └── subcomponents/                       # 📦 SCAN LOGIC SUBCOMPONENTS
+│   │       ├── ScanProgress.tsx                 # Scan progress indicator (400+ lines)
+│   │       ├── ScanResults.tsx                  # Results display (350+ lines)
+│   │       ├── ScanMetrics.tsx                  # Scan metrics (300+ lines)
+│   │       └── ScanActions.tsx                  # Quick scan actions (250+ lines)
+│   ├── rbac-system-spa/                         # 🔐 RBAC SYSTEM SPA GROUP (ADMIN ONLY)
+│   │   ├── RBACSystemSPA.tsx                    # Main SPA orchestrator (4000+ lines)
+│   │   ├── EnterpriseRoleManager.tsx            # Role management (3500+ lines)
+│   │   ├── PermissionMatrixManager.tsx          # Permission management (3200+ lines)
+│   │   ├── UserAccessManager.tsx                # User access control (3000+ lines)
+│   │   ├── SecurityPolicyEngine.tsx             # Security policies (2800+ lines)
+│   │   ├── AccessAuditCenter.tsx                # Access auditing (2600+ lines)
+│   │   ├── ComplianceSecurityDashboard.tsx      # Security compliance (2400+ lines)
+│   │   ├── IdentityProvider.tsx                 # Identity management (2200+ lines)
+│   │   └── SecurityAnalytics.tsx                # Security analytics (2000+ lines)
+│   │   └── subcomponents/                       # 📦 RBAC SYSTEM SUBCOMPONENTS
+│   │       ├── RoleSelector.tsx                 # Role selection (400+ lines)
+│   │       ├── PermissionTree.tsx               # Permission hierarchy (350+ lines)
+│   │       ├── AccessIndicator.tsx              # Access status (300+ lines)
+│   │       └── SecurityBadge.tsx                # Security level badge (250+ lines)
 │   ├── workspace/                               # 🌐 GLOBAL WORKSPACE MANAGEMENT
 │   │   ├── WorkspaceOrchestrator.tsx            # Workspace controller (2700+ lines)
 │   │   ├── ProjectManager.tsx                   # Project management (2500+ lines)
@@ -321,6 +436,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── WorkspaceAnalytics.tsx               # Analytics (1900+ lines)
 │   │   ├── CollaborativeWorkspaces.tsx          # Team workspaces (1800+ lines)
 │   │   └── WorkspaceSecurityManager.tsx         # Security controls (1700+ lines)
+│   │   └── subcomponents/                       # 📦 WORKSPACE SUBCOMPONENTS
+│   │       ├── WorkspaceCard.tsx                # Workspace preview card (400+ lines)
+│   │       ├── ResourceLinker.tsx               # Resource linking tool (350+ lines)
+│   │       ├── WorkspaceMetrics.tsx             # Workspace metrics (300+ lines)
+│   │       └── WorkspaceActions.tsx             # Quick workspace actions (250+ lines)
 │   ├── job-workflow-space/                      # 🔄 DATABRICKS-STYLE WORKFLOW BUILDER
 │   │   ├── JobWorkflowBuilder.tsx               # Workflow builder (3000+ lines)
 │   │   ├── VisualScriptingEngine.tsx            # Visual scripting (2800+ lines)
@@ -332,6 +452,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── CrossGroupOrchestrator.tsx           # Cross-group orchestration (2200+ lines)
 │   │   ├── JobVersionControl.tsx                # Version control (1600+ lines)
 │   │   └── WorkflowAnalytics.tsx                # Analytics (1800+ lines)
+│   │   └── subcomponents/                       # 📦 JOB WORKFLOW SUBCOMPONENTS
+│   │       ├── WorkflowNode.tsx                 # Workflow node component (500+ lines)
+│   │       ├── JobMonitor.tsx                   # Job monitoring widget (400+ lines)
+│   │       ├── WorkflowPreview.tsx              # Workflow preview (350+ lines)
+│   │       └── WorkflowActions.tsx              # Quick workflow actions (300+ lines)
 │   ├── pipeline-manager/                        # ⚡ ADVANCED PIPELINE MANAGEMENT
 │   │   ├── PipelineDesigner.tsx                 # Pipeline builder (2900+ lines)
 │   │   ├── RealTimePipelineVisualizer.tsx       # Live visualization (2700+ lines)
@@ -343,6 +468,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── ErrorHandlingFramework.tsx           # Error handling (1700+ lines)
 │   │   ├── PipelineVersionControl.tsx           # Version control (1600+ lines)
 │   │   └── PipelineAnalytics.tsx                # Analytics (1800+ lines)
+│   │   └── subcomponents/                       # 📦 PIPELINE MANAGER SUBCOMPONENTS
+│   │       ├── PipelineNode.tsx                 # Pipeline node component (500+ lines)
+│   │       ├── PipelineProgress.tsx             # Pipeline progress indicator (400+ lines)
+│   │       ├── PipelineMetrics.tsx              # Pipeline metrics display (350+ lines)
+│   │       └── PipelineActions.tsx              # Quick pipeline actions (300+ lines)
 │   ├── ai-assistant/                            # 🤖 INTEGRATED AI ASSISTANT
 │   │   ├── AIAssistantInterface.tsx             # AI interface (2600+ lines)
 │   │   ├── ContextAwareAssistant.tsx            # Context-aware AI (2400+ lines)
@@ -353,6 +483,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── AnomalyDetectionAssistant.tsx        # Anomaly detection (1600+ lines)
 │   │   ├── ComplianceAssistant.tsx              # Compliance guidance (1500+ lines)
 │   │   └── AILearningEngine.tsx                 # Learning system (1400+ lines)
+│   │   └── subcomponents/                       # 📦 AI ASSISTANT SUBCOMPONENTS
+│   │       ├── ChatInterface.tsx                # Chat interface (600+ lines)
+│   │       ├── RecommendationCard.tsx           # Recommendation display (400+ lines)
+│   │       ├── AIInsightPanel.tsx               # Insights panel (350+ lines)
+│   │       └── AIActions.tsx                    # Quick AI actions (300+ lines)
 │   ├── activity-tracker/                        # 📊 HISTORIC ACTIVITIES TRACKER
 │   │   ├── ActivityTrackingHub.tsx              # Activity tracking (2500+ lines)
 │   │   ├── RealTimeActivityStream.tsx           # Live activity feed (2300+ lines)
@@ -362,6 +497,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── ActivitySearchEngine.tsx             # Activity search (1700+ lines)
 │   │   ├── ComplianceActivityMonitor.tsx        # Compliance tracking (1600+ lines)
 │   │   └── ActivityReportingEngine.tsx          # Reporting system (1500+ lines)
+│   │   └── subcomponents/                       # 📦 ACTIVITY TRACKER SUBCOMPONENTS
+│   │       ├── ActivityFeed.tsx                 # Activity feed component (500+ lines)
+│   │       ├── ActivityCard.tsx                 # Activity card display (400+ lines)
+│   │       ├── ActivityFilters.tsx              # Activity filtering (350+ lines)
+│   │       └── ActivityActions.tsx              # Quick activity actions (300+ lines)
 │   ├── intelligent-dashboard/                   # 📈 INTELLIGENT DASHBOARD SYSTEM
 │   │   ├── IntelligentDashboardOrchestrator.tsx # Dashboard controller (2800+ lines)
 │   │   ├── CrossGroupKPIDashboard.tsx           # KPI visualization (2600+ lines)
@@ -372,6 +512,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── ExecutiveReportingDashboard.tsx      # Executive reporting (1700+ lines)
 │   │   ├── PerformanceMonitoringDashboard.tsx   # Performance monitoring (1600+ lines)
 │   │   └── DashboardPersonalizationEngine.tsx   # Personalization (1500+ lines)
+│   │   └── subcomponents/                       # 📦 INTELLIGENT DASHBOARD SUBCOMPONENTS
+│   │       ├── DashboardWidget.tsx              # Dashboard widget (600+ lines)
+│   │       ├── MetricCard.tsx                   # Metric display card (400+ lines)
+│   │       ├── ChartComponent.tsx               # Chart visualization (350+ lines)
+│   │       └── DashboardActions.tsx             # Quick dashboard actions (300+ lines)
 │   ├── collaboration/                           # 👥 MASTER COLLABORATION SYSTEM
 │   │   ├── MasterCollaborationHub.tsx           # Collaboration orchestrator (2700+ lines)
 │   │   ├── RealTimeCoAuthoringEngine.tsx        # Real-time editing (2500+ lines)
@@ -382,6 +527,11 @@ v15_enhanced_1/components/racine-main-manager/
 │   │   ├── KnowledgeSharingPlatform.tsx         # Knowledge sharing (1700+ lines)
 │   │   ├── CollaborationAnalytics.tsx           # Collaboration metrics (1600+ lines)
 │   │   └── ExternalCollaboratorManager.tsx      # External integration (1500+ lines)
+│   │   └── subcomponents/                       # 📦 COLLABORATION SUBCOMPONENTS
+│   │       ├── CollaborationPanel.tsx           # Collaboration side panel (600+ lines)
+│   │       ├── TeamMemberCard.tsx               # Team member display (400+ lines)
+│   │       ├── ChatWidget.tsx                   # Chat component (350+ lines)
+│   │       └── CollaborationActions.tsx         # Quick collaboration actions (300+ lines)
 │   └── user-management/                         # 👤 USER SETTINGS & PROFILE MANAGEMENT
 │       ├── UserProfileManager.tsx               # User profile (2400+ lines)
 │       ├── EnterpriseAuthenticationCenter.tsx   # Authentication (2200+ lines)
@@ -392,6 +542,11 @@ v15_enhanced_1/components/racine-main-manager/
 │       ├── CrossGroupAccessManager.tsx          # Access management (1500+ lines)
 │       ├── NotificationPreferencesCenter.tsx    # Notifications (1400+ lines)
 │       └── UserAnalyticsDashboard.tsx           # User analytics (1300+ lines)
+│       └── subcomponents/                       # 📦 USER MANAGEMENT SUBCOMPONENTS
+│           ├── ProfileCard.tsx                  # Profile display card (500+ lines)
+│           ├── SecuritySettings.tsx             # Security configuration (400+ lines)
+│           ├── PreferencesPanel.tsx             # Preferences panel (350+ lines)
+│           └── UserActions.tsx                  # Quick user actions (300+ lines)
 ├── services/                                    # 🔌 RACINE INTEGRATION SERVICES
 ├── types/                                       # 📝 RACINE TYPE DEFINITIONS
 ├── hooks/                                       # 🎣 RACINE REACT HOOKS
@@ -401,1312 +556,521 @@ v15_enhanced_1/components/racine-main-manager/
 
 ### **🎯 Detailed Frontend Components**
 
-#### **1. Navigation System Components**
+#### **1. Navigation System Components - PRIORITY 1: CRITICAL**
 
-##### **AppNavbar.tsx (2500+ lines)**
-**Purpose**: Global intelligent navigation system with adaptive UI
+##### **1.1. AppNavbar.tsx (2500+ lines) – Global Intelligent Navbar**
+**Purpose**: Master navigation orchestrator with adaptive UI and cross-group integration
 
 **Key Features**:
-- **Adaptive Navigation**: Role-based menu generation
-- **Global Search**: Cross-group intelligent search
-- **System Health**: Real-time health indicators
-- **Quick Actions**: Context-aware shortcuts
-- **Workspace Switching**: Multi-workspace navigation
-- **Notifications**: Real-time notification center
+- **Adaptive Navigation**: Role-based menu generation with RBAC integration
+- **Global Search**: Cross-group intelligent search with AI-powered suggestions
+- **System Health**: Real-time health indicators across all 7 groups
+- **Quick Actions**: Context-aware shortcuts for common operations
+- **Workspace Switching**: Multi-workspace navigation with seamless transitions
+- **User Profile Integration**: Direct integration with user-management SPA
+- **Notifications**: Real-time notification center with cross-group alerts
+- **AI Assistant Access**: Direct AI assistant trigger from navbar
 
 **Required Dependencies**:
-- **Types**: `NavigationContext`, `CrossGroupState`, `RBACPermissions`, `SystemHealth`
-- **Services**: `racine-orchestration-apis.ts` for health monitoring
-- **Hooks**: `useRacineOrchestration.ts` for system state
-- **Utils**: `cross-group-orchestrator.ts` for navigation logic
-- **Constants**: `cross-group-configs.ts` for group configurations
+- **Types**: `NavigationContext`, `CrossGroupState`, `RBACPermissions`, `SystemHealth`, `UserContext`
+- **Services**: `racine-orchestration-apis.ts`, `user-management-apis.ts`, `cross-group-integration-apis.ts`
+- **Hooks**: `useRacineOrchestration.ts`, `useUserManagement.ts`, `useCrossGroupIntegration.ts`
+- **Utils**: `cross-group-orchestrator.ts`, `navigation-utils.ts`, `security-utils.ts`
+- **Constants**: `cross-group-configs.ts`, `VIEW_MODES`, `USER_ROLES`
 
-**Backend Integration**:
+**Backend Integration Points**:
 - **Routes**: `/api/racine/orchestration/health` - System health monitoring
-- **Routes**: `/api/racine/integration/groups/status` - Group status
+- **Routes**: `/api/racine/integration/groups/status` - Group status aggregation
+- **Routes**: `/api/racine/search/unified` - Cross-group search functionality
+- **Routes**: `/api/racine/workspace/switch` - Workspace switching
+- **Routes**: `/api/auth/profile` - User profile management
 - **Services**: `RacineOrchestrationService.monitor_system_health()`
-- **Models**: `RacineSystemHealth` for health data
+- **Models**: `RacineSystemHealth`, `User`, `RacineWorkspace`
 
-##### **AppSidebar.tsx (2300+ lines)**
-**Purpose**: Adaptive sidebar with real-time updates and group navigation
+**Design Architecture**:
+```typescript
+interface AppNavbarState {
+  currentUser: UserContext;
+  systemHealth: SystemHealth;
+  activeWorkspace: WorkspaceConfiguration;
+  notifications: Notification[];
+  searchQuery: string;
+  quickActions: QuickAction[];
+  profileMenuOpen: boolean;
+  workspaceSwitcherOpen: boolean;
+}
+```
+
+**Component Structure**:
+- **Left Section**: Logo, System health indicator, Workspace switcher
+- **Center Section**: Global search bar with AI suggestions
+- **Right Section**: Quick actions, Notifications, AI assistant trigger, User profile dropdown
+
+**Subcomponents Integration**:
+- `ProfileDropdown.tsx`: User profile management with direct link to user-management SPA
+- `WorkspaceSwitcher.tsx`: Workspace selection with analytics
+- `SystemHealthIndicator.tsx`: Real-time health across all groups
+- `QuickSearchBar.tsx`: Intelligent search with cross-group results
+
+##### **1.2. AppSidebar.tsx (2300+ lines) – Adaptive Sidebar with SPA Orchestration**
+**Purpose**: Master navigation hub orchestrating access to all 7 group SPAs and racine components
 
 **Key Features**:
-- **Group Navigation**: Navigate between all 7 groups
-- **Real-time Updates**: Live status indicators
-- **Workspace Context**: Workspace-aware navigation
-- **Collapsible Design**: Space-efficient layout
-- **Permission-based**: RBAC-controlled visibility
+- **SPA Group Navigation**: Direct access to all 6 core group SPAs + RBAC (admin only)
+  - Data Sources SPA: Complete data source management and exploration
+  - Scan Rule Sets SPA: Rule creation, execution, and marketplace
+  - Classifications SPA: AI-powered classification and taxonomy management
+  - Compliance Rules SPA: Compliance framework and risk management
+  - Advanced Catalog SPA: Intelligent cataloging and asset management
+  - Scan Logic SPA: Unified scanning orchestration and monitoring
+  - RBAC System SPA: Security and access management (admin role only)
+- **Racine Component Access**: Navigation to all racine-specific components
+  - Workspace Management: Multi-workspace orchestration
+  - Job Workflow Space: Databricks-style workflow builder
+  - Pipeline Manager: Advanced pipeline management
+  - AI Assistant: Context-aware AI guidance
+  - Activity Tracker: Cross-group activity monitoring
+  - Intelligent Dashboard: Real-time metrics and analytics
+  - Collaboration Hub: Team collaboration center
+  - User Management: Profile and settings management
+- **Quick Actions Sidebar**: Hidden right sidebar with component-specific quick actions
+- **Real-time Updates**: Live status indicators for all groups and components
+- **Contextual Navigation**: Smart navigation based on current workspace and user context
+- **Permission-based Visibility**: RBAC-controlled menu items and access levels
 
 **Required Dependencies**:
-- **Types**: `UserContext`, `WorkspaceState`, `CrossGroupState`
-- **Services**: `cross-group-integration-apis.ts`
-- **Hooks**: `useCrossGroupIntegration.ts`
-- **Utils**: `workspace-utils.ts`
-- **Constants**: `VIEW_MODES` from cross-group-configs
+- **Types**: `UserContext`, `WorkspaceState`, `CrossGroupState`, `NavigationState`, `RBACPermissions`
+- **Services**: `workspace-management-apis.ts`, `cross-group-integration-apis.ts`, `user-management-apis.ts`
+- **Hooks**: `useWorkspaceManagement.ts`, `useCrossGroupIntegration.ts`, `useUserManagement.ts`
+- **Utils**: `workspace-utils.ts`, `cross-group-orchestrator.ts`, `security-utils.ts`
+- **Constants**: `SUPPORTED_GROUPS`, `VIEW_MODES`, `QUICK_ACTIONS`, `RBAC_PERMISSIONS`
 
-**Backend Integration**:
+**Backend Integration Points**:
 - **Routes**: `/api/racine/workspace/{id}/resources` - Workspace resources
+- **Routes**: `/api/rbac/user/{id}/permissions` - User permissions
+- **Routes**: `/api/racine/integration/groups/status` - All group status
 - **Services**: `RacineWorkspaceService.get_workspace_resources()`
-- **Models**: `RacineWorkspace`, `RacineWorkspaceResource`
+- **Services**: `RBACService.get_user_permissions()`
+- **Models**: `RacineWorkspace`, `User`, `Role`, `Permission`
 
-##### **GlobalSearchInterface.tsx (2200+ lines)**
-**Purpose**: Unified search across all groups with intelligent results
+**Design Architecture**:
+```typescript
+interface AppSidebarState {
+  isCollapsed: boolean;
+  activeGroup: string | null;
+  activeComponent: string | null;
+  userPermissions: RBACPermissions;
+  groupStatuses: Record<string, GroupStatus>;
+  quickActionsPanelOpen: boolean;
+  contextualMenuItems: MenuItem[];
+}
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: string;
+  route: string;
+  permissions: string[];
+  status: 'active' | 'inactive' | 'error';
+  badge?: number;
+  subItems?: MenuItem[];
+}
+```
+
+**Component Structure**:
+- **Top Section**: Workspace context and quick workspace switcher
+- **Main Navigation**: 
+  - **Group SPAs Section**: All 6 core group SPAs + RBAC (admin only)
+  - **Racine Components Section**: All racine-specific functionality
+- **Bottom Section**: User settings, system status, collapse toggle
+- **Quick Actions Panel**: Hidden right sidebar for component-specific actions
+
+**SPA Orchestration Logic**:
+```typescript
+const spaGroups = [
+  {
+    id: 'data-sources',
+    label: 'Data Sources',
+    icon: 'Database',
+    route: '/racine/data-sources',
+    component: 'DataSourcesSPA',
+    permissions: ['data_sources.read'],
+    status: groupStatuses.dataSources
+  },
+  {
+    id: 'scan-rule-sets',
+    label: 'Scan Rule Sets',
+    icon: 'Search',
+    route: '/racine/scan-rule-sets',
+    component: 'ScanRuleSetsSPA',
+    permissions: ['scan_rules.read'],
+    status: groupStatuses.scanRuleSets
+  },
+  // ... all other groups
+];
+
+const racineComponents = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    icon: 'Layout',
+    route: '/racine/workspace',
+    component: 'WorkspaceOrchestrator',
+    permissions: ['workspace.read']
+  },
+  // ... all other racine components
+];
+```
+
+**Subcomponents Integration**:
+- `NavigationMenuItem.tsx`: Individual menu items with status indicators
+- `QuickActionsPanel.tsx`: Right sidebar for component-specific actions
+- `GroupStatusIndicator.tsx`: Real-time group health indicators
+- `PermissionGate.tsx`: RBAC-based visibility control
+
+##### **1.3. ContextualBreadcrumbs.tsx (1800+ lines) – Smart Breadcrumbs**
+**Purpose**: Intelligent breadcrumb navigation with cross-group context awareness
 
 **Key Features**:
-- **Cross-group Search**: Search across all 7 groups simultaneously
-- **Intelligent Ranking**: AI-powered result ranking
-- **Real-time Suggestions**: Auto-complete and suggestions
-- **Faceted Search**: Advanced filtering by group, type, etc.
-- **Search Analytics**: Track search patterns and effectiveness
+- **Cross-Group Context**: Breadcrumbs spanning multiple groups and components
+- **Smart Navigation**: Click-to-navigate with context preservation
+- **Resource Linking**: Direct links to related resources across groups
+- **Workspace Context**: Workspace-aware breadcrumb generation
+- **AI Suggestions**: AI-powered navigation suggestions
+- **History Tracking**: Navigation history with quick back/forward
 
 **Required Dependencies**:
-- **Types**: `SearchQuery`, `SearchResult`, `SearchFilters`
-- **Services**: `racine-orchestration-apis.ts` for search coordination
-- **Hooks**: `useGlobalSearch.ts`
-- **Utils**: `search-utils.ts`
-- **Constants**: `SEARCH_CONFIGS`
-
-**Backend Integration**:
-- **Routes**: `/api/racine/search/unified` - Unified search endpoint
-- **Services**: `RacineSearchService.execute_cross_group_search()`
-- **Integration**: Coordinates with ALL existing group search APIs
-
-#### **2. Workspace Management Components**
-
-##### **WorkspaceOrchestrator.tsx (2700+ lines)**
-**Purpose**: Master workspace controller with cross-group resource management
-
-**Key Features**:
-- **Multi-workspace Management**: Create, switch, and manage workspaces
-- **Cross-group Resources**: Link resources from all 7 groups
-- **Collaboration**: Team workspace management
-- **Templates**: Workspace templates for quick setup
-- **Analytics**: Comprehensive workspace analytics
-
-**Required Dependencies**:
-- **Types**: `WorkspaceConfiguration`, `WorkspaceMember`, `WorkspaceResource`
-- **Services**: `workspace-management-apis.ts`
-- **Hooks**: `useWorkspaceManagement.ts`
-- **Utils**: `workspace-utils.ts`
-- **Constants**: `DEFAULT_WORKSPACE_CONFIG`
-
-**Backend Integration**:
-- **Routes**: `/api/racine/workspace/*` - All workspace operations
-- **Services**: `RacineWorkspaceService` - Complete workspace management
-- **Models**: `RacineWorkspace`, `RacineWorkspaceMember`, `RacineWorkspaceResource`
-
-##### **CrossGroupResourceLinker.tsx (2100+ lines)**
-**Purpose**: Resource linking across all groups within workspaces
-
-**Key Features**:
-- **Resource Discovery**: Find resources across all groups
-- **Link Management**: Create and manage resource links
-- **Dependency Tracking**: Track resource dependencies
-- **Access Control**: RBAC-integrated resource access
-- **Usage Analytics**: Resource usage tracking
-
-**Required Dependencies**:
-- **Types**: `ResourceLink`, `ResourceDependency`, `CrossGroupResource`
+- **Types**: `BreadcrumbItem`, `NavigationContext`, `WorkspaceContext`
 - **Services**: `cross-group-integration-apis.ts`
-- **Hooks**: `useCrossGroupIntegration.ts`
-- **Utils**: `resource-linker-utils.ts`
-- **Constants**: `RESOURCE_TYPES`
+- **Hooks**: `useCrossGroupIntegration.ts`, `useNavigationHistory.ts`
+- **Utils**: `breadcrumb-utils.ts`, `context-analyzer.ts`
+- **Constants**: `BREADCRUMB_CONFIGS`
 
-**Backend Integration**:
-- **Routes**: `/api/racine/integration/resources/link` - Resource linking
-- **Services**: `RacineIntegrationService.link_resources()`
-- **Models**: `RacineCrossGroupIntegration`, `RacineWorkspaceResource`
+**Backend Integration Points**:
+- **Routes**: `/api/racine/navigation/context` - Navigation context
+- **Services**: `RacineIntegrationService.get_navigation_context()`
 
-#### **3. Job Workflow Space Components**
-
-##### **JobWorkflowBuilder.tsx (3000+ lines)**
-**Purpose**: Databricks-style drag-drop workflow builder with cross-group orchestration
+##### **1.4. GlobalSearchInterface.tsx (2200+ lines) – Unified Search**
+**Purpose**: Cross-group intelligent search with AI-powered results
 
 **Key Features**:
-- **Visual Builder**: Drag-drop workflow creation
-- **Cross-group Steps**: Steps can utilize any of the 7 groups
-- **Dependency Management**: Visual dependency mapping
-- **Real-time Validation**: Instant workflow validation
-- **Template Integration**: Pre-built workflow templates
+- **Cross-Group Search**: Search across all 7 groups simultaneously
+- **AI-Powered Ranking**: Machine learning result ranking
+- **Real-time Suggestions**: Auto-complete and intelligent suggestions
+- **Faceted Search**: Advanced filtering by group, type, permissions
+- **Search Analytics**: Track search patterns and optimize results
+- **Natural Language**: Natural language query processing
 
 **Required Dependencies**:
-- **Types**: `WorkflowDefinition`, `WorkflowStep`, `WorkflowDependency`
-- **Services**: `job-workflow-apis.ts`
-- **Hooks**: `useJobWorkflowBuilder.ts`
-- **Utils**: `workflow-engine.ts`
-- **Constants**: `WORKFLOW_TEMPLATES`
+- **Types**: `SearchQuery`, `SearchResult`, `SearchFilters`, `AISearchSuggestion`
+- **Services**: `racine-orchestration-apis.ts`, `ai-assistant-apis.ts`
+- **Hooks**: `useGlobalSearch.ts`, `useAIAssistant.ts`
+- **Utils**: `search-utils.ts`, `ai-integration-utils.ts`
+- **Constants**: `SEARCH_CONFIGS`, `AI_SEARCH_MODELS`
 
-**Backend Integration**:
-- **Routes**: `/api/racine/workflows/create` - Workflow creation
-- **Services**: `RacineWorkflowService.create_workflow()`
-- **Models**: `RacineJobWorkflow`, `RacineWorkflowStep`
+**Backend Integration Points**:
+- **Routes**: `/api/racine/search/unified` - Unified search endpoint
+- **Routes**: `/api/racine/ai-assistant/search-suggestions` - AI suggestions
+- **Services**: `RacineSearchService.execute_cross_group_search()`
+- **Services**: `RacineAIService.generate_search_suggestions()`
 
-##### **RealTimeJobMonitor.tsx (2400+ lines)**
-**Purpose**: Live job monitoring with real-time updates and control
+##### **1.5. QuickActionsPanel.tsx (1600+ lines) – Quick Actions**
+**Purpose**: Context-aware quick actions for common operations
 
 **Key Features**:
-- **Live Monitoring**: Real-time execution tracking
-- **Progress Visualization**: Visual progress indicators
-- **Log Streaming**: Live log streaming
-- **Execution Control**: Pause, resume, cancel workflows
-- **Performance Metrics**: Real-time performance data
+- **Context-Aware Actions**: Actions based on current view and permissions
+- **Cross-Group Operations**: Quick actions spanning multiple groups
+- **Workflow Shortcuts**: One-click workflow creation and execution
+- **AI Recommendations**: AI-suggested actions based on context
+- **Customizable Actions**: User-defined quick actions
+- **Keyboard Shortcuts**: Keyboard accessibility for power users
 
 **Required Dependencies**:
-- **Types**: `JobExecution`, `ExecutionLog`, `PerformanceMetrics`
-- **Services**: `job-workflow-apis.ts` for execution monitoring
-- **Hooks**: `useJobMonitoring.ts`
-- **Utils**: `monitoring-utils.ts`
-- **Constants**: `MONITORING_CONFIGS`
+- **Types**: `QuickAction`, `ActionContext`, `UserPreferences`
+- **Services**: `cross-group-integration-apis.ts`, `user-management-apis.ts`
+- **Hooks**: `useCrossGroupIntegration.ts`, `useUserManagement.ts`
+- **Utils**: `action-utils.ts`, `keyboard-shortcuts.ts`
+- **Constants**: `QUICK_ACTIONS`, `KEYBOARD_SHORTCUTS`
 
-**Backend Integration**:
-- **Routes**: `/api/racine/workflows/{id}/status` - Execution status
-- **Routes**: `/api/racine/workflows/{id}/logs/stream` - Log streaming
-- **Services**: `RacineWorkflowService.monitor_execution()`
-- **Models**: `RacineJobExecution`
-
-#### **4. Pipeline Manager Components**
-
-##### **PipelineDesigner.tsx (2900+ lines)**
-**Purpose**: Advanced pipeline builder with AI-driven optimization
+##### **1.6. NotificationCenter.tsx (2000+ lines) – Notification Hub**
+**Purpose**: Real-time notification system with cross-group alerts
 
 **Key Features**:
-- **Visual Pipeline Builder**: Drag-drop pipeline creation
-- **Stage Management**: Complex pipeline stage orchestration
-- **AI Optimization**: Intelligent pipeline optimization
-- **Cross-group Operations**: Pipeline stages across all groups
-- **Real-time Validation**: Instant pipeline validation
+- **Real-time Notifications**: WebSocket-based live notifications
+- **Cross-Group Alerts**: Notifications from all groups and components
+- **Smart Filtering**: AI-powered notification prioritization
+- **Action Integration**: Direct actions from notifications
+- **Notification History**: Comprehensive notification tracking
+- **Custom Preferences**: User-defined notification preferences
 
 **Required Dependencies**:
-- **Types**: `PipelineDefinition`, `PipelineStage`, `PipelineOperation`
-- **Services**: `pipeline-management-apis.ts`
-- **Hooks**: `usePipelineManager.ts`
-- **Utils**: `pipeline-engine.ts`
-- **Constants**: `PIPELINE_TEMPLATES`
+- **Types**: `Notification`, `NotificationPreferences`, `AlertLevel`
+- **Services**: `activity-tracking-apis.ts`, `user-management-apis.ts`
+- **Hooks**: `useActivityTracker.ts`, `useWebSocket.ts`
+- **Utils**: `notification-utils.ts`, `websocket-utils.ts`
+- **Constants**: `NOTIFICATION_TYPES`, `ALERT_LEVELS`
 
-**Backend Integration**:
-- **Routes**: `/api/racine/pipelines/create` - Pipeline creation
-- **Services**: `RacinePipelineService.create_pipeline()`
-- **Models**: `RacinePipeline`, `RacinePipelineStage`
+**Backend Integration Points**:
+- **Routes**: `/api/racine/notifications/stream` - Real-time notifications
+- **Routes**: `/api/racine/activity/subscribe` - Activity subscriptions
+- **Services**: `RacineActivityService.stream_notifications()`
+- **WebSocket**: Real-time notification streaming
 
-##### **IntelligentPipelineOptimizer.tsx (2300+ lines)**
-**Purpose**: AI-driven pipeline optimization with performance recommendations
+##### **1.7. NavigationAnalytics.tsx (1400+ lines) – Navigation Analytics**
+**Purpose**: Navigation usage analytics and optimization
 
 **Key Features**:
-- **AI Optimization**: Machine learning-based optimization
-- **Performance Analysis**: Comprehensive performance analysis
-- **Bottleneck Detection**: Identify and resolve bottlenecks
-- **Resource Optimization**: Intelligent resource allocation
-- **Predictive Analytics**: Performance prediction
+- **Usage Tracking**: Track navigation patterns and user behavior
+- **Performance Metrics**: Navigation performance and optimization
+- **User Journey Analysis**: Analyze user navigation journeys
+- **Accessibility Metrics**: Navigation accessibility tracking
+- **A/B Testing**: Navigation layout and feature testing
+- **Optimization Recommendations**: AI-driven navigation improvements
 
 **Required Dependencies**:
-- **Types**: `OptimizationRecommendation`, `PerformanceAnalysis`
-- **Services**: `ai-assistant-apis.ts` for AI optimization
-- **Hooks**: `useAIAssistant.ts`
-- **Utils**: `ai-integration-utils.ts`
-- **Constants**: `AI_CONFIGS`
+- **Types**: `NavigationMetrics`, `UserJourney`, `PerformanceMetrics`
+- **Services**: `dashboard-apis.ts`, `ai-assistant-apis.ts`
+- **Hooks**: `useIntelligentDashboard.ts`, `useAnalytics.ts`
+- **Utils**: `analytics-utils.ts`, `performance-utils.ts`
+- **Constants**: `ANALYTICS_CONFIGS`, `TRACKING_EVENTS`
+
+#### **2. SPA Group Architecture - PRIORITY 2: HIGH**
+
+Each SPA group follows a consistent architecture pattern:
+
+##### **2.1. Data Sources SPA Group**
+**Main Component**: `DataSourcesSPA.tsx` (3500+ lines)
+**Purpose**: Complete data source management, discovery, and orchestration
+
+**Core Components**:
+- `DataSourceExplorer.tsx`: Visual data source exploration with lineage
+- `ConnectionManager.tsx`: Connection configuration and testing
+- `DataDiscoveryEngine.tsx`: Automated data discovery and profiling
+- `SourceHealthMonitor.tsx`: Real-time health monitoring and alerting
+- `DataLineageVisualizer.tsx`: Interactive lineage visualization
+- `SourceAnalytics.tsx`: Data source analytics and insights
+- `SourceCollaborationHub.tsx`: Team collaboration on data sources
+
+**Subcomponents for Quick Actions**:
+- `ConnectionTester.tsx`: Quick connection validation
+- `SourcePreview.tsx`: Data source preview with sample data
+- `MetadataViewer.tsx`: Metadata display and editing
+- `SourceSelector.tsx`: Multi-source selection tool
 
 **Backend Integration**:
-- **Routes**: `/api/racine/ai-assistant/optimize-pipeline` - AI optimization
-- **Services**: `RacineAIService.optimize_pipeline()`
-- **Models**: `RacineAIRecommendation`, `RacineAIInsight`
+- **Services**: `DataSourceService`, `DataSourceConnectionService`
+- **Models**: `DataSource`, `DataSourceConnection`, `DataSourceMetadata`
+- **Routes**: `/api/data-sources/*` - All data source operations
 
-#### **5. AI Assistant Components**
+##### **2.2. Scan Rule Sets SPA Group**
+**Main Component**: `ScanRuleSetsSPA.tsx` (3500+ lines)
+**Purpose**: Intelligent rule creation, execution, and marketplace
 
-##### **AIAssistantInterface.tsx (2600+ lines)**
-**Purpose**: Main AI interaction interface with context-aware assistance
+**Core Components**:
+- `IntelligentRuleBuilder.tsx`: AI-powered rule creation with templates
+- `RuleExecutionEngine.tsx`: Rule execution monitoring and optimization
+- `RuleMarketplace.tsx`: Rule sharing and discovery platform
+- `RuleOptimizer.tsx`: Performance optimization and tuning
+- `RuleAnalytics.tsx`: Rule performance analytics and insights
+- `RuleCollaboration.tsx`: Team rule development and review
+- `RuleVersionControl.tsx`: Rule versioning and change management
 
-**Key Features**:
-- **Natural Language Interface**: Chat-based AI interaction
-- **Context Awareness**: Understands current user context
-- **Cross-group Intelligence**: Knowledge across all groups
-- **Proactive Recommendations**: AI-driven suggestions
-- **Learning System**: Continuous learning from interactions
-
-**Required Dependencies**:
-- **Types**: `AIConversation`, `AIMessage`, `AIRecommendation`
-- **Services**: `ai-assistant-apis.ts`
-- **Hooks**: `useAIAssistant.ts`
-- **Utils**: `ai-integration-utils.ts`
-- **Constants**: `AI_CONFIGS`
-
-**Backend Integration**:
-- **Routes**: `/api/racine/ai-assistant/chat` - AI chat interface
-- **Services**: `RacineAIService.process_query()`
-- **Models**: `RacineAIConversation`, `RacineAIMessage`
-
-##### **ContextAwareAssistant.tsx (2400+ lines)**
-**Purpose**: Context-aware AI guidance with proactive assistance
-
-**Key Features**:
-- **Context Analysis**: Deep understanding of user context
-- **Proactive Guidance**: Anticipate user needs
-- **Cross-group Insights**: Insights across all groups
-- **Smart Recommendations**: Intelligent suggestions
-- **Workflow Automation**: Automated workflow suggestions
-
-**Required Dependencies**:
-- **Types**: `UserContext`, `SystemContext`, `AIInsight`
-- **Services**: `ai-assistant-apis.ts`
-- **Hooks**: `useContextAwareAI.ts`
-- **Utils**: `context-analyzer.ts`
-- **Constants**: `CONTEXT_CONFIGS`
+**Subcomponents for Quick Actions**:
+- `RulePreview.tsx`: Rule preview with test execution
+- `RuleValidator.tsx`: Rule validation and testing
+- `RuleMetrics.tsx`: Rule performance metrics display
+- `RuleSelector.tsx`: Multi-rule selection and batch operations
 
 **Backend Integration**:
-- **Routes**: `/api/racine/ai-assistant/analyze-context` - Context analysis
-- **Services**: `RacineAIService.analyze_context()`
-- **Models**: `RacineAIInsight`, `RacineAIRecommendation`
+- **Services**: `ScanRuleSetService`, `EnterpriseRuleService`
+- **Models**: `ScanRuleSet`, `IntelligentScanRule`, `RuleExecutionHistory`
+- **Routes**: `/api/scan-rule-sets/*` - All rule operations
 
-### **📊 Services Layer Architecture**
+##### **2.3. Classifications SPA Group**
+**Main Component**: `ClassificationsSPA.tsx` (3500+ lines)
+**Purpose**: AI-powered classification and taxonomy management
 
-#### **1. racine-orchestration-apis.ts (2000+ lines)**
-**Purpose**: Master orchestration API integration
+**Core Components**:
+- `IntelligentClassifier.tsx`: AI-powered classification engine
+- `ClassificationHierarchy.tsx`: Taxonomy and hierarchy management
+- `ClassificationEngine.tsx`: Classification execution and monitoring
+- `ClassificationAnalytics.tsx`: Classification insights and metrics
+- `ClassificationWorkflows.tsx`: Automated classification workflows
+- `ClassificationGovernance.tsx`: Classification governance and policies
+- `ClassificationReporting.tsx`: Classification reporting and compliance
 
-**Key Functions**:
-- `createOrchestrationMaster()`: Create orchestration instance
-- `executeWorkflow()`: Execute cross-group workflows
-- `monitorSystemHealth()`: Monitor system health
-- `getMetrics()`: Get cross-group metrics
-- `optimizePerformance()`: Optimize system performance
-
-**Backend Integration**:
-- **Routes**: `/api/racine/orchestration/*`
-- **Services**: `RacineOrchestrationService`
-- **Models**: `RacineOrchestrationMaster`, `RacineSystemHealth`
-
-#### **2. workspace-management-apis.ts (1600+ lines)**
-**Purpose**: Workspace management API integration
-
-**Key Functions**:
-- `createWorkspace()`: Create new workspace
-- `getWorkspaceResources()`: Get workspace resources
-- `linkResource()`: Link cross-group resources
-- `getWorkspaceAnalytics()`: Get workspace analytics
-- `manageMembers()`: Manage workspace members
+**Subcomponents for Quick Actions**:
+- `ClassificationPreview.tsx`: Classification preview and confidence
+- `TaxonomyBrowser.tsx`: Interactive taxonomy navigation
+- `ConfidenceIndicator.tsx`: Classification confidence visualization
+- `ClassificationTags.tsx`: Tag management and application
 
 **Backend Integration**:
-- **Routes**: `/api/racine/workspace/*`
-- **Services**: `RacineWorkspaceService`
-- **Models**: `RacineWorkspace`, `RacineWorkspaceResource`
+- **Services**: `ClassificationService`, `EnterpriseClassificationService`
+- **Models**: `ClassificationRule`, `DataClassification`, `ClassificationResult`
+- **Routes**: `/api/classifications/*` - All classification operations
 
-#### **3. job-workflow-apis.ts (1500+ lines)**
-**Purpose**: Job workflow API integration
+##### **2.4. Compliance Rules SPA Group**
+**Main Component**: `ComplianceRulesSPA.tsx` (3500+ lines)
+**Purpose**: Comprehensive compliance framework and risk management
 
-**Key Functions**:
-- `createWorkflow()`: Create new workflow
-- `executeWorkflow()`: Execute workflow
-- `monitorExecution()`: Monitor execution
-- `getWorkflowTemplates()`: Get templates
-- `scheduleWorkflow()`: Schedule workflow
+**Core Components**:
+- `ComplianceFrameworkManager.tsx`: Framework configuration and management
+- `RiskAssessmentEngine.tsx`: Risk evaluation and scoring
+- `ComplianceAuditCenter.tsx`: Audit management and tracking
+- `ComplianceReporting.tsx`: Compliance reporting and dashboards
+- `ComplianceWorkflows.tsx`: Automated compliance workflows
+- `ViolationManagement.tsx`: Violation tracking and remediation
+- `ComplianceAnalytics.tsx`: Compliance analytics and insights
+
+**Subcomponents for Quick Actions**:
+- `ComplianceIndicator.tsx`: Real-time compliance status
+- `RiskMeter.tsx`: Risk level visualization
+- `ViolationAlert.tsx`: Violation notifications and alerts
+- `ComplianceActions.tsx`: Quick compliance remediation actions
 
 **Backend Integration**:
-- **Routes**: `/api/racine/workflows/*`
-- **Services**: `RacineWorkflowService`
-- **Models**: `RacineJobWorkflow`, `RacineJobExecution`
+- **Services**: `ComplianceRuleService`, `ComplianceService`
+- **Models**: `ComplianceRule`, `ComplianceValidation`, `ComplianceReport`
+- **Routes**: `/api/compliance-rules/*` - All compliance operations
 
-### **🎣 Hooks Layer Architecture**
+##### **2.5. Advanced Catalog SPA Group**
+**Main Component**: `AdvancedCatalogSPA.tsx` (3800+ lines)
+**Purpose**: Intelligent cataloging and asset management
 
-#### **1. useRacineOrchestration.ts (600+ lines)**
-**Purpose**: Master orchestration state management
+**Core Components**:
+- `IntelligentCatalogEngine.tsx`: AI-powered cataloging automation
+- `DataAssetExplorer.tsx`: Interactive asset exploration and discovery
+- `CatalogSearchEngine.tsx`: Advanced search and filtering
+- `DataLineageVisualizer.tsx`: Comprehensive lineage visualization
+- `CatalogGovernance.tsx`: Catalog governance and quality control
+- `CatalogAnalytics.tsx`: Catalog analytics and insights
+- `CatalogCollaboration.tsx`: Team collaboration on catalog assets
+- `CatalogRecommendations.tsx`: AI-powered asset recommendations
 
-**Key Features**:
-- System health monitoring
-- Cross-group coordination
-- Performance optimization
-- Error handling
+**Subcomponents for Quick Actions**:
+- `AssetPreview.tsx`: Asset preview with metadata
+- `LineageNode.tsx`: Interactive lineage node component
+- `CatalogBrowser.tsx`: Catalog navigation and browsing
+- `AssetMetrics.tsx`: Asset quality and usage metrics
+- `AssetActions.tsx`: Quick asset management actions
 
-**Dependencies**:
-- **Services**: `racine-orchestration-apis.ts`
-- **Types**: `OrchestrationState`, `SystemHealth`
+**Backend Integration**:
+- **Services**: `CatalogService`, `EnterpriseIntelligentCatalogService`
+- **Models**: `IntelligentDataAsset`, `CatalogMetadata`, `EnterpriseDataLineage`
+- **Routes**: `/api/advanced-catalog/*` - All catalog operations
 
-#### **2. useWorkspaceManagement.ts (450+ lines)**
-**Purpose**: Workspace management state
+##### **2.6. Scan Logic SPA Group**
+**Main Component**: `ScanLogicSPA.tsx` (3800+ lines)
+**Purpose**: Unified scanning orchestration and monitoring
 
-**Key Features**:
-- Workspace CRUD operations
-- Resource management
-- Member management
-- Analytics tracking
+**Core Components**:
+- `UnifiedScanOrchestrator.tsx`: Master scan orchestration and coordination
+- `IntelligentScanEngine.tsx`: AI-powered scanning optimization
+- `ScanPerformanceOptimizer.tsx`: Performance tuning and optimization
+- `ScanResultsAnalyzer.tsx`: Comprehensive results analysis
+- `ScanSchedulingEngine.tsx`: Advanced scheduling and automation
+- `ScanMonitoringDashboard.tsx`: Real-time monitoring and alerting
+- `ScanCollaboration.tsx`: Team collaboration on scan operations
+- `ScanReporting.tsx`: Scan reporting and analytics
 
-**Dependencies**:
-- **Services**: `workspace-management-apis.ts`
-- **Types**: `WorkspaceState`, `WorkspaceConfiguration`
+**Subcomponents for Quick Actions**:
+- `ScanProgress.tsx`: Real-time scan progress indicator
+- `ScanResults.tsx`: Scan results display and analysis
+- `ScanMetrics.tsx`: Scan performance metrics
+- `ScanActions.tsx`: Quick scan management actions
 
-#### **3. useJobWorkflowBuilder.ts (400+ lines)**
-**Purpose**: Workflow builder state management
+**Backend Integration**:
+- **Services**: `UnifiedScanOrchestrator`, `ScanIntelligenceService`
+- **Models**: `ScanOrchestrationJob`, `UnifiedScanExecution`, `ScanWorkflowTemplate`
+- **Routes**: `/api/scan-logic/*` - All scan operations
 
-**Key Features**:
-- Workflow creation and editing
-- Execution monitoring
-- Template management
-- Validation
+##### **2.7. RBAC System SPA Group (Admin Only)**
+**Main Component**: `RBACSystemSPA.tsx` (4000+ lines)
+**Purpose**: Comprehensive security and access management
 
-**Dependencies**:
-- **Services**: `job-workflow-apis.ts`
-- **Types**: `WorkflowState`, `WorkflowDefinition`
+**Core Components**:
+- `EnterpriseRoleManager.tsx`: Role definition and management
+- `PermissionMatrixManager.tsx`: Permission matrix configuration
+- `UserAccessManager.tsx`: User access control and provisioning
+- `SecurityPolicyEngine.tsx`: Security policy configuration
+- `AccessAuditCenter.tsx`: Access auditing and compliance
+- `ComplianceSecurityDashboard.tsx`: Security compliance monitoring
+- `IdentityProvider.tsx`: Identity provider integration
+- `SecurityAnalytics.tsx`: Security analytics and insights
 
-### **🛠️ Utils Layer Architecture**
+**Subcomponents for Quick Actions**:
+- `RoleSelector.tsx`: Role selection and assignment
+- `PermissionTree.tsx`: Permission hierarchy visualization
+- `AccessIndicator.tsx`: Access status indicators
+- `SecurityBadge.tsx`: Security level indicators
 
-#### **1. cross-group-orchestrator.ts (600+ lines)**
-**Purpose**: Cross-group orchestration utilities
+**Backend Integration**:
+- **Services**: `RBACService`, `SecurityService`, `AuthService`
+- **Models**: `User`, `Role`, `Permission`, `SecurityPolicy`
+- **Routes**: `/api/rbac/*` - All RBAC operations
 
-**Key Functions**:
-- `coordinateServices()`: Coordinate multiple services
-- `validateIntegration()`: Validate cross-group integrations
-- `optimizeExecution()`: Optimize execution paths
-- `handleErrors()`: Error handling and recovery
+#### **3. Component Dependencies and Integration Order - PRIORITY 3: HIGH**
 
-#### **2. workflow-engine.ts (550+ lines)**
-**Purpose**: Workflow execution engine
-
-**Key Functions**:
-- `executeWorkflow()`: Execute workflow steps
-- `validateWorkflow()`: Validate workflow definition
-- `optimizeWorkflow()`: Optimize workflow performance
-- `handleDependencies()`: Manage step dependencies
-
-#### **3. pipeline-engine.ts (500+ lines)**
-**Purpose**: Pipeline execution engine
-
-**Key Functions**:
-- `executePipeline()`: Execute pipeline stages
-- `optimizePipeline()`: Optimize pipeline performance
-- `monitorHealth()`: Monitor pipeline health
-- `handleErrors()`: Error handling and recovery
-
-### **📋 Constants Layer Architecture**
-
-#### **1. cross-group-configs.ts (400+ lines)**
-**Purpose**: Cross-group configuration constants
-
-**Key Constants**:
-- `SUPPORTED_GROUPS`: All 7 supported groups
-- `API_ENDPOINTS`: All API endpoints
-- `PERFORMANCE_THRESHOLDS`: Performance thresholds
-- `LAYOUT_PRESETS`: Layout configurations
-
-#### **2. workflow-templates.ts (350+ lines)**
-**Purpose**: Workflow template definitions
-
-**Key Constants**:
-- `WORKFLOW_TEMPLATES`: Pre-built workflow templates
-- `STEP_TEMPLATES`: Common workflow steps
-- `VALIDATION_RULES`: Workflow validation rules
-
-#### **3. pipeline-templates.ts (300+ lines)**
-**Purpose**: Pipeline template definitions
-
-**Key Constants**:
-- `PIPELINE_TEMPLATES`: Pre-built pipeline templates
-- `STAGE_TEMPLATES`: Common pipeline stages
-- `OPTIMIZATION_CONFIGS`: Optimization configurations
-
----
-
-## 🔗 **COMPLETE FRONTEND-BACKEND MAPPING**
-
-### **📊 Component-to-Backend Mapping Matrix**
-
-| **Frontend Component** | **Required Types** | **Required Services** | **Required Hooks** | **Required Utils** | **Required Constants** | **Backend Models** | **Backend Services** | **Backend Routes** |
-|----------------------|-------------------|---------------------|-------------------|-------------------|----------------------|-------------------|--------------------|--------------------|
-| **RacineMainManagerSPA.tsx** | `RacineState`, `CrossGroupState` | `racine-orchestration-apis.ts` | `useRacineOrchestration.ts` | `cross-group-orchestrator.ts` | `cross-group-configs.ts` | `RacineOrchestrationMaster` | `RacineOrchestrationService` | `/api/racine/orchestration` |
-| **AppNavbar.tsx** | `NavigationContext`, `SystemHealth` | `racine-orchestration-apis.ts` | `useRacineOrchestration.ts` | `navigation-utils.ts` | `VIEW_MODES` | `RacineSystemHealth` | `RacineOrchestrationService.monitor_system_health()` | `/api/racine/orchestration/health` |
-| **AppSidebar.tsx** | `UserContext`, `WorkspaceState` | `workspace-management-apis.ts` | `useWorkspaceManagement.ts` | `workspace-utils.ts` | `SUPPORTED_GROUPS` | `RacineWorkspace` | `RacineWorkspaceService` | `/api/racine/workspace/{id}/resources` |
-| **WorkspaceOrchestrator.tsx** | `WorkspaceConfiguration`, `WorkspaceMember` | `workspace-management-apis.ts` | `useWorkspaceManagement.ts` | `workspace-utils.ts` | `DEFAULT_WORKSPACE_CONFIG` | `RacineWorkspace`, `RacineWorkspaceMember` | `RacineWorkspaceService` | `/api/racine/workspace/*` |
-| **JobWorkflowBuilder.tsx** | `WorkflowDefinition`, `WorkflowStep` | `job-workflow-apis.ts` | `useJobWorkflowBuilder.ts` | `workflow-engine.ts` | `WORKFLOW_TEMPLATES` | `RacineJobWorkflow` | `RacineWorkflowService` | `/api/racine/workflows/create` |
-| **RealTimeJobMonitor.tsx** | `JobExecution`, `ExecutionLog` | `job-workflow-apis.ts` | `useJobMonitoring.ts` | `monitoring-utils.ts` | `MONITORING_CONFIGS` | `RacineJobExecution` | `RacineWorkflowService.monitor_execution()` | `/api/racine/workflows/{id}/status` |
-| **PipelineDesigner.tsx** | `PipelineDefinition`, `PipelineStage` | `pipeline-management-apis.ts` | `usePipelineManager.ts` | `pipeline-engine.ts` | `PIPELINE_TEMPLATES` | `RacinePipeline` | `RacinePipelineService` | `/api/racine/pipelines/create` |
-| **AIAssistantInterface.tsx** | `AIConversation`, `AIMessage` | `ai-assistant-apis.ts` | `useAIAssistant.ts` | `ai-integration-utils.ts` | `AI_CONFIGS` | `RacineAIConversation` | `RacineAIService` | `/api/racine/ai-assistant/chat` |
-| **ActivityTrackingHub.tsx** | `ActivityRecord`, `AuditTrail` | `activity-tracking-apis.ts` | `useActivityTracker.ts` | `activity-analyzer.ts` | `ACTIVITY_CONFIGS` | `RacineActivity` | `RacineActivityService` | `/api/racine/activity/track` |
-| **IntelligentDashboardOrchestrator.tsx** | `DashboardState`, `Widget` | `dashboard-apis.ts` | `useIntelligentDashboard.ts` | `dashboard-utils.ts` | `DASHBOARD_CONFIGS` | `RacineDashboard` | `RacineDashboardService` | `/api/racine/dashboards/create` |
-| **MasterCollaborationHub.tsx** | `CollaborationState`, `CollaborationSession` | `collaboration-apis.ts` | `useCollaboration.ts` | `collaboration-utils.ts` | `COLLABORATION_CONFIGS` | `RacineCollaboration` | `RacineCollaborationService` | `/api/racine/collaboration/start` |
-| **UserProfileManager.tsx** | `UserContext`, `UserProfile` | `user-management-apis.ts` | `useUserManagement.ts` | `security-utils.ts` | `USER_CONFIGS` | `User` (existing) | `UserService` (existing) | `/api/auth/profile` |
-
-### **🎯 Cross-Group Integration Mapping**
-
-| **Group** | **Frontend Integration Points** | **Backend Models Used** | **Backend Services Used** | **API Routes Used** |
-|-----------|-------------------------------|------------------------|--------------------------|-------------------|
-| **Data Sources** | `CrossGroupResourceLinker.tsx`, `WorkspaceOrchestrator.tsx` | `DataSource`, `DataSourceConnection` | `DataSourceService` | `/api/data-sources/*` |
-| **Scan Rule Sets** | `WorkflowTemplateLibrary.tsx`, `JobWorkflowBuilder.tsx` | `ScanRuleSet`, `EnhancedScanRuleSet` | `ScanRuleSetService` | `/api/scan-rule-sets/*` |
-| **Classifications** | `CrossGroupInsightsEngine.tsx`, `ComplianceAssistant.tsx` | `ClassificationRule`, `DataClassification` | `ClassificationService` | `/api/classifications/*` |
-| **Compliance Rules** | `ComplianceAssistant.tsx`, `AuditTrailManager.tsx` | `ComplianceRule`, `ComplianceValidation` | `ComplianceRuleService` | `/api/compliance-rules/*` |
-| **Advanced Catalog** | `CrossGroupKPIDashboard.tsx`, `ActivityTrackingHub.tsx` | `CatalogItem`, `CatalogMetadata` | `CatalogService` | `/api/advanced-catalog/*` |
-| **Scan Logic** | `IntelligentPipelineOptimizer.tsx`, `RealTimeJobMonitor.tsx` | `ScanOrchestrationJob`, `ScanWorkflowExecution` | `ScanOrchestrator` | `/api/scan-logic/*` |
-| **RBAC System** | `RBACVisualizationDashboard.tsx`, `WorkspaceSecurityManager.tsx` | `User`, `Role`, `Permission` | `RBACService` | `/api/rbac/*` |
-
----
-
-## 📋 **DETAILED IMPLEMENTATION TODO LIST FOR BACKGROUND CURSOR AGENT**
-
-### **🎯 Phase 1: Backend Foundation Setup (Priority: Critical)**
-
-#### **Task 1.1: Create Racine Models Directory Structure**
-**Objective**: Set up the complete backend models structure for racine system
-
-**Steps**:
-1. Create directory: `backend/scripts_automation/app/models/racine_models/`
-2. Create `__init__.py` in racine_models directory
-3. Create model files:
-   - `racine_orchestration_models.py`
-   - `racine_workspace_models.py`
-   - `racine_workflow_models.py`
-   - `racine_pipeline_models.py`
-   - `racine_ai_models.py`
-   - `racine_activity_models.py`
-   - `racine_dashboard_models.py`
-   - `racine_collaboration_models.py`
-   - `racine_integration_models.py`
-
-**Validation Criteria**:
-- All model files created with proper SQLAlchemy structure
-- All models inherit from existing Base class
-- All foreign key relationships properly defined
-- All models include proper indexes and constraints
-
-**Integration Requirements**:
-- Import and reference ALL existing models from other groups
-- Establish proper foreign key relationships with existing models
-- Ensure no naming conflicts with existing models
-- Add proper migration scripts for database changes
-
-#### **Task 1.2: Implement Racine Orchestration Models**
-**Objective**: Create comprehensive orchestration models with full existing system integration
-
-**Implementation Details**:
-```python
-# File: backend/scripts_automation/app/models/racine_models/racine_orchestration_models.py
-
-# CRITICAL: Import ALL existing models for integration
-from ..scan_models import Scan, ScanResult, DataSource
-from ..compliance_models import ComplianceRule, ComplianceValidation
-from ..classification_models import ClassificationRule, DataClassification
-from ..advanced_catalog_models import CatalogItem, CatalogMetadata
-from ..scan_orchestration_models import ScanOrchestrationJob
-from ..auth_models import User, Role, Permission
-
-class RacineOrchestrationMaster(Base):
-    __tablename__ = 'racine_orchestration_master'
-    
-    # Core fields
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, nullable=False, index=True)
-    description = Column(Text)
-    orchestration_type = Column(String, nullable=False)
-    status = Column(String, default='active', index=True)
-    
-    # Cross-group integration - CRITICAL INTEGRATION POINTS
-    connected_groups = Column(JSON)  # List of connected group IDs
-    group_configurations = Column(JSON)  # Group-specific configurations
-    cross_group_dependencies = Column(JSON)  # Inter-group dependencies
-    
-    # Performance and monitoring
-    performance_metrics = Column(JSON)
-    health_status = Column(String, default='healthy', index=True)
-    last_health_check = Column(DateTime, default=datetime.utcnow, index=True)
-    
-    # CRITICAL: Relationships with existing models
-    scan_orchestration_jobs = relationship("ScanOrchestrationJob", back_populates="racine_orchestrator")
-    compliance_validations = relationship("ComplianceRule", back_populates="racine_orchestrator")
-    
-    # Audit fields
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(String, ForeignKey('users.id'), nullable=False)
-    
-    # Relationships
-    creator = relationship("User")
+##### **3.1. Dependency Hierarchy**
+```
+Level 1 (Foundation): Types, Constants, Utils
+Level 2 (Services): API Services, Backend Integration
+Level 3 (Hooks): State Management Hooks
+Level 4 (Base Components): Navigation, Layout
+Level 5 (SPA Groups): All Group SPAs
+Level 6 (Advanced Features): Workflows, Pipelines, AI
+Level 7 (Master Orchestrator): RacineMainManagerSPA
 ```
 
-**Validation Criteria**:
-- All models properly inherit from Base
-- All foreign key relationships established with existing models
-- All JSON fields have proper validation
-- All indexes created for performance
-- All audit fields included
+##### **3.2. Implementation Order**
+1. **Navigation Group** (Week 1-2): AppNavbar, AppSidebar, Breadcrumbs, Search
+2. **Layout System** (Week 2-3): Layout engine, workspace management
+3. **Core SPA Groups** (Week 3-8): All 6 group SPAs + RBAC
+4. **Advanced Features** (Week 8-10): Workflows, Pipelines, AI Assistant
+5. **Integration & Testing** (Week 10-12): End-to-end integration
+6. **Master Orchestrator** (Week 12-14): RacineMainManagerSPA
 
-**Integration Testing**:
-- Test foreign key constraints with existing models
-- Verify JSON field serialization/deserialization
-- Test cascade delete behavior
-- Verify index performance
+##### **3.3. Quick Actions Integration**
+Each SPA group includes a hidden right sidebar for quick actions:
+- **Trigger**: Hover over component or use keyboard shortcut
+- **Content**: Component-specific quick actions and tools
+- **Integration**: Seamless integration with main component functionality
+- **Persistence**: User preferences for quick action customization
 
-#### **Task 1.3: Create Racine Services Directory Structure**
-**Objective**: Set up the complete backend services structure
+#### **4. Master Orchestrator SPA - PRIORITY 4: CRITICAL**
 
-**Steps**:
-1. Create directory: `backend/scripts_automation/app/services/racine_services/`
-2. Create `__init__.py` in racine_services directory
-3. Create service files:
-   - `racine_orchestration_service.py`
-   - `racine_workspace_service.py`
-   - `racine_workflow_service.py`
-   - `racine_pipeline_service.py`
-   - `racine_ai_service.py`
-   - `racine_activity_service.py`
-   - `racine_dashboard_service.py`
-   - `racine_collaboration_service.py`
-   - `racine_integration_service.py`
+##### **4.1. RacineMainManagerSPA.tsx (4000+ lines) – Master Orchestrator**
+**Purpose**: Ultimate data governance system orchestrator with intelligent dashboard
 
-**Integration Requirements**:
-- Import and initialize ALL existing services
-- Create service registry for dynamic access
-- Implement proper error handling and logging
-- Add comprehensive type hints
+**Key Features**:
+- **System Overview**: Comprehensive system status and health
+- **Intelligent Dashboard**: Real-time metrics across all groups
+- **Workflow Guidance**: AI-powered workflow recommendations
+- **Cross-Group Insights**: Analytics spanning all groups
+- **User Onboarding**: Intelligent onboarding and guidance system
+- **System Administration**: Master system configuration and management
+- **Performance Monitoring**: Real-time performance across all components
+- **Security Center**: Security overview and threat monitoring
 
-#### **Task 1.4: Implement Racine Orchestration Service**
-**Objective**: Create master orchestration service with full existing service integration
-
-**Implementation Details**:
-```python
-# File: backend/scripts_automation/app/services/racine_services/racine_orchestration_service.py
-
-class RacineOrchestrationService:
-    def __init__(self, db_session: Session):
-        self.db = db_session
-        
-        # CRITICAL: Initialize ALL existing services - FULL INTEGRATION
-        self.data_source_service = DataSourceService(db_session)
-        self.scan_rule_service = ScanRuleSetService(db_session)
-        self.classification_service = EnterpriseClassificationService(db_session)
-        self.compliance_service = ComplianceRuleService(db_session)
-        self.catalog_service = EnterpriseIntelligentCatalogService(db_session)
-        self.scan_orchestrator = UnifiedScanOrchestrator(db_session)
-        self.rbac_service = RBACService(db_session)
-        self.ai_service = AdvancedAIService(db_session)
-        self.analytics_service = ComprehensiveAnalyticsService(db_session)
-        
-        # Service registry for dynamic access
-        self.service_registry = {
-            'data_sources': self.data_source_service,
-            'scan_rule_sets': self.scan_rule_service,
-            'classifications': self.classification_service,
-            'compliance_rules': self.compliance_service,
-            'advanced_catalog': self.catalog_service,
-            'scan_logic': self.scan_orchestrator,
-            'rbac_system': self.rbac_service,
-            'ai_service': self.ai_service,
-            'analytics': self.analytics_service
-        }
-    
-    async def execute_cross_group_workflow(self, workflow_definition: Dict[str, Any]) -> RacineWorkflowExecution:
-        """Execute workflow across multiple existing services"""
-        # Implementation that coordinates with ALL existing services
-        pass
-```
-
-**Validation Criteria**:
-- All existing services properly imported and initialized
-- Service registry contains all services
-- All methods have proper async/await patterns
-- Comprehensive error handling implemented
-- All database transactions properly managed
-
-#### **Task 1.5: Create Racine API Routes Directory Structure**
-**Objective**: Set up the complete API routes structure
-
-**Steps**:
-1. Create directory: `backend/scripts_automation/app/api/routes/racine_routes/`
-2. Create `__init__.py` in racine_routes directory
-3. Create route files:
-   - `racine_orchestration_routes.py`
-   - `racine_workspace_routes.py`
-   - `racine_workflow_routes.py`
-   - `racine_pipeline_routes.py`
-   - `racine_ai_routes.py`
-   - `racine_activity_routes.py`
-   - `racine_dashboard_routes.py`
-   - `racine_collaboration_routes.py`
-   - `racine_integration_routes.py`
-
-**Integration Requirements**:
-- Proper FastAPI router setup
-- Integration with existing authentication/authorization
-- Proper request/response models (Pydantic schemas)
-- Comprehensive error handling
-
-### **🎯 Phase 2: Frontend Foundation Setup (Priority: Critical)**
-
-#### **Task 2.1: Create Racine Frontend Directory Structure**
-**Objective**: Set up the complete frontend component structure
-
-**Steps**:
-1. Create directory: `v15_enhanced_1/components/racine-main-manager/`
-2. Create main SPA file: `RacineMainManagerSPA.tsx`
-3. Create component directories:
-   - `components/navigation/`
-   - `components/layout/`
-   - `components/workspace/`
-   - `components/job-workflow-space/`
-   - `components/pipeline-manager/`
-   - `components/ai-assistant/`
-   - `components/activity-tracker/`
-   - `components/intelligent-dashboard/`
-   - `components/collaboration/`
-   - `components/user-management/`
-4. Create support directories:
-   - `services/`
-   - `types/`
-   - `hooks/`
-   - `utils/`
-   - `constants/`
-
-**Validation Criteria**:
-- All directories created with proper structure
-- All directories contain proper index files
-- Proper TypeScript configuration
-- ESLint and Prettier configuration
-
-#### **Task 2.2: Implement Core Type Definitions**
-**Objective**: Create comprehensive TypeScript types for all racine functionality
-
-**Implementation Details**:
+**Component Architecture**:
 ```typescript
-// File: v15_enhanced_1/components/racine-main-manager/types/racine-core.types.ts
-
-// CRITICAL: Define all interfaces that map to backend models
-export interface RacineState {
-  isInitialized: boolean
-  currentView: ViewMode
-  activeWorkspaceId: string
-  layoutMode: LayoutMode
-  sidebarCollapsed: boolean
-  loading: boolean
-  error: string | null
-  systemHealth: SystemHealth
-  lastActivity: Date
-  performanceMetrics: PerformanceMetrics
-}
-
-export interface CrossGroupState {
-  connectedGroups: GroupConfiguration[]
-  activeIntegrations: Integration[]
-  sharedResources: SharedResource[]
-  crossGroupWorkflows: CrossGroupWorkflow[]
-  globalMetrics: Record<string, any>
-  synchronizationStatus: SynchronizationStatus
-  lastSync: Date
-}
-
-// CRITICAL: All interfaces must map exactly to backend models
-export interface WorkspaceConfiguration {
-  id: string
-  name: string
-  description: string
-  type: 'personal' | 'team' | 'enterprise'
-  owner: string
-  members: WorkspaceMember[]
-  groups: string[]
-  resources: WorkspaceResource[]
-  settings: WorkspaceSettings
-  analytics: WorkspaceAnalytics
-  createdAt: Date
-  updatedAt: Date
-  lastAccessed: Date
+interface RacineMainManagerState {
+  systemOverview: SystemOverview;
+  dashboardConfig: DashboardConfiguration;
+  activeWorkflows: WorkflowExecution[];
+  crossGroupInsights: CrossGroupInsight[];
+  userGuidance: UserGuidanceState;
+  performanceMetrics: SystemPerformanceMetrics;
+  securityStatus: SecurityOverview;
 }
 ```
 
-**Validation Criteria**:
-- All interfaces match backend model structures exactly
-- All enums are properly defined
-- All optional fields properly marked
-- All date fields use proper Date types
-- All generic types properly constrained
-
-#### **Task 2.3: Implement Service Layer**
-**Objective**: Create comprehensive API integration services
-
-**Implementation Details**:
-```typescript
-// File: v15_enhanced_1/components/racine-main-manager/services/racine-orchestration-apis.ts
-
-class RacineOrchestrationAPI {
-  private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-  
-  async createOrchestrationMaster(request: OrchestrationCreateRequest): Promise<OrchestrationResponse> {
-    const response = await fetch(`${this.baseUrl}/api/racine/orchestration/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getAuthToken()}`
-      },
-      body: JSON.stringify(request)
-    })
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create orchestration: ${response.statusText}`)
-    }
-    
-    return response.json()
-  }
-  
-  async executeWorkflow(request: WorkflowExecutionRequest): Promise<WorkflowExecutionResponse> {
-    // Implementation that calls backend workflow execution
-    // CRITICAL: Must integrate with ALL existing backend services
-  }
-  
-  async monitorSystemHealth(): Promise<SystemHealthResponse> {
-    // Implementation that monitors health across ALL groups
-  }
-}
-
-export const racineOrchestrationAPI = new RacineOrchestrationAPI()
-```
-
-**Validation Criteria**:
-- All API methods properly typed
-- Proper error handling implemented
-- Authentication integration working
-- All HTTP status codes handled
-- Proper request/response serialization
-
-#### **Task 2.4: Implement Hook Layer**
-**Objective**: Create React hooks for state management
-
-**Implementation Details**:
-```typescript
-// File: v15_enhanced_1/components/racine-main-manager/hooks/useRacineOrchestration.ts
-
-export const useRacineOrchestration = (userId: string, racineState: RacineState) => {
-  const [orchestrationState, setOrchestrationState] = useState<OrchestrationState>({
-    isActive: false,
-    activeWorkflows: {},
-    systemMetrics: {},
-    healthStatus: 'healthy',
-    performanceData: {},
-    resourceUsage: {},
-    errors: [],
-    lastSync: new Date()
-  })
-  
-  const executeWorkflow = useCallback(async (
-    workflowId: string, 
-    steps: WorkflowStep[], 
-    parameters: Record<string, any> = {}
-  ): Promise<WorkflowExecution> => {
-    // Implementation that coordinates with backend
-    // CRITICAL: Must integrate with ALL backend services
-  }, [])
-  
-  const monitorHealth = useCallback(async (): Promise<SystemHealth> => {
-    // Implementation that monitors health across ALL groups
-  }, [])
-  
-  return {
-    orchestrationState,
-    executeWorkflow,
-    monitorHealth,
-    // ... other methods
-  }
-}
-```
-
-**Validation Criteria**:
-- All hooks properly typed
-- Proper dependency arrays for useCallback/useMemo
-- Proper cleanup in useEffect
-- Error handling implemented
-- State updates are immutable
-
-### **🎯 Phase 3: Core Component Implementation (Priority: High)**
-
-#### **Task 3.1: Implement RacineMainManagerSPA Component**
-**Objective**: Create the master orchestrator SPA component
-
-**Implementation Requirements**:
-- 4000+ lines of comprehensive functionality
-- Integration with ALL backend services
-- Real-time state management
-- Error boundary implementation
-- Performance monitoring
-- Accessibility compliance
-
-**Key Features to Implement**:
-1. **Master State Management**: Central state for entire racine system
-2. **Cross-Group Coordination**: Coordinate with all 7 groups
-3. **Real-Time Updates**: WebSocket integration for live updates
-4. **Error Handling**: Comprehensive error boundaries and recovery
-5. **Performance Monitoring**: Real-time performance tracking
-6. **Layout Management**: Dynamic layout system
-7. **Navigation Integration**: Deep integration with navigation system
-
-**Validation Criteria**:
-- Component renders without errors
-- All props properly typed
-- All state updates are immutable
-- Error boundaries catch and handle errors
-- Performance metrics are tracked
-- All accessibility requirements met
-
-#### **Task 3.2: Implement AppNavbar Component**
-**Objective**: Create intelligent global navigation system
-
-**Implementation Requirements**:
-- 2500+ lines of advanced navigation functionality
-- Role-based adaptive UI
-- Real-time system health monitoring
-- Global search integration
-- Cross-group navigation
-
-**Key Features to Implement**:
-1. **Adaptive Navigation**: Role-based menu generation
-2. **Global Search**: Cross-group intelligent search
-3. **System Health**: Real-time health indicators
-4. **Quick Actions**: Context-aware shortcuts
-5. **Workspace Switching**: Multi-workspace navigation
-6. **Notifications**: Real-time notification center
-
-**Backend Integration Points**:
-- `/api/racine/orchestration/health` - System health monitoring
-- `/api/racine/integration/groups/status` - Group status
-- `/api/racine/search/unified` - Global search
-- `/api/racine/workspace/switch` - Workspace switching
-
-#### **Task 3.3: Implement WorkspaceOrchestrator Component**
-**Objective**: Create master workspace controller
-
-**Implementation Requirements**:
-- 2700+ lines of workspace management functionality
-- Cross-group resource management
-- Team collaboration features
-- Analytics integration
-
-**Key Features to Implement**:
-1. **Multi-Workspace Management**: Create, switch, manage workspaces
-2. **Cross-Group Resources**: Link resources from all 7 groups
-3. **Collaboration**: Team workspace management
-4. **Templates**: Workspace templates for quick setup
-5. **Analytics**: Comprehensive workspace analytics
-6. **Security**: RBAC-integrated access control
-
-**Backend Integration Points**:
-- `/api/racine/workspace/*` - All workspace operations
-- `RacineWorkspaceService` - Complete workspace management
-- `RacineWorkspace`, `RacineWorkspaceMember` models
-
-### **🎯 Phase 4: Advanced Feature Implementation (Priority: High)**
-
-#### **Task 4.1: Implement JobWorkflowBuilder Component**
-**Objective**: Create Databricks-style workflow builder
-
-**Implementation Requirements**:
-- 3000+ lines of workflow builder functionality
-- Drag-drop visual interface
-- Cross-group step orchestration
-- Real-time validation
-
-**Key Features to Implement**:
-1. **Visual Builder**: Drag-drop workflow creation
-2. **Cross-Group Steps**: Steps can utilize any of the 7 groups
-3. **Dependency Management**: Visual dependency mapping
-4. **Real-Time Validation**: Instant workflow validation
-5. **Template Integration**: Pre-built workflow templates
-6. **Version Control**: Workflow versioning and rollback
-
-**Backend Integration Points**:
-- `/api/racine/workflows/create` - Workflow creation
-- `/api/racine/workflows/validate` - Workflow validation
-- `/api/racine/workflows/templates` - Template management
-- `RacineWorkflowService` - Complete workflow management
-
-#### **Task 4.2: Implement RealTimeJobMonitor Component**
-**Objective**: Create live job monitoring system
-
-**Implementation Requirements**:
-- 2400+ lines of monitoring functionality
-- Real-time execution tracking
-- WebSocket integration for live updates
-- Performance visualization
-
-**Key Features to Implement**:
-1. **Live Monitoring**: Real-time execution tracking
-2. **Progress Visualization**: Visual progress indicators
-3. **Log Streaming**: Live log streaming via WebSocket
-4. **Execution Control**: Pause, resume, cancel workflows
-5. **Performance Metrics**: Real-time performance data
-6. **Error Handling**: Comprehensive error tracking
-
-**Backend Integration Points**:
-- `/api/racine/workflows/{id}/status` - Execution status
-- `/api/racine/workflows/{id}/logs/stream` - Log streaming
-- `/api/racine/workflows/{id}/control` - Execution control
-- WebSocket connection for real-time updates
-
-#### **Task 4.3: Implement AIAssistantInterface Component**
-**Objective**: Create context-aware AI assistant
-
-**Implementation Requirements**:
-- 2600+ lines of AI interface functionality
-- Natural language processing
-- Context-aware recommendations
-- Cross-group intelligence
-
-**Key Features to Implement**:
-1. **Natural Language Interface**: Chat-based AI interaction
-2. **Context Awareness**: Understands current user context
-3. **Cross-Group Intelligence**: Knowledge across all groups
-4. **Proactive Recommendations**: AI-driven suggestions
-5. **Learning System**: Continuous learning from interactions
-6. **Workflow Automation**: Automated workflow suggestions
-
-**Backend Integration Points**:
-- `/api/racine/ai-assistant/chat` - AI chat interface
-- `/api/racine/ai-assistant/analyze-context` - Context analysis
-- `/api/racine/ai-assistant/recommendations` - AI recommendations
-- `RacineAIService` - Complete AI functionality
-
-### **🎯 Phase 5: Integration and Testing (Priority: Critical)**
-
-#### **Task 5.1: Backend Integration Testing**
-**Objective**: Comprehensive testing of all backend integrations
-
-**Testing Requirements**:
-1. **Model Integration Tests**:
-   - Test all foreign key relationships with existing models
-   - Verify cascade delete behavior
-   - Test JSON field serialization/deserialization
-   - Verify index performance
-
-2. **Service Integration Tests**:
-   - Test all existing service integrations
-   - Verify cross-group coordination
-   - Test error handling and recovery
-   - Verify performance under load
-
-3. **API Integration Tests**:
-   - Test all API endpoints
-   - Verify request/response schemas
-   - Test authentication and authorization
-   - Test WebSocket connections
-
-**Validation Criteria**:
-- All tests pass with 95%+ coverage
-- No integration conflicts with existing systems
-- Performance meets requirements
-- Security requirements satisfied
-
-#### **Task 5.2: Frontend Integration Testing**
-**Objective**: Comprehensive testing of all frontend components
-
-**Testing Requirements**:
-1. **Component Tests**:
-   - Unit tests for all components
-   - Integration tests for component interactions
-   - Accessibility testing
-   - Performance testing
-
-2. **Service Tests**:
-   - API integration tests
-   - Error handling tests
-   - Authentication tests
-   - WebSocket connection tests
-
-3. **Hook Tests**:
-   - State management tests
-   - Side effect tests
-   - Cleanup tests
-   - Performance tests
-
-**Validation Criteria**:
-- All tests pass with 90%+ coverage
-- All components render correctly
-- All user interactions work properly
-- Performance meets requirements
-
-#### **Task 5.3: End-to-End Integration Testing**
-**Objective**: Test complete system integration
-
-**Testing Scenarios**:
-1. **Cross-Group Workflows**:
-   - Create workflow spanning all 7 groups
-   - Execute workflow and monitor progress
-   - Verify results in all affected groups
-   - Test error handling and recovery
-
-2. **Workspace Management**:
-   - Create workspace with resources from all groups
-   - Test collaboration features
-   - Verify access control
-   - Test analytics and monitoring
-
-3. **AI Assistant Integration**:
-   - Test AI queries across all groups
-   - Verify context awareness
-   - Test recommendations
-   - Verify learning system
-
-**Validation Criteria**:
-- All end-to-end scenarios pass
-- System performance meets requirements
-- No data corruption or conflicts
-- Security requirements satisfied
-
-### **🎯 Phase 6: Performance Optimization (Priority: Medium)**
-
-#### **Task 6.1: Backend Performance Optimization**
-**Objective**: Optimize backend performance for enterprise scale
-
-**Optimization Areas**:
-1. **Database Optimization**:
-   - Index optimization
-   - Query optimization
-   - Connection pooling
-   - Caching strategies
-
-2. **Service Optimization**:
-   - Async/await optimization
-   - Resource pooling
-   - Load balancing
-   - Error recovery
-
-3. **API Optimization**:
-   - Response caching
-   - Request batching
-   - Compression
-   - Rate limiting
-
-**Performance Targets**:
-- API response time < 200ms average
-- Support 10,000+ concurrent users
-- 99.9% uptime
-- Memory usage < 100MB per service
-
-#### **Task 6.2: Frontend Performance Optimization**
-**Objective**: Optimize frontend performance for enterprise scale
-
-**Optimization Areas**:
-1. **Component Optimization**:
-   - React.memo optimization
-   - useMemo and useCallback optimization
-   - Virtual scrolling for large datasets
-   - Code splitting and lazy loading
-
-2. **State Management Optimization**:
-   - State normalization
-   - Selective re-rendering
-   - Memoization strategies
-   - Cache optimization
-
-3. **Bundle Optimization**:
-   - Tree shaking
-   - Code splitting
-   - Asset optimization
-   - Service worker caching
-
-**Performance Targets**:
-- Initial load time < 2 seconds
-- Navigation time < 300ms
-- Memory usage < 75MB
-- 60 FPS animations
-
-### **🎯 Phase 7: Documentation and Deployment (Priority: Medium)**
-
-#### **Task 7.1: Comprehensive Documentation**
-**Objective**: Create complete documentation for the racine system
-
-**Documentation Requirements**:
-1. **API Documentation**:
-   - OpenAPI/Swagger documentation
-   - Request/response examples
-   - Error code documentation
-   - Authentication documentation
-
-2. **Component Documentation**:
-   - Storybook documentation
-   - Props documentation
-   - Usage examples
-   - Best practices
-
-3. **Integration Documentation**:
-   - Cross-group integration guide
-   - Workflow creation guide
-   - AI assistant usage guide
-   - Troubleshooting guide
-
-#### **Task 7.2: Deployment Preparation**
-**Objective**: Prepare system for production deployment
-
-**Deployment Requirements**:
-1. **Environment Configuration**:
-   - Production environment setup
-   - Security configuration
-   - Performance configuration
-   - Monitoring configuration
-
-2. **Migration Scripts**:
-   - Database migration scripts
-   - Data migration scripts
-   - Configuration migration
-   - Rollback procedures
-
-3. **Monitoring Setup**:
-   - Application monitoring
-   - Performance monitoring
-   - Error tracking
-   - Security monitoring
-
-### **🎯 Continuous Integration and Maintenance**
-
-#### **Task 8.1: Continuous Integration Setup**
-**Objective**: Set up CI/CD pipeline for racine system
-
-**CI/CD Requirements**:
-1. **Automated Testing**:
-   - Unit test execution
-   - Integration test execution
-   - End-to-end test execution
-   - Performance test execution
-
-2. **Automated Deployment**:
-   - Staging deployment
-   - Production deployment
-   - Rollback procedures
-   - Blue-green deployment
-
-3. **Quality Gates**:
-   - Code coverage requirements
-   - Performance requirements
-   - Security requirements
-   - Documentation requirements
-
-#### **Task 8.2: Maintenance Procedures**
-**Objective**: Establish maintenance and monitoring procedures
-
-**Maintenance Requirements**:
-1. **Monitoring and Alerting**:
-   - System health monitoring
-   - Performance monitoring
-   - Error rate monitoring
-   - Security monitoring
-
-2. **Regular Maintenance**:
-   - Database maintenance
-   - Cache cleanup
-   - Log rotation
-   - Security updates
-
-3. **Capacity Planning**:
-   - Usage monitoring
-   - Resource utilization
-   - Scaling procedures
-   - Cost optimization
-
----
-
-## 🎯 **IMPLEMENTATION GUIDANCE FOR BACKGROUND CURSOR AGENT**
-
-### **📋 Task Execution Strategy**
-
-#### **1. Task Prioritization System**
-**Critical Priority Tasks** (Must be completed first):
-- Phase 1: Backend Foundation Setup
-- Phase 2: Frontend Foundation Setup
-- Phase 3: Core Component Implementation
-
-**High Priority Tasks** (Complete after Critical):
-- Phase 4: Advanced Feature Implementation
-- Phase 5: Integration and Testing
-
-**Medium Priority Tasks** (Complete after High):
-- Phase 6: Performance Optimization
-- Phase 7: Documentation and Deployment
-
-#### **2. Task Dependencies**
-**Sequential Dependencies**:
-1. Backend models must be created before services
-2. Backend services must be created before API routes
-3. Frontend types must be created before components
-4. Frontend services must be created before hooks
-5. Core components must be created before advanced features
-
-**Parallel Opportunities**:
-- Backend and frontend foundation can be developed in parallel
-- Different component groups can be developed in parallel
-- Documentation can be written in parallel with implementation
-
-#### **3. Validation and Testing Strategy**
-**After Each Task**:
-1. Run automated tests to ensure no regressions
-2. Verify integration with existing systems
-3. Check performance impact
-4. Validate security requirements
-5. Update documentation
-
-**Before Moving to Next Phase**:
-1. Complete comprehensive integration testing
-2. Verify all acceptance criteria met
-3. Conduct code review
-4. Update project status
-5. Plan next phase activities
-
-#### **4. Error Handling and Recovery**
-**When Tasks Fail**:
-1. Identify root cause of failure
-2. Check for integration conflicts
-3. Verify all dependencies are met
-4. Rollback if necessary
-5. Re-plan task execution
-
-**Quality Assurance**:
-1. All code must pass linting and formatting
-2. All tests must pass before proceeding
-3. All security requirements must be met
-4. All performance requirements must be met
-5. All accessibility requirements must be met
-
-#### **5. Progress Tracking and Reporting**
-**Task Completion Tracking**:
-- Mark tasks as "in_progress" when starting
-- Mark tasks as "completed" when all acceptance criteria are met
-- Update progress percentage for complex tasks
-- Log any issues or blockers encountered
-
-**Status Reporting**:
-- Daily progress updates
-- Weekly comprehensive status reports
-- Immediate notification of critical issues
-- Regular performance and quality metrics
-
-### **📊 Success Metrics**
-
-#### **Technical Metrics**:
-- **Code Coverage**: 95%+ for backend, 90%+ for frontend
-- **Performance**: API < 200ms, UI < 300ms navigation
-- **Reliability**: 99.9% uptime, < 0.1% error rate
-- **Security**: Zero critical vulnerabilities
-- **Accessibility**: WCAG 2.1 AA compliance
-
-#### **Integration Metrics**:
-- **Cross-Group Integration**: 100% of existing services integrated
-- **Data Consistency**: Zero data corruption incidents
-- **Backward Compatibility**: 100% compatibility with existing APIs
-- **Feature Completeness**: 100% of planned features implemented
-
-#### **User Experience Metrics**:
-- **Load Time**: < 2 seconds initial load
-- **Memory Usage**: < 75MB frontend, < 100MB per backend service
-- **User Satisfaction**: > 4.8/5 rating
-- **Feature Adoption**: > 90% of features actively used
-
-### **🔧 Implementation Best Practices**
-
-#### **Code Quality Standards**:
-1. **TypeScript**: Strict mode enabled, comprehensive type coverage
-2. **Testing**: Unit tests, integration tests, end-to-end tests
-3. **Documentation**: Comprehensive inline and external documentation
-4. **Security**: Security-first design, regular security audits
-5. **Performance**: Performance-first design, regular performance audits
-
-#### **Integration Standards**:
-1. **API Design**: RESTful APIs with comprehensive OpenAPI documentation
-2. **Database Design**: Normalized design with proper indexing
-3. **Error Handling**: Comprehensive error handling and logging
-4. **Monitoring**: Full observability with metrics, logs, and traces
-5. **Security**: Authentication, authorization, audit trails
-
-#### **Deployment Standards**:
-1. **Environment Parity**: Development, staging, production parity
-2. **Configuration Management**: Environment-specific configuration
-3. **Database Migrations**: Safe, reversible database migrations
-4. **Rollback Procedures**: Comprehensive rollback procedures
-5. **Monitoring**: Production monitoring and alerting
-
-This comprehensive plan ensures the successful implementation of the Racine Main Manager system with complete integration across all existing backend implementations and a world-class frontend experience that surpasses all competitors! 🚀
+**Integration Points**:
+- **All Backend Services**: Complete integration with all racine services
+- **All Frontend Components**: Orchestrates all component groups
+- **Real-time Updates**: WebSocket integration for live system updates
+- **AI Integration**: Deep AI assistant integration for guidance
+- **Analytics Integration**: Comprehensive analytics across all groups
+
+// ... existing code continues ...
