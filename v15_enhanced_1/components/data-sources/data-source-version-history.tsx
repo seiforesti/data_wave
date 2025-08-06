@@ -47,58 +47,8 @@ export function DataSourceVersionHistory({
 
   const versions = versionResponse?.data?.versions || []
 
-  // Mock data for fallback
-  const mockVersions: Version[] = useMemo(() => ([
-    {
-      id: "1",
-      version: "2.1.0",
-      description: "Added new encryption features and performance improvements",
-      changes: [
-        "Implemented AES-256cryption",
-        "Added connection pooling",
-        "Improved query performance by 25%",
-        "Fixed memory leak in connection handling"
-      ],
-      author: "john.doe",
-      timestamp: "2024-01-10T10:30:00",
-      type: "minor",
-      status: "active"
-    },
-    {
-      id: "2",
-      version: "2.0.0",
-      description: "Major refactor with new API and improved security",
-      changes: [
-        "Complete API redesign",
-        "Enhanced security protocols",
-        "Added multi-factor authentication",
-        "Improved error handling"
-      ],
-      author: "jane.smith",
-      timestamp: "2024-01-09T09:00:00",
-      type: "major",
-      status: "active"
-    },
-    {
-      id: "3",
-      version: "1.9.2",
-      description: "Bug fixes and minor improvements",
-      changes: [
-        "Fixed connection timeout issues",
-        "Updated dependencies",
-        "Improved logging"
-      ],
-      author: "mike.wilson",
-      timestamp: "2023-12-14T14:15:00",
-      type: "patch",
-      status: "deprecated"
-    }
-  ]), [])
-
-  // Remove useEffect since we're using the API hook directly
-
-  // Use API data if available, otherwise fallback to mock data
-  const displayVersions = versions.length > 0 ? versions : []
+  // Use real backend data only - no mock fallback
+  const displayVersions = versions || []
 
   const getVersionTypeColor = (type: string) => {
     switch (type) {

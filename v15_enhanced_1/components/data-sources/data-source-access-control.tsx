@@ -75,34 +75,12 @@ export function DataSourceAccessControl({
     }))
   }, [permissionsData])
 
-  // Remove mock data
-    {
-      id: "1",
-      userId: "user-1",
-      username: "john.doe",
-      email: "john.doe@company.com",
-      role: "admin",
-      permissions: ["read", "write", "execute", "delete"],
-      grantedAt: "2024-01-01T10:00:00Z",
-      grantedBy: "system-admin",
-      status: "active"
-    },
-    {
-      id: "2",
-      userId: "user-2",
-      username: "jane.smith",
-      email: "jane.smith@company.com",
-      role: "write",
-      permissions: ["read", "execute"],
-      grantedAt: "2024-01-01T10:00:00Z",
-      grantedBy: "john.doe",
-      status: "active"
-    }
-  ]), [])
-
+  // Use real backend data from RBAC system
   useEffect(() => {
-    setPermissions(mockPermissions)
-  }, [mockPermissions])
+    if (permissionsData?.permissions) {
+      setPermissions(permissionsData.permissions)
+    }
+  }, [permissionsData])
 
   const getRoleColor = (role: string) => {
     switch (role) {
