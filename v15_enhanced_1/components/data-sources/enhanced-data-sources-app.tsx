@@ -82,6 +82,9 @@ import {
   useAnalyticsIntegration
 } from './hooks/use-enterprise-features'
 
+// Import RBAC integration
+import { useRBACIntegration, DATA_SOURCE_PERMISSIONS } from "./hooks/use-rbac-integration"
+
 // Import ALL enterprise APIs for complete backend integration
 import { 
   // Core Data Source APIs
@@ -757,6 +760,21 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
   })
 
   // ========================================================================
+  // RBAC INTEGRATION - ENTERPRISE SECURITY
+  // ========================================================================
+  
+  const { 
+    currentUser, 
+    hasPermission, 
+    hasRole,
+    dataSourcePermissions, 
+    logUserAction, 
+    PermissionGuard,
+    isLoading: rbacLoading,
+    error: rbacError
+  } = useRBACIntegration()
+
+  // ========================================================================
   // CORE STATE MANAGEMENT
   // ========================================================================
   
@@ -781,6 +799,90 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(30)
   
+  // ========================================================================
+  // RBAC-FILTERED NAVIGATION
+  // ========================================================================
+  
+  const getFilteredNavigation = useCallback(() => {
+    if (rbacLoading || !currentUser) return {}
+    
+    const filtered: any = {}
+    
+    Object.entries(enterpriseNavigationStructure).forEach(([categoryKey, category]) => {
+      const filteredItems = category.items.filter((item: any) => {
+        // Map navigation items to required permissions
+        switch (item.id) {
+          case 'dashboard':
+          case 'overview':
+          case 'grid':
+          case 'list':
+          case 'details':
+            return dataSourcePermissions.canView
+          case 'monitoring':
+          case 'dashboard-monitoring':
+          case 'performance':
+            return dataSourcePermissions.canViewMonitoring
+          case 'quality':
+          case 'growth':
+          case 'analytics-workbench':
+            return dataSourcePermissions.canViewAnalytics
+          case 'discovery':
+          case 'discovery-workspace':
+          case 'schema-discovery':
+          case 'data-lineage':
+          case 'scan-results':
+            return dataSourcePermissions.canViewDiscovery
+          case 'compliance':
+            return hasPermission('compliance.view')
+          case 'security':
+            return hasPermission('security.view')
+          case 'cloud-config':
+            return dataSourcePermissions.canEdit
+          case 'access-control':
+            return hasPermission('rbac.manage')
+          case 'tags':
+            return dataSourcePermissions.canEdit
+          case 'scheduler':
+            return hasPermission('workflows.manage')
+          case 'workflow-designer':
+            return hasPermission('workflows.design')
+          case 'workspaces':
+            return hasPermission('workspaces.view')
+          case 'collaboration-studio':
+            return hasPermission('collaboration.manage')
+          case 'notifications':
+            return true // Everyone can view notifications
+          case 'reports':
+            return dataSourcePermissions.canGenerateReports
+          case 'version-history':
+            return dataSourcePermissions.canView
+          case 'backup-restore':
+            return dataSourcePermissions.canManageBackup
+          case 'bulk-actions':
+            return dataSourcePermissions.canBulkEdit
+          case 'integrations':
+            return hasPermission('integrations.manage')
+          case 'catalog':
+            return dataSourcePermissions.canViewCatalog
+          case 'connection-test':
+            return dataSourcePermissions.canTestConnection
+          case 'filters':
+            return dataSourcePermissions.canView
+          default:
+            return dataSourcePermissions.canView
+        }
+      })
+      
+      if (filteredItems.length > 0) {
+        filtered[categoryKey] = { ...category, items: filteredItems }
+      }
+    })
+    
+    return filtered
+  }, [rbacLoading, currentUser, dataSourcePermissions, hasPermission])
+
+  const filteredNavigation = useMemo(() => getFilteredNavigation(), [getFilteredNavigation])
+
   // ========================================================================
   // ENTERPRISE FEATURES STATE - DATABRICKS-LEVEL ORCHESTRATION
   // ========================================================================
@@ -1896,6 +1998,65 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
   // MAIN RENDER
   // ========================================================================
   
+  // Handle RBAC loading state
+  if (rbacLoading) {
+    return (
+      <TooltipProvider>
+        <div className={`min-h-screen bg-background ${className}`}>
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Loading Security Context</h3>
+                <p className="text-gray-500">Initializing RBAC permissions...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </TooltipProvider>
+    )
+  }
+
+  // Handle RBAC errors
+  if (rbacError) {
+    return (
+      <TooltipProvider>
+        <div className={`min-h-screen bg-background ${className}`}>
+          <div className="flex items-center justify-center h-screen">
+            <Alert className="max-w-md">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Security Error</AlertTitle>
+              <AlertDescription>
+                Failed to load security permissions. Please refresh the page or contact your administrator.
+                <br />
+                <small className="text-gray-500 mt-2 block">{rbacError.message}</small>
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </TooltipProvider>
+    )
+  }
+
+  // Handle no permissions
+  if (!dataSourcePermissions.canView) {
+    return (
+      <TooltipProvider>
+        <div className={`min-h-screen bg-background ${className}`}>
+          <div className="flex items-center justify-center h-screen">
+            <Alert className="max-w-md">
+              <Shield className="h-4 w-4" />
+              <AlertTitle>Access Denied</AlertTitle>
+              <AlertDescription>
+                You don't have permission to access the Data Sources module. Please contact your administrator to request access.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </TooltipProvider>
+    )
+  }
+  
   return (
     <TooltipProvider>
       <div className={`min-h-screen bg-background ${className}`}>
@@ -2160,26 +2321,108 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
                 <Settings className="h-5 w-5" />
               </Button>
 
-              {/* User Menu */}
+              {/* User Menu with RBAC Context */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" className="flex items-center gap-2 px-3">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={currentUser?.avatar} />
+                      <AvatarFallback className="text-xs">
+                        {currentUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!sidebarCollapsed && (
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-medium">{currentUser?.name || 'User'}</span>
+                        <span className="text-xs text-gray-500">{currentUser?.roles?.[0] || 'Member'}</span>
+                      </div>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Enterprise Account</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="pb-2">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={currentUser?.avatar} />
+                        <AvatarFallback>
+                          {currentUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{currentUser?.name || 'User'}</div>
+                        <div className="text-xs text-gray-500">{currentUser?.email}</div>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  
+                  {/* User Roles */}
+                  <div className="px-2 py-1">
+                    <div className="text-xs text-gray-500 mb-1">Roles</div>
+                    <div className="flex flex-wrap gap-1">
+                      {currentUser?.roles?.map((role: string) => (
+                        <Badge key={role} variant="secondary" className="text-xs">
+                          {role}
+                        </Badge>
+                      )) || <Badge variant="outline" className="text-xs">Member</Badge>}
+                    </div>
+                  </div>
+                  
+                  {/* Permission Summary */}
+                  <div className="px-2 py-1">
+                    <div className="text-xs text-gray-500 mb-1">Data Source Permissions</div>
+                    <div className="grid grid-cols-2 gap-1 text-xs">
+                      <div className="flex items-center gap-1">
+                        {dataSourcePermissions.canView ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <XCircle className="h-3 w-3 text-red-500" />
+                        )}
+                        <span>View</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {dataSourcePermissions.canEdit ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <XCircle className="h-3 w-3 text-red-500" />
+                        )}
+                        <span>Edit</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {dataSourcePermissions.canCreate ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <XCircle className="h-3 w-3 text-red-500" />
+                        )}
+                        <span>Create</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {dataSourcePermissions.canDelete ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <XCircle className="h-3 w-3 text-red-500" />
+                        )}
+                        <span>Delete</span>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Security Preferences
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
                     <HelpCircle className="mr-2 h-4 w-4" />
                     Help & Support
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => logUserAction('user_logout', 'system', null)}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
@@ -2197,7 +2440,7 @@ function EnhancedDataSourcesAppContent({ className, initialConfig }: EnhancedDat
             <ScrollArea className="h-full">
               <div className="p-4 space-y-6">
                 
-                {Object.entries(enterpriseNavigationStructure).map(([categoryKey, category]) => (
+                {Object.entries(filteredNavigation).map(([categoryKey, category]) => (
                   <div key={categoryKey} className="space-y-2">
                     {!sidebarCollapsed && (
                       <div className="flex items-center space-x-2 px-2">
