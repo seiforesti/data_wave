@@ -104,3 +104,6 @@ export { useSecurityManager } from './useSecurityManager';
 
 // Notification management hooks
 export { useNotificationManager } from './useNotificationManager';
+
+// Scan rule set management hooks
+export { useScanRuleSets } from './useScanRuleSets';

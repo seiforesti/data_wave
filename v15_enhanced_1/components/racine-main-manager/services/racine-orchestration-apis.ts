@@ -1467,6 +1467,223 @@ export const dataSourceApis = {
 };
 
 /**
+ * Scan Rule Set API Service
+ * Maps to backend scan rule set service endpoints
+ */
+export const scanRuleSetApis = {
+  // Core CRUD operations
+  async getAllRuleSets(filters?: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets', {
+      method: 'GET',
+      params: filters
+    });
+  },
+
+  async getRuleSetById(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}`, {
+      method: 'GET'
+    });
+  },
+
+  async createRuleSet(ruleSet: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets', {
+      method: 'POST',
+      data: ruleSet
+    });
+  },
+
+  async updateRuleSet(id: string, updates: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}`, {
+      method: 'PUT',
+      data: updates
+    });
+  },
+
+  async deleteRuleSet(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async duplicateRuleSet(id: string, newName: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/duplicate`, {
+      method: 'POST',
+      data: { newName }
+    });
+  },
+
+  // Rule management
+  async addRule(ruleSetId: string, rule: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${ruleSetId}/rules`, {
+      method: 'POST',
+      data: rule
+    });
+  },
+
+  async updateRule(ruleSetId: string, ruleId: string, updates: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${ruleSetId}/rules/${ruleId}`, {
+      method: 'PUT',
+      data: updates
+    });
+  },
+
+  async deleteRule(ruleSetId: string, ruleId: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${ruleSetId}/rules/${ruleId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  async reorderRules(ruleSetId: string, ruleIds: string[]) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${ruleSetId}/rules/reorder`, {
+      method: 'PUT',
+      data: { ruleIds }
+    });
+  },
+
+  // Rule validation and testing
+  async validateRule(rule: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/validate-rule', {
+      method: 'POST',
+      data: rule
+    });
+  },
+
+  async testRule(rule: any, testData: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/test-rule', {
+      method: 'POST',
+      data: { rule, testData }
+    });
+  },
+
+  async validateRuleSet(ruleSet: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/validate', {
+      method: 'POST',
+      data: ruleSet
+    });
+  },
+
+  // Execution operations
+  async executeRuleSet(id: string, dataSourceId: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/execute`, {
+      method: 'POST',
+      data: { dataSourceId }
+    });
+  },
+
+  async scheduleRuleSet(id: string, schedule: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/schedule`, {
+      method: 'POST',
+      data: schedule
+    });
+  },
+
+  async cancelExecution(executionId: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/executions/${executionId}/cancel`, {
+      method: 'POST'
+    });
+  },
+
+  async getActiveExecutions() {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/executions/active', {
+      method: 'GET'
+    });
+  },
+
+  // Analytics and metrics
+  async getRuleSetMetrics(id: string, timeRange?: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/metrics`, {
+      method: 'GET',
+      params: { timeRange }
+    });
+  },
+
+  async getExecutionHistory(id: string, limit?: number) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/executions`, {
+      method: 'GET',
+      params: { limit }
+    });
+  },
+
+  async getRuleSetStats(filters?: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/stats', {
+      method: 'GET',
+      params: filters
+    });
+  },
+
+  // Templates and optimization
+  async getRuleTemplates() {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/templates', {
+      method: 'GET'
+    });
+  },
+
+  async createFromTemplate(templateId: string, name: string) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/templates/create', {
+      method: 'POST',
+      data: { templateId, name }
+    });
+  },
+
+  async optimizeRuleSet(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/optimize`, {
+      method: 'POST'
+    });
+  },
+
+  async applyOptimization(id: string, optimization: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/optimize/apply`, {
+      method: 'POST',
+      data: optimization
+    });
+  },
+
+  // Import/Export
+  async exportRuleSet(id: string, format: 'json' | 'yaml' = 'json') {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/scan-rule-sets/${id}/export`, {
+      method: 'GET',
+      params: { format },
+      responseType: 'blob'
+    });
+  },
+
+  async importRuleSet(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/import', {
+      method: 'POST',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  // Bulk operations
+  async bulkUpdateRuleSets(updates: { id: string; updates: any }[]) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/bulk-update', {
+      method: 'PUT',
+      data: { updates }
+    });
+  },
+
+  async bulkDeleteRuleSets(ids: string[]) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/bulk-delete', {
+      method: 'DELETE',
+      data: { ids }
+    });
+  },
+
+  async bulkExecuteRuleSets(ids: string[], dataSourceId: string) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/scan-rule-sets/bulk-execute', {
+      method: 'POST',
+      data: { ids, dataSourceId }
+    });
+  }
+};
+
+/**
  * Export types for external use
  */
 export type {
