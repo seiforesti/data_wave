@@ -1,32 +1,42 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import {
-  FileText, Download, Calendar, Clock, CheckCircle, AlertCircle,
-  RefreshCw, PlusCircle, Eye, Edit, Trash2, Filter, Search
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  FileText, Download, Eye, Edit, Trash2, Plus, Search, Filter, RefreshCw,
+  Calendar, Clock, AlertTriangle, CheckCircle, BarChart3, TrendingUp,
+  Settings, Share2, ExternalLink, Archive, MoreHorizontal
 } from "lucide-react"
 
 // Enterprise Integration
 import { ComplianceHooks } from '../hooks/use-enterprise-features'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import { ComplianceAPIs } from '../services/enterprise-apis'
-import type { 
-  ComplianceReport, 
-  ComplianceComponentProps 
-} from '../types'
+import type { ComplianceReport } from '../types'
 
-interface ComplianceReportsProps extends ComplianceComponentProps {
-  onCreateReport?: () => void
-  onEditReport?: (report: ComplianceReport) => void
-  onViewReport?: (report: ComplianceReport) => void
-  onDeleteReport?: (report: ComplianceReport) => void
+interface ComplianceReportsProps {
+  dataSourceId?: number
+  searchQuery?: string
+  filters?: Record<string, any>
+  onRefresh?: () => void
+  onError?: (error: string) => void
 }
 
 const ComplianceReports: React.FC<ComplianceReportsProps> = ({
@@ -34,12 +44,7 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
   searchQuery: initialSearchQuery = '',
   filters: initialFilters = {},
   onRefresh,
-  onError,
-  className = '',
-  onCreateReport,
-  onEditReport,
-  onViewReport,
-  onDeleteReport
+  onError
 }) => {
   const enterprise = useEnterpriseCompliance()
   
@@ -56,219 +61,67 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery)
   const [filters, setFilters] = useState(initialFilters)
+  const [selectedReports, setSelectedReports] = useState<Set<number>>(new Set())
   const [activeTab, setActiveTab] = useState('all')
 
-  // Mock data for clean output
-  const mockReports: ComplianceReport[] = [
-    {
-      id: 1,
-      name: 'SOC 2 Type II Assessment Report',
-      description: 'Annual SOC 2 Type II compliance assessment report',
-      report_type: 'compliance_status',
-      framework: 'SOC 2',
-      data_source_id: dataSourceId,
-      status: 'completed',
-      generated_by: 'system',
-      generated_at: '2024-01-15T10:00:00Z',
-      file_url: '/reports/soc2-2024-q1.pdf',
-      file_format: 'pdf',
-      parameters: {
-        date_range: {
-          start_date: '2023-01-01',
-          end_date: '2023-12-31'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: true,
-        detail_level: 'detailed',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        frameworks: ['SOC 2'],
-        risk_levels: ['high', 'critical'],
-        statuses: ['non_compliant', 'partially_compliant']
-      },
-      schedule: {
-        frequency: 'annually',
-        time: '09:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2025-01-15T09:00:00Z',
-        last_run: '2024-01-15T09:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'compliance@company.com',
-          name: 'Compliance Team',
-          role: 'Compliance Officer',
-          delivery_method: 'email',
-          access_level: 'download'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 2555, // 7 years in days
-      access_level: 'confidential',
-      watermark: 'CONFIDENTIAL',
-      digital_signature: true,
-      encryption_required: true,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-      created_by: 'admin',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 2,
-      name: 'GDPR Compliance Gap Analysis',
-      description: 'Quarterly GDPR compliance gap analysis and remediation recommendations',
-      report_type: 'gap_analysis',
-      framework: 'GDPR',
-      data_source_id: dataSourceId,
-      status: 'generating',
-      generated_by: 'john.smith',
-      generated_at: null,
-      file_url: null,
-      file_format: 'excel',
-      parameters: {
-        date_range: {
-          start_date: '2024-01-01',
-          end_date: '2024-03-31'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: false,
-        detail_level: 'standard',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        frameworks: ['GDPR'],
-        risk_levels: ['medium', 'high', 'critical'],
-        statuses: ['non_compliant']
-      },
-      schedule: {
-        frequency: 'quarterly',
-        time: '08:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2024-07-01T08:00:00Z',
-        last_run: '2024-04-01T08:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'privacy@company.com',
-          name: 'Privacy Team',
-          role: 'Data Protection Officer',
-          delivery_method: 'email',
-          access_level: 'view'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 1825, // 5 years in days
-      access_level: 'internal',
-      watermark: null,
-      digital_signature: false,
-      encryption_required: false,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-03-01T00:00:00Z',
-      updated_at: '2024-04-01T08:30:00Z',
-      created_by: 'john.smith',
-      updated_by: 'john.smith',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 3,
-      name: 'Executive Risk Summary',
-      description: 'Monthly executive summary of compliance risks and trends',
-      report_type: 'executive_summary',
-      framework: null,
-      data_source_id: dataSourceId,
-      status: 'scheduled',
-      generated_by: null,
-      generated_at: null,
-      file_url: null,
-      file_format: 'pdf',
-      parameters: {
-        date_range: {
-          start_date: '2024-04-01',
-          end_date: '2024-04-30'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: false,
-        detail_level: 'summary',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        risk_levels: ['high', 'critical'],
-        statuses: ['non_compliant']
-      },
-      schedule: {
-        frequency: 'monthly',
-        day_of_month: 1,
-        time: '07:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2024-05-01T07:00:00Z',
-        last_run: '2024-04-01T07:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'executives@company.com',
-          name: 'Executive Team',
-          role: 'Executive',
-          delivery_method: 'email',
-          access_level: 'view'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 365, // 1 year in days
-      access_level: 'confidential',
-      watermark: 'EXECUTIVE SUMMARY',
-      digital_signature: true,
-      encryption_required: true,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-      created_by: 'admin',
-      updated_by: 'admin',
-      version: 1,
-      metadata: {}
-    }
-  ]
-
-  // Load reports
+  // Load reports from backend
   useEffect(() => {
     const loadReports = async () => {
       setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setReports(mockReports)
+        // Use real backend API call through enterprise integration
+        const response = await ComplianceAPIs.ComplianceReporting.getReports({
+          data_source_id: dataSourceId,
+          report_type: filters.report_type,
+          status: filters.status,
+          framework: filters.framework,
+          created_by: filters.created_by,
+          search: searchQuery,
+          page: 1,
+          limit: 50
+        })
+        
+        if (response.success && response.data) {
+          setReports(response.data.data || [])
+          
+          // Log successful data load for audit
+          auditFeatures.logActivity('reports_loaded', {
+            count: response.data.data?.length || 0,
+            filters: { ...filters, searchQuery },
+            dataSourceId
+          })
+        } else {
+          throw new Error(response.error || 'Failed to load reports')
+        }
       } catch (error) {
         console.error('Failed to load reports:', error)
-        onError?.('Failed to load compliance reports')
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load compliance reports'
+        onError?.(errorMessage)
+        
+        // Log error for audit
+        auditFeatures.logActivity('reports_load_failed', {
+          error: errorMessage,
+          filters: { ...filters, searchQuery },
+          dataSourceId
+        })
       } finally {
         setLoading(false)
       }
     }
 
     loadReports()
-  }, [dataSourceId])
+  }, [dataSourceId, searchQuery, filters, auditFeatures, onError])
+
+  // Auto-refresh every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading) {
+        onRefresh?.()
+      }
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [loading, onRefresh])
 
   // Filter reports based on active tab and search
   const filteredReports = reports.filter(report => {
@@ -321,7 +174,7 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
       case 'scheduled':
         return <Calendar className="h-4 w-4 text-orange-500" />
       case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertTriangle className="h-4 w-4 text-red-500" />
       default:
         return <FileText className="h-4 w-4 text-gray-500" />
     }

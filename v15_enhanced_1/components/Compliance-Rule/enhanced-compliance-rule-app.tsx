@@ -44,6 +44,12 @@ import { EnterpriseComplianceProvider, useEnterpriseCompliance } from './enterpr
 import { ComplianceHooks } from './hooks/use-enterprise-features'
 import { ComplianceAPIs } from './services/enterprise-apis'
 
+// RBAC System Integration
+import { useCurrentUser } from '../Advanced_RBAC_Datagovernance_System/hooks/useCurrentUser'
+import { usePermissionCheck } from '../Advanced_RBAC_Datagovernance_System/hooks/usePermissionCheck'
+import { PermissionGuard } from '../Advanced_RBAC_Datagovernance_System/components/shared/PermissionGuard'
+import { RBACContext } from '../Advanced_RBAC_Datagovernance_System/contexts/RBACContext'
+
 // Enhanced Components with Enterprise Integration
 import ComplianceRuleList from './components/ComplianceRuleList'
 import ComplianceRuleDashboard from './components/ComplianceRuleDashboard'
@@ -946,10 +952,22 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
   const searchParams = useSearchParams()
   const enterprise = useEnterpriseCompliance()
   
+  // RBAC Integration
+  const { 
+    user: currentUser, 
+    permissions, 
+    checkPermission, 
+    hasRole, 
+    isLoading: rbacLoading 
+  } = useCurrentUser()
+  
+  const { canAccess } = usePermissionCheck()
+  
   // Hooks for enterprise features
   const enterpriseFeatures = ComplianceHooks.useEnterpriseFeatures({
     componentName: 'ComplianceRuleApp',
-    dataSourceId
+    dataSourceId,
+    userId: currentUser?.id
   })
   
   const monitoring = ComplianceHooks.useComplianceMonitoring(dataSourceId)
@@ -1395,45 +1413,102 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
           searchPlaceholder="Search compliance requirements, assessments, and reports..."
         />
 
+        {/* User Context Display */}
+        {currentUser && (
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium">
+                  {currentUser.firstName?.[0]}{currentUser.lastName?.[0]}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-medium">
+                  {currentUser.firstName} {currentUser.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Compliance System Access
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="text-xs">
+                {permissions?.effective.length || 0} Permissions
+              </Badge>
+              {hasRole('compliance_admin') && (
+                <Badge variant="default" className="text-xs">
+                  Admin
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7 lg:grid-cols-9">
-            <TabsTrigger value="dashboard" className="flex items-center space-x-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="requirements" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Requirements</span>
-            </TabsTrigger>
-            <TabsTrigger value="assessments" className="flex items-center space-x-2">
-              <Scan className="h-4 w-4" />
-              <span className="hidden sm:inline">Assessments</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Reports</span>
-            </TabsTrigger>
-            <TabsTrigger value="workflows" className="flex items-center space-x-2">
-              <Workflow className="h-4 w-4" />
-              <span className="hidden sm:inline">Workflows</span>
-            </TabsTrigger>
-            <TabsTrigger value="integrations" className="flex items-center space-x-2">
-              <Boxes className="h-4 w-4" />
-              <span className="hidden sm:inline">Integrations</span>
-            </TabsTrigger>
-            <TabsTrigger value="issues" className="flex items-center space-x-2">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="hidden sm:inline">Issues</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center space-x-2">
-              <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center space-x-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
+            <PermissionGuard permission="compliance.dashboard.view" fallback={null}>
+              <TabsTrigger value="dashboard" className="flex items-center space-x-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.requirements.view" fallback={null}>
+              <TabsTrigger value="requirements" className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Requirements</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.assessments.view" fallback={null}>
+              <TabsTrigger value="assessments" className="flex items-center space-x-2">
+                <Scan className="h-4 w-4" />
+                <span className="hidden sm:inline">Assessments</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.reports.view" fallback={null}>
+              <TabsTrigger value="reports" className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Reports</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.workflows.view" fallback={null}>
+              <TabsTrigger value="workflows" className="flex items-center space-x-2">
+                <Workflow className="h-4 w-4" />
+                <span className="hidden sm:inline">Workflows</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.integrations.view" fallback={null}>
+              <TabsTrigger value="integrations" className="flex items-center space-x-2">
+                <Boxes className="h-4 w-4" />
+                <span className="hidden sm:inline">Integrations</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.issues.view" fallback={null}>
+              <TabsTrigger value="issues" className="flex items-center space-x-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">Issues</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.analytics.view" fallback={null}>
+              <TabsTrigger value="analytics" className="flex items-center space-x-2">
+                <TrendingUp className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard permission="compliance.settings.view" fallback={null}>
+              <TabsTrigger value="settings" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </TabsTrigger>
+            </PermissionGuard>
           </TabsList>
 
           <AnimatePresence mode="wait">
@@ -1444,23 +1519,29 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <TabsContent value="dashboard" className="space-y-6">
-                <ComplianceRuleDashboard 
-                  dataSourceId={dataSourceId}
-                  searchQuery={searchQuery}
-                  filters={filters}
-                  insights={insights}
-                  alerts={alerts}
-                />
-              </TabsContent>
+              <PermissionGuard permission="compliance.dashboard.view">
+                <TabsContent value="dashboard" className="space-y-6">
+                  <ComplianceRuleDashboard 
+                    dataSourceId={dataSourceId}
+                    searchQuery={searchQuery}
+                    filters={filters}
+                    insights={insights}
+                    alerts={alerts}
+                    currentUser={currentUser}
+                  />
+                </TabsContent>
+              </PermissionGuard>
 
-              <TabsContent value="requirements" className="space-y-6">
-                <ComplianceRuleList 
-                  dataSourceId={dataSourceId}
-                  searchQuery={searchQuery}
-                  filters={filters}
-                />
-              </TabsContent>
+              <PermissionGuard permission="compliance.requirements.view">
+                <TabsContent value="requirements" className="space-y-6">
+                  <ComplianceRuleList 
+                    dataSourceId={dataSourceId}
+                    searchQuery={searchQuery}
+                    filters={filters}
+                    currentUser={currentUser}
+                  />
+                </TabsContent>
+              </PermissionGuard>
 
               <TabsContent value="assessments" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
