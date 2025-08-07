@@ -3354,6 +3354,1416 @@ export interface QualityMetrics {
 }
 
 // =============================================================================
+// DATA SOURCE MANAGEMENT TYPES - Complete Backend Integration
+// =============================================================================
+
+/**
+ * Data Source Type Enum - matches backend DataSourceType
+ */
+export enum DataSourceType {
+  POSTGRESQL = "postgresql",
+  MYSQL = "mysql", 
+  MONGODB = "mongodb",
+  SNOWFLAKE = "snowflake",
+  S3 = "s3",
+  REDIS = "redis",
+  API = "api"
+}
+
+export enum DataSourceLocation {
+  ON_PREM = "on_prem",
+  CLOUD = "cloud", 
+  HYBRID = "hybrid"
+}
+
+export enum DataSourceStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  ERROR = "error",
+  PENDING = "pending",
+  SYNCING = "syncing",
+  MAINTENANCE = "maintenance"
+}
+
+export enum Environment {
+  PRODUCTION = "production",
+  STAGING = "staging",
+  DEVELOPMENT = "development",
+  TEST = "test"
+}
+
+export enum Criticality {
+  CRITICAL = "critical",
+  HIGH = "high",
+  MEDIUM = "medium", 
+  LOW = "low"
+}
+
+export enum DataClassification {
+  PUBLIC = "public",
+  INTERNAL = "internal",
+  CONFIDENTIAL = "confidential",
+  RESTRICTED = "restricted"
+}
+
+export enum ScanFrequency {
+  HOURLY = "hourly",
+  DAILY = "daily",
+  WEEKLY = "weekly",
+  MONTHLY = "monthly"
+}
+
+export enum CloudProvider {
+  AWS = "aws",
+  AZURE = "azure",
+  GCP = "gcp"
+}
+
+/**
+ * Core Data Source Interface - maps to backend DataSource model
+ */
+export interface DataSource {
+  id: string;
+  name: string;
+  description?: string;
+  type: DataSourceType;
+  location: DataSourceLocation;
+  status: DataSourceStatus;
+  
+  // Connection configuration
+  connectionConfig: ConnectionConfig;
+  credentials?: EncryptedCredentials;
+  
+  // Metadata and classification
+  environment?: Environment;
+  criticality?: Criticality;
+  dataClassification?: DataClassification;
+  
+  // Scheduling and automation
+  scanFrequency?: ScanFrequency;
+  isActive: boolean;
+  
+  // Cloud configuration
+  cloudProvider?: CloudProvider;
+  cloudConfig?: Record<string, any>;
+  
+  // Security and compliance
+  security: SecurityPolicy;
+  tags: string[];
+  
+  // Timestamps and ownership
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  ownerId: string;
+  workspaceId: string;
+  
+  // Performance and monitoring
+  healthCheck?: HealthCheckConfig;
+  lastScanAt?: ISODateString;
+  metrics?: DataSourceMetrics;
+}
+
+/**
+ * Connection Configuration
+ */
+export interface ConnectionConfig {
+  type: DataSourceType;
+  host?: string;
+  port?: number;
+  database?: string;
+  schema?: string;
+  username?: string;
+  password?: string;
+  connectionString?: string;
+  ssl?: boolean;
+  encryption?: boolean;
+  timeout?: number;
+  poolSize?: number;
+  maxConnections?: number;
+  // Cloud-specific config
+  bucket?: string;
+  region?: string;
+  account?: string;
+  provider?: string;
+  baseUrl?: string;
+  apiKey?: string;
+  token?: string;
+  authMethod?: AuthenticationMethod;
+  // Additional type-specific properties
+  additionalProperties?: Record<string, any>;
+}
+
+export enum AuthenticationMethod {
+  USERNAME_PASSWORD = "username_password",
+  API_KEY = "api_key",
+  OAUTH = "oauth",
+  JWT = "jwt",
+  IAM = "iam",
+  CERTIFICATE = "certificate"
+}
+
+/**
+ * Validation Result
+ */
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  suggestions: string[];
+  details?: Record<string, any>;
+}
+
+/**
+ * Connection Test Result
+ */
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  error?: string;
+  latency: number;
+  timestamp: number;
+  details?: ConnectionDiagnostics;
+  duration?: number;
+}
+
+/**
+ * Connection Diagnostics
+ */
+export interface ConnectionDiagnostics {
+  networkLatency: NetworkLatency;
+  dnsResolution: DiagnosticResult;
+  tlsHandshake: DiagnosticResult;
+  authentication: DiagnosticResult;
+  queryExecution: DiagnosticResult;
+  resourceUsage: ResourceUsage;
+  recommendations: string[];
+}
+
+export interface NetworkLatency {
+  min: number;
+  max: number;
+  avg: number;
+  jitter: number;
+  packetLoss: number;
+}
+
+export interface DiagnosticResult {
+  success: boolean;
+  duration: number;
+  message: string;
+  details?: Record<string, any>;
+}
+
+/**
+ * Performance Metrics
+ */
+export interface PerformanceMetrics {
+  latency: number;
+  throughput: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  diskUsage?: number;
+  networkUsage?: number;
+  score: number;
+  timestamp: ISODateString;
+}
+
+/**
+ * Data Source Health
+ */
+export interface DataSourceHealth {
+  status: HealthStatus;
+  lastCheck: number;
+  latency: number;
+  uptime: number;
+  errorRate: number;
+  message?: string;
+  issues?: HealthIssue[];
+  score?: number;
+}
+
+export interface HealthIssue {
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  message: string;
+  suggestion?: string;
+  timestamp: ISODateString;
+}
+
+/**
+ * Test Configuration and Suites
+ */
+export interface TestConfiguration {
+  timeout: number;
+  retries: number;
+  parallel: boolean;
+  validateSsl: boolean;
+  testQuery?: string;
+  expectedResult?: any;
+}
+
+export interface TestSuite {
+  id: string;
+  name: string;
+  description: string;
+  tests: string[];
+  timeout: number;
+  parallel: boolean;
+}
+
+/**
+ * Security and Encryption
+ */
+export interface SecurityPolicy {
+  encryption: boolean;
+  ssl: boolean;
+  accessControl: string;
+  auditEnabled: boolean;
+  complianceLevel: DataClassification;
+  securityFeatures: string[];
+}
+
+export interface EncryptionConfig {
+  algorithm: string;
+  keySize: number;
+  provider: string;
+  keyRotation: boolean;
+  rotationInterval: number;
+}
+
+export interface EncryptedCredentials {
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  token?: string;
+  encrypted: boolean;
+  algorithm?: string;
+  timestamp: number;
+}
+
+/**
+ * Connection Pool Configuration
+ */
+export interface ConnectionPool {
+  minSize: number;
+  maxSize: number;
+  acquireTimeoutMillis: number;
+  createTimeoutMillis: number;
+  destroyTimeoutMillis: number;
+  idleTimeoutMillis: number;
+  reapIntervalMillis: number;
+  createRetryIntervalMillis: number;
+  maxRetries: number;
+  validateOnBorrow: boolean;
+  validateOnReturn: boolean;
+  maxWaitingClients: number;
+}
+
+/**
+ * Data Source Templates
+ */
+export interface DataSourceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: DataSourceType;
+  category: string;
+  connectionTemplate: string;
+  defaultSettings: Record<string, any>;
+  securityFeatures: string[];
+  supportedOperations: Record<string, boolean>;
+  metadata: TemplateMetadata;
+}
+
+export interface TemplateMetadata {
+  createdAt: number;
+  version: string;
+  tags: string[];
+  documentation?: string;
+  examples?: Record<string, any>[];
+}
+
+/**
+ * Connection Optimization and Reports
+ */
+export interface ConnectionOptimization {
+  recommendations: OptimizationRecommendation[];
+  estimatedImprovement: PerformanceMetrics;
+  performanceGain: number;
+  costSavings?: number;
+  improvements: string[];
+}
+
+export interface OptimizationRecommendation {
+  category: string;
+  priority: 'low' | 'medium' | 'high';
+  description: string;
+  implementation: string;
+  estimatedImpact: number;
+}
+
+export interface SecurityValidation {
+  sslEnabled: boolean;
+  encryptionEnabled: boolean;
+  authenticationValid: boolean;
+  complianceLevel: string;
+  vulnerabilities: SecurityVulnerability[];
+  recommendations: string[];
+  score: number;
+}
+
+export interface SecurityVulnerability {
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  description: string;
+  remediation: string;
+  cveId?: string;
+}
+
+export interface ConnectionReport {
+  timestamp: number;
+  config: ConnectionConfig;
+  testResult: ConnectionTestResult | null;
+  diagnostics: ConnectionDiagnostics | null;
+  performance: PerformanceMetrics | null;
+  security: SecurityValidation | null;
+  recommendations: string[];
+  summary: ReportSummary;
+}
+
+export interface ReportSummary {
+  overallStatus: 'excellent' | 'good' | 'warning' | 'critical';
+  score: number;
+  criticalIssues: number;
+  warnings: number;
+  suggestions: number;
+}
+
+/**
+ * Diagnostic Logs
+ */
+export interface DiagnosticLog {
+  timestamp: ISODateString;
+  level: 'debug' | 'info' | 'warn' | 'error';
+  category: string;
+  message: string;
+  details?: Record<string, any>;
+  duration?: number;
+  success?: boolean;
+}
+
+/**
+ * Connection Health Configuration
+ */
+export interface ConnectionHealth {
+  status: HealthStatus;
+  lastCheck: number;
+  latency: number;
+  uptime: number;
+  errorRate: number;
+  message?: string;
+  details?: Record<string, any>;
+}
+
+export interface HealthCheckConfig {
+  enabled: boolean;
+  interval: number;
+  timeout: number;
+  retries: number;
+  healthQuery?: string;
+  alertThresholds: HealthThresholds;
+}
+
+export interface HealthThresholds {
+  latencyWarning: number;
+  latencyCritical: number;
+  errorRateWarning: number;
+  errorRateCritical: number;
+  uptimeWarning: number;
+}
+
+/**
+ * Data Source CRUD Request/Response Types
+ */
+export interface DataSourceCreateRequest {
+  name: string;
+  description?: string;
+  type: DataSourceType;
+  connectionConfig: ConnectionConfig;
+  environment?: Environment;
+  criticality?: Criticality;
+  dataClassification?: DataClassification;
+  tags?: string[];
+  workspaceId?: string;
+  security?: Partial<SecurityPolicy>;
+}
+
+export interface DataSourceUpdateRequest {
+  name?: string;
+  description?: string;
+  connectionConfig?: Partial<ConnectionConfig>;
+  environment?: Environment;
+  criticality?: Criticality;
+  dataClassification?: DataClassification;
+  tags?: string[];
+  isActive?: boolean;
+  security?: Partial<SecurityPolicy>;
+}
+
+export interface DataSourceFilters {
+  type?: DataSourceType | DataSourceType[];
+  status?: DataSourceStatus | DataSourceStatus[];
+  environment?: Environment | Environment[];
+  criticality?: Criticality | Criticality[];
+  workspaceId?: string;
+  tags?: string[];
+  search?: string;
+  owner?: string;
+  createdAfter?: ISODateString;
+  createdBefore?: ISODateString;
+}
+
+export interface DataSourceStats {
+  total: number;
+  active: number;
+  inactive: number;
+  error: number;
+  byType: Record<DataSourceType, number>;
+  byEnvironment: Record<Environment, number>;
+  byCriticality: Record<Criticality, number>;
+  healthScore: number;
+  lastUpdated: ISODateString;
+}
+
+export interface DataSourceMetrics {
+  connectionCount: number;
+  avgLatency: number;
+  throughput: number;
+  errorRate: number;
+  uptime: number;
+  dataVolume: number;
+  queryCount: number;
+  performanceScore: number;
+  timeRange: string;
+  lastUpdated: ISODateString;
+  trends: MetricTrend[];
+}
+
+export interface MetricTrend {
+  metric: string;
+  direction: 'up' | 'down' | 'stable';
+  change: number;
+  period: string;
+}
+
+// Additional metrics and monitoring types needed by components
+export interface UsageStatistics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  peakUsage: number;
+  currentConnections: number;
+  dataTransferred: number;
+  queriesExecuted: number;
+  errorRate: number;
+  uptime: number;
+  lastUpdated: ISODateString;
+  timeRange: string;
+}
+
+export interface MetricPoint {
+  timestamp: ISODateString;
+  value: number;
+  label?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface TimeRange {
+  start: ISODateString;
+  end: ISODateString;
+  interval: '1m' | '5m' | '15m' | '1h' | '6h' | '12h' | '1d' | '7d' | '30d';
+  timezone?: string;
+}
+
+export enum MetricType {
+  COUNTER = "counter",
+  GAUGE = "gauge",
+  HISTOGRAM = "histogram",
+  TIMER = "timer",
+  PERCENTAGE = "percentage",
+  RATE = "rate"
+}
+
+export enum AggregationMethod {
+  SUM = "sum",
+  AVERAGE = "average",
+  MIN = "min",
+  MAX = "max",
+  COUNT = "count",
+  PERCENTILE_95 = "percentile_95",
+  PERCENTILE_99 = "percentile_99",
+  MEDIAN = "median"
+}
+
+export interface PerformanceReport {
+  id: string;
+  dataSourceId: string;
+  reportType: 'daily' | 'weekly' | 'monthly' | 'custom';
+  generatedAt: ISODateString;
+  period: TimeRange;
+  summary: PerformanceReportSummary;
+  performanceMetrics: PerformanceMetrics[];
+  usageStatistics: UsageStatistics;
+  trends: MetricTrend[];
+  alerts: MetricAlert[];
+  recommendations: string[];
+  chartData: ChartDataPoint[];
+  comparison?: PerformanceComparison;
+}
+
+export interface PerformanceReportSummary {
+  overallScore: number;
+  performanceGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+  keyMetrics: KeyMetric[];
+  criticalIssues: number;
+  improvements: number;
+  degradations: number;
+}
+
+export interface KeyMetric {
+  name: string;
+  current: number;
+  previous?: number;
+  change?: number;
+  trend: 'up' | 'down' | 'stable';
+  unit: string;
+  status: 'good' | 'warning' | 'critical';
+}
+
+export interface ChartDataPoint {
+  timestamp: ISODateString;
+  metrics: Record<string, number>;
+  labels?: Record<string, string>;
+}
+
+export interface PerformanceComparison {
+  previousPeriod: TimeRange;
+  improvements: string[];
+  degradations: string[];
+  overallChange: number;
+  significantChanges: MetricChange[];
+}
+
+export interface MetricChange {
+  metric: string;
+  previousValue: number;
+  currentValue: number;
+  changePercent: number;
+  significance: 'minor' | 'moderate' | 'major';
+}
+
+export interface MetricAlert {
+  id: string;
+  dataSourceId: string;
+  name: string;
+  description: string;
+  metric: string;
+  threshold: MetricThreshold;
+  status: AlertStatus;
+  severity: AlertLevel;
+  enabled: boolean;
+  notificationChannels: string[];
+  triggered: boolean;
+  triggeredAt?: ISODateString;
+  resolvedAt?: ISODateString;
+  acknowledgedAt?: ISODateString;
+  acknowledgiedBy?: string;
+  history: AlertHistoryEntry[];
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+}
+
+export interface MetricThreshold {
+  operator: 'greater_than' | 'less_than' | 'equals' | 'not_equals' | 'between' | 'outside';
+  value: number | number[];
+  duration?: number;
+  evaluationWindow?: number;
+}
+
+export enum AlertStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  SUSPENDED = "suspended",
+  RESOLVED = "resolved"
+}
+
+export enum AlertLevel {
+  INFO = "info",
+  WARNING = "warning",
+  ERROR = "error",
+  CRITICAL = "critical"
+}
+
+export interface AlertHistoryEntry {
+  timestamp: ISODateString;
+  action: 'triggered' | 'resolved' | 'acknowledged' | 'escalated';
+  value: number;
+  message: string;
+  userId?: string;
+}
+
+export enum HealthStatus {
+  HEALTHY = "healthy",
+  WARNING = "warning", 
+  CRITICAL = "critical",
+  ERROR = "error",
+  UNKNOWN = "unknown",
+  CONNECTING = "connecting",
+  DISCONNECTED = "disconnected",
+  DEGRADED = "degraded"
+}
+
+export interface SecurityStatus {
+  overall: HealthStatus;
+  encryption: HealthStatus;
+  authentication: HealthStatus;
+  authorization: HealthStatus;
+  compliance: HealthStatus;
+  vulnerabilities: SecurityVulnerability[];
+  lastSecurityScan: ISODateString;
+  securityScore: number;
+  complianceLevel: string;
+  recommendations: SecurityRecommendation[];
+  pendingUpdates: SecurityUpdate[];
+}
+
+export interface SecurityRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  impact: string;
+  effort: 'low' | 'medium' | 'high';
+  priority: number;
+}
+
+export interface SecurityUpdate {
+  id: string;
+  title: string;
+  type: 'patch' | 'configuration' | 'policy';
+  description: string;
+  scheduledDate?: ISODateString;
+  estimatedDowntime?: number;
+}
+
+export interface HealthCheck {
+  id: string;
+  name: string;
+  type: HealthCheckType;
+  status: HealthStatus;
+  enabled: boolean;
+  interval: number;
+  timeout: number;
+  retries: number;
+  endpoint?: string;
+  query?: string;
+  expectedResult?: any;
+  lastRun: ISODateString;
+  lastSuccess: ISODateString;
+  lastFailure?: ISODateString;
+  consecutiveFailures: number;
+  responseTime: number;
+  history: HealthCheckResult[];
+  alertThresholds: HealthAlertThreshold[];
+  notificationChannels: string[];
+}
+
+export enum HealthCheckType {
+  CONNECTIVITY = "connectivity",
+  QUERY = "query",
+  AUTHENTICATION = "authentication",
+  PERFORMANCE = "performance",
+  CUSTOM = "custom"
+}
+
+export interface HealthCheckResult {
+  timestamp: ISODateString;
+  status: HealthStatus;
+  responseTime: number;
+  message?: string;
+  error?: string;
+  details?: Record<string, any>;
+}
+
+export interface HealthAlertThreshold {
+  metric: 'response_time' | 'consecutive_failures' | 'error_rate';
+  operator: 'greater_than' | 'less_than' | 'equals';
+  value: number;
+  severity: AlertLevel;
+}
+
+export interface StatusHistory {
+  dataSourceId: string;
+  entries: StatusHistoryEntry[];
+  retentionDays: number;
+  lastUpdated: ISODateString;
+}
+
+export interface StatusHistoryEntry {
+  timestamp: ISODateString;
+  status: DataSourceStatus;
+  healthStatus: HealthStatus;
+  metrics?: PerformanceMetrics;
+  events: StatusEvent[];
+  triggeredBy: string;
+  reason?: string;
+}
+
+export interface StatusEvent {
+  type: 'connection' | 'performance' | 'security' | 'configuration' | 'user_action';
+  description: string;
+  severity: AlertLevel;
+  metadata?: Record<string, any>;
+}
+
+// =============================================================================
+// CLASSIFICATIONS TYPES - Complete Backend Integration  
+// =============================================================================
+
+export enum ClassificationLevel {
+  PUBLIC = "public",
+  INTERNAL = "internal", 
+  CONFIDENTIAL = "confidential",
+  RESTRICTED = "restricted",
+  TOP_SECRET = "top_secret"
+}
+
+export enum ClassificationStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  DRAFT = "draft",
+  PENDING_REVIEW = "pending_review",
+  APPROVED = "approved"
+}
+
+export interface Classification {
+  id: string;
+  name: string;
+  description?: string;
+  level: ClassificationLevel;
+  status: ClassificationStatus;
+  rules: ClassificationRule[];
+  confidence: number;
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  ownerId: string;
+  workspaceId: string;
+  metrics?: ClassificationMetrics;
+  history: ClassificationHistory[];
+}
+
+export interface ClassificationRule {
+  id: string;
+  pattern: string;
+  weight: number;
+  conditions: RuleCondition[];
+  threshold: number;
+}
+
+export interface ClassificationTemplate {
+  id: string;
+  name: string;
+  description: string;
+  level: ClassificationLevel;
+  ruleTemplates: ClassificationRule[];
+  usageCount: number;
+}
+
+export interface ClassificationResult {
+  id: string;
+  dataSourceId: string;
+  fieldName: string;
+  detectedLevel: ClassificationLevel;
+  confidence: number;
+  appliedRules: string[];
+  timestamp: ISODateString;
+}
+
+export interface ClassificationMetrics {
+  totalClassifications: number;
+  accuracyScore: number;
+  confidenceAverage: number;
+  byLevel: Record<ClassificationLevel, number>;
+  timeRange: string;
+  lastUpdated: ISODateString;
+}
+
+export interface ClassificationHistory {
+  id: string;
+  action: 'created' | 'updated' | 'deleted' | 'classified';
+  previousLevel?: ClassificationLevel;
+  newLevel: ClassificationLevel;
+  changedBy: string;
+  changedAt: ISODateString;
+  reason?: string;
+}
+
+export interface ClassificationConfig {
+  autoClassification: boolean;
+  confidenceThreshold: number;
+  reviewRequired: boolean;
+  notifyOnChange: boolean;
+  retentionDays: number;
+}
+
+// =============================================================================
+// COMPLIANCE RULE TYPES - Complete Backend Integration  
+// =============================================================================
+
+export enum ComplianceStatus {
+  COMPLIANT = "compliant",
+  NON_COMPLIANT = "non_compliant", 
+  PENDING = "pending",
+  REVIEWING = "reviewing",
+  REMEDIATED = "remediated"
+}
+
+export interface ComplianceRule {
+  id: string;
+  name: string;
+  description: string;
+  regulation: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: RuleStatus;
+  requirements: string[];
+  conditions: RuleCondition[];
+  validationLogic: string;
+  complianceFramework: string;
+  riskLevel: number;
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+}
+
+export interface CompliancePolicy {
+  id: string;
+  name: string;
+  description: string;
+  framework: string;
+  rules: ComplianceRule[];
+  status: ComplianceStatus;
+  scope: string;
+  applicability: string[];
+  enforcement: 'manual' | 'automatic' | 'hybrid';
+  version: string;
+  effectiveDate: ISODateString;
+  expiryDate?: ISODateString;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+export interface ComplianceReport {
+  id: string;
+  title: string;
+  period: TimeRange;
+  status: ComplianceStatus;
+  overallScore: number;
+  violations: ComplianceViolation[];
+  remediation: ComplianceRemediation[];
+  recommendations: string[];
+  generatedAt: ISODateString;
+  generatedBy: string;
+}
+
+export interface ComplianceAudit {
+  id: string;
+  auditType: 'internal' | 'external' | 'self_assessment';
+  auditor: string;
+  startDate: ISODateString;
+  endDate?: ISODateString;
+  findings: AuditFinding[];
+  status: 'planning' | 'in_progress' | 'completed' | 'follow_up';
+}
+
+export interface AuditFinding {
+  id: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  evidence: string[];
+  recommendation: string;
+  status: 'open' | 'resolved' | 'accepted_risk';
+}
+
+export interface ComplianceMetrics {
+  overallScore: number;
+  complianceRate: number;
+  violationCount: number;
+  byFramework: Record<string, number>;
+  riskScore: number;
+  trends: MetricTrend[];
+  lastUpdated: ISODateString;
+}
+
+export interface ComplianceViolation {
+  id: string;
+  ruleId: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  detectedAt: ISODateString;
+  status: 'open' | 'investigating' | 'resolved' | 'false_positive';
+  affectedAssets: string[];
+}
+
+export interface ComplianceRemediation {
+  id: string;
+  violationId: string;
+  action: string;
+  assignedTo: string;
+  dueDate: ISODateString;
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  completedAt?: ISODateString;
+}
+
+export interface ComplianceHistory {
+  id: string;
+  entityId: string;
+  entityType: string;
+  action: string;
+  previousStatus?: ComplianceStatus;
+  newStatus: ComplianceStatus;
+  changedBy: string;
+  changedAt: ISODateString;
+  reason?: string;
+}
+
+// =============================================================================
+// SCAN RULE SETS TYPES - Complete Backend Integration
+// =============================================================================
+
+/**
+ * Rule Category Enum - matches backend RuleCategory
+ */
+export enum RuleCategory {
+  PRIVACY = "privacy",
+  SECURITY = "security",
+  COMPLIANCE = "compliance",
+  QUALITY = "quality",
+  CUSTOM = "custom"
+}
+
+export enum RuleComplexity {
+  SIMPLE = "simple",
+  MODERATE = "moderate",
+  COMPLEX = "complex",
+  ADVANCED = "advanced"
+}
+
+export enum RuleStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  DRAFT = "draft",
+  ARCHIVED = "archived"
+}
+
+/**
+ * Core Scan Rule Set Interface - maps to backend ScanRuleSet model
+ */
+export interface ScanRuleSet {
+  id: string;
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  status: RuleStatus;
+  
+  // Rules and execution
+  rules: ScanRule[];
+  executionOrder: string[];
+  parallelExecution: boolean;
+  
+  // Metadata and ownership
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  ownerId: string;
+  workspaceId: string;
+  
+  // Scheduling and automation
+  isScheduled: boolean;
+  scheduleConfig?: RuleSchedule;
+  
+  // Performance and optimization
+  optimizationLevel: 'basic' | 'standard' | 'aggressive';
+  resourceLimits?: ResourceLimits;
+  
+  // Analytics and reporting
+  executionHistory: RuleExecution[];
+  metrics?: RuleMetrics;
+  lastExecutionAt?: ISODateString;
+}
+
+/**
+ * Individual Scan Rule
+ */
+export interface ScanRule {
+  id: string;
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  status: RuleStatus;
+  
+  // Rule definition
+  pattern: string;
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+  
+  // Execution settings
+  priority: number;
+  timeout: number;
+  retryAttempts: number;
+  
+  // Dependencies
+  dependencies: string[];
+  conflictsWith: string[];
+  
+  // Validation and testing
+  testCases: RuleTestCase[];
+  lastValidatedAt?: ISODateString;
+  
+  // Performance
+  averageExecutionTime: number;
+  successRate: number;
+  
+  // Metadata
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+}
+
+export interface RuleCondition {
+  id: string;
+  type: 'field' | 'value' | 'pattern' | 'custom';
+  field?: string;
+  operator: 'equals' | 'contains' | 'matches' | 'greater_than' | 'less_than' | 'in' | 'not_in';
+  value: any;
+  caseSensitive?: boolean;
+  negate?: boolean;
+}
+
+export interface RuleAction {
+  id: string;
+  type: 'flag' | 'mask' | 'encrypt' | 'quarantine' | 'alert' | 'log' | 'custom';
+  parameters: Record<string, any>;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  requiresApproval?: boolean;
+}
+
+export interface RuleTestCase {
+  id: string;
+  name: string;
+  input: any;
+  expectedOutput: any;
+  expectedActions: string[];
+  status: 'pass' | 'fail' | 'pending';
+  lastRun?: ISODateString;
+}
+
+/**
+ * Rule Execution and Results
+ */
+export interface RuleExecution {
+  id: string;
+  ruleSetId: string;
+  ruleId?: string;
+  status: OperationStatus;
+  
+  // Execution details
+  startedAt: ISODateString;
+  completedAt?: ISODateString;
+  duration?: number;
+  
+  // Results
+  recordsProcessed: number;
+  matchesFound: number;
+  actionsExecuted: number;
+  errorsOccurred: number;
+  
+  // Execution context
+  dataSourceId: string;
+  executedBy: string;
+  executionMode: 'manual' | 'scheduled' | 'triggered';
+  
+  // Results and logs
+  results: RuleExecutionResult[];
+  logs: ExecutionLog[];
+  errors: ExecutionError[];
+  
+  // Performance metrics
+  resourceUsage: ResourceUsage;
+  performanceMetrics: PerformanceMetrics;
+}
+
+export interface RuleExecutionResult {
+  ruleId: string;
+  recordId: string;
+  field?: string;
+  matchedPattern?: string;
+  confidence: number;
+  actionsApplied: string[];
+  metadata: Record<string, any>;
+  timestamp: ISODateString;
+}
+
+export interface ResourceLimits {
+  maxMemory: number;
+  maxCpu: number;
+  maxDuration: number;
+  maxRecords: number;
+}
+
+/**
+ * Rule Validation and Testing
+ */
+export interface RuleValidation {
+  ruleId: string;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  suggestions: string[];
+  coverage: number;
+  testResults: RuleTestResult[];
+  validatedAt: ISODateString;
+}
+
+export interface RuleTestResult {
+  testCaseId: string;
+  status: 'pass' | 'fail' | 'error';
+  actualOutput?: any;
+  actualActions?: string[];
+  message?: string;
+  duration: number;
+}
+
+/**
+ * Rule Metrics and Analytics
+ */
+export interface RuleMetrics {
+  executionCount: number;
+  successRate: number;
+  averageExecutionTime: number;
+  totalRecordsProcessed: number;
+  totalMatchesFound: number;
+  errorRate: number;
+  resourceEfficiency: number;
+  accuracyScore: number;
+  timeRange: string;
+  lastUpdated: ISODateString;
+  trends: MetricTrend[];
+}
+
+/**
+ * Rule Scheduling
+ */
+export interface RuleSchedule {
+  id: string;
+  frequency: 'once' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'cron';
+  cronExpression?: string;
+  startDate: ISODateString;
+  endDate?: ISODateString;
+  timezone: string;
+  enabled: boolean;
+  
+  // Execution conditions
+  conditions: ScheduleCondition[];
+  
+  // Notification settings
+  notifyOnSuccess: boolean;
+  notifyOnFailure: boolean;
+  notificationChannels: string[];
+  
+  // History
+  lastExecution?: ISODateString;
+  nextExecution?: ISODateString;
+  executionHistory: ScheduleExecution[];
+}
+
+export interface ScheduleCondition {
+  type: 'data_available' | 'resource_available' | 'time_window' | 'custom';
+  parameters: Record<string, any>;
+}
+
+export interface ScheduleExecution {
+  id: string;
+  scheduledAt: ISODateString;
+  executedAt?: ISODateString;
+  status: OperationStatus;
+  duration?: number;
+  result?: string;
+  error?: string;
+}
+
+/**
+ * Rule History and Versioning
+ */
+export interface RuleHistory {
+  id: string;
+  ruleId: string;
+  version: string;
+  changeType: 'created' | 'updated' | 'deleted' | 'deployed' | 'rollback';
+  changes: RuleChange[];
+  changedBy: string;
+  changedAt: ISODateString;
+  reason?: string;
+  approvedBy?: string;
+  approvedAt?: ISODateString;
+}
+
+export interface RuleChange {
+  field: string;
+  oldValue: any;
+  newValue: any;
+  operation: 'add' | 'update' | 'remove';
+}
+
+/**
+ * Rule Optimization
+ */
+export interface RuleOptimization {
+  ruleId: string;
+  currentPerformance: PerformanceMetrics;
+  optimizedPattern?: string;
+  optimizedConditions?: RuleCondition[];
+  estimatedImprovement: number;
+  recommendations: OptimizationRecommendation[];
+  implementationComplexity: 'low' | 'medium' | 'high';
+  riskLevel: 'low' | 'medium' | 'high';
+  testResults?: RuleTestResult[];
+}
+
+/**
+ * Rule Templates
+ */
+export interface RuleTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  
+  // Template definition
+  patternTemplate: string;
+  conditionTemplates: RuleConditionTemplate[];
+  actionTemplates: RuleActionTemplate[];
+  
+  // Usage and popularity
+  usageCount: number;
+  rating: number;
+  
+  // Metadata
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  
+  // Customization options
+  customizableFields: string[];
+  requiredParameters: string[];
+  optionalParameters: string[];
+}
+
+export interface RuleConditionTemplate {
+  type: 'field' | 'value' | 'pattern' | 'custom';
+  fieldTemplate?: string;
+  operatorOptions: string[];
+  valueTemplate?: string;
+  description: string;
+  required: boolean;
+}
+
+export interface RuleActionTemplate {
+  type: 'flag' | 'mask' | 'encrypt' | 'quarantine' | 'alert' | 'log' | 'custom';
+  parameterTemplates: Record<string, ParameterTemplate>;
+  severityOptions: string[];
+  description: string;
+  required: boolean;
+}
+
+export interface ParameterTemplate {
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  defaultValue?: any;
+  options?: any[];
+  validation?: string;
+  description: string;
+  required: boolean;
+}
+
+/**
+ * Rule CRUD Request/Response Types
+ */
+export interface ScanRuleSetCreateRequest {
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity?: RuleComplexity;
+  rules?: Partial<ScanRule>[];
+  tags?: string[];
+  workspaceId?: string;
+  optimizationLevel?: 'basic' | 'standard' | 'aggressive';
+  parallelExecution?: boolean;
+}
+
+export interface ScanRuleSetUpdateRequest {
+  name?: string;
+  description?: string;
+  category?: RuleCategory;
+  complexity?: RuleComplexity;
+  status?: RuleStatus;
+  rules?: Partial<ScanRule>[];
+  tags?: string[];
+  optimizationLevel?: 'basic' | 'standard' | 'aggressive';
+  parallelExecution?: boolean;
+}
+
+export interface ScanRuleSetFilters {
+  category?: RuleCategory | RuleCategory[];
+  complexity?: RuleComplexity | RuleComplexity[];
+  status?: RuleStatus | RuleStatus[];
+  workspaceId?: string;
+  tags?: string[];
+  search?: string;
+  owner?: string;
+  createdAfter?: ISODateString;
+  createdBefore?: ISODateString;
+}
+
+export interface ScanRuleSetStats {
+  total: number;
+  active: number;
+  inactive: number;
+  draft: number;
+  byCategory: Record<RuleCategory, number>;
+  byComplexity: Record<RuleComplexity, number>;
+  averageExecutionTime: number;
+  successRate: number;
+  lastUpdated: ISODateString;
+}
+
+// =============================================================================
 // EXPORT ALL TYPES
 // =============================================================================
 
@@ -3404,7 +4814,41 @@ export type {
   
   // Common utility types
   RetryPolicy, ErrorHandlingPolicy, MonitoringConfiguration, ResourceConfiguration,
-  ResourceUsage, LogLevel, TriggerType, ExecutionLog, ExecutionError
+  ResourceUsage, LogLevel, TriggerType, ExecutionLog, ExecutionError,
+  
+  // Data Source Management Types
+  DataSource, DataSourceType as DataSourceTypeEnum, DataSourceLocation, DataSourceStatus,
+  Environment, Criticality, DataClassification, ScanFrequency, CloudProvider,
+  ConnectionConfig, ValidationResult, SecurityPolicy, DataSourceTemplate,
+  EncryptionConfig, AuthenticationMethod, ConnectionPool, DataSourceMetrics,
+  DataSourceHealth, PerformanceMetrics, ConnectionTestResult, ConnectionDiagnostics,
+  TestConfiguration, ConnectionHealth, NetworkLatency, TestSuite, DiagnosticLog,
+  ConnectionOptimization, SecurityValidation, ConnectionReport, DataSourceCreateRequest,
+  DataSourceUpdateRequest, DataSourceFilters, DataSourceStats,
+  
+  // Scan Rule Sets Types
+  ScanRuleSet, ScanRule, RuleCategory, RuleComplexity, RuleTemplate, RuleExecution,
+  RuleValidation, RuleMetrics, RuleSchedule, RuleHistory, RuleOptimization,
+  
+  // Classifications Types  
+  Classification, ClassificationRule, ClassificationLevel, ClassificationTemplate,
+  ClassificationResult, ClassificationMetrics, ClassificationHistory, ClassificationConfig,
+  
+  // Compliance Rule Types
+  ComplianceRule, CompliancePolicy, ComplianceStatus, ComplianceReport, ComplianceAudit,
+  ComplianceMetrics, ComplianceViolation, ComplianceRemediation, ComplianceHistory,
+  
+  // Advanced Catalog Types
+  CatalogItem, CatalogMetadata, LineageGraph, DataAsset, AssetRelationship, AssetMetrics,
+  CatalogSearch, AssetClassification, AssetGovernance, CatalogConfiguration,
+  
+  // Scan Logic Types
+  ScanLogic, ScanExecution, ScanConfiguration, ScanSchedule, ScanResult, ScanMetrics,
+  ScanHistory, ScanOptimization, ScanDiagnostics, ScanTemplate,
+  
+  // RBAC System Types
+  Role, Permission, User, UserRole, RolePermission, AccessControl, SecurityGroup,
+  PermissionSet, AuthenticationProvider, SessionManagement, AuditLog
 };
 
 // Export enums separately
