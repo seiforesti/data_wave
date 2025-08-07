@@ -105,6 +105,13 @@ import {
   QUICK_ACTION_CATEGORIES
 } from '../../constants/cross-group-configs'
 
+// Import new subcomponents for enhanced functionality
+import { QuickSearch } from './subcomponents/QuickSearch'
+import { QuickNotifications } from './subcomponents/QuickNotifications'
+import { QuickActions } from './subcomponents/QuickActions'
+import { QuickWorkspaceSwitch } from './subcomponents/QuickWorkspaceSwitch'
+import { QuickHealthStatus } from './subcomponents/QuickHealthStatus'
+
 // Existing SPA route mappings for deep integration
 const EXISTING_SPA_ROUTES = {
   'data-sources': '/v15_enhanced_1/components/data-sources',
@@ -860,7 +867,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
             </nav>
           </div>
 
-          {/* Center section - Global Search */}
+          {/* Center section - Enhanced Global Search */}
           <div className="flex-1 max-w-xl mx-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -874,6 +881,10 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
                     handleSearch(searchInput)
                     setIsSearchOpen(true)
                   }
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                    e.preventDefault()
+                    setIsSearchOpen(true)
+                  }
                 }}
                 onFocus={() => setIsSearchOpen(true)}
                 className="pl-10 pr-4 h-9 bg-muted/50 border-muted-foreground/20 focus:bg-background transition-colors"
@@ -884,17 +895,60 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
                 </kbd>
               </div>
             </div>
+            
+            {/* Enhanced Global Search Modal */}
+            <QuickSearch
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              defaultQuery={searchInput}
+              onResultSelect={(result) => {
+                // Navigate to the result
+                if (result.url) {
+                  router.push(result.url)
+                } else if (result.spa) {
+                  navigateToSPA(result.spa, result.path)
+                }
+                setIsSearchOpen(false)
+              }}
+              enableAIInsights={true}
+              showCategories={true}
+            />
           </div>
 
           {/* Right section - System Status, Notifications, User */}
           <div className="flex items-center gap-2">
-            {/* System Health Indicator */}
-            {renderHealthIndicator()}
+            {/* Enhanced System Health Status */}
+            <QuickHealthStatus
+              compact={false}
+              autoRefresh={true}
+              refreshInterval={30000}
+              onHealthClick={(health) => {
+                // Navigate to detailed health dashboard
+                router.push('/racine/health-dashboard')
+              }}
+            />
 
             <Separator orientation="vertical" className="h-4 mx-1" />
 
-            {/* Workspace Switcher */}
-            {renderWorkspaceSwitcher()}
+            {/* Enhanced Workspace Switcher */}
+            <QuickWorkspaceSwitch
+              showCreateOption={true}
+              showTemplates={true}
+              onWorkspaceSwitch={(workspace) => {
+                // Track workspace switch
+                trackEvent('workspace_switched_from_navbar', {
+                  workspaceId: workspace.id,
+                  workspaceName: workspace.name
+                })
+              }}
+              onWorkspaceCreate={(workspace) => {
+                // Track workspace creation
+                trackEvent('workspace_created_from_navbar', {
+                  workspaceId: workspace.id,
+                  workspaceName: workspace.name
+                })
+              }}
+            />
 
             {/* Quick Actions Trigger */}
             <Tooltip>
@@ -916,8 +970,19 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
               </TooltipContent>
             </Tooltip>
 
-            {/* Notifications */}
-            {renderNotificationCenter()}
+            {/* Enhanced Notifications */}
+            <QuickNotifications
+              showBadge={true}
+              autoClose={false}
+              onNotificationClick={(notification) => {
+                // Handle notification click based on type
+                if (notification.actionUrl) {
+                  router.push(notification.actionUrl)
+                } else if (notification.spa) {
+                  navigateToSPA(notification.spa, notification.path)
+                }
+              }}
+            />
 
             {/* User Profile */}
             {renderUserProfile()}
