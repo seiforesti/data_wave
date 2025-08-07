@@ -51,6 +51,12 @@ export * from './compliance-rule-apis';
 // Scan rule sets service
 export * from './scan-rule-sets-apis';
 
+// RBAC admin service (for subcomponents)
+export * from './rbac-admin-apis';
+
+// Quick actions service (for subcomponents)
+export * from './quick-actions-apis';
+
 // Re-export service instances for convenience
 export { racineOrchestrationAPI } from './racine-orchestration-apis';
 export { workspaceManagementAPI } from './workspace-management-apis';
@@ -67,6 +73,8 @@ export { advancedCatalogAPI } from './advanced-catalog-apis';
 export { classificationsAPI } from './classifications-apis';
 export { complianceRuleAPI } from './compliance-rule-apis';
 export { scanRuleSetsAPI } from './scan-rule-sets-apis';
+export { rbacAdminAPI } from './rbac-admin-apis';
+export { quickActionsAPI } from './quick-actions-apis';
 
 // Export service types for external usage
 export type {
