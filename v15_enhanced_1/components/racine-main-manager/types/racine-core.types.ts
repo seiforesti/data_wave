@@ -1981,6 +1981,293 @@ export interface RBACPermissions {
   system: SystemPermissions;
 }
 
+// ============================================================================
+// COMPREHENSIVE RBAC SYSTEM TYPES
+// Integration with Advanced_RBAC_Datagovernance_System SPA
+// ============================================================================
+
+export interface RBACUser {
+  id: UUID;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
+  isVerified: boolean;
+  lastLogin?: ISODateString;
+  roles?: RBACRole[];
+  groups?: RBACGroup[];
+  permissions?: RBACPermission[];
+  profile?: UserProfile;
+  preferences?: UserPreferences;
+  auditInfo: AuditInfo;
+  metadata?: Record<string, JSONValue>;
+}
+
+export interface RBACRole {
+  id: UUID;
+  name: string;
+  displayName: string;
+  description: string;
+  permissions: RBACPermission[];
+  inheritedRoles?: UUID[];
+  isSystemRole: boolean;
+  isActive: boolean;
+  scope: 'global' | 'workspace' | 'group';
+  workspaceId?: UUID;
+  groupId?: string;
+  auditInfo: AuditInfo;
+  metadata?: Record<string, JSONValue>;
+}
+
+export interface RBACPermission {
+  id: UUID;
+  name: string;
+  resource: string;
+  action: string;
+  effect: 'allow' | 'deny';
+  conditions?: RBACCondition[];
+  scope: 'global' | 'workspace' | 'group' | 'resource';
+  description?: string;
+  isSystemPermission: boolean;
+  auditInfo: AuditInfo;
+}
+
+export interface RBACGroup {
+  id: UUID;
+  name: string;
+  displayName: string;
+  description: string;
+  type: 'functional' | 'organizational' | 'project';
+  members: RBACUser[];
+  roles: RBACRole[];
+  parentGroupId?: UUID;
+  childGroups?: RBACGroup[];
+  isActive: boolean;
+  auditInfo: AuditInfo;
+  metadata?: Record<string, JSONValue>;
+}
+
+export interface RBACResource {
+  id: UUID;
+  name: string;
+  type: string;
+  path: string;
+  attributes: Record<string, JSONValue>;
+  permissions: RBACPermission[];
+  owner: UUID;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+export interface RBACPolicy {
+  id: UUID;
+  name: string;
+  type: 'access' | 'data' | 'workflow' | 'security';
+  rules: RBACPolicyRule[];
+  conditions: RBACCondition[];
+  priority: number;
+  isActive: boolean;
+  scope: 'global' | 'workspace' | 'group';
+  workspaceId?: UUID;
+  groupId?: string;
+  auditInfo: AuditInfo;
+}
+
+export interface RBACPolicyRule {
+  id: UUID;
+  effect: 'allow' | 'deny';
+  subjects: RBACSubject[];
+  resources: string[];
+  actions: string[];
+  conditions?: RBACCondition[];
+}
+
+export interface RBACSubject {
+  type: 'user' | 'role' | 'group';
+  id: UUID;
+  name: string;
+}
+
+export interface RBACCondition {
+  id: UUID;
+  type: 'time_based' | 'location_based' | 'attribute_based' | 'resource_based';
+  operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than' | 'contains' | 'starts_with' | 'ends_with' | 'in';
+  value: JSONValue;
+  
+  // Time-based conditions
+  timeRange?: {
+    start: string; // HH:MM format
+    end: string;   // HH:MM format
+  };
+  allowedDays?: number[]; // 0-6 (Sunday-Saturday)
+  
+  // Location-based conditions
+  allowedLocations?: string[];
+  blockedLocations?: string[];
+  
+  // Attribute-based conditions
+  attributes?: Array<{
+    name: string;
+    value: JSONValue;
+    operator: string;
+  }>;
+  
+  // Resource-based conditions
+  resourceConstraints?: Array<{
+    type: string;
+    constraint: JSONValue;
+  }>;
+}
+
+export interface RBACAccessRequest {
+  id: UUID;
+  userId: UUID;
+  requestedBy: RBACUser;
+  resource: string;
+  action: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'denied' | 'expired';
+  approvedBy?: UUID;
+  approvalDate?: ISODateString;
+  deniedBy?: UUID;
+  denialReason?: string;
+  expiresAt?: ISODateString;
+  metadata?: Record<string, JSONValue>;
+  auditInfo: AuditInfo;
+}
+
+export interface RBACAuditLog {
+  id: UUID;
+  userId: UUID;
+  action: string;
+  resource: string;
+  resourceId?: UUID;
+  timestamp: ISODateString;
+  ipAddress: string;
+  userAgent: string;
+  status: 'success' | 'failed' | 'denied';
+  details?: Record<string, JSONValue>;
+  sessionId?: UUID;
+}
+
+export interface RBACConfiguration {
+  workspaceId: UUID;
+  policies: RBACPolicy[];
+  settings: {
+    enableAuditLogging: boolean;
+    auditLogRetention: number; // days
+    sessionTimeout: number; // minutes
+    passwordPolicy: PasswordPolicy;
+    mfaRequired: boolean;
+    allowedIpRanges?: string[];
+    customAttributes?: Record<string, JSONValue>;
+  };
+}
+
+export interface PasswordPolicy {
+  minLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireNumbers: boolean;
+  requireSpecialChars: boolean;
+  historyCount: number; // prevent reuse of last N passwords
+  expirationDays?: number;
+}
+
+export interface RBACMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  totalRoles: number;
+  totalPermissions: number;
+  totalGroups: number;
+  totalPolicies: number;
+  activeSessions: number;
+  failedLoginAttempts: number;
+  complianceScore: number;
+  violations: Array<{
+    type: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    count: number;
+    description: string;
+  }>;
+  recommendations: string[];
+  userActivityTrends?: Array<{
+    date: ISODateString;
+    activeUsers: number;
+    loginCount: number;
+    failedAttempts: number;
+  }>;
+  permissionUsageMetrics?: Array<{
+    permission: string;
+    usageCount: number;
+    lastUsed: ISODateString;
+  }>;
+  accessPatterns?: Array<{
+    userId: UUID;
+    pattern: string;
+    frequency: number;
+    riskScore: number;
+  }>;
+}
+
+export interface RBACAnalytics {
+  timeframe: {
+    start: ISODateString;
+    end: ISODateString;
+  };
+  userAnalytics: {
+    totalUsers: number;
+    activeUsers: number;
+    newUsers: number;
+    accessFrequency: Record<UUID, number>;
+    riskUsers: Array<{
+      userId: UUID;
+      riskScore: number;
+      reasons: string[];
+    }>;
+  };
+  permissionAnalytics: {
+    mostUsedPermissions: Array<{
+      permission: string;
+      usageCount: number;
+    }>;
+    unusedPermissions: string[];
+    permissionTrends: Array<{
+      date: ISODateString;
+      usage: number;
+    }>;
+  };
+  complianceAnalytics: {
+    overallScore: number;
+    violations: Array<{
+      type: string;
+      count: number;
+      trend: 'increasing' | 'decreasing' | 'stable';
+    }>;
+    auditFindings: Array<{
+      finding: string;
+      severity: string;
+      recommendation: string;
+    }>;
+  };
+}
+
+export interface RBACCoordination {
+  id: UUID;
+  type: 'cross_group' | 'workspace' | 'policy_sync';
+  participants: string[]; // group or workspace IDs
+  rules: RBACPolicy[];
+  syncConfig: {
+    enabled: boolean;
+    syncInterval: number; // minutes
+    conflictResolution: 'merge' | 'overwrite' | 'manual';
+  };
+  status: 'active' | 'paused' | 'error';
+  lastSync?: ISODateString;
+  auditInfo: AuditInfo;
+}
+
 export interface GroupPermissions {
   read: boolean;
   write: boolean;
