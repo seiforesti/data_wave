@@ -94,3 +94,13 @@ export type {
   CrossGroupIntegrationHookOperations,
   CrossGroupIntegrationHookConfig
 } from './useCrossGroupIntegration';
+
+// Data source management hooks
+export { useDataSources } from './useDataSources';
+export { useConnectionValidator } from './useConnectionValidator';
+
+// Security management hooks
+export { useSecurityManager } from './useSecurityManager';
+
+// Notification management hooks
+export { useNotificationManager } from './useNotificationManager';

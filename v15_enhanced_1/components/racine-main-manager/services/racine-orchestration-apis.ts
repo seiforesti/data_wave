@@ -1197,6 +1197,276 @@ export class RacineOrchestrationAPI {
 export const racineOrchestrationAPI = new RacineOrchestrationAPI();
 
 /**
+ * Data Source API Service
+ * Maps to backend data source service endpoints
+ */
+export const dataSourceApis = {
+  // Core CRUD operations
+  async getAllDataSources(filters?: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources', {
+      method: 'GET',
+      params: filters
+    });
+  },
+
+  async getDataSourceById(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}`, {
+      method: 'GET'
+    });
+  },
+
+  async getDataSourceByName(name: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/by-name/${name}`, {
+      method: 'GET'
+    });
+  },
+
+  async createDataSource(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async updateDataSource(id: string, updates: any) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}`, {
+      method: 'PUT',
+      data: updates
+    });
+  },
+
+  async deleteDataSource(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // Templates and configuration
+  async getDataSourceTemplates() {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/templates', {
+      method: 'GET'
+    });
+  },
+
+  async validateDataSourceConfig(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/validate', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async getConnectionRequirements(type: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/requirements/${type}`, {
+      method: 'GET'
+    });
+  },
+
+  async optimizeConnectionSettings(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/optimize', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  // Performance and analytics
+  async estimatePerformance(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/estimate-performance', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async getDataSourceMetrics(id: string, timeRange?: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/metrics`, {
+      method: 'GET',
+      params: { timeRange }
+    });
+  },
+
+  async getDataSourceHealth(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/health`, {
+      method: 'GET'
+    });
+  },
+
+  async getDataSourceStats(filters?: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/stats', {
+      method: 'GET',
+      params: filters
+    });
+  },
+
+  // Connection testing and validation
+  async testConnection(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/test-connection', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async validateConnection(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/validate-connection', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async validateCredentials(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/validate-credentials', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async checkConnectivity(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/connectivity`, {
+      method: 'GET'
+    });
+  },
+
+  async performDiagnostics(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/diagnostics', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async analyzePerformance(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/analyze-performance', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async testSecurity(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/test-security', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async optimizeConnection(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/optimize-connection', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async runTestSuite(config: any, suite: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/test-suite', {
+      method: 'POST',
+      data: { config, suite }
+    });
+  },
+
+  async getBestPractices(dataSourceType: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/best-practices/${dataSourceType}`, {
+      method: 'GET'
+    });
+  },
+
+  // Real-time monitoring
+  async startRealTimeMonitoring(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/monitoring/start`, {
+      method: 'POST'
+    });
+  },
+
+  async stopRealTimeMonitoring(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/monitoring/stop`, {
+      method: 'POST'
+    });
+  },
+
+  async getRealTimeStatus(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/status`, {
+      method: 'GET'
+    });
+  },
+
+  // Historical data
+  async getConnectionHistory(id?: string, timeRange?: string) {
+    const endpoint = id 
+      ? `/api/v1/data-sources/${id}/connection-history`
+      : '/api/v1/data-sources/connection-history';
+    return racineOrchestrationAPI.makeRequest(endpoint, {
+      method: 'GET',
+      params: { timeRange }
+    });
+  },
+
+  async getPerformanceHistory(id: string, timeRange?: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/performance-history`, {
+      method: 'GET',
+      params: { timeRange }
+    });
+  },
+
+  // Security and compliance
+  async validateSecurityCompliance(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/validate-security', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  async encryptCredentials(credentials: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/encrypt-credentials', {
+      method: 'POST',
+      data: credentials
+    });
+  },
+
+  async testConnectionSecurity(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/test-security`, {
+      method: 'POST'
+    });
+  },
+
+  async refreshDataSourceStatus(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/refresh-status`, {
+      method: 'POST'
+    });
+  },
+
+  // Advanced operations
+  async cloneDataSource(id: string, newName: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/clone`, {
+      method: 'POST',
+      data: { newName }
+    });
+  },
+
+  async exportDataSourceConfig(id: string) {
+    return racineOrchestrationAPI.makeRequest(`/api/v1/data-sources/${id}/export`, {
+      method: 'GET'
+    });
+  },
+
+  async importDataSourceConfig(config: any) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/import', {
+      method: 'POST',
+      data: config
+    });
+  },
+
+  // Troubleshooting
+  async troubleshootConnection(config: any, error?: string) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/troubleshoot', {
+      method: 'POST',
+      data: { config, error }
+    });
+  },
+
+  async getSuggestedFixes(error: string, dataSourceType: string) {
+    return racineOrchestrationAPI.makeRequest('/api/v1/data-sources/suggested-fixes', {
+      method: 'POST',
+      data: { error, dataSourceType }
+    });
+  }
+};
+
+/**
  * Export types for external use
  */
 export type {

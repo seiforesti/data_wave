@@ -3354,6 +3354,424 @@ export interface QualityMetrics {
 }
 
 // =============================================================================
+// SCAN RULE SETS TYPES - Complete Backend Integration
+// =============================================================================
+
+/**
+ * Rule Category Enum - matches backend RuleCategory
+ */
+export enum RuleCategory {
+  PRIVACY = "privacy",
+  SECURITY = "security",
+  COMPLIANCE = "compliance",
+  QUALITY = "quality",
+  CUSTOM = "custom"
+}
+
+export enum RuleComplexity {
+  SIMPLE = "simple",
+  MODERATE = "moderate",
+  COMPLEX = "complex",
+  ADVANCED = "advanced"
+}
+
+export enum RuleStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  DRAFT = "draft",
+  ARCHIVED = "archived"
+}
+
+/**
+ * Core Scan Rule Set Interface - maps to backend ScanRuleSet model
+ */
+export interface ScanRuleSet {
+  id: string;
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  status: RuleStatus;
+  
+  // Rules and execution
+  rules: ScanRule[];
+  executionOrder: string[];
+  parallelExecution: boolean;
+  
+  // Metadata and ownership
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  ownerId: string;
+  workspaceId: string;
+  
+  // Scheduling and automation
+  isScheduled: boolean;
+  scheduleConfig?: RuleSchedule;
+  
+  // Performance and optimization
+  optimizationLevel: 'basic' | 'standard' | 'aggressive';
+  resourceLimits?: ResourceLimits;
+  
+  // Analytics and reporting
+  executionHistory: RuleExecution[];
+  metrics?: RuleMetrics;
+  lastExecutionAt?: ISODateString;
+}
+
+/**
+ * Individual Scan Rule
+ */
+export interface ScanRule {
+  id: string;
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  status: RuleStatus;
+  
+  // Rule definition
+  pattern: string;
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+  
+  // Execution settings
+  priority: number;
+  timeout: number;
+  retryAttempts: number;
+  
+  // Dependencies
+  dependencies: string[];
+  conflictsWith: string[];
+  
+  // Validation and testing
+  testCases: RuleTestCase[];
+  lastValidatedAt?: ISODateString;
+  
+  // Performance
+  averageExecutionTime: number;
+  successRate: number;
+  
+  // Metadata
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+}
+
+export interface RuleCondition {
+  id: string;
+  type: 'field' | 'value' | 'pattern' | 'custom';
+  field?: string;
+  operator: 'equals' | 'contains' | 'matches' | 'greater_than' | 'less_than' | 'in' | 'not_in';
+  value: any;
+  caseSensitive?: boolean;
+  negate?: boolean;
+}
+
+export interface RuleAction {
+  id: string;
+  type: 'flag' | 'mask' | 'encrypt' | 'quarantine' | 'alert' | 'log' | 'custom';
+  parameters: Record<string, any>;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  requiresApproval?: boolean;
+}
+
+export interface RuleTestCase {
+  id: string;
+  name: string;
+  input: any;
+  expectedOutput: any;
+  expectedActions: string[];
+  status: 'pass' | 'fail' | 'pending';
+  lastRun?: ISODateString;
+}
+
+/**
+ * Rule Execution and Results
+ */
+export interface RuleExecution {
+  id: string;
+  ruleSetId: string;
+  ruleId?: string;
+  status: OperationStatus;
+  
+  // Execution details
+  startedAt: ISODateString;
+  completedAt?: ISODateString;
+  duration?: number;
+  
+  // Results
+  recordsProcessed: number;
+  matchesFound: number;
+  actionsExecuted: number;
+  errorsOccurred: number;
+  
+  // Execution context
+  dataSourceId: string;
+  executedBy: string;
+  executionMode: 'manual' | 'scheduled' | 'triggered';
+  
+  // Results and logs
+  results: RuleExecutionResult[];
+  logs: ExecutionLog[];
+  errors: ExecutionError[];
+  
+  // Performance metrics
+  resourceUsage: ResourceUsage;
+  performanceMetrics: PerformanceMetrics;
+}
+
+export interface RuleExecutionResult {
+  ruleId: string;
+  recordId: string;
+  field?: string;
+  matchedPattern?: string;
+  confidence: number;
+  actionsApplied: string[];
+  metadata: Record<string, any>;
+  timestamp: ISODateString;
+}
+
+export interface ResourceLimits {
+  maxMemory: number;
+  maxCpu: number;
+  maxDuration: number;
+  maxRecords: number;
+}
+
+/**
+ * Rule Validation and Testing
+ */
+export interface RuleValidation {
+  ruleId: string;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  suggestions: string[];
+  coverage: number;
+  testResults: RuleTestResult[];
+  validatedAt: ISODateString;
+}
+
+export interface RuleTestResult {
+  testCaseId: string;
+  status: 'pass' | 'fail' | 'error';
+  actualOutput?: any;
+  actualActions?: string[];
+  message?: string;
+  duration: number;
+}
+
+/**
+ * Rule Metrics and Analytics
+ */
+export interface RuleMetrics {
+  executionCount: number;
+  successRate: number;
+  averageExecutionTime: number;
+  totalRecordsProcessed: number;
+  totalMatchesFound: number;
+  errorRate: number;
+  resourceEfficiency: number;
+  accuracyScore: number;
+  timeRange: string;
+  lastUpdated: ISODateString;
+  trends: MetricTrend[];
+}
+
+/**
+ * Rule Scheduling
+ */
+export interface RuleSchedule {
+  id: string;
+  frequency: 'once' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'cron';
+  cronExpression?: string;
+  startDate: ISODateString;
+  endDate?: ISODateString;
+  timezone: string;
+  enabled: boolean;
+  
+  // Execution conditions
+  conditions: ScheduleCondition[];
+  
+  // Notification settings
+  notifyOnSuccess: boolean;
+  notifyOnFailure: boolean;
+  notificationChannels: string[];
+  
+  // History
+  lastExecution?: ISODateString;
+  nextExecution?: ISODateString;
+  executionHistory: ScheduleExecution[];
+}
+
+export interface ScheduleCondition {
+  type: 'data_available' | 'resource_available' | 'time_window' | 'custom';
+  parameters: Record<string, any>;
+}
+
+export interface ScheduleExecution {
+  id: string;
+  scheduledAt: ISODateString;
+  executedAt?: ISODateString;
+  status: OperationStatus;
+  duration?: number;
+  result?: string;
+  error?: string;
+}
+
+/**
+ * Rule History and Versioning
+ */
+export interface RuleHistory {
+  id: string;
+  ruleId: string;
+  version: string;
+  changeType: 'created' | 'updated' | 'deleted' | 'deployed' | 'rollback';
+  changes: RuleChange[];
+  changedBy: string;
+  changedAt: ISODateString;
+  reason?: string;
+  approvedBy?: string;
+  approvedAt?: ISODateString;
+}
+
+export interface RuleChange {
+  field: string;
+  oldValue: any;
+  newValue: any;
+  operation: 'add' | 'update' | 'remove';
+}
+
+/**
+ * Rule Optimization
+ */
+export interface RuleOptimization {
+  ruleId: string;
+  currentPerformance: PerformanceMetrics;
+  optimizedPattern?: string;
+  optimizedConditions?: RuleCondition[];
+  estimatedImprovement: number;
+  recommendations: OptimizationRecommendation[];
+  implementationComplexity: 'low' | 'medium' | 'high';
+  riskLevel: 'low' | 'medium' | 'high';
+  testResults?: RuleTestResult[];
+}
+
+/**
+ * Rule Templates
+ */
+export interface RuleTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: RuleCategory;
+  complexity: RuleComplexity;
+  
+  // Template definition
+  patternTemplate: string;
+  conditionTemplates: RuleConditionTemplate[];
+  actionTemplates: RuleActionTemplate[];
+  
+  // Usage and popularity
+  usageCount: number;
+  rating: number;
+  
+  // Metadata
+  tags: string[];
+  version: string;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: string;
+  
+  // Customization options
+  customizableFields: string[];
+  requiredParameters: string[];
+  optionalParameters: string[];
+}
+
+export interface RuleConditionTemplate {
+  type: 'field' | 'value' | 'pattern' | 'custom';
+  fieldTemplate?: string;
+  operatorOptions: string[];
+  valueTemplate?: string;
+  description: string;
+  required: boolean;
+}
+
+export interface RuleActionTemplate {
+  type: 'flag' | 'mask' | 'encrypt' | 'quarantine' | 'alert' | 'log' | 'custom';
+  parameterTemplates: Record<string, ParameterTemplate>;
+  severityOptions: string[];
+  description: string;
+  required: boolean;
+}
+
+export interface ParameterTemplate {
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  defaultValue?: any;
+  options?: any[];
+  validation?: string;
+  description: string;
+  required: boolean;
+}
+
+/**
+ * Rule CRUD Request/Response Types
+ */
+export interface ScanRuleSetCreateRequest {
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  complexity?: RuleComplexity;
+  rules?: Partial<ScanRule>[];
+  tags?: string[];
+  workspaceId?: string;
+  optimizationLevel?: 'basic' | 'standard' | 'aggressive';
+  parallelExecution?: boolean;
+}
+
+export interface ScanRuleSetUpdateRequest {
+  name?: string;
+  description?: string;
+  category?: RuleCategory;
+  complexity?: RuleComplexity;
+  status?: RuleStatus;
+  rules?: Partial<ScanRule>[];
+  tags?: string[];
+  optimizationLevel?: 'basic' | 'standard' | 'aggressive';
+  parallelExecution?: boolean;
+}
+
+export interface ScanRuleSetFilters {
+  category?: RuleCategory | RuleCategory[];
+  complexity?: RuleComplexity | RuleComplexity[];
+  status?: RuleStatus | RuleStatus[];
+  workspaceId?: string;
+  tags?: string[];
+  search?: string;
+  owner?: string;
+  createdAfter?: ISODateString;
+  createdBefore?: ISODateString;
+}
+
+export interface ScanRuleSetStats {
+  total: number;
+  active: number;
+  inactive: number;
+  draft: number;
+  byCategory: Record<RuleCategory, number>;
+  byComplexity: Record<RuleComplexity, number>;
+  averageExecutionTime: number;
+  successRate: number;
+  lastUpdated: ISODateString;
+}
+
+// =============================================================================
 // EXPORT ALL TYPES
 // =============================================================================
 
@@ -3404,7 +3822,41 @@ export type {
   
   // Common utility types
   RetryPolicy, ErrorHandlingPolicy, MonitoringConfiguration, ResourceConfiguration,
-  ResourceUsage, LogLevel, TriggerType, ExecutionLog, ExecutionError
+  ResourceUsage, LogLevel, TriggerType, ExecutionLog, ExecutionError,
+  
+  // Data Source Management Types
+  DataSource, DataSourceType as DataSourceTypeEnum, DataSourceLocation, DataSourceStatus,
+  Environment, Criticality, DataClassification, ScanFrequency, CloudProvider,
+  ConnectionConfig, ValidationResult, SecurityPolicy, DataSourceTemplate,
+  EncryptionConfig, AuthenticationMethod, ConnectionPool, DataSourceMetrics,
+  DataSourceHealth, PerformanceMetrics, ConnectionTestResult, ConnectionDiagnostics,
+  TestConfiguration, ConnectionHealth, NetworkLatency, TestSuite, DiagnosticLog,
+  ConnectionOptimization, SecurityValidation, ConnectionReport, DataSourceCreateRequest,
+  DataSourceUpdateRequest, DataSourceFilters, DataSourceStats,
+  
+  // Scan Rule Sets Types
+  ScanRuleSet, ScanRule, RuleCategory, RuleComplexity, RuleTemplate, RuleExecution,
+  RuleValidation, RuleMetrics, RuleSchedule, RuleHistory, RuleOptimization,
+  
+  // Classifications Types  
+  Classification, ClassificationRule, ClassificationLevel, ClassificationTemplate,
+  ClassificationResult, ClassificationMetrics, ClassificationHistory, ClassificationConfig,
+  
+  // Compliance Rule Types
+  ComplianceRule, CompliancePolicy, ComplianceStatus, ComplianceReport, ComplianceAudit,
+  ComplianceMetrics, ComplianceViolation, ComplianceRemediation, ComplianceHistory,
+  
+  // Advanced Catalog Types
+  CatalogItem, CatalogMetadata, LineageGraph, DataAsset, AssetRelationship, AssetMetrics,
+  CatalogSearch, AssetClassification, AssetGovernance, CatalogConfiguration,
+  
+  // Scan Logic Types
+  ScanLogic, ScanExecution, ScanConfiguration, ScanSchedule, ScanResult, ScanMetrics,
+  ScanHistory, ScanOptimization, ScanDiagnostics, ScanTemplate,
+  
+  // RBAC System Types
+  Role, Permission, User, UserRole, RolePermission, AccessControl, SecurityGroup,
+  PermissionSet, AuthenticationProvider, SessionManagement, AuditLog
 };
 
 // Export enums separately
