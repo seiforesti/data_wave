@@ -25,9 +25,11 @@ import {
   Brain, Sparkles, Target, Activity, Settings, Star
 } from 'lucide-react';
 
-import { useRBACSystem } from '../../../hooks/useRBACSystem';
+import { useRBAC } from '../../../hooks/useRBAC';
 import { useWorkspaceManagement } from '../../../hooks/useWorkspaceManagement';
 import { useUserManagement } from '../../../hooks/useUserManagement';
+import { useAIAssistant } from '../../../hooks/useAIAssistant';
+import { useCrossGroupIntegration } from '../../../hooks/useCrossGroupIntegration';
 import { useActivityTracking } from '../../../hooks/useActivityTracking';
 
 interface QuickUserCreateProps {
@@ -68,6 +70,22 @@ interface UserConfiguration {
     theme: string;
     notifications: string[];
   };
+  compliance: {
+    dataProcessingConsent: boolean;
+    privacyPolicyAccepted: boolean;
+    termsOfServiceAccepted: boolean;
+    gdprCompliant: boolean;
+    retentionPeriod: string;
+    backgroundCheckRequired: boolean;
+    complianceTraining: string[];
+  };
+  integration: {
+    ldapSync: boolean;
+    ssoProvider: string;
+    externalId: string;
+    syncAttributes: string[];
+    identityProvider: string;
+  };
 }
 
 const QuickUserCreate: React.FC<QuickUserCreateProps> = ({
@@ -106,15 +124,33 @@ const QuickUserCreate: React.FC<QuickUserCreateProps> = ({
       theme: 'light',
       notifications: ['email'],
     },
+    compliance: {
+      dataProcessingConsent: false,
+      privacyPolicyAccepted: false,
+      termsOfServiceAccepted: false,
+      gdprCompliant: true,
+      retentionPeriod: '7years',
+      backgroundCheckRequired: false,
+      complianceTraining: [],
+    },
+    integration: {
+      ldapSync: false,
+      ssoProvider: '',
+      externalId: '',
+      syncAttributes: [],
+      identityProvider: 'local',
+    },
   });
   const [isCreating, setIsCreating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [validation, setValidation] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
-  const { createUser, getRoles, getPermissions, loading } = useRBACSystem();
+  const { createUser, getRoles, getPermissions, loading } = useRBAC();
   const { currentWorkspace, workspaces, workspaceUsers } = useWorkspaceManagement();
   const { currentUser } = useUserManagement();
+  const { analyzeUserCreation, getUserRecommendations } = useAIAssistant();
+  const { getCrossGroupRoles, syncWithIdentityProvider } = useCrossGroupIntegration();
   const { trackActivity } = useActivityTracking();
 
   const containerVariants = {
@@ -485,6 +521,176 @@ const QuickUserCreate: React.FC<QuickUserCreateProps> = ({
     </motion.div>
   );
 
+  const renderComplianceTab = () => (
+    <motion.div variants={itemVariants} className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Data Privacy & Compliance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="data-consent">Data Processing Consent</Label>
+              <p className="text-xs text-gray-500">User consents to data processing</p>
+            </div>
+            <Switch
+              id="data-consent"
+              checked={userConfig.compliance.dataProcessingConsent}
+              onCheckedChange={(checked) => handleConfigChange('compliance', 'dataProcessingConsent', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="privacy-policy">Privacy Policy Accepted</Label>
+              <p className="text-xs text-gray-500">User has accepted privacy policy</p>
+            </div>
+            <Switch
+              id="privacy-policy"
+              checked={userConfig.compliance.privacyPolicyAccepted}
+              onCheckedChange={(checked) => handleConfigChange('compliance', 'privacyPolicyAccepted', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="terms-service">Terms of Service Accepted</Label>
+              <p className="text-xs text-gray-500">User has accepted terms of service</p>
+            </div>
+            <Switch
+              id="terms-service"
+              checked={userConfig.compliance.termsOfServiceAccepted}
+              onCheckedChange={(checked) => handleConfigChange('compliance', 'termsOfServiceAccepted', checked)}
+            />
+          </div>
+
+          <div>
+            <Label>Data Retention Period</Label>
+            <Select
+              value={userConfig.compliance.retentionPeriod}
+              onValueChange={(value) => handleConfigChange('compliance', 'retentionPeriod', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1year">1 Year</SelectItem>
+                <SelectItem value="3years">3 Years</SelectItem>
+                <SelectItem value="5years">5 Years</SelectItem>
+                <SelectItem value="7years">7 Years</SelectItem>
+                <SelectItem value="indefinite">Indefinite</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="background-check">Background Check Required</Label>
+              <p className="text-xs text-gray-500">Requires background verification</p>
+            </div>
+            <Switch
+              id="background-check"
+              checked={userConfig.compliance.backgroundCheckRequired}
+              onCheckedChange={(checked) => handleConfigChange('compliance', 'backgroundCheckRequired', checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  const renderIntegrationTab = () => (
+    <motion.div variants={itemVariants} className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Identity Provider Integration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Identity Provider</Label>
+            <Select
+              value={userConfig.integration.identityProvider}
+              onValueChange={(value) => handleConfigChange('integration', 'identityProvider', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="local">Local Database</SelectItem>
+                <SelectItem value="ldap">LDAP/Active Directory</SelectItem>
+                <SelectItem value="saml">SAML SSO</SelectItem>
+                <SelectItem value="oauth">OAuth 2.0</SelectItem>
+                <SelectItem value="azure">Azure AD</SelectItem>
+                <SelectItem value="okta">Okta</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="ldap-sync">Enable LDAP Sync</Label>
+              <p className="text-xs text-gray-500">Sync user data with LDAP</p>
+            </div>
+            <Switch
+              id="ldap-sync"
+              checked={userConfig.integration.ldapSync}
+              onCheckedChange={(checked) => handleConfigChange('integration', 'ldapSync', checked)}
+            />
+          </div>
+
+          <div>
+            <Label>SSO Provider</Label>
+            <Input
+              value={userConfig.integration.ssoProvider}
+              onChange={(e) => handleConfigChange('integration', 'ssoProvider', e.target.value)}
+              placeholder="e.g., company.okta.com"
+            />
+          </div>
+
+          <div>
+            <Label>External User ID</Label>
+            <Input
+              value={userConfig.integration.externalId}
+              onChange={(e) => handleConfigChange('integration', 'externalId', e.target.value)}
+              placeholder="External system user identifier"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Sync Configuration</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Sync Attributes</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {['firstName', 'lastName', 'email', 'department', 'title', 'manager'].map((attr) => (
+                <div key={attr} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`sync-${attr}`}
+                    checked={userConfig.integration.syncAttributes.includes(attr)}
+                    onCheckedChange={(checked) => {
+                      const current = userConfig.integration.syncAttributes;
+                      const updated = checked 
+                        ? [...current, attr]
+                        : current.filter(a => a !== attr);
+                      handleConfigChange('integration', 'syncAttributes', updated);
+                    }}
+                  />
+                  <Label htmlFor={`sync-${attr}`} className="text-xs capitalize">
+                    {attr.replace(/([A-Z])/g, ' $1').trim()}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
   if (!isVisible) return null;
 
   return (
@@ -514,15 +720,19 @@ const QuickUserCreate: React.FC<QuickUserCreateProps> = ({
 
         <div className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
               <TabsTrigger value="access" className="text-xs">Access</TabsTrigger>
               <TabsTrigger value="security" className="text-xs">Security</TabsTrigger>
+              <TabsTrigger value="compliance" className="text-xs">Compliance</TabsTrigger>
+              <TabsTrigger value="integration" className="text-xs">Integration</TabsTrigger>
             </TabsList>
 
             <TabsContent value="personal">{renderPersonalTab()}</TabsContent>
             <TabsContent value="access">{renderAccessTab()}</TabsContent>
             <TabsContent value="security">{renderSecurityTab()}</TabsContent>
+            <TabsContent value="compliance">{renderComplianceTab()}</TabsContent>
+            <TabsContent value="integration">{renderIntegrationTab()}</TabsContent>
           </Tabs>
 
           <div className="flex space-x-2 mt-6">
