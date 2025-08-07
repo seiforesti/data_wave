@@ -4838,18 +4838,1111 @@ export type {
   ComplianceRule, CompliancePolicy, ComplianceStatus, ComplianceReport, ComplianceAudit,
   ComplianceMetrics, ComplianceViolation, ComplianceRemediation, ComplianceHistory,
   
-  // Advanced Catalog Types
-  CatalogItem, CatalogMetadata, LineageGraph, DataAsset, AssetRelationship, AssetMetrics,
-  CatalogSearch, AssetClassification, AssetGovernance, CatalogConfiguration,
+  // Advanced Catalog Types - Enhanced
+  CatalogAsset, CatalogAssetType, AssetStatus, CatalogMetadata, LineageGraph, DataLineage,
+  AssetRelationship, AssetMetrics, CatalogSearch, AssetClassification, AssetGovernance,
+  CatalogConfiguration, AssetProfile, DataQuality, SchemaEvolution, AssetUsage,
+  CatalogTags, BusinessGlossary, DataDictionary, AssetSteward, CatalogCreateRequest,
+  CatalogUpdateRequest, CatalogFilters, CatalogStats, AssetDiscovery, SemanticSearch,
   
-  // Scan Logic Types
-  ScanLogic, ScanExecution, ScanConfiguration, ScanSchedule, ScanResult, ScanMetrics,
-  ScanHistory, ScanOptimization, ScanDiagnostics, ScanTemplate,
+  // Scan Logic Types - Enhanced
+  ScanEngine, ScanEngineType, ScanEngineStatus, ScanLogic, ScanExecution, ScanConfiguration,
+  ScanSchedule, ScanResult, ScanMetrics, ScanHistory, ScanOptimization, ScanDiagnostics,
+  ScanTemplate, ScanPattern, ScanPolicy, ScanCreateRequest, ScanUpdateRequest, ScanFilters,
+  ScanStats, ScanPerformance, ScanAlert, ScanRecommendation,
   
   // RBAC System Types
   Role, Permission, User, UserRole, RolePermission, AccessControl, SecurityGroup,
   PermissionSet, AuthenticationProvider, SessionManagement, AuditLog
 };
+
+// ============================================================================
+// ADVANCED CATALOG TYPES
+// ============================================================================
+
+export enum CatalogAssetType {
+  TABLE = 'table',
+  VIEW = 'view',
+  SCHEMA = 'schema',
+  DATABASE = 'database',
+  COLUMN = 'column',
+  FILE = 'file',
+  DATASET = 'dataset',
+  MODEL = 'model',
+  REPORT = 'report',
+  DASHBOARD = 'dashboard',
+  API = 'api',
+  STREAM = 'stream',
+  TOPIC = 'topic',
+  QUEUE = 'queue'
+}
+
+export enum AssetStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  DEPRECATED = 'deprecated',
+  DRAFT = 'draft',
+  ARCHIVED = 'archived',
+  PENDING = 'pending'
+}
+
+export interface CatalogAsset {
+  id?: string
+  name: string
+  type: CatalogAssetType
+  status: AssetStatus
+  description?: string
+  owner?: string
+  steward?: AssetSteward
+  tags?: CatalogTags[]
+  metadata?: CatalogMetadata
+  schema?: any
+  location?: string
+  source?: string
+  createdAt?: string
+  updatedAt?: string
+  lastAccessed?: string
+  version?: string
+  lineage?: DataLineage
+  quality?: DataQuality
+  usage?: AssetUsage
+  classification?: AssetClassification
+  governance?: AssetGovernance
+  profile?: AssetProfile
+  relationships?: AssetRelationship[]
+  metrics?: AssetMetrics
+  businessTerms?: BusinessGlossary[]
+  dataElements?: DataDictionary[]
+}
+
+export interface AssetSteward {
+  userId: string
+  name: string
+  email?: string
+  role: string
+  responsibilities?: string[]
+  assignedAt: string
+}
+
+export interface CatalogTags {
+  key: string
+  value: string
+  category?: string
+  source?: 'user' | 'system' | 'imported'
+  confidence?: number
+}
+
+export interface DataLineage {
+  upstream?: LineageNode[]
+  downstream?: LineageNode[]
+  graph?: LineageGraph
+  impact?: ImpactAnalysis
+  dependencies?: AssetDependency[]
+}
+
+export interface LineageNode {
+  assetId: string
+  assetName: string
+  assetType: CatalogAssetType
+  relationship: 'parent' | 'child' | 'sibling' | 'reference'
+  transformationType?: string
+  confidence?: number
+}
+
+export interface LineageGraph {
+  nodes: LineageGraphNode[]
+  edges: LineageGraphEdge[]
+  metadata?: any
+}
+
+export interface LineageGraphNode {
+  id: string
+  label: string
+  type: CatalogAssetType
+  properties?: Record<string, any>
+}
+
+export interface LineageGraphEdge {
+  source: string
+  target: string
+  type: string
+  properties?: Record<string, any>
+}
+
+export interface ImpactAnalysis {
+  upstreamImpact: number
+  downstreamImpact: number
+  criticalPath: string[]
+  riskScore: number
+  affectedAssets: string[]
+}
+
+export interface AssetDependency {
+  dependentAssetId: string
+  dependencyType: 'hard' | 'soft' | 'reference'
+  criticality: 'high' | 'medium' | 'low'
+}
+
+export interface DataQuality {
+  overallScore?: number
+  dimensions?: QualityDimension[]
+  issues?: QualityIssue[]
+  rules?: QualityRule[]
+  history?: QualityHistory[]
+}
+
+export interface QualityDimension {
+  name: string
+  score: number
+  weight: number
+  description?: string
+  measurements?: QualityMeasurement[]
+}
+
+export interface QualityMeasurement {
+  metric: string
+  value: number
+  threshold: number
+  status: 'pass' | 'fail' | 'warning'
+}
+
+export interface QualityIssue {
+  id: string
+  type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  affectedRows?: number
+  affectedColumns?: string[]
+  detectedAt: string
+  resolved?: boolean
+  resolvedAt?: string
+}
+
+export interface QualityRule {
+  id: string
+  name: string
+  description?: string
+  condition: string
+  threshold: number
+  enabled: boolean
+  lastRun?: string
+  status?: 'pass' | 'fail' | 'error'
+}
+
+export interface QualityHistory {
+  timestamp: string
+  score: number
+  dimensions: Record<string, number>
+  issues: number
+}
+
+export interface AssetUsage {
+  totalQueries?: number
+  uniqueUsers?: number
+  avgQueriesPerDay?: number
+  peakUsageTime?: string
+  usageTrend?: 'increasing' | 'decreasing' | 'stable'
+  topConsumers?: AssetConsumer[]
+  usageByTime?: TimeSeriesData[]
+}
+
+export interface AssetConsumer {
+  userId: string
+  userName?: string
+  queryCount: number
+  lastAccess: string
+  accessType: string[]
+}
+
+export interface TimeSeriesData {
+  timestamp: string
+  value: number
+  metadata?: Record<string, any>
+}
+
+export interface AssetProfile {
+  summary?: string
+  sampleData?: any[]
+  columnProfiles?: ColumnProfile[]
+  distributionAnalysis?: DistributionAnalysis
+  anomalies?: DataAnomaly[]
+  recommendations?: string[]
+}
+
+export interface ColumnProfile {
+  name: string
+  dataType: string
+  nullable: boolean
+  unique: boolean
+  distinctCount?: number
+  nullCount?: number
+  minValue?: any
+  maxValue?: any
+  meanValue?: any
+  medianValue?: any
+  mode?: any
+  standardDeviation?: number
+  patterns?: string[]
+  examples?: any[]
+}
+
+export interface DistributionAnalysis {
+  histogram?: HistogramBin[]
+  percentiles?: Record<string, number>
+  outliers?: any[]
+  trends?: TrendAnalysis[]
+}
+
+export interface HistogramBin {
+  range: [number, number]
+  count: number
+  percentage: number
+}
+
+export interface TrendAnalysis {
+  metric: string
+  trend: 'increasing' | 'decreasing' | 'stable'
+  confidence: number
+  timeRange: string
+}
+
+export interface DataAnomaly {
+  type: 'outlier' | 'missing' | 'duplicate' | 'format' | 'range'
+  description: string
+  severity: 'low' | 'medium' | 'high'
+  count: number
+  examples?: any[]
+  suggestions?: string[]
+}
+
+export interface BusinessGlossary {
+  termId: string
+  term: string
+  definition: string
+  category?: string
+  synonyms?: string[]
+  relatedTerms?: string[]
+  owner?: string
+  status: 'draft' | 'approved' | 'deprecated'
+}
+
+export interface DataDictionary {
+  elementId: string
+  name: string
+  dataType: string
+  description?: string
+  businessRules?: string[]
+  validValues?: string[]
+  format?: string
+  constraints?: string[]
+}
+
+export interface CatalogSearch {
+  query: string
+  filters?: CatalogFilters
+  facets?: SearchFacet[]
+  sort?: SearchSort
+  pagination?: SearchPagination
+  suggestions?: string[]
+  results?: SearchResult[]
+}
+
+export interface SearchFacet {
+  field: string
+  values: FacetValue[]
+}
+
+export interface FacetValue {
+  value: string
+  count: number
+  selected?: boolean
+}
+
+export interface SearchSort {
+  field: string
+  order: 'asc' | 'desc'
+}
+
+export interface SearchPagination {
+  page: number
+  size: number
+  total?: number
+}
+
+export interface SearchResult {
+  asset: CatalogAsset
+  score: number
+  highlights?: Record<string, string[]>
+  explanation?: string
+}
+
+export interface AssetDiscovery {
+  discoveredAssets?: DiscoveredAsset[]
+  patterns?: DiscoveryPattern[]
+  recommendations?: DiscoveryRecommendation[]
+  statistics?: DiscoveryStatistics
+}
+
+export interface DiscoveredAsset {
+  source: string
+  path: string
+  type: CatalogAssetType
+  confidence: number
+  metadata?: any
+  suggestedTags?: string[]
+  similarAssets?: string[]
+}
+
+export interface DiscoveryPattern {
+  pattern: string
+  frequency: number
+  examples: string[]
+  confidence: number
+}
+
+export interface DiscoveryRecommendation {
+  type: 'tag' | 'classification' | 'owner' | 'description'
+  suggestion: string
+  confidence: number
+  reasoning: string
+}
+
+export interface DiscoveryStatistics {
+  totalAssets: number
+  newAssets: number
+  modifiedAssets: number
+  missingMetadata: number
+  qualityIssues: number
+}
+
+export interface SemanticSearch {
+  semanticQuery?: string
+  conceptualMatches?: ConceptualMatch[]
+  contextualResults?: ContextualResult[]
+  knowledgeGraph?: KnowledgeGraph
+}
+
+export interface ConceptualMatch {
+  concept: string
+  similarity: number
+  relatedConcepts: string[]
+  assets: string[]
+}
+
+export interface ContextualResult {
+  assetId: string
+  contextScore: number
+  relevanceFactors: string[]
+  semanticSimilarity: number
+}
+
+export interface KnowledgeGraph {
+  entities: KnowledgeEntity[]
+  relationships: KnowledgeRelationship[]
+  concepts: KnowledgeConcept[]
+}
+
+export interface KnowledgeEntity {
+  id: string
+  type: string
+  label: string
+  properties: Record<string, any>
+}
+
+export interface KnowledgeRelationship {
+  source: string
+  target: string
+  type: string
+  weight: number
+}
+
+export interface KnowledgeConcept {
+  id: string
+  name: string
+  description?: string
+  synonyms: string[]
+  category: string
+}
+
+export interface CatalogConfiguration {
+  indexing?: IndexingConfig
+  discovery?: DiscoveryConfig
+  quality?: QualityConfig
+  governance?: GovernanceConfig
+  search?: SearchConfig
+  lineage?: LineageConfig
+}
+
+export interface IndexingConfig {
+  enabled: boolean
+  frequency: string
+  batchSize: number
+  parallelism: number
+  includedSources: string[]
+  excludedPatterns: string[]
+}
+
+export interface DiscoveryConfig {
+  autoDiscovery: boolean
+  discoveryRules: DiscoveryRule[]
+  confidenceThreshold: number
+  notificationSettings: any
+}
+
+export interface DiscoveryRule {
+  id: string
+  name: string
+  pattern: string
+  action: string
+  enabled: boolean
+}
+
+export interface QualityConfig {
+  enabledRules: string[]
+  thresholds: Record<string, number>
+  alerting: AlertingConfig
+  reporting: ReportingConfig
+}
+
+export interface AlertingConfig {
+  enabled: boolean
+  channels: string[]
+  severity: string[]
+  frequency: string
+}
+
+export interface ReportingConfig {
+  enabled: boolean
+  schedule: string
+  recipients: string[]
+  format: string[]
+}
+
+export interface GovernanceConfig {
+  policies: string[]
+  approvalWorkflows: WorkflowConfig[]
+  certificationLevels: string[]
+  lifecycleStages: string[]
+}
+
+export interface WorkflowConfig {
+  id: string
+  name: string
+  steps: WorkflowStep[]
+  triggers: string[]
+}
+
+export interface SearchConfig {
+  indexFields: string[]
+  facetFields: string[]
+  boostFields: Record<string, number>
+  semanticSearch: boolean
+}
+
+export interface LineageConfig {
+  autoDetection: boolean
+  trackingLevel: 'column' | 'table' | 'schema'
+  retentionDays: number
+  computeImpact: boolean
+}
+
+// Request/Response types
+export interface CatalogCreateRequest {
+  name: string
+  type: CatalogAssetType
+  description?: string
+  metadata?: CatalogMetadata
+  tags?: CatalogTags[]
+  owner?: string
+  source?: string
+  location?: string
+  schema?: any
+}
+
+export interface CatalogUpdateRequest {
+  name?: string
+  description?: string
+  metadata?: Partial<CatalogMetadata>
+  tags?: CatalogTags[]
+  owner?: string
+  status?: AssetStatus
+  governance?: Partial<AssetGovernance>
+}
+
+export interface CatalogFilters {
+  types?: CatalogAssetType[]
+  statuses?: AssetStatus[]
+  owners?: string[]
+  tags?: string[]
+  sources?: string[]
+  dateRange?: DateRange
+  qualityScore?: NumberRange
+  usageLevel?: 'high' | 'medium' | 'low'
+}
+
+export interface NumberRange {
+  min?: number
+  max?: number
+}
+
+export interface DateRange {
+  start: Date
+  end: Date
+}
+
+export interface CatalogStats {
+  totalAssets?: number
+  assetsByType?: Record<CatalogAssetType, number>
+  assetsByStatus?: Record<AssetStatus, number>
+  qualityDistribution?: QualityDistribution
+  usageStats?: UsageStatistics
+  governanceStats?: GovernanceStatistics
+  recentActivity?: ActivitySummary[]
+}
+
+export interface QualityDistribution {
+  excellent: number  // 90-100
+  good: number       // 70-89
+  fair: number       // 50-69
+  poor: number       // 0-49
+}
+
+export interface UsageStatistics {
+  totalQueries: number
+  activeUsers: number
+  topAssets: AssetUsageSummary[]
+  usageTrends: TrendData[]
+}
+
+export interface AssetUsageSummary {
+  assetId: string
+  assetName: string
+  queryCount: number
+  userCount: number
+}
+
+export interface TrendData {
+  period: string
+  value: number
+  change: number
+}
+
+export interface GovernanceStatistics {
+  governedAssets: number
+  ungoverned: number
+  pendingApproval: number
+  complianceRate: number
+}
+
+export interface ActivitySummary {
+  type: string
+  count: number
+  timestamp: string
+  assets: string[]
+}
+
+// ============================================================================
+// SCAN LOGIC TYPES
+// ============================================================================
+
+export enum ScanEngineType {
+  PATTERN_BASED = 'pattern_based',
+  ML_BASED = 'ml_based',
+  RULE_BASED = 'rule_based',
+  HYBRID = 'hybrid',
+  CUSTOM = 'custom'
+}
+
+export enum ScanEngineStatus {
+  IDLE = 'idle',
+  RUNNING = 'running',
+  PAUSED = 'paused',
+  STOPPED = 'stopped',
+  ERROR = 'error',
+  MAINTENANCE = 'maintenance'
+}
+
+export interface ScanEngine {
+  id?: string
+  name: string
+  type: ScanEngineType
+  status: ScanEngineStatus
+  version?: string
+  description?: string
+  capabilities?: string[]
+  configuration?: ScanConfiguration
+  performance?: ScanPerformance
+  createdAt?: string
+  updatedAt?: string
+  lastUsed?: string
+}
+
+export interface ScanLogic {
+  id?: string
+  name: string
+  description?: string
+  engine: string
+  engineType: ScanEngineType
+  patterns?: ScanPattern[]
+  policies?: ScanPolicy[]
+  template?: ScanTemplate
+  configuration?: ScanConfiguration
+  schedule?: ScanSchedule
+  metrics?: ScanMetrics
+  history?: ScanHistory[]
+  optimization?: ScanOptimization
+  diagnostics?: ScanDiagnostics
+  status?: ScanEngineStatus
+  createdAt?: string
+  updatedAt?: string
+  createdBy?: string
+  tags?: string[]
+}
+
+export interface ScanPattern {
+  id?: string
+  name: string
+  type: 'regex' | 'sql' | 'semantic' | 'ml' | 'custom'
+  pattern: string
+  description?: string
+  confidence?: number
+  sensitivity?: 'low' | 'medium' | 'high'
+  category?: string
+  examples?: string[]
+  exclusions?: string[]
+  metadata?: Record<string, any>
+}
+
+export interface ScanPolicy {
+  id?: string
+  name: string
+  description?: string
+  rules: ScanRule[]
+  scope?: ScanScope
+  priority?: number
+  enforcement?: 'strict' | 'advisory' | 'disabled'
+  notifications?: NotificationConfig[]
+  exceptions?: PolicyException[]
+}
+
+export interface ScanRule {
+  id?: string
+  name: string
+  condition: string
+  action: 'alert' | 'block' | 'log' | 'quarantine'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  enabled: boolean
+  parameters?: Record<string, any>
+}
+
+export interface ScanScope {
+  dataSources?: string[]
+  assetTypes?: string[]
+  locations?: string[]
+  excludePatterns?: string[]
+  includePatterns?: string[]
+  maxDepth?: number
+}
+
+export interface NotificationConfig {
+  type: 'email' | 'webhook' | 'slack' | 'teams'
+  recipients: string[]
+  template?: string
+  conditions?: string[]
+}
+
+export interface PolicyException {
+  id?: string
+  pattern: string
+  reason: string
+  approver: string
+  validUntil?: string
+  metadata?: Record<string, any>
+}
+
+export interface ScanTemplate {
+  id?: string
+  name: string
+  description?: string
+  category?: string
+  patterns: ScanPattern[]
+  policies: ScanPolicy[]
+  configuration: ScanConfiguration
+  metadata?: TemplateMetadata
+}
+
+export interface TemplateMetadata {
+  author?: string
+  version?: string
+  tags?: string[]
+  compliance?: string[]
+  industry?: string[]
+  useCase?: string
+}
+
+export interface ScanConfiguration {
+  concurrency?: number
+  timeout?: number
+  retries?: number
+  batchSize?: number
+  samplingRate?: number
+  enableCaching?: boolean
+  cacheExpiry?: number
+  enableProfiling?: boolean
+  enableLineage?: boolean
+  outputFormat?: 'json' | 'csv' | 'xml'
+  compression?: boolean
+  encryption?: boolean
+  customSettings?: Record<string, any>
+}
+
+export interface ScanExecution {
+  id?: string
+  scanLogicId: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  startTime?: string
+  endTime?: string
+  duration?: number
+  progress?: number
+  processedItems?: number
+  totalItems?: number
+  results?: ScanResult[]
+  errors?: ScanError[]
+  warnings?: ScanWarning[]
+  metrics?: ExecutionMetrics
+  logs?: string[]
+}
+
+export interface ScanResult {
+  id?: string
+  executionId: string
+  assetId?: string
+  assetName?: string
+  assetType?: string
+  location?: string
+  findings: Finding[]
+  score?: number
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical'
+  recommendations?: ScanRecommendation[]
+  metadata?: Record<string, any>
+  timestamp: string
+}
+
+export interface Finding {
+  id?: string
+  type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  pattern?: string
+  confidence: number
+  location?: FindingLocation
+  evidence?: Evidence[]
+  remediation?: RemediationAction[]
+}
+
+export interface FindingLocation {
+  source?: string
+  line?: number
+  column?: number
+  offset?: number
+  context?: string
+}
+
+export interface Evidence {
+  type: 'sample' | 'pattern' | 'metadata' | 'statistical'
+  value: any
+  description?: string
+  confidence?: number
+}
+
+export interface RemediationAction {
+  type: 'mask' | 'encrypt' | 'delete' | 'quarantine' | 'classify'
+  description: string
+  automated?: boolean
+  priority?: number
+  estimatedEffort?: string
+}
+
+export interface ScanError {
+  code: string
+  message: string
+  details?: string
+  timestamp: string
+  recoverable?: boolean
+}
+
+export interface ScanWarning {
+  code: string
+  message: string
+  details?: string
+  timestamp: string
+}
+
+export interface ExecutionMetrics {
+  throughput?: number
+  accuracy?: number
+  precision?: number
+  recall?: number
+  falsePositives?: number
+  falseNegatives?: number
+  processingTime?: number
+  memoryUsage?: number
+  cpuUsage?: number
+}
+
+export interface ScanMetrics {
+  totalExecutions?: number
+  successfulExecutions?: number
+  failedExecutions?: number
+  averageDuration?: number
+  averageAccuracy?: number
+  totalFindings?: number
+  findingsByType?: Record<string, number>
+  findingsBySeverity?: Record<string, number>
+  trends?: MetricTrend[]
+}
+
+export interface MetricTrend {
+  metric: string
+  period: string
+  value: number
+  change: number
+  trend: 'increasing' | 'decreasing' | 'stable'
+}
+
+export interface ScanHistory {
+  executionId: string
+  timestamp: string
+  status: string
+  duration: number
+  findings: number
+  errors: number
+  metrics?: ExecutionMetrics
+  summary?: string
+}
+
+export interface ScanSchedule {
+  id?: string
+  name?: string
+  cron?: string
+  frequency?: 'hourly' | 'daily' | 'weekly' | 'monthly'
+  enabled?: boolean
+  nextRun?: string
+  lastRun?: string
+  timezone?: string
+  parameters?: Record<string, any>
+}
+
+export interface ScanOptimization {
+  recommendations?: OptimizationRecommendation[]
+  performance?: PerformanceOptimization
+  cost?: CostOptimization
+  accuracy?: AccuracyOptimization
+}
+
+export interface OptimizationRecommendation {
+  type: 'performance' | 'accuracy' | 'cost' | 'configuration'
+  description: string
+  impact: 'low' | 'medium' | 'high'
+  effort: 'low' | 'medium' | 'high'
+  estimatedImprovement?: number
+  implementation?: string[]
+}
+
+export interface PerformanceOptimization {
+  currentThroughput?: number
+  potentialThroughput?: number
+  bottlenecks?: string[]
+  suggestions?: string[]
+}
+
+export interface CostOptimization {
+  currentCost?: number
+  potentialSavings?: number
+  costDrivers?: string[]
+  suggestions?: string[]
+}
+
+export interface AccuracyOptimization {
+  currentAccuracy?: number
+  potentialAccuracy?: number
+  improvementAreas?: string[]
+  suggestions?: string[]
+}
+
+export interface ScanDiagnostics {
+  health?: HealthStatus
+  performance?: PerformanceStatus
+  errors?: ErrorAnalysis
+  warnings?: WarningAnalysis
+  recommendations?: DiagnosticRecommendation[]
+}
+
+export interface HealthStatus {
+  overall: 'healthy' | 'degraded' | 'unhealthy'
+  components?: ComponentHealth[]
+  lastCheck?: string
+}
+
+export interface ComponentHealth {
+  name: string
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  message?: string
+  metrics?: Record<string, number>
+}
+
+export interface PerformanceStatus {
+  throughput: number
+  latency: number
+  errorRate: number
+  resourceUtilization: ResourceUtilization
+}
+
+export interface ResourceUtilization {
+  cpu: number
+  memory: number
+  disk: number
+  network: number
+}
+
+export interface ErrorAnalysis {
+  totalErrors: number
+  errorsByType: Record<string, number>
+  errorTrends: TrendData[]
+  topErrors: ErrorSummary[]
+}
+
+export interface ErrorSummary {
+  error: string
+  count: number
+  lastOccurrence: string
+  impact: 'low' | 'medium' | 'high'
+}
+
+export interface WarningAnalysis {
+  totalWarnings: number
+  warningsByType: Record<string, number>
+  warningTrends: TrendData[]
+  topWarnings: WarningSummary[]
+}
+
+export interface WarningSummary {
+  warning: string
+  count: number
+  lastOccurrence: string
+  impact: 'low' | 'medium' | 'high'
+}
+
+export interface DiagnosticRecommendation {
+  type: 'configuration' | 'resource' | 'pattern' | 'policy'
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  action: string
+  expectedOutcome?: string
+}
+
+export interface ScanPerformance {
+  throughput?: number
+  latency?: number
+  accuracy?: number
+  reliability?: number
+  scalability?: number
+  benchmarks?: PerformanceBenchmark[]
+}
+
+export interface PerformanceBenchmark {
+  name: string
+  value: number
+  unit: string
+  baseline?: number
+  target?: number
+  timestamp: string
+}
+
+export interface ScanAlert {
+  id?: string
+  type: 'finding' | 'error' | 'performance' | 'system'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  title: string
+  description: string
+  source?: string
+  timestamp: string
+  acknowledged?: boolean
+  acknowledgedBy?: string
+  acknowledgedAt?: string
+  resolved?: boolean
+  resolvedBy?: string
+  resolvedAt?: string
+  metadata?: Record<string, any>
+}
+
+export interface ScanRecommendation {
+  id?: string
+  type: 'pattern' | 'policy' | 'configuration' | 'optimization'
+  category?: string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  confidence: number
+  implementation?: ImplementationGuide
+  benefits?: string[]
+  risks?: string[]
+  metadata?: Record<string, any>
+}
+
+export interface ImplementationGuide {
+  steps: string[]
+  estimatedTime?: string
+  requiredSkills?: string[]
+  prerequisites?: string[]
+  resources?: string[]
+}
+
+// Request/Response types
+export interface ScanCreateRequest {
+  name: string
+  description?: string
+  engineType: ScanEngineType
+  patterns?: ScanPattern[]
+  policies?: ScanPolicy[]
+  configuration?: ScanConfiguration
+  schedule?: ScanSchedule
+  tags?: string[]
+}
+
+export interface ScanUpdateRequest {
+  name?: string
+  description?: string
+  patterns?: ScanPattern[]
+  policies?: ScanPolicy[]
+  configuration?: Partial<ScanConfiguration>
+  schedule?: Partial<ScanSchedule>
+  tags?: string[]
+  status?: ScanEngineStatus
+}
+
+export interface ScanFilters {
+  engineTypes?: ScanEngineType[]
+  statuses?: ScanEngineStatus[]
+  tags?: string[]
+  dateRange?: DateRange
+  performance?: NumberRange
+  accuracy?: NumberRange
+  createdBy?: string[]
+}
+
+export interface ScanStats {
+  totalEngines?: number
+  enginesByType?: Record<ScanEngineType, number>
+  enginesByStatus?: Record<ScanEngineStatus, number>
+  totalExecutions?: number
+  successRate?: number
+  averageAccuracy?: number
+  totalFindings?: number
+  findingsByType?: Record<string, number>
+  performanceMetrics?: PerformanceMetrics
+  recentActivity?: ActivitySummary[]
+}
 
 // Export enums separately
 export {
@@ -4869,5 +5962,11 @@ export {
   // Activity enums
   ActivityType, ActivitySeverity, ResourceScope, CollaborationType,
   NotificationType, IntegrationType, AlertLevel, ActivityCategory,
-  GroupType, AnalyticsMetric
+  GroupType, AnalyticsMetric,
+  
+  // Advanced Catalog enums
+  CatalogAssetType, AssetStatus,
+  
+  // Scan Logic enums
+  ScanEngineType, ScanEngineStatus
 };
