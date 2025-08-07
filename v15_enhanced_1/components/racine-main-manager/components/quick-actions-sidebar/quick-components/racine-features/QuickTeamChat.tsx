@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -57,6 +57,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 
@@ -65,2068 +75,2113 @@ import {
   MessageSquare,
   Users,
   Send,
-  Paperclip,
-  Smile,
-  Phone,
-  Video,
-  MoreHorizontal,
+  Plus,
   Search,
   Filter,
   Settings,
-  UserPlus,
-  Crown,
-  Shield,
-  Eye,
-  EyeOff,
-  Bell,
-  BellOff,
-  Pin,
-  PinOff,
-  Edit,
-  Trash2,
-  Reply,
-  Forward,
-  Quote,
-  Download,
-  Upload,
-  File,
-  FileText,
-  Image,
-  FileVideo,
-  FileAudio,
-  Archive,
-  Link,
-  ExternalLink,
-  Copy,
-  Share,
-  Calendar,
-  Clock,
-  MapPin,
-  Tag,
-  Hash,
-  AtSign,
-  Zap,
-  Star,
-  Heart,
-  ThumbsUp,
-  ThumbsDown,
-  Plus,
-  Minus,
-  X,
-  Check,
-  AlertCircle,
-  Info,
-  CheckCircle,
-  XCircle,
-  HelpCircle,
-  RefreshCw,
-  Volume2,
-  VolumeX,
+  Phone,
+  Video,
+  Paperclip,
+  Smile,
   Mic,
   MicOff,
   Camera,
   CameraOff,
-  Monitor,
-  MonitorOff,
-  Maximize,
-  Minimize,
-  CornerDownLeft,
-  CornerDownRight,
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ChevronUp,
+  Share,
+  Edit,
+  Trash,
+  Reply,
+  Forward,
+  Star,
+  Pin,
+  Copy,
+  Download,
+  Upload,
+  X,
+  Check,
+  CheckCheck,
+  Clock,
+  AlertCircle,
+  Info,
+  MoreHorizontal,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
-  ChevronsUp,
-  ChevronsDown,
-  MoreVertical,
-  Workflow,
-  GitBranch,
-  Database,
-  Server,
-  Cloud,
-  Globe,
+  ArrowRight,
+  ArrowLeft,
+  Maximize2,
+  Minimize2,
+  Volume2,
+  VolumeX,
+  Bell,
+  BellOff,
+  Hash,
+  AtSign,
+  Eye,
+  EyeOff,
   Lock,
   Unlock,
-  Key,
-  ShieldCheck,
-  AlertTriangle,
-  Gauge,
+  Globe,
+  Zap,
   Activity,
   TrendingUp,
   BarChart3,
   PieChart,
+  Calendar,
+  Clock3,
+  UserPlus,
+  UserMinus,
+  Shield,
+  ShieldCheck,
+  FileText,
+  Image,
+  FileVideo,
+  FileAudio,
+  File,
+  Link,
+  ExternalLink,
+  Workflow,
+  GitBranch,
   Target,
-  Crosshair,
-  Focus,
-  Scan,
-  Filter as FilterIcon,
-  SortAsc,
-  SortDesc,
-  List,
-  Grid,
-  Columns,
-  Rows,
-  Layout,
-  Sidebar,
-  PanelLeft,
-  PanelRight,
-  PanelTop,
-  PanelBottom,
-  SplitSquareHorizontal,
-  SplitSquareVertical,
-  MousePointer,
-  Hand,
-  Move,
-  Resize,
-  RotateCcw,
-  RotateCw,
-  FlipHorizontal,
-  FlipVertical,
-  ZoomIn,
-  ZoomOut,
-  Fullscreen,
-  Minimize2,
-  Maximize2,
-  PictureInPicture,
-  PictureInPicture2,
-  ScreenShare,
-  ScreenShareOff,
-  Cast,
-  Airplay,
-  Bluetooth,
-  Wifi,
-  WifiOff,
-  Signal,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
-  SignalZero,
-  Antenna,
-  Router,
-  Ethernet,
-  Cable,
-  Usb,
-  HardDrive,
-  SdCard,
-  Smartphone,
-  Tablet,
-  Laptop,
-  Monitor as MonitorIcon,
-  Tv,
-  Watch,
-  Headphones,
-  Speaker,
-  Gamepad2,
-  Joystick,
-  Mouse,
-  Keyboard,
-  Printer,
-  Scanner,
-  Webcam,
-  Projector,
+  Flag,
+  Bookmark,
+  Tag,
+  Archive,
+  RefreshCw,
+  Download as DownloadIcon,
+  Upload as UploadIcon,
+  Save,
+  Share2,
+  Heart,
+  ThumbsUp,
+  ThumbsDown,
+  Laugh,
+  Angry,
+  Frown,
 } from 'lucide-react';
 
-// Import hooks and services
-import { useAIAssistant } from '../../../hooks/useAIAssistant';
-import { useWorkspaceManagement } from '../../../hooks/useWorkspaceManagement';
-import { useUserManagement } from '../../../hooks/useUserManagement';
-import { useCrossGroupIntegration } from '../../../hooks/useCrossGroupIntegration';
-import { useActivityTracking } from '../../../hooks/useActivityTracking';
-import { usePipelineManagement } from '../../../hooks/usePipelineManagement';
-import { useJobWorkflow } from '../../../hooks/useJobWorkflow';
-import { useDataSources } from '../../../hooks/useDataSources';
-import { useScanRuleSets } from '../../../hooks/useScanRuleSets';
-import { useClassifications } from '../../../hooks/useClassifications';
-import { useComplianceRule } from '../../../hooks/useComplianceRule';
-import { useAdvancedCatalog } from '../../../hooks/useAdvancedCatalog';
-import { useScanLogic } from '../../../hooks/useScanLogic';
-import { useRBAC } from '../../../hooks/useRBAC';
+// Racine hooks and services
+import { useWorkspaceManagement } from '@/components/racine-main-manager/hooks/useWorkspaceManagement';
+import { useUserManagement } from '@/components/racine-main-manager/hooks/useUserManagement';
+import { useAIAssistant } from '@/components/racine-main-manager/hooks/useAIAssistant';
+import { useCrossGroupIntegration } from '@/components/racine-main-manager/hooks/useCrossGroupIntegration';
+import { useActivityTracking } from '@/components/racine-main-manager/hooks/useActivityTracking';
+import { useCollaboration } from '@/components/racine-main-manager/hooks/useCollaboration';
+
+// SPA hooks for cross-group functionality
+import { useDataSources } from '@/components/data-sources/hooks/useDataSources';
+import { useScanRuleSets } from '@/components/Advanced-Scan-Rule-Sets/hooks/useScanRuleSets';
+import { useClassifications } from '@/components/classifications/hooks/useClassifications';
+import { useComplianceRule } from '@/components/Compliance-Rule/hooks/useComplianceRule';
+import { useAdvancedCatalog } from '@/components/Advanced-Catalog/hooks/useAdvancedCatalog';
+import { useScanLogic } from '@/components/Advanced-Scan-Logic/hooks/useScanLogic';
+import { useRBACSystem } from '@/components/Advanced_RBAC_Datagovernance_System/hooks/useRBACSystem';
 
 // Types
 interface ChatMessage {
   id: string;
-  type: 'text' | 'file' | 'image' | 'video' | 'audio' | 'workflow' | 'system' | 'ai';
+  type: 'text' | 'image' | 'file' | 'video' | 'audio' | 'system' | 'workflow' | 'mention' | 'reply' | 'reaction';
   content: string;
-  author: TeamMember;
+  senderId: string;
+  senderName: string;
+  senderAvatar?: string;
+  senderRole: string;
   timestamp: string;
   edited?: boolean;
   editedAt?: string;
   replyTo?: string;
-  thread?: ChatMessage[];
-  reactions: MessageReaction[];
-  attachments: MessageAttachment[];
-  mentions: string[];
-  tags: string[];
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  mentions?: string[];
+  reactions?: {
+    emoji: string;
+    count: number;
+    users: string[];
+  }[];
+  attachments?: ChatAttachment[];
   metadata?: {
     workflowId?: string;
-    pipelineId?: string;
-    taskId?: string;
-    assetId?: string;
-    location?: string;
-    duration?: number;
-    size?: number;
-    format?: string;
-    language?: string;
-    encrypted?: boolean;
+    spaComponent?: string;
+    dataSourceId?: string;
+    urgency?: 'low' | 'medium' | 'high' | 'critical';
+    tags?: string[];
+    category?: string;
+    priority?: number;
+    status?: 'read' | 'unread' | 'acknowledged' | 'archived';
+    readBy?: {
+      userId: string;
+      readAt: string;
+    }[];
+    deliveryStatus?: 'sent' | 'delivered' | 'failed';
+    encryption?: boolean;
+    retention?: number;
   };
-  aiContext?: {
-    confidence: number;
-    suggestions: string[];
-    sentiment: 'positive' | 'neutral' | 'negative';
-    topics: string[];
-    entities: string[];
-    summary?: string;
+  thread?: {
+    id: string;
+    messageCount: number;
+    lastActivity: string;
+    participants: string[];
   };
 }
 
-interface MessageReaction {
-  emoji: string;
-  users: string[];
-  count: number;
-}
-
-interface MessageAttachment {
+interface ChatAttachment {
   id: string;
   name: string;
-  type: 'file' | 'image' | 'video' | 'audio' | 'document' | 'link';
-  url: string;
+  type: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'link' | 'workflow' | 'dashboard' | 'report';
   size: number;
-  format: string;
+  url: string;
   thumbnail?: string;
-  preview?: string;
   metadata?: {
     duration?: number;
     dimensions?: { width: number; height: number };
-    pages?: number;
     encoding?: string;
+    description?: string;
+    workflowData?: any;
+    spaData?: any;
   };
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: 'owner' | 'admin' | 'moderator' | 'member' | 'guest';
-  status: 'online' | 'away' | 'busy' | 'offline';
-  lastSeen: string;
-  permissions: TeamPermissions;
-  profile: {
-    title?: string;
-    department?: string;
-    location?: string;
-    timezone?: string;
-    workingHours?: { start: string; end: string };
-    skills?: string[];
-    bio?: string;
-  };
-  preferences: {
-    notifications: boolean;
-    sounds: boolean;
-    theme: 'light' | 'dark' | 'auto';
-    language: string;
-    autoStatus: boolean;
-  };
-  stats: {
-    messagesCount: number;
-    filesShared: number;
-    workflowsCreated: number;
-    collaborations: number;
-    joinedAt: string;
-    lastActivity: string;
-  };
-}
-
-interface TeamPermissions {
-  canSendMessages: boolean;
-  canUploadFiles: boolean;
-  canCreateWorkflows: boolean;
-  canManageMembers: boolean;
-  canDeleteMessages: boolean;
-  canPinMessages: boolean;
-  canCreateChannels: boolean;
-  canManageChannels: boolean;
-  canStartCalls: boolean;
-  canScreenShare: boolean;
-  canAccessHistory: boolean;
-  canExportData: boolean;
+  uploadedBy: string;
+  uploadedAt: string;
+  securityLevel?: 'public' | 'internal' | 'confidential' | 'restricted';
+  scanStatus?: 'pending' | 'clean' | 'suspicious' | 'blocked';
 }
 
 interface ChatChannel {
   id: string;
   name: string;
   description: string;
-  type: 'public' | 'private' | 'direct' | 'group' | 'announcement' | 'workflow';
-  members: string[];
+  type: 'public' | 'private' | 'direct' | 'group' | 'announcement' | 'workspace' | 'project' | 'department';
+  members: ChatMember[];
   admins: string[];
-  owner: string;
+  owners: string[];
+  settings: {
+    allowFileSharing: boolean;
+    allowMentions: boolean;
+    allowReactions: boolean;
+    allowThreads: boolean;
+    allowBots: boolean;
+    messageRetention: number;
+    readReceipts: boolean;
+    typing_indicators: boolean;
+    encryption: boolean;
+    moderation: 'none' | 'basic' | 'strict';
+    external_access: boolean;
+    invite_permissions: 'admin' | 'members' | 'anyone';
+  };
+  integrations: {
+    spaIntegrations: string[];
+    workflowIntegrations: string[];
+    aiAssistant: boolean;
+    notifications: {
+      desktop: boolean;
+      mobile: boolean;
+      email: boolean;
+      slack: boolean;
+      teams: boolean;
+    };
+    webhooks: {
+      url: string;
+      events: string[];
+      active: boolean;
+    }[];
+  };
   createdAt: string;
+  createdBy: string;
   lastActivity: string;
   messageCount: number;
-  unreadCount: number;
-  pinnedMessages: string[];
-  settings: ChannelSettings;
-  integration?: {
-    workspaceId?: string;
-    workflowId?: string;
-    pipelineId?: string;
-    spaType?: string;
-    autoNotifications?: boolean;
-    eventFilters?: string[];
+  unreadCount?: number;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  tags?: string[];
+  category?: string;
+  workspaceId?: string;
+  projectId?: string;
+}
+
+interface ChatMember {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  role: string;
+  permissions: string[];
+  status: 'online' | 'away' | 'busy' | 'offline';
+  lastSeen: string;
+  joinedAt: string;
+  isBot?: boolean;
+  timezone?: string;
+  preferences?: {
+    notifications: boolean;
+    soundEnabled: boolean;
+    theme: 'light' | 'dark' | 'auto';
+    language: string;
+    fontSize: 'small' | 'medium' | 'large';
   };
 }
 
-interface ChannelSettings {
-  notifications: boolean;
-  sounds: boolean;
-  mentions: boolean;
-  slowMode: number;
-  messageRetention: number;
-  fileUploads: boolean;
-  linkPreviews: boolean;
-  reactions: boolean;
-  threads: boolean;
-  readReceipts: boolean;
-  encryption: boolean;
+interface ChatThread {
+  id: string;
+  parentMessageId: string;
+  channelId: string;
+  title?: string;
+  messages: ChatMessage[];
+  participants: string[];
+  createdAt: string;
+  lastActivity: string;
+  isResolved?: boolean;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  tags?: string[];
 }
 
 interface VoiceCall {
   id: string;
-  type: 'voice' | 'video' | 'screen-share';
-  participants: CallParticipant[];
-  status: 'ringing' | 'connecting' | 'active' | 'ended';
-  startTime: string;
-  endTime?: string;
+  channelId: string;
+  participants: {
+    userId: string;
+    joinedAt: string;
+    isMuted: boolean;
+    isDeafened: boolean;
+    isSpeaking: boolean;
+    quality: 'good' | 'fair' | 'poor';
+  }[];
+  startedAt: string;
+  endedAt?: string;
   duration?: number;
+  quality: 'good' | 'fair' | 'poor';
   recording?: {
     enabled: boolean;
     url?: string;
-    size?: number;
-    duration?: number;
+    transcription?: string;
   };
-  settings: {
-    muteOnJoin: boolean;
-    videoOnJoin: boolean;
-    allowScreenShare: boolean;
-    maxParticipants: number;
-    quality: 'low' | 'medium' | 'high' | 'hd';
-    bandwidth: number;
+  screen_sharing?: {
+    userId: string;
+    startedAt: string;
+    quality: 'good' | 'fair' | 'poor';
   };
 }
 
-interface CallParticipant {
-  userId: string;
-  joinedAt: string;
-  leftAt?: string;
-  status: 'connecting' | 'connected' | 'disconnected';
-  audioEnabled: boolean;
-  videoEnabled: boolean;
-  screenSharing: boolean;
-  speaking: boolean;
-  signalStrength: number;
-  latency: number;
-}
-
-interface WorkflowIntegration {
+interface VideoCall {
   id: string;
-  type: 'pipeline' | 'job' | 'scan' | 'compliance' | 'catalog' | 'rbac';
+  channelId: string;
+  participants: {
+    userId: string;
+    joinedAt: string;
+    isVideoEnabled: boolean;
+    isAudioEnabled: boolean;
+    isSpeaking: boolean;
+    quality: 'good' | 'fair' | 'poor';
+  }[];
+  startedAt: string;
+  endedAt?: string;
+  duration?: number;
+  quality: 'good' | 'fair' | 'poor';
+  recording?: {
+    enabled: boolean;
+    url?: string;
+    transcription?: string;
+  };
+  screen_sharing?: {
+    userId: string;
+    startedAt: string;
+    app?: string;
+    quality: 'good' | 'fair' | 'poor';
+  };
+  layout: 'grid' | 'speaker' | 'gallery' | 'sidebar';
+}
+
+interface ChatBot {
+  id: string;
   name: string;
-  status: 'running' | 'completed' | 'failed' | 'paused' | 'scheduled';
-  progress: number;
-  startTime: string;
-  endTime?: string;
-  owner: string;
-  collaborators: string[];
-  notifications: {
-    onStart: boolean;
-    onComplete: boolean;
-    onError: boolean;
-    onProgress: boolean;
-    channels: string[];
+  description: string;
+  avatar?: string;
+  type: 'ai-assistant' | 'workflow-bot' | 'notification-bot' | 'integration-bot' | 'compliance-bot';
+  capabilities: string[];
+  permissions: string[];
+  isActive: boolean;
+  settings: {
+    autoRespond: boolean;
+    learningEnabled: boolean;
+    contextAware: boolean;
+    crossSpaIntegration: boolean;
+  };
+  createdBy: string;
+  createdAt: string;
+  lastActive?: string;
+  usage_stats?: {
+    messagesProcessed: number;
+    responsesGenerated: number;
+    accuracy: number;
+    userSatisfaction: number;
+  };
+}
+
+interface ChatAnalytics {
+  channelId: string;
+  period: {
+    start: string;
+    end: string;
+  };
+  metrics: {
+    messageCount: number;
+    activeUsers: number;
+    avgResponseTime: number;
+    engagementScore: number;
+    collaborationIndex: number;
+    productivityScore: number;
+  };
+  trends: {
+    messageTrends: { date: string; count: number }[];
+    userActivityTrends: { date: string; activeUsers: number }[];
+    engagementTrends: { date: string; score: number }[];
+  };
+  topUsers: {
+    userId: string;
+    messageCount: number;
+    engagementScore: number;
+  }[];
+  frequentTopics: {
+    topic: string;
+    count: number;
+    sentiment: 'positive' | 'neutral' | 'negative';
+  }[];
+  integrationUsage: {
+    spaType: string;
+    usageCount: number;
+    lastUsed: string;
+  }[];
+}
+
+interface ChatWorkflowIntegration {
+  id: string;
+  name: string;
+  description: string;
+  type: 'trigger' | 'action' | 'condition' | 'template';
+  spaIntegration: {
+    spaType: 'data-sources' | 'scan-rule-sets' | 'classifications' | 'compliance-rule' | 'advanced-catalog' | 'scan-logic' | 'rbac-system';
+    component: string;
+    action: string;
+    parameters: Record<string, any>;
+  };
+  trigger: {
+    event: 'message' | 'mention' | 'keyword' | 'reaction' | 'file_upload' | 'user_join' | 'user_leave';
+    conditions: {
+      keywords?: string[];
+      users?: string[];
+      channels?: string[];
+      file_types?: string[];
+      reactions?: string[];
+    };
   };
   actions: {
-    canStart: boolean;
-    canStop: boolean;
-    canPause: boolean;
-    canRestart: boolean;
-    canConfigure: boolean;
+    type: 'send_message' | 'create_thread' | 'notify_users' | 'trigger_workflow' | 'update_spa' | 'generate_report';
+    config: Record<string, any>;
+  }[];
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  lastTriggered?: string;
+  usage_stats?: {
+    triggeredCount: number;
+    successRate: number;
+    avgExecutionTime: number;
   };
 }
 
-interface TeamAnalytics {
-  members: {
-    total: number;
-    online: number;
-    active: number;
-    new: number;
-  };
-  messages: {
-    total: number;
-    today: number;
-    average: number;
-    trend: number;
-  };
-  channels: {
-    total: number;
-    active: number;
-    private: number;
-    public: number;
-  };
-  files: {
-    shared: number;
-    storage: number;
-    types: Record<string, number>;
-  };
-  calls: {
-    total: number;
-    duration: number;
-    participants: number;
-    quality: number;
-  };
-  workflows: {
-    integrated: number;
-    active: number;
-    completed: number;
-    collaborations: number;
-  };
-  engagement: {
-    messageRate: number;
-    responseTime: number;
-    participation: number;
-    satisfaction: number;
+interface ChatNotification {
+  id: string;
+  type: 'message' | 'mention' | 'reaction' | 'thread' | 'call' | 'system' | 'workflow' | 'integration';
+  title: string;
+  content: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  channelId: string;
+  messageId?: string;
+  userId: string;
+  timestamp: string;
+  isRead: boolean;
+  readAt?: string;
+  actions?: {
+    label: string;
+    action: string;
+    parameters?: Record<string, any>;
+  }[];
+  metadata?: {
+    workflowId?: string;
+    spaComponent?: string;
+    urgency?: boolean;
+    autoExpire?: string;
   };
 }
 
-interface QuickTeamChatProps {
-  isVisible: boolean;
-  onClose: () => void;
-  className?: string;
-  initialChannel?: string;
-  workflowContext?: {
-    workflowId: string;
-    type: string;
-    name: string;
+interface ChatSettings {
+  appearance: {
+    theme: 'light' | 'dark' | 'auto';
+    fontSize: 'small' | 'medium' | 'large';
+    density: 'compact' | 'comfortable' | 'spacious';
+    showAvatars: boolean;
+    showTimestamps: boolean;
+    showReadReceipts: boolean;
+    showTypingIndicators: boolean;
+    animationsEnabled: boolean;
+  };
+  notifications: {
+    desktop: boolean;
+    sound: boolean;
+    email: boolean;
+    mobile: boolean;
+    mentions: boolean;
+    directMessages: boolean;
+    channelMessages: boolean;
+    reactions: boolean;
+    threads: boolean;
+    calls: boolean;
+    quietHours: {
+      enabled: boolean;
+      start: string;
+      end: string;
+      timezone: string;
+    };
+  };
+  privacy: {
+    showOnlineStatus: boolean;
+    showLastSeen: boolean;
+    allowDirectMessages: boolean;
+    allowMentions: boolean;
+    messageHistory: boolean;
+    dataRetention: number;
+    encryption: boolean;
+  };
+  integrations: {
+    spaIntegrations: string[];
+    workflowIntegrations: string[];
+    aiAssistant: boolean;
+    bots: string[];
+    externalServices: Record<string, boolean>;
+  };
+  accessibility: {
+    highContrast: boolean;
+    reduceMotion: boolean;
+    screenReader: boolean;
+    keyboardNavigation: boolean;
+    fontSize: 'small' | 'medium' | 'large' | 'extra-large';
   };
 }
 
-const QuickTeamChat: React.FC<QuickTeamChatProps> = ({
-  isVisible,
-  onClose,
-  className = '',
-  initialChannel,
-  workflowContext,
-}) => {
+const QuickTeamChat: React.FC = () => {
   // State management
-  const [activeChannel, setActiveChannel] = useState<string>(initialChannel || 'general');
-  const [channels, setChannels] = useState<ChatChannel[]>([]);
-  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [currentMessage, setCurrentMessage] = useState<string>('');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [editingMessage, setEditingMessage] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCall, setActiveCall] = useState<VoiceCall | null>(null);
-  const [isTyping, setIsTyping] = useState<Record<string, string[]>>({});
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('channels');
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [selectedThread, setSelectedThread] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredChannels, setFilteredChannels] = useState<ChatChannel[]>([]);
+  const [activeCall, setActiveCall] = useState<VoiceCall | VideoCall | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [showUserList, setShowUserList] = useState(false);
+  const [showThreads, setShowThreads] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [pinnedMessages, setPinnedMessages] = useState<string[]>([]);
-  const [showMemberList, setShowMemberList] = useState<boolean>(true);
-  const [showThreads, setShowThreads] = useState<boolean>(false);
-  const [showFiles, setShowFiles] = useState<boolean>(false);
-  const [showWorkflows, setShowWorkflows] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'calls' | 'files' | 'workflows' | 'analytics'>('chat');
-  const [channelFilter, setChannelFilter] = useState<'all' | 'public' | 'private' | 'direct' | 'workflow'>('all');
-  const [messageFilter, setMessageFilter] = useState<'all' | 'mentions' | 'starred' | 'files' | 'workflows'>('all');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'relevance'>('newest');
-  const [notifications, setNotifications] = useState<boolean>(true);
-  const [sounds, setSounds] = useState<boolean>(true);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [isDragOver, setIsDragOver] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [analytics, setAnalytics] = useState<TeamAnalytics | null>(null);
-  const [workflowIntegrations, setWorkflowIntegrations] = useState<WorkflowIntegration[]>([]);
-  const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
-  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
-  const [showMentionSuggestions, setShowMentionSuggestions] = useState<boolean>(false);
-  const [mentionQuery, setMentionQuery] = useState<string>('');
+  const [replyToMessage, setReplyToMessage] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Hooks
-  const {
-    getAIRecommendations,
-    processNaturalLanguage,
-    generateInsights,
-    analyzeUserBehavior,
-    getContextualHelp,
-    autoComplete,
-    generateCode,
-    validateConfiguration
-  } = useAIAssistant();
-
+  // Racine hooks for backend integration
   const {
     currentWorkspace,
-    workspaceMembers,
+    getWorkspaceMembers,
+    getWorkspaceProjects,
     getWorkspaceMetrics,
-    getWorkspaceActivities,
-    inviteMember,
-    removeMember
+    getWorkspaceResources
   } = useWorkspaceManagement();
 
   const {
     currentUser,
-    userPermissions,
-    getUserById,
+    users,
+    getUserProfile,
     updateUserStatus,
-    getUserPreferences
+    getUserPermissions,
+    getUserPreferences,
+    updateUserPreferences
   } = useUserManagement();
 
   const {
-    getCrossGroupMetrics,
-    getSPAStatus,
-    getIntegrationStatus,
-    triggerCrossGroupAction
+    aiContext,
+    getAIRecommendations,
+    processNaturalLanguage,
+    generateInsights,
+    analyzeConversation,
+    suggestResponses,
+    detectSentiment,
+    extractEntities,
+    summarizeConversation,
+    generateTranscription,
+    translateMessage,
+    moderateContent,
+    getContextualHelp
+  } = useAIAssistant();
+
+  const {
+    integrationContext,
+    getSPAContext,
+    triggerCrossGroupAction,
+    getIntegrationData,
+    synchronizeData,
+    getGlobalInsights,
+    orchestrateWorkflow,
+    getPerformanceMetrics
   } = useCrossGroupIntegration();
 
   const {
     trackActivity,
-    getActivityHistory,
-    getCollaborationMetrics,
-    getUserInteractions
+    getActivityFeed,
+    getActivityMetrics,
+    getActivityInsights,
+    trackUserAction,
+    trackSystemEvent,
+    generateActivityReport
   } = useActivityTracking();
 
-  // SPA Integration Hooks
-  const { pipelines, createPipeline, executePipeline } = usePipelineManagement();
-  const { workflows, createWorkflow, executeWorkflow } = useJobWorkflow();
-  const { dataSources, connectDataSource } = useDataSources();
-  const { scanJobs, startScan } = useScanLogic();
-  const { complianceRules, checkCompliance } = useComplianceRule();
-  const { catalogItems, addToCatalog } = useAdvancedCatalog();
-  const { users: rbacUsers, roles, assignRole } = useRBAC();
+  const {
+    channels,
+    currentChannel,
+    loading: collaborationLoading,
+    error: collaborationError,
+    createChannel,
+    updateChannel,
+    deleteChannel,
+    joinChannel,
+    leaveChannel,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    addReaction,
+    removeReaction,
+    createThread,
+    markAsRead,
+    getChannelHistory,
+    getChannelMembers,
+    inviteToChannel,
+    removeFromChannel,
+    startVoiceCall,
+    startVideoCall,
+    endCall,
+    shareScreen,
+    recordCall,
+    muteUser,
+    unmuteUser,
+    banUser,
+    unbanUser,
+    getChannelAnalytics,
+    exportChannelData,
+    searchMessages,
+    getNotifications,
+    updateSettings,
+    getSettings,
+    syncWithExternalServices,
+    generateReport,
+    getPresenceData,
+    updatePresence,
+    getTypingIndicators,
+    setTypingIndicator,
+    getMessageDeliveryStatus,
+    encryptMessage,
+    decryptMessage,
+    validateMessage,
+    moderateMessage,
+    archiveChannel,
+    restoreChannel,
+    getChannelInsights,
+    optimizePerformance,
+    getIntegrationStatus,
+    triggerWebhook,
+    processCommand
+  } = useCollaboration();
 
-  // Emoji reactions
-  const commonEmojis = ['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '🎉', '🚀', '💡', '✅', '❌', '⚠️', '📝', '🔥'];
+  // SPA hooks for cross-group functionality
+  const { dataSources, getDataSourceMetrics } = useDataSources();
+  const { scanRuleSets, getScanRuleMetrics } = useScanRuleSets();
+  const { classifications, getClassificationMetrics } = useClassifications();
+  const { complianceRules, getComplianceMetrics } = useComplianceRule();
+  const { catalogItems, getCatalogMetrics } = useAdvancedCatalog();
+  const { scanLogic, getScanLogicMetrics } = useScanLogic();
+  const { rbacRoles, rbacUsers, getRBACMetrics } = useRBACSystem();
 
-  // Message types for workflow integration
-  const workflowMessageTypes = [
-    { type: 'pipeline', label: 'Pipeline Update', icon: GitBranch },
-    { type: 'job', label: 'Job Status', icon: Workflow },
-    { type: 'scan', label: 'Scan Results', icon: Scan },
-    { type: 'compliance', label: 'Compliance Alert', icon: ShieldCheck },
-    { type: 'catalog', label: 'Catalog Entry', icon: Database },
-    { type: 'rbac', label: 'Access Change', icon: Lock }
-  ];
+  // Animation controls
+  const dragControls = useDragControls();
 
-  // Initialize component
-  useEffect(() => {
-    loadChannels();
-    loadMembers();
-    loadMessages();
-    loadWorkflowIntegrations();
-    loadAnalytics();
-    setupRealTimeConnection();
-    trackActivity('team-chat-opened', { component: 'QuickTeamChat' });
+  // Memoized values
+  const currentChannelData = useMemo(() => {
+    return channels.find(channel => channel.id === selectedChannel);
+  }, [channels, selectedChannel]);
 
-    if (workflowContext) {
-      handleWorkflowIntegration(workflowContext);
-    }
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery) return messages;
+    return messages.filter(message =>
+      message.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      message.senderName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [messages, searchQuery]);
 
-    return () => {
-      cleanupRealTimeConnection();
-    };
-  }, []);
+  const channelMembers = useMemo(() => {
+    return currentChannelData?.members || [];
+  }, [currentChannelData]);
 
-  // Auto-scroll to bottom on new messages
+  const unreadMessages = useMemo(() => {
+    return messages.filter(message => 
+      message.metadata?.status === 'unread' && 
+      message.senderId !== currentUser?.id
+    );
+  }, [messages, currentUser]);
+
+  const aiSuggestions = useMemo(() => {
+    if (!newMessage) return [];
+    return suggestResponses?.(newMessage, messages.slice(-5)) || [];
+  }, [newMessage, messages, suggestResponses]);
+
+  // Effects
   useEffect(() => {
     scrollToBottom();
-  }, [messages, activeChannel]);
+  }, [messages]);
 
-  // Handle typing indicators
   useEffect(() => {
-    if (currentMessage.length > 0) {
-      handleTyping(true);
-    } else {
-      handleTyping(false);
-    }
-  }, [currentMessage]);
+    setUnreadCount(unreadMessages.length);
+  }, [unreadMessages]);
 
-  // AI suggestions based on message content
   useEffect(() => {
-    if (currentMessage.length > 10) {
-      generateAISuggestions(currentMessage);
-    } else {
-      setAISuggestions([]);
+    if (selectedChannel && currentChannelData) {
+      loadChannelMessages();
+      markChannelAsRead();
     }
-  }, [currentMessage]);
+  }, [selectedChannel, currentChannelData]);
 
-  // Load channels
-  const loadChannels = useCallback(async () => {
-    try {
-      const defaultChannels: ChatChannel[] = [
-        {
-          id: 'general',
-          name: 'general',
-          description: 'General team discussions',
-          type: 'public',
-          members: [],
-          admins: [],
-          owner: currentUser?.id || '',
-          createdAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString(),
-          messageCount: 0,
-          unreadCount: 0,
-          pinnedMessages: [],
-          settings: {
-            notifications: true,
-            sounds: true,
-            mentions: true,
-            slowMode: 0,
-            messageRetention: 30,
-            fileUploads: true,
-            linkPreviews: true,
-            reactions: true,
-            threads: true,
-            readReceipts: true,
-            encryption: false
-          }
-        },
-        {
-          id: 'data-governance',
-          name: 'data-governance',
-          description: 'Data governance discussions and updates',
-          type: 'public',
-          members: [],
-          admins: [],
-          owner: currentUser?.id || '',
-          createdAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString(),
-          messageCount: 0,
-          unreadCount: 0,
-          pinnedMessages: [],
-          settings: {
-            notifications: true,
-            sounds: true,
-            mentions: true,
-            slowMode: 0,
-            messageRetention: 90,
-            fileUploads: true,
-            linkPreviews: true,
-            reactions: true,
-            threads: true,
-            readReceipts: true,
-            encryption: true
-          },
-          integration: {
-            workspaceId: currentWorkspace?.id,
-            autoNotifications: true,
-            eventFilters: ['compliance', 'scan', 'catalog']
-          }
-        },
-        {
-          id: 'workflows',
-          name: 'workflows',
-          description: 'Workflow collaboration and status updates',
-          type: 'workflow',
-          members: [],
-          admins: [],
-          owner: currentUser?.id || '',
-          createdAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString(),
-          messageCount: 0,
-          unreadCount: 0,
-          pinnedMessages: [],
-          settings: {
-            notifications: true,
-            sounds: false,
-            mentions: true,
-            slowMode: 0,
-            messageRetention: 180,
-            fileUploads: true,
-            linkPreviews: true,
-            reactions: true,
-            threads: true,
-            readReceipts: true,
-            encryption: true
-          },
-          integration: {
-            workspaceId: currentWorkspace?.id,
-            autoNotifications: true,
-            eventFilters: ['pipeline', 'job', 'workflow']
-          }
-        }
-      ];
-
-      setChannels(defaultChannels);
-    } catch (error) {
-      console.error('Failed to load channels:', error);
-    }
-  }, [currentUser, currentWorkspace]);
-
-  // Load members
-  const loadMembers = useCallback(async () => {
-    try {
-      if (workspaceMembers) {
-        const teamMembers: TeamMember[] = workspaceMembers.map(member => ({
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          avatar: member.avatar,
-          role: member.role === 'admin' ? 'admin' : 'member',
-          status: 'online',
-          lastSeen: new Date().toISOString(),
-          permissions: {
-            canSendMessages: true,
-            canUploadFiles: true,
-            canCreateWorkflows: member.role === 'admin',
-            canManageMembers: member.role === 'admin',
-            canDeleteMessages: member.role === 'admin',
-            canPinMessages: true,
-            canCreateChannels: member.role === 'admin',
-            canManageChannels: member.role === 'admin',
-            canStartCalls: true,
-            canScreenShare: true,
-            canAccessHistory: true,
-            canExportData: member.role === 'admin'
-          },
-          profile: {
-            title: member.title,
-            department: member.department,
-            location: member.location,
-            timezone: member.timezone,
-            skills: member.skills || [],
-            bio: member.bio
-          },
-          preferences: {
-            notifications: true,
-            sounds: true,
-            theme: 'auto',
-            language: 'en',
-            autoStatus: true
-          },
-          stats: {
-            messagesCount: 0,
-            filesShared: 0,
-            workflowsCreated: 0,
-            collaborations: 0,
-            joinedAt: member.joinedAt || new Date().toISOString(),
-            lastActivity: new Date().toISOString()
-          }
-        }));
-
-        setMembers(teamMembers);
-        setOnlineUsers(teamMembers.map(m => m.id));
-      }
-    } catch (error) {
-      console.error('Failed to load members:', error);
-    }
-  }, [workspaceMembers]);
-
-  // Load messages
-  const loadMessages = useCallback(async () => {
-    try {
-      // In a real implementation, this would fetch from an API
-      const defaultMessages: Record<string, ChatMessage[]> = {
-        general: [
-          {
-            id: 'msg-1',
-            type: 'text',
-            content: 'Welcome to the team chat! 🎉',
-            author: members[0] || {
-              id: 'system',
-              name: 'System',
-              email: 'system@example.com',
-              role: 'admin',
-              status: 'online',
-              lastSeen: new Date().toISOString(),
-              permissions: {} as TeamPermissions,
-              profile: {},
-              preferences: {} as any,
-              stats: {} as any
-            },
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            reactions: [{ emoji: '👋', users: ['user-1', 'user-2'], count: 2 }],
-            attachments: [],
-            mentions: [],
-            tags: [],
-            priority: 'normal',
-            status: 'read'
-          }
-        ]
-      };
-
-      setMessages(defaultMessages);
-    } catch (error) {
-      console.error('Failed to load messages:', error);
-    }
-  }, [members]);
-
-  // Load workflow integrations
-  const loadWorkflowIntegrations = useCallback(async () => {
-    try {
-      const integrations: WorkflowIntegration[] = [
-        {
-          id: 'wf-1',
-          type: 'pipeline',
-          name: 'Data Quality Pipeline',
-          status: 'running',
-          progress: 65,
-          startTime: new Date(Date.now() - 1800000).toISOString(),
-          owner: currentUser?.id || '',
-          collaborators: [],
-          notifications: {
-            onStart: true,
-            onComplete: true,
-            onError: true,
-            onProgress: false,
-            channels: ['workflows', 'data-governance']
-          },
-          actions: {
-            canStart: false,
-            canStop: true,
-            canPause: true,
-            canRestart: false,
-            canConfigure: true
-          }
-        },
-        {
-          id: 'wf-2',
-          type: 'scan',
-          name: 'Compliance Scan',
-          status: 'completed',
-          progress: 100,
-          startTime: new Date(Date.now() - 7200000).toISOString(),
-          endTime: new Date(Date.now() - 3600000).toISOString(),
-          owner: currentUser?.id || '',
-          collaborators: [],
-          notifications: {
-            onStart: true,
-            onComplete: true,
-            onError: true,
-            onProgress: false,
-            channels: ['workflows', 'data-governance']
-          },
-          actions: {
-            canStart: true,
-            canStop: false,
-            canPause: false,
-            canRestart: true,
-            canConfigure: true
-          }
-        }
-      ];
-
-      setWorkflowIntegrations(integrations);
-    } catch (error) {
-      console.error('Failed to load workflow integrations:', error);
-    }
-  }, [currentUser]);
-
-  // Load analytics
-  const loadAnalytics = useCallback(async () => {
-    try {
-      const analyticsData: TeamAnalytics = {
-        members: {
-          total: members.length,
-          online: onlineUsers.length,
-          active: Math.floor(members.length * 0.8),
-          new: 2
-        },
-        messages: {
-          total: 1847,
-          today: 156,
-          average: 98,
-          trend: 12
-        },
-        channels: {
-          total: channels.length,
-          active: 3,
-          private: 1,
-          public: 2
-        },
-        files: {
-          shared: 234,
-          storage: 1.2, // GB
-          types: {
-            documents: 45,
-            images: 78,
-            videos: 12,
-            audio: 8,
-            other: 91
-          }
-        },
-        calls: {
-          total: 23,
-          duration: 8.5, // hours
-          participants: 12,
-          quality: 4.2
-        },
-        workflows: {
-          integrated: 15,
-          active: 3,
-          completed: 28,
-          collaborations: 67
-        },
-        engagement: {
-          messageRate: 2.3,
-          responseTime: 4.2, // minutes
-          participation: 0.85,
-          satisfaction: 4.6
-        }
-      };
-
-      setAnalytics(analyticsData);
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
-    }
-  }, [members, onlineUsers, channels]);
-
-  // Setup real-time connection
-  const setupRealTimeConnection = useCallback(() => {
-    // In a real implementation, this would setup WebSocket or similar
-    console.log('Setting up real-time connection...');
-    
-    // Simulate real-time updates
+  useEffect(() => {
     const interval = setInterval(() => {
-      // Update online status
-      setOnlineUsers(prev => {
-        const shuffled = [...prev].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, Math.floor(Math.random() * members.length) + 1);
-      });
-    }, 10000);
+      updateOnlineStatus();
+      syncPresenceData();
+    }, 30000);
 
     return () => clearInterval(interval);
-  }, [members]);
-
-  // Cleanup real-time connection
-  const cleanupRealTimeConnection = useCallback(() => {
-    console.log('Cleaning up real-time connection...');
   }, []);
 
-  // Handle workflow integration
-  const handleWorkflowIntegration = useCallback((context: { workflowId: string; type: string; name: string }) => {
-    const workflowMessage: ChatMessage = {
-      id: `workflow-${Date.now()}`,
-      type: 'workflow',
-      content: `Workflow "${context.name}" has been integrated with this chat`,
-      author: {
-        id: 'system',
-        name: 'Workflow System',
-        email: 'system@example.com',
-        role: 'admin',
-        status: 'online',
-        lastSeen: new Date().toISOString(),
-        permissions: {} as TeamPermissions,
-        profile: {},
-        preferences: {} as any,
-        stats: {} as any
-      },
-      timestamp: new Date().toISOString(),
-      reactions: [],
-      attachments: [],
-      mentions: [],
-      tags: [context.type],
-      priority: 'normal',
-      status: 'sent',
-      metadata: {
-        workflowId: context.workflowId
-      }
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [activeChannel]: [...(prev[activeChannel] || []), workflowMessage]
-    }));
-
-    trackActivity('workflow-integrated-chat', context);
-  }, [activeChannel, trackActivity]);
-
-  // Handle typing
-  const handleTyping = useCallback((typing: boolean) => {
-    if (!currentUser) return;
-
-    setIsTyping(prev => ({
-      ...prev,
-      [activeChannel]: typing 
-        ? [...(prev[activeChannel] || []).filter(id => id !== currentUser.id), currentUser.id]
-        : (prev[activeChannel] || []).filter(id => id !== currentUser.id)
-    }));
-  }, [activeChannel, currentUser]);
-
-  // Generate AI suggestions
-  const generateAISuggestions = useCallback(async (content: string) => {
-    try {
-      const suggestions = await autoComplete(content, {
-        context: 'team-chat',
-        channelType: channels.find(c => c.id === activeChannel)?.type,
-        recentMessages: messages[activeChannel]?.slice(-5) || []
-      });
-
-      if (suggestions && Array.isArray(suggestions)) {
-        setAISuggestions(suggestions.slice(0, 3));
-      }
-    } catch (error) {
-      console.error('Failed to generate AI suggestions:', error);
+  useEffect(() => {
+    if (isTyping) {
+      setTypingIndicator?.(selectedChannel || '', true);
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+        setTypingIndicator?.(selectedChannel || '', false);
+      }, 3000);
+      return () => clearTimeout(timeout);
     }
-  }, [activeChannel, channels, messages, autoComplete]);
+  }, [isTyping, selectedChannel, setTypingIndicator]);
 
-  // Scroll to bottom
+  // Callback functions
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Handle send message
-  const handleSendMessage = useCallback(async () => {
-    if (!currentMessage.trim() || !currentUser) return;
-
-    const newMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      type: 'text',
-      content: currentMessage.trim(),
-      author: currentUser,
-      timestamp: new Date().toISOString(),
-      replyTo: replyTo || undefined,
-      reactions: [],
-      attachments: [],
-      mentions: extractMentions(currentMessage),
-      tags: extractTags(currentMessage),
-      priority: 'normal',
-      status: 'sending'
-    };
-
-    // Add to messages
-    setMessages(prev => ({
-      ...prev,
-      [activeChannel]: [...(prev[activeChannel] || []), newMessage]
-    }));
-
-    // Clear input
-    setCurrentMessage('');
-    setReplyTo(null);
-    setAISuggestions([]);
-
-    // Simulate sending
-    setTimeout(() => {
-      setMessages(prev => ({
-        ...prev,
-        [activeChannel]: prev[activeChannel]?.map(msg => 
-          msg.id === newMessage.id 
-            ? { ...msg, status: 'sent' as const }
-            : msg
-        ) || []
-      }));
-    }, 500);
-
-    // Track activity
-    trackActivity('message-sent', {
-      channelId: activeChannel,
-      messageLength: newMessage.content.length,
-      mentions: newMessage.mentions.length,
-      replyTo: !!replyTo
-    });
-
-    // Process with AI if needed
-    if (newMessage.content.includes('@ai') || newMessage.content.includes('/ai')) {
-      handleAIResponse(newMessage);
-    }
-  }, [currentMessage, currentUser, activeChannel, replyTo, trackActivity]);
-
-  // Handle AI response
-  const handleAIResponse = useCallback(async (userMessage: ChatMessage) => {
+  const loadChannelMessages = useCallback(async () => {
+    if (!selectedChannel) return;
+    
     try {
-      const aiResponse = await processNaturalLanguage(userMessage.content, {
-        context: 'team-chat',
-        channelType: channels.find(c => c.id === activeChannel)?.type,
-        recentMessages: messages[activeChannel]?.slice(-10) || [],
-        workflowIntegrations: workflowIntegrations
-      });
-
-      if (aiResponse) {
-        const aiMessage: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          type: 'ai',
-          content: aiResponse.response || 'I\'m here to help with your data governance tasks!',
-          author: {
-            id: 'ai-assistant',
-            name: 'AI Assistant',
-            email: 'ai@example.com',
-            role: 'admin',
-            status: 'online',
-            lastSeen: new Date().toISOString(),
-            permissions: {} as TeamPermissions,
-            profile: { title: 'AI Assistant' },
-            preferences: {} as any,
-            stats: {} as any
-          },
-          timestamp: new Date().toISOString(),
-          replyTo: userMessage.id,
-          reactions: [],
-          attachments: [],
-          mentions: [],
-          tags: ['ai'],
-          priority: 'normal',
-          status: 'sent',
-          aiContext: {
-            confidence: aiResponse.confidence || 0.9,
-            suggestions: aiResponse.suggestions || [],
-            sentiment: 'positive',
-            topics: aiResponse.topics || [],
-            entities: aiResponse.entities || [],
-            summary: aiResponse.summary
-          }
-        };
-
-        setMessages(prev => ({
-          ...prev,
-          [activeChannel]: [...(prev[activeChannel] || []), aiMessage]
-        }));
+      setLoading(true);
+      const history = await getChannelHistory?.(selectedChannel, 50);
+      if (history) {
+        setMessages(history);
       }
     } catch (error) {
-      console.error('Failed to get AI response:', error);
+      console.error('Error loading channel messages:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [activeChannel, channels, messages, workflowIntegrations, processNaturalLanguage]);
+  }, [selectedChannel, getChannelHistory]);
 
-  // Extract mentions from message
-  const extractMentions = useCallback((content: string): string[] => {
+  const markChannelAsRead = useCallback(async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      await markAsRead?.(selectedChannel);
+    } catch (error) {
+      console.error('Error marking channel as read:', error);
+    }
+  }, [selectedChannel, markAsRead]);
+
+  const updateOnlineStatus = useCallback(() => {
+    if (channelMembers.length > 0) {
+      const online = channelMembers
+        .filter(member => member.status === 'online')
+        .map(member => member.userId);
+      setOnlineUsers(online);
+    }
+  }, [channelMembers]);
+
+  const syncPresenceData = useCallback(async () => {
+    try {
+      const presenceData = await getPresenceData?.();
+      if (presenceData) {
+        // Update user presence status
+        updatePresence?.('online');
+      }
+    } catch (error) {
+      console.error('Error syncing presence data:', error);
+    }
+  }, [getPresenceData, updatePresence]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !selectedChannel) return;
+
+    try {
+      setLoading(true);
+      
+      // Track activity
+      trackUserAction?.('chat_message_sent', {
+        channelId: selectedChannel,
+        messageLength: newMessage.length,
+        mentions: extractMentions(newMessage),
+        hasAttachments: false,
+        isReply: !!replyToMessage
+      });
+
+      // Process with AI for enhancement
+      let processedMessage = newMessage;
+      if (aiContext?.enhanceMessages) {
+        const enhanced = await processNaturalLanguage?.(newMessage, {
+          context: 'team_chat',
+          enhance: true,
+          detectIntent: true
+        });
+        if (enhanced?.enhancedText) {
+          processedMessage = enhanced.enhancedText;
+        }
+      }
+
+      // Send message
+      const messageData: Partial<ChatMessage> = {
+        type: 'text',
+        content: processedMessage,
+        replyTo: replyToMessage || undefined,
+        mentions: extractMentions(newMessage),
+        metadata: {
+          urgency: detectUrgency(newMessage),
+          tags: extractTags(newMessage),
+          category: 'general',
+          status: 'unread'
+        }
+      };
+
+      await sendMessage?.(selectedChannel, messageData);
+      
+      // Clear input and reset state
+      setNewMessage('');
+      setReplyToMessage(null);
+      setIsTyping(false);
+      
+      // Focus back to input
+      messageInputRef.current?.focus();
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [newMessage, selectedChannel, replyToMessage, trackUserAction, processNaturalLanguage, sendMessage, aiContext]);
+
+  const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
+    try {
+      await editMessage?.(messageId, newContent);
+      setEditingMessage(null);
+      
+      trackUserAction?.('chat_message_edited', {
+        messageId,
+        newLength: newContent.length
+      });
+    } catch (error) {
+      console.error('Error editing message:', error);
+    }
+  }, [editMessage, trackUserAction]);
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    try {
+      await deleteMessage?.(messageId);
+      
+      trackUserAction?.('chat_message_deleted', {
+        messageId
+      });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  }, [deleteMessage, trackUserAction]);
+
+  const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      await addReaction?.(messageId, emoji);
+      
+      trackUserAction?.('chat_reaction_added', {
+        messageId,
+        emoji
+      });
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+  }, [addReaction, trackUserAction]);
+
+  const handleCreateThread = useCallback(async (messageId: string) => {
+    try {
+      const threadId = await createThread?.(messageId);
+      if (threadId) {
+        setSelectedThread(threadId);
+        setShowThreads(true);
+      }
+      
+      trackUserAction?.('chat_thread_created', {
+        messageId,
+        threadId
+      });
+    } catch (error) {
+      console.error('Error creating thread:', error);
+    }
+  }, [createThread, trackUserAction]);
+
+  const handleStartVoiceCall = useCallback(async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      const callId = await startVoiceCall?.(selectedChannel);
+      if (callId) {
+        // Handle voice call setup
+        trackUserAction?.('voice_call_started', {
+          channelId: selectedChannel,
+          callId
+        });
+      }
+    } catch (error) {
+      console.error('Error starting voice call:', error);
+    }
+  }, [selectedChannel, startVoiceCall, trackUserAction]);
+
+  const handleStartVideoCall = useCallback(async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      const callId = await startVideoCall?.(selectedChannel);
+      if (callId) {
+        // Handle video call setup
+        trackUserAction?.('video_call_started', {
+          channelId: selectedChannel,
+          callId
+        });
+      }
+    } catch (error) {
+      console.error('Error starting video call:', error);
+    }
+  }, [selectedChannel, startVideoCall, trackUserAction]);
+
+  const handleFileUpload = useCallback(async (files: FileList) => {
+    if (!selectedChannel || files.length === 0) return;
+
+    try {
+      setLoading(true);
+      
+      for (const file of Array.from(files)) {
+        // Validate file
+        const isValid = await validateFile(file);
+        if (!isValid) continue;
+
+        // Upload file
+        const attachment = await uploadFile(file);
+        if (attachment) {
+          // Send message with attachment
+          const messageData: Partial<ChatMessage> = {
+            type: getFileMessageType(file.type) as any,
+            content: `Shared ${file.name}`,
+            attachments: [attachment],
+            metadata: {
+              category: 'file_share',
+              status: 'unread'
+            }
+          };
+
+          await sendMessage?.(selectedChannel, messageData);
+        }
+      }
+
+      trackUserAction?.('files_uploaded', {
+        channelId: selectedChannel,
+        fileCount: files.length
+      });
+
+    } catch (error) {
+      console.error('Error uploading files:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedChannel, sendMessage, trackUserAction]);
+
+  const handleChannelSelect = useCallback((channelId: string) => {
+    setSelectedChannel(channelId);
+    setSelectedThread(null);
+    setReplyToMessage(null);
+    setEditingMessage(null);
+    
+    trackUserAction?.('channel_selected', {
+      channelId
+    });
+  }, [trackUserAction]);
+
+  const handleCreateChannel = useCallback(async (channelData: Partial<ChatChannel>) => {
+    try {
+      const channelId = await createChannel?.(channelData);
+      if (channelId) {
+        setSelectedChannel(channelId);
+        
+        trackUserAction?.('channel_created', {
+          channelId,
+          channelType: channelData.type
+        });
+      }
+    } catch (error) {
+      console.error('Error creating channel:', error);
+    }
+  }, [createChannel, trackUserAction]);
+
+  const handleInviteUser = useCallback(async (userId: string) => {
+    if (!selectedChannel) return;
+    
+    try {
+      await inviteToChannel?.(selectedChannel, userId);
+      
+      trackUserAction?.('user_invited', {
+        channelId: selectedChannel,
+        invitedUserId: userId
+      });
+    } catch (error) {
+      console.error('Error inviting user:', error);
+    }
+  }, [selectedChannel, inviteToChannel, trackUserAction]);
+
+  // Utility functions
+  const extractMentions = (text: string): string[] => {
     const mentionRegex = /@(\w+)/g;
     const mentions = [];
     let match;
-    while ((match = mentionRegex.exec(content)) !== null) {
+    while ((match = mentionRegex.exec(text)) !== null) {
       mentions.push(match[1]);
     }
     return mentions;
-  }, []);
+  };
 
-  // Extract tags from message
-  const extractTags = useCallback((content: string): string[] => {
+  const extractTags = (text: string): string[] => {
     const tagRegex = /#(\w+)/g;
     const tags = [];
     let match;
-    while ((match = tagRegex.exec(content)) !== null) {
+    while ((match = tagRegex.exec(text)) !== null) {
       tags.push(match[1]);
     }
     return tags;
-  }, []);
+  };
 
-  // Handle file upload
-  const handleFileUpload = useCallback(async (files: FileList) => {
-    if (!currentUser) return;
+  const detectUrgency = (text: string): 'low' | 'medium' | 'high' | 'critical' => {
+    const urgentKeywords = ['urgent', 'asap', 'critical', 'emergency', 'immediate'];
+    const highKeywords = ['important', 'priority', 'needed'];
+    
+    const lowerText = text.toLowerCase();
+    
+    if (urgentKeywords.some(keyword => lowerText.includes(keyword))) {
+      return 'critical';
+    } else if (highKeywords.some(keyword => lowerText.includes(keyword))) {
+      return 'high';
+    } else if (text.includes('!')) {
+      return 'medium';
+    }
+    
+    return 'low';
+  };
 
-    for (const file of Array.from(files)) {
-      const attachment: MessageAttachment = {
-        id: `file-${Date.now()}`,
-        name: file.name,
-        type: getFileType(file.type),
-        url: URL.createObjectURL(file),
-        size: file.size,
-        format: file.type,
-        thumbnail: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-      };
-
-      const fileMessage: ChatMessage = {
-        id: `file-msg-${Date.now()}`,
-        type: 'file',
-        content: `Shared a file: ${file.name}`,
-        author: currentUser,
-        timestamp: new Date().toISOString(),
-        reactions: [],
-        attachments: [attachment],
-        mentions: [],
-        tags: [],
-        priority: 'normal',
-        status: 'sending'
-      };
-
-      setMessages(prev => ({
-        ...prev,
-        [activeChannel]: [...(prev[activeChannel] || []), fileMessage]
-      }));
-
-      // Simulate upload
-      setUploadProgress(0);
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setMessages(prevMsgs => ({
-              ...prevMsgs,
-              [activeChannel]: prevMsgs[activeChannel]?.map(msg => 
-                msg.id === fileMessage.id 
-                  ? { ...msg, status: 'sent' as const }
-                  : msg
-              ) || []
-            }));
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 100);
+  const validateFile = async (file: File): Promise<boolean> => {
+    // File size validation (50MB limit)
+    if (file.size > 50 * 1024 * 1024) {
+      return false;
     }
 
-    trackActivity('file-shared', { fileCount: files.length, channel: activeChannel });
-  }, [currentUser, activeChannel, trackActivity]);
+    // File type validation
+    const allowedTypes = [
+      'image/', 'video/', 'audio/', 'text/', 'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument'
+    ];
+    
+    return allowedTypes.some(type => file.type.startsWith(type));
+  };
 
-  // Get file type
-  const getFileType = useCallback((mimeType: string): MessageAttachment['type'] => {
+  const uploadFile = async (file: File): Promise<ChatAttachment | null> => {
+    // Simulate file upload - in real implementation, this would upload to server
+    return {
+      id: `attachment_${Date.now()}`,
+      name: file.name,
+      type: getFileMessageType(file.type) as any,
+      size: file.size,
+      url: URL.createObjectURL(file),
+      uploadedBy: currentUser?.id || '',
+      uploadedAt: new Date().toISOString(),
+      securityLevel: 'internal',
+      scanStatus: 'clean'
+    };
+  };
+
+  const getFileMessageType = (mimeType: string): string => {
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
-    if (mimeType.includes('pdf') || mimeType.includes('doc') || mimeType.includes('text')) return 'document';
     return 'file';
-  }, []);
+  };
 
-  // Handle message reaction
-  const handleMessageReaction = useCallback((messageId: string, emoji: string) => {
-    if (!currentUser) return;
-
-    setMessages(prev => ({
-      ...prev,
-      [activeChannel]: prev[activeChannel]?.map(msg => {
-        if (msg.id === messageId) {
-          const existingReaction = msg.reactions.find(r => r.emoji === emoji);
-          if (existingReaction) {
-            const userIndex = existingReaction.users.indexOf(currentUser.id);
-            if (userIndex > -1) {
-              // Remove reaction
-              existingReaction.users.splice(userIndex, 1);
-              existingReaction.count = existingReaction.users.length;
-              if (existingReaction.count === 0) {
-                msg.reactions = msg.reactions.filter(r => r.emoji !== emoji);
-              }
-            } else {
-              // Add reaction
-              existingReaction.users.push(currentUser.id);
-              existingReaction.count = existingReaction.users.length;
-            }
-          } else {
-            // New reaction
-            msg.reactions.push({
-              emoji,
-              users: [currentUser.id],
-              count: 1
-            });
-          }
-        }
-        return msg;
-      }) || []
-    }));
-  }, [activeChannel, currentUser]);
-
-  // Handle mention suggestions
-  const handleMentionInput = useCallback((value: string) => {
-    const lastAtIndex = value.lastIndexOf('@');
-    if (lastAtIndex > -1 && lastAtIndex === value.length - 1) {
-      setShowMentionSuggestions(true);
-      setMentionQuery('');
-    } else if (lastAtIndex > -1) {
-      const query = value.substring(lastAtIndex + 1);
-      if (query.includes(' ')) {
-        setShowMentionSuggestions(false);
-      } else {
-        setMentionQuery(query);
-        setShowMentionSuggestions(true);
-      }
-    } else {
-      setShowMentionSuggestions(false);
-    }
-  }, []);
-
-  // Filter members for mentions
-  const filteredMembersForMention = useMemo(() => {
-    if (!mentionQuery) return members.slice(0, 5);
-    return members.filter(member => 
-      member.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(mentionQuery.toLowerCase())
-    ).slice(0, 5);
-  }, [members, mentionQuery]);
-
-  // Filter messages based on current filter
-  const filteredMessages = useMemo(() => {
-    const channelMessages = messages[activeChannel] || [];
+  const formatTimestamp = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
     
-    switch (messageFilter) {
-      case 'mentions':
-        return channelMessages.filter(msg => 
-          msg.mentions.includes(currentUser?.name || '') || 
-          msg.content.includes(`@${currentUser?.name}`)
-        );
-      case 'starred':
-        return channelMessages.filter(msg => 
-          pinnedMessages.includes(msg.id)
-        );
-      case 'files':
-        return channelMessages.filter(msg => 
-          msg.attachments.length > 0
-        );
-      case 'workflows':
-        return channelMessages.filter(msg => 
-          msg.type === 'workflow' || msg.metadata?.workflowId
-        );
-      default:
-        return channelMessages;
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+    return date.toLocaleDateString();
+  };
+
+  const getChannelIcon = (channel: ChatChannel) => {
+    switch (channel.type) {
+      case 'public': return <Hash className="w-4 h-4" />;
+      case 'private': return <Lock className="w-4 h-4" />;
+      case 'direct': return <AtSign className="w-4 h-4" />;
+      case 'group': return <Users className="w-4 h-4" />;
+      case 'announcement': return <Bell className="w-4 h-4" />;
+      default: return <MessageSquare className="w-4 h-4" />;
     }
-  }, [messages, activeChannel, messageFilter, currentUser, pinnedMessages]);
+  };
 
-  // Filter channels based on current filter
-  const filteredChannels = useMemo(() => {
-    switch (channelFilter) {
-      case 'public':
-        return channels.filter(ch => ch.type === 'public');
-      case 'private':
-        return channels.filter(ch => ch.type === 'private');
-      case 'direct':
-        return channels.filter(ch => ch.type === 'direct');
-      case 'workflow':
-        return channels.filter(ch => ch.type === 'workflow');
-      default:
-        return channels;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'online': return <div className="w-2 h-2 bg-green-500 rounded-full" />;
+      case 'away': return <div className="w-2 h-2 bg-yellow-500 rounded-full" />;
+      case 'busy': return <div className="w-2 h-2 bg-red-500 rounded-full" />;
+      default: return <div className="w-2 h-2 bg-gray-400 rounded-full" />;
     }
-  }, [channels, channelFilter]);
+  };
 
-  // Render message
-  const renderMessage = useCallback((message: ChatMessage, index: number) => {
-    const isCurrentUser = message.author.id === currentUser?.id;
-    const showAvatar = index === 0 || 
-      messages[activeChannel]?.[index - 1]?.author.id !== message.author.id;
-
-    return (
-      <motion.div
-        key={message.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex gap-3 p-3 hover:bg-muted/30 transition-colors ${
-          isCurrentUser ? 'flex-row-reverse' : ''
-        }`}
-      >
-        {showAvatar && (
-          <Avatar className="w-8 h-8 flex-shrink-0">
-            <AvatarImage src={message.author.avatar} />
-            <AvatarFallback>
-              {message.author.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        )}
-        
-        <div className={`flex-1 min-w-0 ${showAvatar ? '' : 'ml-11'}`}>
-          {showAvatar && (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-sm">{message.author.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(message.timestamp).toLocaleTimeString()}
-              </span>
-              {message.author.role === 'admin' && (
-                <Crown className="w-3 h-3 text-yellow-500" />
-              )}
-              {message.type === 'ai' && (
-                <Badge variant="secondary" className="text-xs">AI</Badge>
-              )}
-            </div>
-          )}
-          
-          <div className={`rounded-lg p-3 max-w-lg ${
-            isCurrentUser 
-              ? 'bg-primary text-primary-foreground ml-auto' 
-              : 'bg-muted'
-          }`}>
-            {message.replyTo && (
-              <div className="text-xs text-muted-foreground mb-2 pl-2 border-l-2 border-muted-foreground">
-                Replying to message...
-              </div>
-            )}
-            
-            <div className="text-sm whitespace-pre-wrap">
-              {message.content}
-            </div>
-            
-            {message.attachments.length > 0 && (
-              <div className="mt-2 space-y-2">
-                {message.attachments.map(attachment => (
-                  <div key={attachment.id} className="flex items-center gap-2 p-2 rounded border">
-                    {attachment.type === 'image' ? (
-                      <Image className="w-4 h-4" />
-                    ) : attachment.type === 'video' ? (
-                      <FileVideo className="w-4 h-4" />
-                    ) : attachment.type === 'audio' ? (
-                      <FileAudio className="w-4 h-4" />
-                    ) : (
-                      <File className="w-4 h-4" />
-                    )}
-                    <span className="text-xs truncate">{attachment.name}</span>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <Download className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {message.mentions.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {message.mentions.map(mention => (
-                  <Badge key={mention} variant="secondary" className="text-xs">
-                    @{mention}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            
-            {message.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {message.tags.map(tag => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          {message.reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {message.reactions.map(reaction => (
-                <Button
-                  key={reaction.emoji}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => handleMessageReaction(message.id, reaction.emoji)}
-                >
-                  {reaction.emoji} {reaction.count}
-                </Button>
-              ))}
-            </div>
-          )}
-          
-          <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <Smile className="w-3 h-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-2" side="top">
-                <div className="flex flex-wrap gap-1 max-w-xs">
-                  {commonEmojis.map(emoji => (
-                    <Button
-                      key={emoji}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleMessageReaction(message.id, emoji)}
-                    >
-                      {emoji}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setReplyTo(message.id)}
-            >
-              <Reply className="w-3 h-3" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <MoreHorizontal className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>
-                  <Copy className="w-3 h-3 mr-1" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Forward className="w-3 h-3 mr-1" />
-                  Forward
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Pin className="w-3 h-3 mr-1" />
-                  Pin
-                </DropdownMenuItem>
-                {isCurrentUser && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }, [activeChannel, messages, currentUser, handleMessageReaction, commonEmojis]);
-
-  // Main render
-  if (!isVisible) return null;
+  const emojiList = ['👍', '❤️', '😂', '😢', '😡', '👏', '🎉', '🔥', '💯', '🚀'];
 
   return (
     <TooltipProvider>
-      <div className={`fixed inset-0 z-50 bg-background/80 backdrop-blur-sm ${className}`}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="fixed inset-4 bg-background border rounded-lg shadow-lg flex flex-col overflow-hidden"
-        >
+      <motion.div
+        className="fixed right-4 top-20 z-50"
+        initial={{ opacity: 0, x: 100 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className={`transition-all duration-300 ${
+          isExpanded 
+            ? 'w-96 h-[600px]' 
+            : 'w-80 h-14'
+        } bg-gradient-to-br from-white/95 to-blue-50/95 backdrop-blur-lg border-blue-200/20 shadow-xl`}>
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <div className="flex items-center space-x-3">
-              <MessageSquare className="h-6 w-6 text-primary" />
-              <div>
-                <h2 className="text-lg font-semibold">Team Chat</h2>
-                <p className="text-sm text-muted-foreground">
-                  Real-time collaboration hub with workflow integration
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              {notifications && (
-                <Bell className="h-4 w-4 text-green-500" />
-              )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowMemberList(!showMemberList)}
-              >
-                <Users className="h-4 w-4 mr-1" />
-                Members ({onlineUsers.length})
-              </Button>
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Settings className="h-4 w-4 mr-1" />
-                    Settings
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>
-                    <Bell className="h-3 w-3 mr-1" />
-                    Notifications
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Volume2 className="h-3 w-3 mr-1" />
-                    Sounds
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Eye className="h-3 w-3 mr-1" />
-                    Privacy
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Left Sidebar - Channels */}
-            <div className="w-80 border-r bg-muted/30 flex flex-col">
-              {/* Channel Filter */}
-              <div className="p-3 border-b">
-                <Select value={channelFilter} onValueChange={setChannelFilter}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Channels</SelectItem>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                    <SelectItem value="direct">Direct</SelectItem>
-                    <SelectItem value="workflow">Workflows</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Channels List */}
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {filteredChannels.map(channel => (
-                    <div
-                      key={channel.id}
-                      className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-                        activeChannel === channel.id 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'hover:bg-muted'
-                      }`}
-                      onClick={() => setActiveChannel(channel.id)}
-                    >
-                      {channel.type === 'public' && <Hash className="w-4 h-4" />}
-                      {channel.type === 'private' && <Lock className="w-4 h-4" />}
-                      {channel.type === 'direct' && <AtSign className="w-4 h-4" />}
-                      {channel.type === 'workflow' && <Workflow className="w-4 h-4" />}
-                      
-                      <span className="flex-1 text-sm font-medium truncate">
-                        {channel.name}
-                      </span>
-                      
-                      {channel.unreadCount > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {channel.unreadCount}
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-blue-900">Team Chat</CardTitle>
+                  {selectedChannel && currentChannelData && (
+                    <p className="text-sm text-blue-600 flex items-center space-x-1">
+                      {getChannelIcon(currentChannelData)}
+                      <span>{currentChannelData.name}</span>
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="text-xs px-1">
+                          {unreadCount}
                         </Badge>
                       )}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {/* Quick Actions */}
-              <div className="p-2 border-t space-y-1">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Channel
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Invite Members
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  <Workflow className="w-4 h-4 mr-2" />
-                  Workflow Integration
-                </Button>
-              </div>
-            </div>
-
-            {/* Chat Area */}
-            <div className="flex-1 flex flex-col">
-              {/* Chat Header */}
-              <div className="flex items-center justify-between p-3 border-b">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">
-                    #{channels.find(c => c.id === activeChannel)?.name}
-                  </h3>
-                  <Badge variant="outline" className="text-xs">
-                    {members.length} members
-                  </Badge>
-                  {isTyping[activeChannel]?.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <div className="flex space-x-1">
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce" />
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-75" />
-                        <div className="w-1 h-1 bg-current rounded-full animate-bounce delay-150" />
-                      </div>
-                      <span>
-                        {isTyping[activeChannel].length === 1 
-                          ? `${members.find(m => m.id === isTyping[activeChannel][0])?.name} is typing...`
-                          : `${isTyping[activeChannel].length} people are typing...`
-                        }
-                      </span>
-                    </div>
+                    </p>
                   )}
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <Select value={messageFilter} onValueChange={setMessageFilter}>
-                    <SelectTrigger className="h-8 w-32 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Messages</SelectItem>
-                      <SelectItem value="mentions">Mentions</SelectItem>
-                      <SelectItem value="starred">Starred</SelectItem>
-                      <SelectItem value="files">Files</SelectItem>
-                      <SelectItem value="workflows">Workflows</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button variant="outline" size="sm">
-                    <Phone className="w-4 h-4 mr-1" />
-                    Call
-                  </Button>
-                  
-                  <Button variant="outline" size="sm">
-                    <Video className="w-4 h-4 mr-1" />
-                    Video
-                  </Button>
-                </div>
               </div>
-
-              {/* Messages */}
-              <ScrollArea 
-                ref={chatContainerRef}
-                className="flex-1 p-0"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragOver(false);
-                  const files = e.dataTransfer.files;
-                  if (files.length > 0) {
-                    handleFileUpload(files);
-                  }
-                }}
-              >
-                <div className="space-y-0">
-                  {filteredMessages.map((message, index) => (
-                    <div key={message.id} className="group">
-                      {renderMessage(message, index)}
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-                
-                {isDragOver && (
-                  <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary flex items-center justify-center">
-                    <div className="text-center">
-                      <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
-                      <p className="text-lg font-medium">Drop files to share</p>
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
-
-              {/* Reply Banner */}
-              {replyTo && (
-                <div className="flex items-center justify-between p-2 bg-muted border-t">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Reply className="w-4 h-4" />
-                    <span>Replying to message</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setReplyTo(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-
-              {/* AI Suggestions */}
-              {aiSuggestions.length > 0 && (
-                <div className="p-2 border-t bg-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-medium">AI Suggestions</span>
-                  </div>
-                  <div className="space-y-1">
-                    {aiSuggestions.map((suggestion, index) => (
-                      <Button
-                        key={index}
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-xs h-auto p-2"
-                        onClick={() => setCurrentMessage(suggestion)}
-                      >
-                        {suggestion}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Message Input */}
-              <div className="p-3 border-t">
-                <div className="flex items-end gap-2">
-                  <div className="flex-1 relative">
-                    <Textarea
-                      ref={messageInputRef}
-                      value={currentMessage}
-                      onChange={(e) => {
-                        setCurrentMessage(e.target.value);
-                        handleMentionInput(e.target.value);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      placeholder="Type a message... (@mention, #tag, /command)"
-                      className="min-h-[40px] max-h-32 resize-none"
-                      rows={1}
-                    />
-                    
-                    {showMentionSuggestions && (
-                      <div className="absolute bottom-full left-0 w-full bg-background border rounded-md shadow-lg mb-1 z-10">
-                        {filteredMembersForMention.map(member => (
-                          <div
-                            key={member.id}
-                            className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                            onClick={() => {
-                              const lastAtIndex = currentMessage.lastIndexOf('@');
-                              const newMessage = currentMessage.substring(0, lastAtIndex + 1) + member.name + ' ';
-                              setCurrentMessage(newMessage);
-                              setShowMentionSuggestions(false);
-                              messageInputRef.current?.focus();
-                            }}
-                          >
-                            <Avatar className="w-6 h-6">
-                              <AvatarImage src={member.avatar} />
-                              <AvatarFallback className="text-xs">
-                                {member.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="text-sm font-medium">{member.name}</div>
-                              <div className="text-xs text-muted-foreground">{member.profile.title}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  >
-                    <Smile className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={isRecording ? 'text-red-500' : ''}
-                  >
-                    <Mic className="w-4 h-4" />
-                  </Button>
-                  
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!currentMessage.trim()}
-                    size="sm"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="mt-2">
-                    <Progress value={uploadProgress} className="h-2" />
-                    <span className="text-xs text-muted-foreground">
-                      Uploading... {uploadProgress}%
-                    </span>
-                  </div>
+              
+              <div className="flex items-center space-x-1">
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {unreadCount}
+                  </Badge>
                 )}
                 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) {
-                      handleFileUpload(e.target.files);
-                    }
-                  }}
-                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNotifications(!showNotifications)}
+                      className="text-blue-600 hover:bg-blue-100"
+                    >
+                      <Bell className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Notifications</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="text-blue-600 hover:bg-blue-100"
+                    >
+                      {isExpanded ? (
+                        <Minimize2 className="w-4 h-4" />
+                      ) : (
+                        <Maximize2 className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isExpanded ? 'Minimize' : 'Expand'}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
+          </CardHeader>
 
-            {/* Right Sidebar - Members & Info */}
-            {showMemberList && (
-              <div className="w-80 border-l bg-muted/30 flex flex-col">
-                <Tabs defaultValue="members" className="flex-1 flex flex-col">
-                  <TabsList className="grid w-full grid-cols-3 m-2">
-                    <TabsTrigger value="members" className="text-xs">Members</TabsTrigger>
-                    <TabsTrigger value="files" className="text-xs">Files</TabsTrigger>
-                    <TabsTrigger value="workflows" className="text-xs">Workflows</TabsTrigger>
-                  </TabsList>
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <CardContent className="p-4 pt-0 h-[540px] flex flex-col">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                    <TabsList className="grid w-full grid-cols-4 mb-4">
+                      <TabsTrigger value="channels" className="text-xs">
+                        <Hash className="w-3 h-3 mr-1" />
+                        Channels
+                      </TabsTrigger>
+                      <TabsTrigger value="chat" className="text-xs">
+                        <MessageSquare className="w-3 h-3 mr-1" />
+                        Chat
+                      </TabsTrigger>
+                      <TabsTrigger value="calls" className="text-xs">
+                        <Phone className="w-3 h-3 mr-1" />
+                        Calls
+                      </TabsTrigger>
+                      <TabsTrigger value="settings" className="text-xs">
+                        <Settings className="w-3 h-3 mr-1" />
+                        Settings
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <div className="flex-1 overflow-hidden">
-                    {/* Members Tab */}
-                    <TabsContent value="members" className="h-full m-0 p-2">
-                      <ScrollArea className="h-full">
+                    {/* Channels Tab */}
+                    <TabsContent value="channels" className="flex-1 flex flex-col space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative flex-1">
+                          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                          <Input
+                            placeholder="Search channels..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 text-sm"
+                          />
+                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Create Channel</DialogTitle>
+                              <DialogDescription>
+                                Create a new channel for team collaboration
+                              </DialogDescription>
+                            </DialogHeader>
+                            {/* Channel creation form would go here */}
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+
+                      <ScrollArea className="flex-1">
                         <div className="space-y-2">
-                          {members.map(member => (
-                            <div key={member.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/50">
-                              <div className="relative">
-                                <Avatar className="w-8 h-8">
-                                  <AvatarImage src={member.avatar} />
-                                  <AvatarFallback className="text-xs">
-                                    {member.name.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
-                                  onlineUsers.includes(member.id)
-                                    ? member.status === 'online' ? 'bg-green-500'
-                                      : member.status === 'away' ? 'bg-yellow-500'
-                                      : member.status === 'busy' ? 'bg-red-500'
-                                      : 'bg-gray-500'
-                                    : 'bg-gray-500'
-                                }`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-sm font-medium truncate">
-                                    {member.name}
-                                  </span>
-                                  {member.role === 'owner' && (
-                                    <Crown className="w-3 h-3 text-yellow-500" />
-                                  )}
-                                  {member.role === 'admin' && (
-                                    <Shield className="w-3 h-3 text-blue-500" />
-                                  )}
+                          {channels.map((channel) => (
+                            <motion.div
+                              key={channel.id}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Card
+                                className={`p-3 cursor-pointer transition-all border-l-4 ${
+                                  selectedChannel === channel.id
+                                    ? 'bg-blue-50 border-l-blue-500 shadow-md'
+                                    : 'bg-white/50 border-l-transparent hover:bg-blue-25'
+                                }`}
+                                onClick={() => handleChannelSelect(channel.id)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2 flex-1">
+                                    {getChannelIcon(channel)}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm truncate">
+                                        {channel.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {channel.members.length} members
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center space-x-1">
+                                    {channel.unreadCount && channel.unreadCount > 0 && (
+                                      <Badge variant="destructive" className="text-xs px-1">
+                                        {channel.unreadCount}
+                                      </Badge>
+                                    )}
+                                    
+                                    {onlineUsers.filter(userId => 
+                                      channel.members.some(member => member.userId === userId)
+                                    ).length > 0 && (
+                                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                    )}
+                                  </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {member.profile.title || member.email}
+                              </Card>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+
+                    {/* Chat Tab */}
+                    <TabsContent value="chat" className="flex-1 flex flex-col">
+                      {selectedChannel && currentChannelData ? (
+                        <div className="flex-1 flex flex-col">
+                          {/* Chat Header */}
+                          <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg mb-3">
+                            <div className="flex items-center space-x-2">
+                              {getChannelIcon(currentChannelData)}
+                              <div>
+                                <p className="font-medium text-sm">{currentChannelData.name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {onlineUsers.length} online
                                 </p>
                               </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                    <MoreVertical className="w-3 h-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  <DropdownMenuItem>
-                                    <MessageSquare className="w-3 h-3 mr-1" />
-                                    Message
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Phone className="w-3 h-3 mr-1" />
-                                    Call
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    Profile
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
                             </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </TabsContent>
+                            
+                            <div className="flex items-center space-x-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleStartVoiceCall}
+                                    className="text-blue-600 hover:bg-blue-100"
+                                  >
+                                    <Phone className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Start Voice Call</TooltipContent>
+                              </Tooltip>
 
-                    {/* Files Tab */}
-                    <TabsContent value="files" className="h-full m-0 p-2">
-                      <ScrollArea className="h-full">
-                        <div className="space-y-2">
-                          {filteredMessages
-                            .filter(msg => msg.attachments.length > 0)
-                            .map(msg => msg.attachments.map(attachment => (
-                              <div key={attachment.id} className="flex items-center gap-2 p-2 rounded border">
-                                {attachment.type === 'image' ? (
-                                  <Image className="w-4 h-4" />
-                                ) : attachment.type === 'video' ? (
-                                  <FileVideo className="w-4 h-4" />
-                                ) : attachment.type === 'audio' ? (
-                                  <FileAudio className="w-4 h-4" />
-                                ) : (
-                                  <File className="w-4 h-4" />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium truncate">
-                                    {attachment.name}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleStartVideoCall}
+                                    className="text-blue-600 hover:bg-blue-100"
+                                  >
+                                    <Video className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Start Video Call</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowUserList(!showUserList)}
+                                    className="text-blue-600 hover:bg-blue-100"
+                                  >
+                                    <Users className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Member List</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+
+                          {/* Messages Area */}
+                          <ScrollArea className="flex-1 mb-3">
+                            <div className="space-y-2">
+                              {loading ? (
+                                <div className="flex items-center justify-center py-8">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                                </div>
+                              ) : filteredMessages.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                  <p className="text-sm">No messages yet</p>
+                                  <p className="text-xs">Start the conversation!</p>
+                                </div>
+                              ) : (
+                                filteredMessages.map((message) => (
+                                  <motion.div
+                                    key={message.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className={`flex space-x-2 ${
+                                      message.senderId === currentUser?.id 
+                                        ? 'flex-row-reverse space-x-reverse' 
+                                        : 'flex-row'
+                                    }`}
+                                  >
+                                    {message.senderId !== currentUser?.id && (
+                                      <Avatar className="w-8 h-8">
+                                        <AvatarImage src={message.senderAvatar} />
+                                        <AvatarFallback className="text-xs">
+                                          {message.senderName.charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    )}
+                                    
+                                    <div className={`flex-1 max-w-[80%] ${
+                                      message.senderId === currentUser?.id 
+                                        ? 'items-end' 
+                                        : 'items-start'
+                                    }`}>
+                                      <div className={`p-2 rounded-lg ${
+                                        message.senderId === currentUser?.id
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-white border border-gray-200'
+                                      }`}>
+                                        {message.senderId !== currentUser?.id && (
+                                          <p className="text-xs font-medium mb-1">
+                                            {message.senderName}
+                                          </p>
+                                        )}
+                                        
+                                        {message.replyTo && (
+                                          <div className="mb-2 p-2 bg-black/10 rounded text-xs">
+                                            <p className="opacity-75">Replying to:</p>
+                                            <p className="truncate">
+                                              {messages.find(m => m.id === message.replyTo)?.content}
+                                            </p>
+                                          </div>
+                                        )}
+                                        
+                                        <p className="text-sm">{message.content}</p>
+                                        
+                                        {message.attachments && message.attachments.length > 0 && (
+                                          <div className="mt-2 space-y-1">
+                                            {message.attachments.map((attachment) => (
+                                              <div
+                                                key={attachment.id}
+                                                className="flex items-center space-x-2 p-2 bg-black/10 rounded"
+                                              >
+                                                <Paperclip className="w-4 h-4" />
+                                                <span className="text-xs truncate">
+                                                  {attachment.name}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        
+                                        {message.reactions && message.reactions.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {message.reactions.map((reaction, index) => (
+                                              <Badge
+                                                key={index}
+                                                variant="secondary"
+                                                className="text-xs px-1 cursor-pointer"
+                                                onClick={() => handleAddReaction(message.id, reaction.emoji)}
+                                              >
+                                                {reaction.emoji} {reaction.count}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
+                                        
+                                        <div className="flex items-center justify-between mt-1">
+                                          <p className="text-xs opacity-60">
+                                            {formatTimestamp(message.timestamp)}
+                                            {message.edited && ' (edited)'}
+                                          </p>
+                                          
+                                          <div className="flex items-center space-x-1">
+                                            {message.metadata?.status === 'read' && (
+                                              <CheckCheck className="w-3 h-3 opacity-60" />
+                                            )}
+                                            
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-auto p-0 opacity-60 hover:opacity-100"
+                                                >
+                                                  <MoreHorizontal className="w-3 h-3" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                  onClick={() => setReplyToMessage(message.id)}
+                                                >
+                                                  <Reply className="w-4 h-4 mr-2" />
+                                                  Reply
+                                                </DropdownMenuItem>
+                                                
+                                                <DropdownMenuItem
+                                                  onClick={() => handleCreateThread(message.id)}
+                                                >
+                                                  <MessageSquare className="w-4 h-4 mr-2" />
+                                                  Start Thread
+                                                </DropdownMenuItem>
+                                                
+                                                {message.senderId === currentUser?.id && (
+                                                  <>
+                                                    <DropdownMenuItem
+                                                      onClick={() => setEditingMessage(message.id)}
+                                                    >
+                                                      <Edit className="w-4 h-4 mr-2" />
+                                                      Edit
+                                                    </DropdownMenuItem>
+                                                    
+                                                    <DropdownMenuItem
+                                                      onClick={() => handleDeleteMessage(message.id)}
+                                                      className="text-red-600"
+                                                    >
+                                                      <Trash className="w-4 h-4 mr-2" />
+                                                      Delete
+                                                    </DropdownMenuItem>
+                                                  </>
+                                                )}
+                                                
+                                                <DropdownMenuSeparator />
+                                                
+                                                <DropdownMenuItem>
+                                                  <Copy className="w-4 h-4 mr-2" />
+                                                  Copy
+                                                </DropdownMenuItem>
+                                                
+                                                <DropdownMenuItem>
+                                                  <Pin className="w-4 h-4 mr-2" />
+                                                  Pin
+                                                </DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Quick Reactions */}
+                                      <div className="flex items-center space-x-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {emojiList.slice(0, 3).map((emoji) => (
+                                          <Button
+                                            key={emoji}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-auto p-1 text-xs"
+                                            onClick={() => handleAddReaction(message.id, emoji)}
+                                          >
+                                            {emoji}
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                ))
+                              )}
+                              <div ref={messagesEndRef} />
+                            </div>
+                          </ScrollArea>
+
+                          {/* Reply Preview */}
+                          {replyToMessage && (
+                            <div className="mb-2 p-2 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="text-xs text-blue-600 font-medium">
+                                    Replying to {messages.find(m => m.id === replyToMessage)?.senderName}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {(attachment.size / 1024 / 1024).toFixed(1)} MB
+                                  <p className="text-xs text-gray-600 truncate">
+                                    {messages.find(m => m.id === replyToMessage)?.content}
                                   </p>
                                 </div>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                  <Download className="w-3 h-3" />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setReplyToMessage(null)}
+                                  className="h-auto p-1"
+                                >
+                                  <X className="w-3 h-3" />
                                 </Button>
                               </div>
-                            )))
-                          }
+                            </div>
+                          )}
+
+                          {/* AI Suggestions */}
+                          {aiSuggestions.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-gray-500 mb-1">AI Suggestions:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {aiSuggestions.slice(0, 3).map((suggestion, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className="text-xs cursor-pointer hover:bg-blue-50"
+                                    onClick={() => setNewMessage(suggestion)}
+                                  >
+                                    {suggestion}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Message Input */}
+                          <div className="space-y-2">
+                            <div className="flex items-end space-x-2">
+                              <div className="flex-1">
+                                <Textarea
+                                  ref={messageInputRef}
+                                  placeholder="Type a message..."
+                                  value={newMessage}
+                                  onChange={(e) => {
+                                    setNewMessage(e.target.value);
+                                    setIsTyping(true);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleSendMessage();
+                                    }
+                                  }}
+                                  className="min-h-[40px] max-h-24 resize-none text-sm"
+                                  disabled={loading}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center space-x-1">
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  multiple
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    if (e.target.files) {
+                                      handleFileUpload(e.target.files);
+                                    }
+                                  }}
+                                />
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => fileInputRef.current?.click()}
+                                      className="text-gray-500 hover:text-blue-600"
+                                    >
+                                      <Paperclip className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Attach File</TooltipContent>
+                                </Tooltip>
+
+                                <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-gray-500 hover:text-blue-600"
+                                    >
+                                      <Smile className="w-4 h-4" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-2">
+                                    <div className="grid grid-cols-5 gap-1">
+                                      {emojiList.map((emoji) => (
+                                        <Button
+                                          key={emoji}
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setNewMessage(prev => prev + emoji);
+                                            setShowEmojiPicker(false);
+                                          }}
+                                          className="h-auto p-2 text-lg"
+                                        >
+                                          {emoji}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        // Toggle voice recording
+                                        setIsRecording(!isRecording);
+                                      }}
+                                      className={`${
+                                        isRecording 
+                                          ? 'text-red-600 bg-red-50' 
+                                          : 'text-gray-500 hover:text-blue-600'
+                                      }`}
+                                    >
+                                      {isRecording ? (
+                                        <MicOff className="w-4 h-4" />
+                                      ) : (
+                                        <Mic className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isRecording ? 'Stop Recording' : 'Voice Message'}
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      onClick={handleSendMessage}
+                                      disabled={!newMessage.trim() || loading}
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      {loading ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                                      ) : (
+                                        <Send className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Send Message</TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+
+                            {/* Typing Indicators */}
+                            {isTyping && (
+                              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                                <div className="flex space-x-1">
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" />
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-100" />
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-200" />
+                                </div>
+                                <span>Someone is typing...</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </ScrollArea>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-500">
+                          <div className="text-center">
+                            <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm font-medium">Select a channel</p>
+                            <p className="text-xs">Choose a channel to start chatting</p>
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
 
-                    {/* Workflows Tab */}
-                    <TabsContent value="workflows" className="h-full m-0 p-2">
-                      <ScrollArea className="h-full">
-                        <div className="space-y-2">
-                          {workflowIntegrations.map(workflow => (
-                            <Card key={workflow.id} className="p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Workflow className="w-4 h-4" />
-                                  <span className="text-sm font-medium">{workflow.name}</span>
-                                </div>
-                                <Badge variant={
-                                  workflow.status === 'running' ? 'default' :
-                                  workflow.status === 'completed' ? 'secondary' :
-                                  workflow.status === 'failed' ? 'destructive' : 'outline'
-                                }>
-                                  {workflow.status}
-                                </Badge>
-                              </div>
-                              
-                              {workflow.status === 'running' && (
-                                <div className="mb-2">
-                                  <Progress value={workflow.progress} className="h-2" />
-                                  <span className="text-xs text-muted-foreground">
-                                    {workflow.progress}% complete
-                                  </span>
-                                </div>
-                              )}
-                              
-                              <div className="flex gap-1">
-                                {workflow.actions.canStop && (
-                                  <Button variant="outline" size="sm" className="text-xs">
-                                    Stop
-                                  </Button>
-                                )}
-                                {workflow.actions.canPause && (
-                                  <Button variant="outline" size="sm" className="text-xs">
-                                    Pause
-                                  </Button>
-                                )}
-                                {workflow.actions.canConfigure && (
-                                  <Button variant="outline" size="sm" className="text-xs">
-                                    Configure
-                                  </Button>
-                                )}
-                              </div>
-                            </Card>
-                          ))}
+                    {/* Calls Tab */}
+                    <TabsContent value="calls" className="flex-1 flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-medium">Active Calls</h3>
+                        <div className="flex space-x-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleStartVoiceCall}
+                                className="text-blue-600 hover:bg-blue-100"
+                              >
+                                <Phone className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Start Voice Call</TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleStartVideoCall}
+                                className="text-blue-600 hover:bg-blue-100"
+                              >
+                                <Video className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Start Video Call</TooltipContent>
+                          </Tooltip>
                         </div>
-                      </ScrollArea>
+                      </div>
+
+                      {activeCall ? (
+                        <Card className="p-4 bg-green-50 border-green-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              {'participants' in activeCall && activeCall.participants.some(p => 'isVideoEnabled' in p) ? (
+                                <Video className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <Phone className="w-5 h-5 text-green-600" />
+                              )}
+                              <div>
+                                <p className="font-medium text-sm">Active Call</p>
+                                <p className="text-xs text-gray-600">
+                                  {activeCall.participants.length} participant(s)
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {activeCall.quality}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2 mb-4">
+                            {activeCall.participants.map((participant, index) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-white rounded">
+                                <div className="flex items-center space-x-2">
+                                  <Avatar className="w-6 h-6">
+                                    <AvatarFallback className="text-xs">
+                                      U{index + 1}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">User {index + 1}</span>
+                                  {participant.isSpeaking && (
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center space-x-1">
+                                  {'isVideoEnabled' in participant && participant.isVideoEnabled && (
+                                    <Camera className="w-4 h-4 text-blue-600" />
+                                  )}
+                                  {'isMuted' in participant && participant.isMuted && (
+                                    <MicOff className="w-4 h-4 text-red-600" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center justify-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:bg-red-100"
+                              onClick={() => endCall?.(activeCall.id)}
+                            >
+                              <Phone className="w-4 h-4" />
+                              End Call
+                            </Button>
+                            
+                            {activeCall.recording?.enabled && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:bg-blue-100"
+                              >
+                                <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse" />
+                                Recording
+                              </Button>
+                            )}
+                          </div>
+                        </Card>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-500">
+                          <div className="text-center">
+                            <Phone className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm font-medium">No active calls</p>
+                            <p className="text-xs">Start a voice or video call</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent Calls */}
+                      <div className="mt-6">
+                        <h4 className="font-medium text-sm mb-2">Recent Calls</h4>
+                        <div className="text-center text-gray-500 text-sm">
+                          No recent calls
+                        </div>
+                      </div>
                     </TabsContent>
-                  </div>
-                </Tabs>
-              </div>
+
+                    {/* Settings Tab */}
+                    <TabsContent value="settings" className="flex-1 flex flex-col space-y-4">
+                      <div>
+                        <h3 className="font-medium mb-3">Chat Settings</h3>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Notifications</p>
+                              <p className="text-xs text-gray-500">Enable chat notifications</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Sound</p>
+                              <p className="text-xs text-gray-500">Play notification sounds</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Read Receipts</p>
+                              <p className="text-xs text-gray-500">Show when messages are read</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Typing Indicators</p>
+                              <p className="text-xs text-gray-500">Show when others are typing</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">AI Assistant</p>
+                              <p className="text-xs text-gray-500">Enable AI suggestions</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-2">
+                            <Label htmlFor="theme" className="text-sm">Theme</Label>
+                            <Select defaultValue="auto">
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="light">Light</SelectItem>
+                                <SelectItem value="dark">Dark</SelectItem>
+                                <SelectItem value="auto">Auto</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="font-size" className="text-sm">Font Size</Label>
+                            <Select defaultValue="medium">
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="small">Small</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="large">Large</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <Separator />
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Show Online Status</p>
+                              <p className="text-xs text-gray-500">Let others see when you're online</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">Allow Direct Messages</p>
+                              <p className="text-xs text-gray-500">Allow anyone to message you directly</p>
+                            </div>
+                            <Switch defaultChecked />
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Export Chat Data
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start"
+                            >
+                              <Archive className="w-4 h-4 mr-2" />
+                              Archived Channels
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full justify-start text-red-600 hover:text-red-700"
+                            >
+                              <Trash className="w-4 h-4 mr-2" />
+                              Clear Chat History
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </motion.div>
             )}
-          </div>
-        </motion.div>
-      </div>
+          </AnimatePresence>
+        </Card>
+
+        {/* Member List Sidebar */}
+        <AnimatePresence>
+          {showUserList && isExpanded && selectedChannel && (
+            <motion.div
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              className="fixed right-[400px] top-20 z-40"
+            >
+              <Card className="w-64 h-[600px] bg-white/95 backdrop-blur-lg border-gray-200/20 shadow-xl">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Members</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowUserList(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="p-4 pt-0">
+                  <ScrollArea className="h-[520px]">
+                    <div className="space-y-2">
+                      {channelMembers.map((member) => (
+                        <div
+                          key={member.userId}
+                          className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50"
+                        >
+                          <div className="relative">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={member.avatar} />
+                              <AvatarFallback className="text-xs">
+                                {member.displayName.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-1 -right-1">
+                              {getStatusIcon(member.status)}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {member.displayName}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {member.role}
+                            </p>
+                          </div>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-auto p-1">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Message
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Phone className="w-4 h-4 mr-2" />
+                                Call
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Profile
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Notifications Panel */}
+        <AnimatePresence>
+          {showNotifications && isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="fixed right-4 top-[640px] z-40"
+            >
+              <Card className="w-80 max-h-96 bg-white/95 backdrop-blur-lg border-gray-200/20 shadow-xl">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Notifications</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNotifications(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="p-4 pt-0">
+                  <div className="text-center text-gray-500 text-sm py-8">
+                    No new notifications
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </TooltipProvider>
   );
 };
