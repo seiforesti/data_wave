@@ -65,7 +65,8 @@ class DataSourceService:
         ssl_config: Optional[Dict[str, str]] = None,
         pool_size: Optional[int] = None,
         max_overflow: Optional[int] = None,
-        pool_timeout: Optional[int] = None
+        pool_timeout: Optional[int] = None,
+        created_by: Optional[str] = None
     ) -> DataSource:
         """Create a new data source with enhanced fields."""
         try:
@@ -118,7 +119,7 @@ class DataSourceService:
                 environment=environment,
                 criticality=criticality or Criticality.MEDIUM,
                 data_classification=data_classification or DataClassification.INTERNAL,
-                owner=owner,
+                owner=owner or created_by,  # Use created_by as owner if not specified
                 team=team,
                 tags=tags,
                 scan_frequency=scan_frequency or ScanFrequency.WEEKLY,
@@ -131,7 +132,9 @@ class DataSourceService:
                 ssl_config=ssl_config,
                 pool_size=pool_size or 5,
                 max_overflow=max_overflow or 10,
-                pool_timeout=pool_timeout or 30
+                pool_timeout=pool_timeout or 30,
+                created_by=created_by,
+                updated_by=created_by
             )
             
             session.add(data_source)
@@ -145,10 +148,49 @@ class DataSourceService:
             raise
     
     @staticmethod
-    def get_data_source(session: Session, data_source_id: int) -> Optional[DataSource]:
-        """Get a data source by ID."""
-        result = session.exec(select(DataSource).where(DataSource.id == data_source_id)).first()
+    def get_data_source(session: Session, data_source_id: int, current_user: Optional[str] = None) -> Optional[DataSource]:
+        """Get a data source by ID with RBAC filtering."""
+        query = select(DataSource).where(DataSource.id == data_source_id)
+        
+        # Apply RBAC filtering - users can only see their own data sources or ones they have access to
+        if current_user:
+            # For now, allow users to see data sources they created or own
+            # In a more complex RBAC system, this would check permissions
+            query = query.where(
+                or_(
+                    DataSource.created_by == current_user,
+                    DataSource.owner == current_user,
+                    DataSource.created_by.is_(None)  # Legacy data sources without created_by
+                )
+            )
+        
+        result = session.exec(query).first()
         return cast(Optional[DataSource], result)
+    
+    @staticmethod
+    def get_all_data_sources(
+        session: Session, 
+        current_user: Optional[str] = None,
+        include_all: bool = False
+    ) -> List[DataSource]:
+        """Get all data sources with RBAC filtering."""
+        query = select(DataSource)
+        
+        # Apply RBAC filtering unless explicitly requested to include all (for admin users)
+        if current_user and not include_all:
+            query = query.where(
+                or_(
+                    DataSource.created_by == current_user,
+                    DataSource.owner == current_user,
+                    DataSource.created_by.is_(None)  # Legacy data sources without created_by
+                )
+            )
+        
+        # Order by most recent first
+        query = query.order_by(desc(DataSource.created_at))
+        
+        result = session.exec(query).all()
+        return cast(List[DataSource], result)
     
     @staticmethod
     def get_data_source_by_name(session: Session, name: str) -> Optional[DataSource]:
@@ -166,6 +208,7 @@ class DataSourceService:
     def update_data_source(
         session: Session,
         data_source_id: int,
+        updated_by: Optional[str] = None,
         **kwargs
     ) -> Optional[DataSource]:
         """Update a data source."""
@@ -196,11 +239,14 @@ class DataSourceService:
             if hasattr(data_source, key):
                 setattr(data_source, key, value)
         
+        # Set RBAC user tracking
         data_source.updated_at = datetime.utcnow()
+        data_source.updated_by = updated_by
+        
         session.add(data_source)
         session.commit()
         session.refresh(data_source)
-        logger.info(f"Updated data source: {data_source.name} (ID: {data_source_id})")
+        logger.info(f"Updated data source: {data_source.name} (ID: {data_source_id}) by user: {updated_by}")
         return data_source
     
     @staticmethod

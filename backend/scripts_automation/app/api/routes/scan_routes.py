@@ -248,7 +248,7 @@ async def create_data_source(
 ):
     """Create a new data source."""
     try:
-        # Create data source
+        # Create data source with current user context
         db_data_source = DataSourceService.create_data_source(
             session=session,
             name=data_source.name,
@@ -267,7 +267,8 @@ async def create_data_source(
             owner=data_source.owner,
             team=data_source.team,
             tags=data_source.tags,
-            scan_frequency=data_source.scan_frequency
+            scan_frequency=data_source.scan_frequency,
+            created_by=current_user.get("username") or current_user.get("email")
         )
         
         return db_data_source
@@ -294,8 +295,16 @@ async def get_data_sources(
 ):
     """Get all data sources with filtering and pagination."""
     try:
-        # Apply filters in the service layer
-        data_sources = DataSourceService.get_all_data_sources(session)
+        # Get user context for RBAC filtering
+        current_username = current_user.get("username") or current_user.get("email")
+        is_admin = current_user.get("role") == "admin"
+        
+        # Apply filters in the service layer with RBAC
+        data_sources = DataSourceService.get_all_data_sources(
+            session=session,
+            current_user=current_username,
+            include_all=is_admin
+        )
         
         # Filter results
         filtered_sources = []
@@ -337,8 +346,13 @@ async def get_data_source(
     session: Session = Depends(get_session),
     current_user: Dict[str, Any] = Depends(require_permission(PERMISSION_SCAN_VIEW))
 ):
-    """Get a data source by ID."""
-    data_source = DataSourceService.get_data_source(session, data_source_id)
+    """Get a data source by ID with RBAC filtering."""
+    current_username = current_user.get("username") or current_user.get("email")
+    data_source = DataSourceService.get_data_source(
+        session=session, 
+        data_source_id=data_source_id,
+        current_user=current_username
+    )
     if not data_source:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Data source not found")
     return data_source
@@ -363,6 +377,7 @@ async def update_data_source(
         updated_data_source = DataSourceService.update_data_source(
             session=session,
             data_source_id=data_source_id,
+            updated_by=current_user.get("username") or current_user.get("email"),
             **update_data
         )
         

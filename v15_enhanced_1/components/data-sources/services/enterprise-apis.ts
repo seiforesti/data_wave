@@ -675,6 +675,125 @@ export const rollbackVersion = async (data_source_id: number, target_version_id:
 }
 
 // ============================================================================
+// DATA SOURCE MANAGEMENT APIs
+// ============================================================================
+
+// Data Source CRUD operations
+export const useUpdateDataSourceMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, params }: { id: number, params: any }) => {
+      const { data } = await enterpriseApi.put(`/scan/data-sources/${id}`, params)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+    },
+  })
+}
+
+export const useTestConnectionMutation = () => {
+  return useMutation({
+    mutationFn: async (dataSourceId: number) => {
+      const { data } = await enterpriseApi.post(`/scan/data-sources/${dataSourceId}/test-connection`)
+      return data
+    },
+  })
+}
+
+// Access Control APIs
+export const useDataSourceAccessControlQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['data-source-access-control', dataSourceId],
+    queryFn: async () => {
+      const { data } = await enterpriseApi.get(`/scan/data-sources/${dataSourceId}/access-control`)
+      return data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+export const useCreateAccessControlMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: any) => {
+      const { data } = await enterpriseApi.post('/scan/data-sources/access-control', params)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-source-access-control'] })
+    },
+  })
+}
+
+export const useUpdateAccessControlMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ permission_id, ...params }: any) => {
+      const { data } = await enterpriseApi.put(`/scan/data-sources/access-control/${permission_id}`, params)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-source-access-control'] })
+    },
+  })
+}
+
+export const useDeleteAccessControlMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (permissionId: string) => {
+      const { data } = await enterpriseApi.delete(`/scan/data-sources/access-control/${permissionId}`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-source-access-control'] })
+    },
+  })
+}
+
+// Version History APIs
+export const useDataSourceVersionHistoryQuery = (dataSourceId: number, options = {}) => {
+  return useQuery({
+    queryKey: ['data-source-version-history', dataSourceId],
+    queryFn: async () => {
+      const { data } = await enterpriseApi.get(`/scan/data-sources/${dataSourceId}/version-history`)
+      return data
+    },
+    enabled: !!dataSourceId,
+    ...options,
+  })
+}
+
+export const useCreateVersionMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: any) => {
+      const { data } = await enterpriseApi.post('/scan/data-sources/version-history', params)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-source-version-history'] })
+    },
+  })
+}
+
+export const useRestoreVersionMutation = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: any) => {
+      const { data } = await enterpriseApi.post('/scan/data-sources/version-history/restore', params)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['data-source-version-history'] })
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] })
+    },
+  })
+}
+
+// ============================================================================
 // REACT QUERY HOOKS - ENTERPRISE FEATURES
 // ============================================================================
 
