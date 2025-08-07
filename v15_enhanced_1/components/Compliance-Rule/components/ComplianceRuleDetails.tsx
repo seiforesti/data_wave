@@ -89,10 +89,7 @@ export function ComplianceRuleDetails({
         setRequirement(requirementData)
         
         // Load evaluation history
-        const evaluationsResponse = await ComplianceAPIs.ComplianceManagement.getRuleEvaluations(requirementId, {
-          page: 1,
-          limit: 10
-        })
+        const evaluationsResponse = await ComplianceAPIs.ComplianceManagement.getEvaluationHistory(requirementId, 1, 10)
         setAssessmentHistory(evaluationsResponse.data || [])
         
         // Load related requirements (same framework)
@@ -170,10 +167,14 @@ export function ComplianceRuleDetails({
   const handleRefresh = async () => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setAssessmentHistory(mockAssessmentHistory)
-      setEvidenceFiles(mockEvidenceFiles)
-      setRelatedRequirements(mockRelatedRequirements)
+      const requirementData = await ComplianceAPIs.ComplianceManagement.getRequirement(requirement?.id as number)
+      setRequirement(requirementData)
+      const evaluationsResponse = await ComplianceAPIs.ComplianceManagement.getEvaluationHistory(requirement?.id as number, 1, 10)
+      setAssessmentHistory(evaluationsResponse.data || [])
+      if (requirementData.framework) {
+        const relatedResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({ framework: requirementData.framework, limit: 5 })
+        setRelatedRequirements((relatedResponse.data || []).filter(r => r.id !== requirement?.id))
+      }
       sendNotification('success', 'Requirement details refreshed')
     } catch (error) {
       sendNotification('error', 'Failed to refresh details')

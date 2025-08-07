@@ -226,11 +226,12 @@ const ComplianceDashboard: React.FC<ComplianceDashboardProps> = ({
       if (event.type === 'compliance_status_updated' || event.type === 'metrics_updated') {
         // Reload data when compliance status changes
         setLoading(true)
-        setTimeout(() => {
-          // Trigger a reload by updating the dependency
-          setMetrics(prev => ({ ...prev, last_updated: new Date().toISOString() }))
-          setLoading(false)
-        }, 1000)
+        ComplianceAPIs.ComplianceManagement.getDashboardAnalytics({ data_source_id: dataSourceId, time_range: timeRange })
+          .then((analytics) => {
+            setMetrics(prev => ({ ...prev, ...analytics, last_updated: new Date().toISOString() }))
+          })
+          .catch((err) => console.error('Failed to refresh dashboard analytics:', err))
+          .finally(() => setLoading(false))
       }
     })
 
