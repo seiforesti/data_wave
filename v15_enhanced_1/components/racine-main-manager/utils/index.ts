@@ -318,3 +318,22 @@ export const throttle = <T extends (...args: any[]) => any>(
     }
   }) as T;
 };
+
+// New utility exports for Scan Logic and RBAC
+export { scanLogicUtils } from './scan-logic-utils';
+export type {
+  ScanLogicConfigurationUtils,
+  ScanLogicMonitoringUtils,
+  ScanLogicCoordinationUtils,
+  ScanLogicRealTimeUtils
+} from './scan-logic-utils';
+
+export { rbacUtils } from './rbac-utils';
+export type {
+  RBACPermissionUtils,
+  RBACRoleUtils,
+  RBACUserUtils,
+  RBACPolicyUtils,
+  RBACAnalyticsUtils,
+  RBACConfigurationUtils
+} from './rbac-utils';

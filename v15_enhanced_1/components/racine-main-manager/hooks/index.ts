@@ -107,3 +107,26 @@ export { useNotificationManager } from './useNotificationManager';
 
 // Scan rule set management hooks
 export { useScanRuleSets } from './useScanRuleSets';
+
+// Additional SPA integration hooks
+export { useClassifications } from './useClassifications';
+export { useComplianceRules } from './useComplianceRules';
+export { useAdvancedCatalog } from './useAdvancedCatalog';
+
+// Scan logic integration hooks
+export { useScanLogic } from './useScanLogic';
+export type {
+  ScanLogicState,
+  ScanLogicMethods,
+  UseScanLogicOptions,
+  UseScanLogicReturn
+} from './useScanLogic';
+
+// RBAC system integration hooks
+export { useRBACSystem } from './useRBACSystem';
+export type {
+  RBACSystemState,
+  RBACSystemMethods,
+  UseRBACSystemOptions,
+  UseRBACSystemReturn
+} from './useRBACSystem';

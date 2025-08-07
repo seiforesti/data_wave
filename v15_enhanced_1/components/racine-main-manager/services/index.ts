@@ -36,6 +36,21 @@ export * from './cross-group-integration-apis';
 // User management service
 export * from './user-management-apis';
 
+// Scan logic service (integrated with Advanced-Scan-Logic SPA)
+export * from './scan-logic-apis';
+
+// Advanced catalog service
+export * from './advanced-catalog-apis';
+
+// Classifications service
+export * from './classifications-apis';
+
+// Compliance rule service
+export * from './compliance-rule-apis';
+
+// Scan rule sets service
+export * from './scan-rule-sets-apis';
+
 // Re-export service instances for convenience
 export { racineOrchestrationAPI } from './racine-orchestration-apis';
 export { workspaceManagementAPI } from './workspace-management-apis';
@@ -47,6 +62,11 @@ export { dashboardAPI } from './dashboard-apis';
 export { collaborationAPI } from './collaboration-apis';
 export { crossGroupIntegrationAPI } from './cross-group-integration-apis';
 export { userManagementAPI } from './user-management-apis';
+export { scanLogicAPI } from './scan-logic-apis';
+export { advancedCatalogAPI } from './advanced-catalog-apis';
+export { classificationsAPI } from './classifications-apis';
+export { complianceRuleAPI } from './compliance-rule-apis';
+export { scanRuleSetsAPI } from './scan-rule-sets-apis';
 
 // Export service types for external usage
 export type {
