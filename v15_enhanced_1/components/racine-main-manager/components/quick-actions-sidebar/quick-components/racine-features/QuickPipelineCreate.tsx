@@ -201,7 +201,7 @@ import {
 } from 'lucide-react';
 
 // Import hooks and services
-import { usePipelineManagement } from '../../../hooks/usePipelineManagement';
+import { usePipelineManager } from '../../../hooks/usePipelineManager';
 import { useWorkspaceManagement } from '../../../hooks/useWorkspaceManagement';
 import { useUserManagement } from '../../../hooks/useUserManagement';
 import { useAIAssistant } from '../../../hooks/useAIAssistant';
@@ -494,7 +494,7 @@ const QuickPipelineCreate: React.FC<QuickPipelineCreateProps> = ({
     getQualityMetrics,
     getComplianceReport,
     getOptimizationRecommendations
-  } = usePipelineManagement();
+  } = usePipelineManager();
 
   const {
     currentWorkspace,

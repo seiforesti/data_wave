@@ -198,7 +198,7 @@ import { useUserManagement } from '../../../hooks/useUserManagement';
 import { useAIAssistant } from '../../../hooks/useAIAssistant';
 import { useCrossGroupIntegration } from '../../../hooks/useCrossGroupIntegration';
 import { useActivityTracking } from '../../../hooks/useActivityTracking';
-import { usePipelineManagement } from '../../../hooks/usePipelineManagement';
+import { usePipelineManager } from '../../../hooks/usePipelineManager';
 import { useAdvancedCatalog } from '../../../hooks/useAdvancedCatalog';
 import { useDataSources } from '../../../hooks/useDataSources';
 import { useScanRuleSets } from '../../../hooks/useScanRuleSets';
