@@ -2473,11 +2473,15 @@ const EnhancedComplianceRuleApp: React.FC<{ dataSourceId?: number }> = ({ dataSo
 // Wrapped component with Enterprise Provider
 const ComplianceRuleAppWithProvider: React.FC<{ dataSourceId?: number }> = ({ dataSourceId }) => {
   return (
-    <EnterpriseComplianceProvider>
-      <TooltipProvider>
-        <EnhancedComplianceRuleApp dataSourceId={dataSourceId} />
-      </TooltipProvider>
-    </EnterpriseComplianceProvider>
+    <PermissionProvider>
+      <PermissionGuard permission={PERMISSION_COMPLIANCE_VIEW}>
+        <EnterpriseComplianceProvider>
+          <TooltipProvider>
+            <EnhancedComplianceRuleApp dataSourceId={dataSourceId} />
+          </TooltipProvider>
+        </EnterpriseComplianceProvider>
+      </PermissionGuard>
+    </PermissionProvider>
   )
 }
 

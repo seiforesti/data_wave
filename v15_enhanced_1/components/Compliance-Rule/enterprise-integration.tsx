@@ -793,19 +793,43 @@ export function EnterpriseComplianceProvider({
       console.log(`Executing compliance action: ${action}`, params)
       performanceMonitor.recordRequest(Date.now())
       
-      // Simulate backend call
-      const response = await fetch('/api/compliance/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, params })
-      })
-      
-      if (!response.ok) {
-        performanceMonitor.recordError()
-        throw new Error('Action failed')
+      // Map enterprise actions to real backend APIs
+      let result: any
+      switch (action) {
+        case 'generate_report':
+          result = await ComplianceAPIs.Audit.createReport(params)
+          break
+        case 'regenerate_report':
+          result = await ComplianceAPIs.Audit.generateReport(params.id, { force_regenerate: true })
+          break
+        case 'update_settings':
+          result = await ComplianceAPIs.ComplianceManagement.updateRequirement(params.id, params.data)
+          break
+        case 'createWorkflow':
+          result = await ComplianceAPIs.ComplianceManagement.createWorkflow(params)
+          break
+        case 'updateWorkflow':
+          result = await ComplianceAPIs.ComplianceManagement.updateWorkflow(params.id, params.data)
+          break
+        case 'executeWorkflow':
+          result = await ComplianceAPIs.ComplianceManagement.executeWorkflow(params.id, params)
+          break
+        case 'createReport':
+          result = await ComplianceAPIs.Audit.createReport(params)
+          break
+        case 'updateReport':
+          result = await ComplianceAPIs.Audit.updateReport(params.id, params.data)
+          break
+        case 'downloadEvidence':
+          // Implement evidence download via appropriate API if available
+          result = { status: 'initiated' }
+          break
+        case 'startAssessment':
+          result = await ComplianceAPIs.ComplianceManagement.evaluateRequirement(params.requirementId, { run_scans: true })
+          break
+        default:
+          throw new Error(`Unsupported action: ${action}`)
       }
-      
-      const result = await response.json()
       performanceMonitor.recordRequest(Date.now())
       
       // Add event

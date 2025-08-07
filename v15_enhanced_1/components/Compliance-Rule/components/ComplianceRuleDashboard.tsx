@@ -22,6 +22,8 @@ import { ComplianceHooks } from '../hooks/use-enterprise-features'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import type { ComplianceMetrics, ComplianceInsight, ComplianceEvent } from '../types'
 import { ComplianceAPIs } from '../services/enterprise-apis'
+import { PermissionProvider, PermissionGuard } from '@/v15_enhanced_1/components/Advanced_RBAC_Datagovernance_System/components/shared/PermissionGuard'
+import { PERMISSION_COMPLIANCE_VIEW } from '@/v15_enhanced_1/components/Advanced_RBAC_Datagovernance_System/constants/permissions.constants'
 
 interface ComplianceRuleDashboardProps {
   dataSourceId?: number
@@ -193,34 +195,15 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
     return unsubscribe
   }, [enterprise, enterpriseFeatures])
 
-  // Mock data for demonstration
-  const mockMetrics = {
-    totalRequirements: 247,
-    complianceScore: 94.2,
-    openGaps: 12,
-    riskScore: 72,
-    trendsData: [
-      { date: '2024-01', score: 89.5 },
-      { date: '2024-02', score: 91.2 },
-      { date: '2024-03', score: 93.1 },
-      { date: '2024-04', score: 94.2 }
-    ],
-    frameworkScores: {
-      'SOC 2': 96,
-      'GDPR': 92,
-      'HIPAA': 88,
-      'PCI DSS': 94,
-      'ISO 27001': 90
-    },
-    riskDistribution: {
-      low: 65,
-      medium: 25,
-      high: 8,
-      critical: 2
-    }
+  const displayMetrics = metrics || {
+    totalRequirements: 0,
+    complianceScore: 0,
+    openGaps: 0,
+    riskScore: 0,
+    trendsData: [],
+    frameworkScores: {},
+    riskDistribution: { low: 0, medium: 0, high: 0, critical: 0 }
   }
-
-  const displayMetrics = metrics || mockMetrics
 
   // Render overview metrics
   const renderOverviewMetrics = () => (
@@ -488,151 +471,155 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
   )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Compliance Dashboard</h2>
-          <p className="text-muted-foreground">
-            Real-time compliance monitoring and analytics
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-1" />
-            Filters
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-1" />
-            Settings
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+    <PermissionProvider>
+      <PermissionGuard permission={PERMISSION_COMPLIANCE_VIEW}>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Compliance Dashboard</h2>
+              <p className="text-muted-foreground">
+                Real-time compliance monitoring and analytics
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+              </Button>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1" />
+                Settings
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
+            </div>
+          </div>
 
-      {/* Overview Metrics */}
-      {renderOverviewMetrics()}
+          {/* Overview Metrics */}
+          {renderOverviewMetrics()}
 
-      {/* Main Dashboard Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-          <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
+          {/* Main Dashboard Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="trends">Trends</TabsTrigger>
+              <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
+              <TabsTrigger value="insights">Insights</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  {renderComplianceTrends()}
+                  {renderRecentActivities()}
+                </div>
+                <div className="space-y-6">
+                  {renderFrameworkPerformance()}
+                  {renderRiskDistribution()}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="trends" className="space-y-6">
               {renderComplianceTrends()}
-              {renderRecentActivities()}
-            </div>
-            <div className="space-y-6">
-              {renderFrameworkPerformance()}
-              {renderRiskDistribution()}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-6">
-          {renderComplianceTrends()}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance Velocity</CardTitle>
-                <CardDescription>Rate of compliance improvement over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center bg-muted/50 rounded">
-                  <p className="text-muted-foreground">Velocity trend chart</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Risk Trends</CardTitle>
-                <CardDescription>Risk level changes over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center bg-muted/50 rounded">
-                  <p className="text-muted-foreground">Risk trend chart</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="frameworks" className="space-y-6">
-          {renderFrameworkPerformance()}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {Object.entries(displayMetrics.frameworkScores || {}).map(([framework, score]) => (
-              <Card key={framework}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{framework}</CardTitle>
-                  <CardDescription>Current compliance status</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2">{score}%</div>
-                    <Progress value={score} className="mb-4" />
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Last Updated</span>
-                      <span>2 hours ago</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Compliance Velocity</CardTitle>
+                    <CardDescription>Rate of compliance improvement over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 flex items-center justify-center bg-muted/50 rounded">
+                      <p className="text-muted-foreground">Velocity trend chart</p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Risk Trends</CardTitle>
+                    <CardDescription>Risk level changes over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 flex items-center justify-center bg-muted/50 rounded">
+                      <p className="text-muted-foreground">Risk trend chart</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
-        <TabsContent value="insights" className="space-y-6">
-          {renderAIInsights()}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Predictive Analytics</CardTitle>
-                <CardDescription>AI-powered compliance predictions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-3 bg-blue-50 rounded border-l-4 border-blue-400">
-                    <p className="text-sm font-medium">Compliance Score Forecast</p>
-                    <p className="text-xs text-muted-foreground">Expected to reach 96% by next quarter</p>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded border-l-4 border-green-400">
-                    <p className="text-sm font-medium">Risk Reduction Opportunity</p>
-                    <p className="text-xs text-muted-foreground">Implementing suggested controls could reduce risk by 15%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Anomaly Detection</CardTitle>
-                <CardDescription>Unusual patterns and outliers</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-3 bg-yellow-50 rounded border-l-4 border-yellow-400">
-                    <p className="text-sm font-medium">Unusual Activity Detected</p>
-                    <p className="text-xs text-muted-foreground">Spike in access control violations detected</p>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded border-l-4 border-red-400">
-                    <p className="text-sm font-medium">Critical Pattern Alert</p>
-                    <p className="text-xs text-muted-foreground">Data exposure incidents increasing</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+            <TabsContent value="frameworks" className="space-y-6">
+              {renderFrameworkPerformance()}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {Object.entries(displayMetrics.frameworkScores || {}).map(([framework, score]) => (
+                  <Card key={framework}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{framework}</CardTitle>
+                      <CardDescription>Current compliance status</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold mb-2">{score}%</div>
+                        <Progress value={score} className="mb-4" />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Last Updated</span>
+                          <span>2 hours ago</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="insights" className="space-y-6">
+              {renderAIInsights()}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Predictive Analytics</CardTitle>
+                    <CardDescription>AI-powered compliance predictions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="p-3 bg-blue-50 rounded border-l-4 border-blue-400">
+                        <p className="text-sm font-medium">Compliance Score Forecast</p>
+                        <p className="text-xs text-muted-foreground">Expected to reach 96% by next quarter</p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded border-l-4 border-green-400">
+                        <p className="text-sm font-medium">Risk Reduction Opportunity</p>
+                        <p className="text-xs text-muted-foreground">Implementing suggested controls could reduce risk by 15%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Anomaly Detection</CardTitle>
+                    <CardDescription>Unusual patterns and outliers</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="p-3 bg-yellow-50 rounded border-l-4 border-yellow-400">
+                        <p className="text-sm font-medium">Unusual Activity Detected</p>
+                        <p className="text-xs text-muted-foreground">Spike in access control violations detected</p>
+                      </div>
+                      <div className="p-3 bg-red-50 rounded border-l-4 border-red-400">
+                        <p className="text-sm font-medium">Critical Pattern Alert</p>
+                        <p className="text-xs text-muted-foreground">Data exposure incidents increasing</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </PermissionGuard>
+    </PermissionProvider>
   )
 }
 

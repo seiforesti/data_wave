@@ -17,6 +17,8 @@ import {
 import { ComplianceHooks } from '../hooks/use-enterprise-features'
 import { useEnterpriseCompliance } from '../enterprise-integration'
 import { ComplianceAPIs } from '../services/enterprise-apis'
+import { PermissionProvider, PermissionGuard } from '@/v15_enhanced_1/components/Advanced_RBAC_Datagovernance_System/components/shared/PermissionGuard'
+import { PERMISSION_COMPLIANCE_VIEW, PERMISSION_COMPLIANCE_MANAGE } from '@/v15_enhanced_1/components/Advanced_RBAC_Datagovernance_System/constants/permissions.constants'
 import type { 
   ComplianceReport, 
   ComplianceComponentProps 
@@ -58,207 +60,23 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
   const [filters, setFilters] = useState(initialFilters)
   const [activeTab, setActiveTab] = useState('all')
 
-  // Mock data for clean output
-  const mockReports: ComplianceReport[] = [
-    {
-      id: 1,
-      name: 'SOC 2 Type II Assessment Report',
-      description: 'Annual SOC 2 Type II compliance assessment report',
-      report_type: 'compliance_status',
-      framework: 'SOC 2',
-      data_source_id: dataSourceId,
-      status: 'completed',
-      generated_by: 'system',
-      generated_at: '2024-01-15T10:00:00Z',
-      file_url: '/reports/soc2-2024-q1.pdf',
-      file_format: 'pdf',
-      parameters: {
-        date_range: {
-          start_date: '2023-01-01',
-          end_date: '2023-12-31'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: true,
-        detail_level: 'detailed',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        frameworks: ['SOC 2'],
-        risk_levels: ['high', 'critical'],
-        statuses: ['non_compliant', 'partially_compliant']
-      },
-      schedule: {
-        frequency: 'annually',
-        time: '09:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2025-01-15T09:00:00Z',
-        last_run: '2024-01-15T09:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'compliance@company.com',
-          name: 'Compliance Team',
-          role: 'Compliance Officer',
-          delivery_method: 'email',
-          access_level: 'download'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 2555, // 7 years in days
-      access_level: 'confidential',
-      watermark: 'CONFIDENTIAL',
-      digital_signature: true,
-      encryption_required: true,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-      created_by: 'admin',
-      updated_by: 'system',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 2,
-      name: 'GDPR Compliance Gap Analysis',
-      description: 'Quarterly GDPR compliance gap analysis and remediation recommendations',
-      report_type: 'gap_analysis',
-      framework: 'GDPR',
-      data_source_id: dataSourceId,
-      status: 'generating',
-      generated_by: 'john.smith',
-      generated_at: null,
-      file_url: null,
-      file_format: 'excel',
-      parameters: {
-        date_range: {
-          start_date: '2024-01-01',
-          end_date: '2024-03-31'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: false,
-        detail_level: 'standard',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        frameworks: ['GDPR'],
-        risk_levels: ['medium', 'high', 'critical'],
-        statuses: ['non_compliant']
-      },
-      schedule: {
-        frequency: 'quarterly',
-        time: '08:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2024-07-01T08:00:00Z',
-        last_run: '2024-04-01T08:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'privacy@company.com',
-          name: 'Privacy Team',
-          role: 'Data Protection Officer',
-          delivery_method: 'email',
-          access_level: 'view'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 1825, // 5 years in days
-      access_level: 'internal',
-      watermark: null,
-      digital_signature: false,
-      encryption_required: false,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-03-01T00:00:00Z',
-      updated_at: '2024-04-01T08:30:00Z',
-      created_by: 'john.smith',
-      updated_by: 'john.smith',
-      version: 1,
-      metadata: {}
-    },
-    {
-      id: 3,
-      name: 'Executive Risk Summary',
-      description: 'Monthly executive summary of compliance risks and trends',
-      report_type: 'executive_summary',
-      framework: null,
-      data_source_id: dataSourceId,
-      status: 'scheduled',
-      generated_by: null,
-      generated_at: null,
-      file_url: null,
-      file_format: 'pdf',
-      parameters: {
-        date_range: {
-          start_date: '2024-04-01',
-          end_date: '2024-04-30'
-        },
-        include_charts: true,
-        include_recommendations: true,
-        include_evidence: false,
-        detail_level: 'summary',
-        language: 'en',
-        timezone: 'UTC',
-        custom_fields: {}
-      },
-      filters: {
-        risk_levels: ['high', 'critical'],
-        statuses: ['non_compliant']
-      },
-      schedule: {
-        frequency: 'monthly',
-        day_of_month: 1,
-        time: '07:00',
-        timezone: 'UTC',
-        enabled: true,
-        next_run: '2024-05-01T07:00:00Z',
-        last_run: '2024-04-01T07:00:00Z'
-      },
-      recipients: [
-        {
-          email: 'executives@company.com',
-          name: 'Executive Team',
-          role: 'Executive',
-          delivery_method: 'email',
-          access_level: 'view'
-        }
-      ],
-      distribution_method: 'email',
-      retention_period: 365, // 1 year in days
-      access_level: 'confidential',
-      watermark: 'EXECUTIVE SUMMARY',
-      digital_signature: true,
-      encryption_required: true,
-      sections: [],
-      charts: [],
-      appendices: [],
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-      created_by: 'admin',
-      updated_by: 'admin',
-      version: 1,
-      metadata: {}
-    }
-  ]
+  // Replaced mock with backend API integration via ComplianceAPIs.Audit.getComplianceReports
+  const mockReports: ComplianceReport[] = [] // legacy placeholder not used; will be removed after verification
 
   // Load reports
   useEffect(() => {
     const loadReports = async () => {
       setLoading(true)
       try {
-        // Use mock data for clean output
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-        setReports(mockReports)
+        const response = await ComplianceAPIs.Audit.getComplianceReports({
+          data_source_id: dataSourceId,
+          framework: filters.framework,
+          report_type: filters.report_type,
+          status: filters.status,
+          page: 1,
+          limit: 100
+        })
+        setReports(response.data || [])
       } catch (error) {
         console.error('Failed to load reports:', error)
         onError?.('Failed to load compliance reports')
@@ -363,9 +181,11 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <PermissionProvider>
+      <PermissionGuard permission={PERMISSION_COMPLIANCE_VIEW}>
+        <div className={`space-y-6 ${className}`}>
+          {/* Header */}
+          <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Compliance Reports</h3>
           <p className="text-sm text-muted-foreground">
@@ -377,10 +197,12 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
             <RefreshCw className="h-4 w-4 mr-1" />
             Refresh
           </Button>
-          <Button size="sm" onClick={onCreateReport}>
-            <PlusCircle className="h-4 w-4 mr-1" />
-            New Report
-          </Button>
+          <PermissionGuard permission={PERMISSION_COMPLIANCE_MANAGE} fallback={null} showUnauthorized={false}>
+            <Button size="sm" onClick={onCreateReport}>
+              <PlusCircle className="h-4 w-4 mr-1" />
+              New Report
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -604,6 +426,9 @@ const ComplianceReports: React.FC<ComplianceReportsProps> = ({
         </TabsContent>
       </Tabs>
     </div>
+        </div>
+      </PermissionGuard>
+    </PermissionProvider>
   )
 }
 
