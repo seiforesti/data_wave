@@ -441,6 +441,8 @@ const QuickPipelineCreate: React.FC<QuickPipelineCreateProps> = ({
   const [showVariablesDialog, setShowVariablesDialog] = useState<boolean>(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState<boolean>(false);
   const [showMetricsDialog, setShowMetricsDialog] = useState<boolean>(false);
+  const [showOptimizationDialog, setShowOptimizationDialog] = useState<boolean>(false);
+  const [currentOptimization, setCurrentOptimization] = useState<any>(null);
   const [pipelineVariables, setPipelineVariables] = useState<Record<string, any>>({});
   const [scheduleConfig, setScheduleConfig] = useState<any>({});
   const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
@@ -1114,8 +1116,9 @@ const QuickPipelineCreate: React.FC<QuickPipelineCreateProps> = ({
           optimizationId: optimization.id 
         });
       } else {
-        // Show manual implementation steps
-        alert(`Manual optimization steps:\n${optimization.implementation.steps.join('\n')}`);
+        // Show manual implementation steps in dialog
+        setCurrentOptimization(optimization);
+        setShowOptimizationDialog(true);
       }
     } catch (error) {
       console.error('Failed to apply AI optimization:', error);
@@ -2376,6 +2379,61 @@ const QuickPipelineCreate: React.FC<QuickPipelineCreateProps> = ({
                 </Card>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* AI Optimization Manual Steps Dialog */}
+        <Dialog open={showOptimizationDialog} onOpenChange={setShowOptimizationDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>AI Optimization Manual Steps</DialogTitle>
+              <DialogDescription>
+                {currentOptimization?.name && `${currentOptimization.name} - `}
+                Follow these manual steps to apply the optimization
+              </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              {currentOptimization?.implementation?.steps && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                      Estimated Impact
+                    </h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-200">
+                      {currentOptimization.impact}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-3">Implementation Steps:</h4>
+                    <ol className="space-y-3">
+                      {currentOptimization.implementation.steps.map((step: string, index: number) => (
+                        <li key={index} className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </span>
+                          <span className="text-sm">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {currentOptimization?.complexity && (
+                    <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg">
+                      <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-2">
+                        Complexity Level
+                      </h4>
+                      <Badge variant={
+                        currentOptimization.complexity === 'low' ? 'default' :
+                        currentOptimization.complexity === 'medium' ? 'secondary' : 'destructive'
+                      }>
+                        {currentOptimization.complexity.toUpperCase()}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </div>
