@@ -554,7 +554,7 @@ import { useWorkspaceManagement } from '../../../hooks/useWorkspaceManagement';
 import { useUserManagement } from '../../../hooks/useUserManagement';
 import { useCrossGroupIntegration } from '../../../hooks/useCrossGroupIntegration';
 import { useActivityTracking } from '../../../hooks/useActivityTracking';
-import { usePipelineManagement } from '../../../hooks/usePipelineManagement';
+import { usePipelineManager } from '../../../hooks/usePipelineManager';
 import { useJobWorkflow } from '../../../hooks/useJobWorkflow';
 import { useDataSources } from '../../../hooks/useDataSources';
 import { useScanRuleSets } from '../../../hooks/useScanRuleSets';
@@ -896,7 +896,15 @@ const QuickAIChat: React.FC<QuickAIChatProps> = ({
   const { catalogItems, getCatalogMetrics } = useAdvancedCatalog();
   const { scanJobs, getScanMetrics } = useScanLogic();
   const { users, roles, getRBACMetrics } = useRBAC();
-  const { pipelines, getPipelineMetrics } = usePipelineManagement();
+  const { 
+    pipelines, 
+    getPipelineMetrics,
+    createPipeline,
+    executePipeline,
+    optimizePipeline,
+    loadPipeline,
+    generatePipelineFromTemplate
+  } = usePipelineManager();
   const { workflows, getWorkflowMetrics } = useJobWorkflow();
 
   // Conversation Templates
@@ -1487,6 +1495,35 @@ const QuickAIChat: React.FC<QuickAIChatProps> = ({
           break;
         case 'pipeline':
           // Handle pipeline actions
+          if (action.execution?.method === 'create') {
+            result = await createPipeline({
+              name: action.parameters.name || 'AI Generated Pipeline',
+              description: action.parameters.description || 'Pipeline created by AI Assistant',
+              stages: action.parameters.stages || [],
+              workspace: currentWorkspace?.id,
+              template: action.parameters.template,
+              ...action.parameters
+            });
+          } else if (action.execution?.method === 'execute') {
+            result = await executePipeline(
+              action.parameters.pipelineId,
+              action.parameters.executionParameters
+            );
+          } else if (action.execution?.method === 'optimize') {
+            result = await optimizePipeline(
+              action.parameters.pipelineId,
+              action.parameters.optimizationConfig
+            );
+          } else if (action.execution?.method === 'load') {
+            result = await loadPipeline(action.parameters.pipelineId);
+          } else if (action.execution?.method === 'generateFromTemplate') {
+            result = await generatePipelineFromTemplate(
+              action.parameters.templateId,
+              action.parameters.templateParameters
+            );
+          } else {
+            throw new Error(`Unsupported pipeline method: ${action.execution?.method}`);
+          }
           break;
         case 'analysis':
           result = await analyzePerformance(action.parameters);

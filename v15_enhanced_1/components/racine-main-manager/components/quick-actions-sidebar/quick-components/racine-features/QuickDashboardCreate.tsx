@@ -355,7 +355,7 @@ import { useWorkspaceManagement } from '../../../hooks/useWorkspaceManagement';
 import { useUserManagement } from '../../../hooks/useUserManagement';
 import { useCrossGroupIntegration } from '../../../hooks/useCrossGroupIntegration';
 import { useActivityTracking } from '../../../hooks/useActivityTracking';
-import { usePipelineManagement } from '../../../hooks/usePipelineManagement';
+import { usePipelineManager } from '../../../hooks/usePipelineManager';
 import { useJobWorkflow } from '../../../hooks/useJobWorkflow';
 import { useDataSources } from '../../../hooks/useDataSources';
 import { useScanRuleSets } from '../../../hooks/useScanRuleSets';
@@ -663,7 +663,7 @@ const QuickDashboardCreate: React.FC<QuickDashboardCreateProps> = ({
   const { catalogItems, getCatalogMetrics } = useAdvancedCatalog();
   const { scanJobs, getScanMetrics } = useScanLogic();
   const { users, roles, getRBACMetrics } = useRBAC();
-  const { pipelines, getPipelineMetrics } = usePipelineManagement();
+  const { pipelines, getPipelineMetrics } = usePipelineManager();
   const { workflows, getWorkflowMetrics } = useJobWorkflow();
 
   // Widget Types Configuration
@@ -1221,10 +1221,65 @@ const QuickDashboardCreate: React.FC<QuickDashboardCreateProps> = ({
           URL.revokeObjectURL(url);
           break;
         case 'pdf':
+          // Export dashboard as PDF using html2canvas and jsPDF
+          const { default: html2canvas } = await import('html2canvas');
+          const { jsPDF } = await import('jspdf');
+          
+          const dashboardElement = document.querySelector('[data-dashboard-container]');
+          if (dashboardElement) {
+            const canvas = await html2canvas(dashboardElement as HTMLElement);
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF();
+            
+            const imgWidth = 210;
+            const pageHeight = 295;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+            
+            while (heightLeft >= 0) {
+              position = heightLeft - imgHeight;
+              pdf.addPage();
+              pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+              heightLeft -= pageHeight;
+            }
+            
+            pdf.save(`${dashboardName || 'dashboard'}.pdf`);
+          }
+          break;
+          
         case 'png':
+          // Export dashboard as PNG using html2canvas
+          const { default: html2canvasPng } = await import('html2canvas');
+          
+          const dashboardElementPng = document.querySelector('[data-dashboard-container]');
+          if (dashboardElementPng) {
+            const canvasPng = await html2canvasPng(dashboardElementPng as HTMLElement);
+            const link = document.createElement('a');
+            link.download = `${dashboardName || 'dashboard'}.png`;
+            link.href = canvasPng.toDataURL();
+            link.click();
+          }
+          break;
+          
         case 'svg':
-          // Implementation would depend on chosen charting library
-          console.log(`Export to ${format} not implemented`);
+          // Export dashboard as SVG by serializing the DOM
+          const dashboardElementSvg = document.querySelector('[data-dashboard-container]');
+          if (dashboardElementSvg) {
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(dashboardElementSvg);
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            const link = document.createElement('a');
+            link.href = svgUrl;
+            link.download = `${dashboardName || 'dashboard'}.svg`;
+            link.click();
+            URL.revokeObjectURL(svgUrl);
+          }
           break;
       }
 
@@ -1890,6 +1945,7 @@ const QuickDashboardCreate: React.FC<QuickDashboardCreateProps> = ({
                 <div
                   ref={canvasRef}
                   className="w-full h-full relative min-h-[600px]"
+                  data-dashboard-container
                   style={{
                     backgroundImage: showGrid 
                       ? `linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)`
