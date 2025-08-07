@@ -193,34 +193,59 @@ const ComplianceRuleDashboard: React.FC<ComplianceRuleDashboardProps> = ({
     return unsubscribe
   }, [enterprise, enterpriseFeatures])
 
-  // Mock data for demonstration
-  const mockMetrics = {
-    totalRequirements: 247,
-    complianceScore: 94.2,
-    openGaps: 12,
-    riskScore: 72,
-    trendsData: [
-      { date: '2024-01', score: 89.5 },
-      { date: '2024-02', score: 91.2 },
-      { date: '2024-03', score: 93.1 },
-      { date: '2024-04', score: 94.2 }
-    ],
-    frameworkScores: {
-      'SOC 2': 96,
-      'GDPR': 92,
-      'HIPAA': 88,
-      'PCI DSS': 94,
-      'ISO 27001': 90
-    },
+  // Load real metrics from backend
+  useEffect(() => {
+    const loadDashboardMetrics = async () => {
+      if (!dataSourceId) return
+      
+      setLoading(true)
+      try {
+        // Load compliance metrics from backend
+        const metricsResponse = await ComplianceAPIs.ComplianceAnalytics.getDashboardMetrics({
+          data_source_id: dataSourceId,
+          timeframe: '30d'
+        })
+        
+        if (metricsResponse.success && metricsResponse.data) {
+          setMetrics(metricsResponse.data)
+        }
+        
+        // Log successful metrics load
+        auditFeatures.logActivity('dashboard_metrics_loaded', {
+          dataSourceId,
+          metricsCount: Object.keys(metricsResponse.data || {}).length
+        })
+      } catch (error) {
+        console.error('Failed to load dashboard metrics:', error)
+        auditFeatures.logActivity('dashboard_metrics_load_failed', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          dataSourceId
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardMetrics()
+  }, [dataSourceId, auditFeatures])
+
+  // Fallback metrics for when backend data is not available
+  const fallbackMetrics = {
+    totalRequirements: 0,
+    complianceScore: 0,
+    openGaps: 0,
+    riskScore: 0,
+    trendsData: [],
+    frameworkScores: {},
     riskDistribution: {
-      low: 65,
-      medium: 25,
-      high: 8,
-      critical: 2
+      low: 0,
+      medium: 0,
+      high: 0,
+      critical: 0
     }
   }
 
-  const displayMetrics = metrics || mockMetrics
+  const displayMetrics = metrics || fallbackMetrics
 
   // Render overview metrics
   const renderOverviewMetrics = () => (

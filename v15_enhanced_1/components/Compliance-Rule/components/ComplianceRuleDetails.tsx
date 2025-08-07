@@ -168,14 +168,38 @@ export function ComplianceRuleDetails({
   }
 
   const handleRefresh = async () => {
+    if (!requirement?.id) return
+    
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setAssessmentHistory(mockAssessmentHistory)
-      setEvidenceFiles(mockEvidenceFiles)
-      setRelatedRequirements(mockRelatedRequirements)
+      // Load fresh requirement data from backend
+      const requirementResponse = await ComplianceAPIs.ComplianceManagement.getRequirement(requirement.id)
+      setRequirement(requirementResponse.data)
+      
+      // Load assessment history from backend
+      const assessmentResponse = await ComplianceAPIs.ComplianceManagement.getRuleEvaluations(requirement.id, {
+        page: 1,
+        limit: 20,
+        sort: 'created_at',
+        sort_order: 'desc'
+      })
+      setAssessmentHistory(assessmentResponse.data?.data || [])
+      
+      // Load evidence files from backend
+      const evidenceResponse = await ComplianceAPIs.ComplianceManagement.getRequirementEvidence(requirement.id)
+      setEvidenceFiles(evidenceResponse.data || [])
+      
+      // Load related requirements from backend
+      const relatedResponse = await ComplianceAPIs.ComplianceManagement.getRequirements({
+        framework: requirement.framework,
+        exclude_id: requirement.id,
+        limit: 10
+      })
+      setRelatedRequirements(relatedResponse.data?.data || [])
+      
       sendNotification('success', 'Requirement details refreshed')
     } catch (error) {
+      console.error('Failed to refresh requirement details:', error)
       sendNotification('error', 'Failed to refresh details')
     } finally {
       setLoading(false)
