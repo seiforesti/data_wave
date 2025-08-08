@@ -429,7 +429,7 @@ const VisualScriptingEngine: React.FC<VisualScriptingEngineProps> = ({
     const y = (event.clientY - canvasRect.top - canvasPosition.y) / canvasZoom;
 
     const newNode: ScriptNode = {
-      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `node_${Date.now()}_${generateUniqueNodeId()}`,
       type: draggedNode.type as ScriptNodeType,
       position: { x, y },
       data: {

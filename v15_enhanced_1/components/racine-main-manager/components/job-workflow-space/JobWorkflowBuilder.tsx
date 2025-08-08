@@ -1297,8 +1297,8 @@ const NodePalette: React.FC<NodePaletteProps> = ({
                 onClick={() => {
                   // Generate random position for demo
                   const position = {
-                    x: Math.random() * 300 + 100,
-                    y: Math.random() * 200 + 100
+                    x: await calculateOptimalNodePosition(existingNodes, canvasSize).x || 150,
+                    y: await calculateOptimalNodePosition(existingNodes, canvasSize).y || 150
                   };
                   onNodeCreate(nodeType, position);
                 }}
