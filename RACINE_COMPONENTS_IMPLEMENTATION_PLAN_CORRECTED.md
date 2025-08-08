@@ -753,13 +753,13 @@ v15_enhanced_1/components/racine-main-manager/
 ---
 
 #### **🔥 PHASE 4: RACINE ADVANCED FEATURES (HIGH PRIORITY)**
-
+***NOTE IMPORTANT: all components must be advanced powerfully modern design with large hardcodeing implimentation bazed on racine backend implimentation without any mock/stubs use***
 **Dependencies**: Navigation, Quick Actions Sidebar, and SPA Orchestrators completed
 **Can be built in parallel**: Most components in this phase
 
 ---
 
-##### **Task 4.1: Job Workflow Space Implementation (10 Components)**
+##### **Task 4.1: Job Workflow Space Implementation (10 Components)  **
 
 ###### **4.1.1 JobWorkflowBuilder.tsx (3000+ lines) - Databricks-Style Workflow Builder**
 
