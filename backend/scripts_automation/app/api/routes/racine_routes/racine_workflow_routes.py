@@ -73,7 +73,7 @@ logger = get_logger(__name__)
 
 # Initialize router
 router = APIRouter(
-    prefix="/api/racine/workflow",
+    prefix="/api/racine/workflows",
     tags=["Racine Workflow Management"],
     responses={
         404: {"description": "Workflow not found"},
