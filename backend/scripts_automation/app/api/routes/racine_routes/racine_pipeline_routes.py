@@ -75,7 +75,7 @@ logger = get_logger(__name__)
 
 # Initialize router
 router = APIRouter(
-    prefix="/api/racine/pipeline",
+    prefix="/api/racine/pipelines",
     tags=["Racine Pipeline Management"],
     responses={
         404: {"description": "Pipeline not found"},

@@ -70,7 +70,7 @@ from ....models.auth_models import User
 logger = logging.getLogger(__name__)
 
 # Create router
-router = APIRouter(prefix="/racine/orchestration", tags=["Racine Orchestration"])
+router = APIRouter(prefix="/api/racine/orchestration", tags=["Racine Orchestration"])
 
 # ===================== REQUEST/RESPONSE MODELS =====================
 
