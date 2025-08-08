@@ -640,7 +640,7 @@ const JobSchedulingEngine: React.FC<JobSchedulingEngineProps> = ({
         schedule_id: schedule.id || 'preview',
         scheduled_time: nextExecution.toISOString(),
         status: 'scheduled',
-        estimated_duration: 300 + Math.random() * 600, // 5-15 minutes
+        estimated_duration: await predictExecutionDuration(schedule, executionId) || 600, // Get from backend prediction
         resource_allocation: schedule.resource_requirements || {},
         priority: schedule.priority || 'normal',
         timezone: schedule.timezone,

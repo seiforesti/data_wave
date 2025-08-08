@@ -45,6 +45,9 @@ import { useWorkspaceManagement } from '../../hooks/useWorkspaceManagement';
 import { useActivityTracker } from '../../hooks/useActivityTracker';
 import { useAIAssistant } from '../../hooks/useAIAssistant';
 
+// Backend Integration Utilities
+import { analyzeTemplatePerformance } from '../../utils/workflow-backend-integration';
+
 // Types from racine-core.types
 import { 
   WorkflowTemplate,
@@ -365,21 +368,41 @@ const WorkflowTemplateLibrary: React.FC<WorkflowTemplateLibraryProps> = ({
       ];
 
       // Remove duplicates and enhance with AI insights
-      const uniqueTemplates = allTemplates.reduce((acc, template) => {
-        const existing = acc.find(t => t.id === template.id);
-        if (!existing) {
-          acc.push({
-            ...template,
-            ai_insights: {
-              performance_score: Math.random() * 100,
-              complexity_analysis: 'Analyzed by AI',
-              optimization_suggestions: [],
-              usage_predictions: {}
-            }
-          });
-        }
-        return acc;
-      }, [] as WorkflowTemplate[]);
+      const uniqueTemplates = await Promise.all(
+        allTemplates.reduce((acc, template) => {
+          const existing = acc.find(t => t.id === template.id);
+          if (!existing) {
+            acc.push(template);
+          }
+          return acc;
+        }, [] as WorkflowTemplate[])
+        .map(async (template) => {
+          try {
+            // Get real AI insights from backend
+            const templateAnalysis = await analyzeTemplatePerformance(template.id);
+            return {
+              ...template,
+              ai_insights: templateAnalysis.insights || {
+                performance_score: templateAnalysis.performance_score || 0,
+                complexity_analysis: templateAnalysis.complexity_analysis || 'Not analyzed',
+                optimization_suggestions: templateAnalysis.optimization_suggestions || [],
+                usage_predictions: templateAnalysis.usage_predictions || {}
+              }
+            };
+          } catch (error) {
+            console.warn('Failed to analyze template:', template.id, error);
+            return {
+              ...template,
+              ai_insights: {
+                performance_score: 0,
+                complexity_analysis: 'Analysis unavailable',
+                optimization_suggestions: [],
+                usage_predictions: {}
+              }
+            };
+          }
+        })
+      );
 
       setTemplates(uniqueTemplates);
       setRecommendations(aiRecommendations);

@@ -46,6 +46,14 @@ import { useWorkspaceManagement } from '../../hooks/useWorkspaceManagement';
 import { useActivityTracker } from '../../hooks/useActivityTracker';
 import { useAIAssistant } from '../../hooks/useAIAssistant';
 
+// Backend Integration Utilities
+import { 
+  executeWorkflowStep, 
+  orchestrate7GroupWorkflow,
+  validateCrossGroupWorkflow,
+  validateWorkflowCompliance
+} from '../../utils/workflow-backend-integration';
+
 // Types from racine-core.types
 import { 
   CrossGroupWorkflow,
@@ -615,8 +623,13 @@ const CrossGroupOrchestrator: React.FC<CrossGroupOrchestratorProps> = ({
             }
           }
           
-          // Simulate execution time with realistic delays
-          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+          // Execute workflow step through backend
+          const executionResult = await executeWorkflowStep(step.id, {
+            workflow_id: workflow.id,
+            step_config: step.config,
+            input_data: step.input_data,
+            context: executionContext
+          });
         }
 
         const completionMessage = `🎉 Workflow execution completed successfully in ${workflow.steps.length} steps`;

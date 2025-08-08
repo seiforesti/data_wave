@@ -410,10 +410,10 @@ const AIWorkflowOptimizer: React.FC<AIWorkflowOptimizerProps> = ({
         pattern_analysis: patternAnalysis,
         anomalies: anomalies,
         ai_insights: {
-          performance_score: Math.random() * 100, // AI-calculated score
-          optimization_potential: Math.random() * 50 + 25, // 25-75%
-          complexity_rating: patternAnalysis.complexity || 'medium',
-          recommendations_confidence: Math.random() * 30 + 70 // 70-100%
+          performance_score: patternAnalysis.performance_score || performanceMetrics.overall_score || 0,
+          optimization_potential: patternAnalysis.optimization_potential || performanceMetrics.improvement_potential || 0,
+          complexity_rating: patternAnalysis.complexity_rating || patternAnalysis.complexity || 'medium',
+          recommendations_confidence: patternAnalysis.confidence_score || aiRecommendations[0]?.confidence * 100 || 0
         }
       };
 
