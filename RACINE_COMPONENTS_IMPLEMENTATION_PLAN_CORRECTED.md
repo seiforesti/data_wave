@@ -803,8 +803,9 @@ v15_enhanced_1/components/racine-main-manager/
 
 ---
 
-##### **Task 4.2: Pipeline Manager Implementation (10 Components)**
+##### **Task 4.2: Pipeline Manager Implementation (10 Components) hardcoded large detailed design witha advanced modern UI/UX design with advanced shadn/i .next and tailwind css and advanced design tools, iplimenting workflow builders and advanced piplines building management capabilities surpassing or same advanced level of Databricks-style, every compponent must be builded with more 2000+ line for advanced modern UI/UX management **
 
+***NOTE IMPORTANT: all components must be advanced powerfully modern design with large hardcodeing implimentation bazed on racine backend implimentation without any mock/stubs use***
 ###### **4.2.1 PipelineDesigner.tsx (2900+ lines) - Advanced Pipeline Builder**
 
 **🎨 Design Architecture**:
