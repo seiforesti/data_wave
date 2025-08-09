@@ -1215,4 +1215,1089 @@ const PipelineOrchestrationEngine: React.FC<PipelineOrchestrationEngineProps> = 
   );
 };
 
+// Advanced Cross-SPA Orchestration Engine
+interface AdvancedOrchestrationEngine {
+  crossSPACoordination: boolean;
+  intelligentWorkflowEngine: boolean;
+  adaptiveResourceAllocation: boolean;
+  enterpriseSecurity: boolean;
+  realTimeMonitoring: boolean;
+  autoScaling: boolean;
+  loadBalancing: boolean;
+  faultTolerance: boolean;
+  distributedExecution: boolean;
+  eventDrivenArchitecture: boolean;
+}
+
+interface CrossSPACoordination {
+  id: string;
+  coordinationType: 'sequential' | 'parallel' | 'conditional' | 'event_driven' | 'workflow';
+  participantSPAs: OrchestrationParticipant[];
+  dependencies: SPADependency[];
+  coordinationRules: CoordinationRule[];
+  executionPlan: ExecutionPlan;
+  synchronizationPoints: SynchronizationPoint[];
+  rollbackStrategy: RollbackStrategy;
+  monitoringConfig: OrchestrationMonitoring;
+  securityContext: OrchestrationSecurity;
+}
+
+interface OrchestrationParticipant {
+  spaId: string;
+  spaType: 'data_sources' | 'scan_rules' | 'classifications' | 'compliance' | 'catalog' | 'scan_logic' | 'rbac';
+  role: 'leader' | 'follower' | 'observer' | 'contributor';
+  priority: number;
+  resourceRequirements: ResourceRequirements;
+  capabilities: SPACapability[];
+  healthStatus: 'healthy' | 'degraded' | 'critical' | 'unavailable';
+  loadMetrics: LoadMetrics;
+  communicationEndpoints: CommunicationEndpoint[];
+  constraints: ExecutionConstraint[];
+}
+
+interface SPADependency {
+  id: string;
+  sourceSPA: string;
+  targetSPA: string;
+  dependencyType: 'data' | 'execution' | 'resource' | 'configuration' | 'security';
+  strength: 'weak' | 'strong' | 'critical';
+  bidirectional: boolean;
+  conditions: DependencyCondition[];
+  timeout: number;
+  retryPolicy: RetryPolicy;
+  fallbackStrategy: FallbackStrategy;
+}
+
+interface CoordinationRule {
+  id: string;
+  name: string;
+  description: string;
+  ruleType: 'validation' | 'execution' | 'resource' | 'security' | 'compliance';
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+  priority: number;
+  enabled: boolean;
+  executionContext: string[];
+  auditRequired: boolean;
+}
+
+interface ExecutionPlan {
+  id: string;
+  name: string;
+  description: string;
+  phases: ExecutionPhase[];
+  totalEstimatedDuration: number;
+  resourceAllocation: ResourceAllocation;
+  riskAssessment: RiskAssessment;
+  successCriteria: SuccessCriteria[];
+  contingencyPlans: ContingencyPlan[];
+  monitoringPoints: MonitoringPoint[];
+}
+
+interface ExecutionPhase {
+  id: string;
+  name: string;
+  description: string;
+  phaseType: 'preparation' | 'execution' | 'validation' | 'cleanup' | 'rollback';
+  order: number;
+  parallelizable: boolean;
+  tasks: OrchestrationTask[];
+  prerequisites: string[];
+  deliverables: string[];
+  estimatedDuration: number;
+  resourceRequirements: ResourceRequirements;
+  rollbackProcedure: RollbackProcedure;
+}
+
+interface OrchestrationTask {
+  id: string;
+  name: string;
+  description: string;
+  taskType: string;
+  targetSPA: string;
+  endpoint: string;
+  parameters: TaskParameter[];
+  timeout: number;
+  retryPolicy: RetryPolicy;
+  validation: TaskValidation;
+  monitoring: TaskMonitoring;
+  security: TaskSecurity;
+  dependencies: string[];
+  outputs: TaskOutput[];
+}
+
+interface SynchronizationPoint {
+  id: string;
+  name: string;
+  description: string;
+  syncType: 'barrier' | 'checkpoint' | 'milestone' | 'decision_point';
+  participants: string[];
+  conditions: SyncCondition[];
+  timeout: number;
+  actions: SyncAction[];
+  notificationConfig: NotificationConfig;
+}
+
+interface RollbackStrategy {
+  id: string;
+  name: string;
+  strategy: 'immediate' | 'graceful' | 'staged' | 'conditional';
+  scope: 'task' | 'phase' | 'full';
+  triggers: RollbackTrigger[];
+  procedures: RollbackProcedure[];
+  dataRecovery: DataRecoveryPlan;
+  notificationStrategy: NotificationStrategy;
+  auditRequirements: AuditRequirements;
+}
+
+// Intelligent Workflow Engine
+interface IntelligentWorkflowEngine {
+  workflowOptimization: boolean;
+  adaptiveScheduling: boolean;
+  intelligentRouting: boolean;
+  dynamicResourceAllocation: boolean;
+  predictiveAnalytics: boolean;
+  anomalyDetection: boolean;
+  selfHealing: boolean;
+  performanceTuning: boolean;
+  costOptimization: boolean;
+  complianceAutomation: boolean;
+}
+
+interface WorkflowDefinition {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  category: string;
+  workflowType: 'linear' | 'parallel' | 'conditional' | 'loop' | 'dag' | 'state_machine';
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  variables: WorkflowVariable[];
+  configuration: WorkflowConfiguration;
+  validation: WorkflowValidation;
+  optimization: WorkflowOptimization;
+  monitoring: WorkflowMonitoring;
+  security: WorkflowSecurity;
+}
+
+interface WorkflowNode {
+  id: string;
+  name: string;
+  type: 'start' | 'end' | 'task' | 'decision' | 'parallel' | 'merge' | 'loop' | 'subprocess';
+  position: { x: number; y: number };
+  configuration: NodeConfiguration;
+  validation: NodeValidation;
+  monitoring: NodeMonitoring;
+  errorHandling: ErrorHandling;
+  timeout: number;
+  retries: number;
+  resources: ResourceRequirements;
+}
+
+interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  edgeType: 'default' | 'conditional' | 'error' | 'timeout' | 'retry';
+  conditions: EdgeCondition[];
+  transformations: DataTransformation[];
+  validation: EdgeValidation;
+  monitoring: EdgeMonitoring;
+}
+
+interface WorkflowOptimization {
+  enabled: boolean;
+  strategies: OptimizationStrategy[];
+  objectives: OptimizationObjective[];
+  constraints: OptimizationConstraint[];
+  algorithms: OptimizationAlgorithm[];
+  metrics: OptimizationMetric[];
+  feedback: OptimizationFeedback;
+}
+
+interface OptimizationStrategy {
+  name: string;
+  type: 'performance' | 'cost' | 'resource' | 'time' | 'quality' | 'compliance';
+  algorithm: string;
+  parameters: OptimizationParameter[];
+  weight: number;
+  enabled: boolean;
+  constraints: string[];
+}
+
+// Advanced Resource Management
+interface AdvancedResourceManager {
+  dynamicAllocation: boolean;
+  predictiveScaling: boolean;
+  loadBalancing: boolean;
+  resourceOptimization: boolean;
+  costManagement: boolean;
+  performanceMonitoring: boolean;
+  capacityPlanning: boolean;
+  resourcePooling: boolean;
+  multiTenancy: boolean;
+  resourceGovernance: boolean;
+}
+
+interface ResourcePool {
+  id: string;
+  name: string;
+  description: string;
+  poolType: 'compute' | 'storage' | 'network' | 'memory' | 'gpu' | 'mixed';
+  totalCapacity: ResourceCapacity;
+  availableCapacity: ResourceCapacity;
+  allocatedCapacity: ResourceCapacity;
+  reservedCapacity: ResourceCapacity;
+  utilizationMetrics: UtilizationMetrics;
+  allocationPolicies: AllocationPolicy[];
+  constraints: ResourceConstraint[];
+  monitoring: ResourceMonitoring;
+  costTracking: CostTracking;
+}
+
+interface ResourceCapacity {
+  cpu: number;
+  memory: number;
+  storage: number;
+  network: number;
+  gpu: number;
+  custom: Record<string, number>;
+}
+
+interface AllocationPolicy {
+  id: string;
+  name: string;
+  description: string;
+  policyType: 'fair_share' | 'priority' | 'weight_based' | 'quota' | 'burst' | 'elastic';
+  rules: AllocationRule[];
+  priorities: AllocationPriority[];
+  constraints: AllocationConstraint[];
+  scheduling: SchedulingPolicy;
+  enforcement: EnforcementPolicy;
+}
+
+interface AllocationRule {
+  id: string;
+  condition: string;
+  action: string;
+  priority: number;
+  weight: number;
+  limits: ResourceLimits;
+  reservations: ResourceReservation[];
+  quotas: ResourceQuota[];
+}
+
+interface PredictiveScaling {
+  enabled: boolean;
+  algorithms: PredictiveAlgorithm[];
+  models: ScalingModel[];
+  triggers: ScalingTrigger[];
+  policies: ScalingPolicy[];
+  metrics: ScalingMetric[];
+  feedback: ScalingFeedback;
+  optimization: ScalingOptimization;
+}
+
+interface ScalingModel {
+  id: string;
+  name: string;
+  modelType: 'linear' | 'exponential' | 'ml' | 'statistical' | 'hybrid';
+  algorithm: string;
+  parameters: ModelParameter[];
+  trainingData: TrainingData[];
+  accuracy: number;
+  confidence: number;
+  lastUpdated: Date;
+  performance: ModelPerformance;
+}
+
+// Enterprise Security Integration
+interface EnterpriseSecurityIntegration {
+  rbacIntegration: boolean;
+  auditLogging: boolean;
+  encryptionAtRest: boolean;
+  encryptionInTransit: boolean;
+  accessControl: boolean;
+  identityManagement: boolean;
+  secretsManagement: boolean;
+  complianceMonitoring: boolean;
+  threatDetection: boolean;
+  vulnerabilityScanning: boolean;
+}
+
+interface SecurityContext {
+  id: string;
+  principal: SecurityPrincipal;
+  permissions: Permission[];
+  roles: Role[];
+  constraints: SecurityConstraint[];
+  policies: SecurityPolicy[];
+  auditConfig: AuditConfiguration;
+  encryptionConfig: EncryptionConfiguration;
+  authenticationConfig: AuthenticationConfiguration;
+  authorizationConfig: AuthorizationConfiguration;
+}
+
+interface SecurityPrincipal {
+  id: string;
+  type: 'user' | 'service' | 'system' | 'application';
+  name: string;
+  displayName: string;
+  email?: string;
+  groups: string[];
+  attributes: SecurityAttribute[];
+  credentials: Credential[];
+  lastLogin?: Date;
+  status: 'active' | 'inactive' | 'locked' | 'expired';
+}
+
+interface OrchestrationSecurity {
+  securityLevel: 'basic' | 'standard' | 'high' | 'critical';
+  accessControl: AccessControlPolicy;
+  dataProtection: DataProtectionPolicy;
+  networkSecurity: NetworkSecurityPolicy;
+  monitoring: SecurityMonitoring;
+  incidentResponse: IncidentResponsePlan;
+  compliance: ComplianceRequirements;
+}
+
+// Advanced Monitoring and Observability
+interface AdvancedMonitoring {
+  realTimeMetrics: boolean;
+  distributedTracing: boolean;
+  logAggregation: boolean;
+  alerting: boolean;
+  dashboards: boolean;
+  reporting: boolean;
+  analytics: boolean;
+  anomalyDetection: boolean;
+  performanceAnalysis: boolean;
+  businessIntelligence: boolean;
+}
+
+interface MonitoringConfiguration {
+  metricsCollection: MetricsCollection;
+  tracing: TracingConfiguration;
+  logging: LoggingConfiguration;
+  alerting: AlertingConfiguration;
+  dashboards: DashboardConfiguration;
+  reporting: ReportingConfiguration;
+  retention: RetentionPolicy;
+  sampling: SamplingConfiguration;
+}
+
+interface MetricsCollection {
+  enabled: boolean;
+  interval: number;
+  metrics: MetricDefinition[];
+  aggregation: AggregationConfiguration;
+  storage: MetricStorageConfiguration;
+  export: MetricExportConfiguration;
+}
+
+interface TracingConfiguration {
+  enabled: boolean;
+  samplingRate: number;
+  traceIdHeader: string;
+  spanIdHeader: string;
+  contextPropagation: ContextPropagationConfiguration;
+  instrumentation: InstrumentationConfiguration;
+}
+
+// Enhanced Orchestration Engine Component
+const EnhancedOrchestrationEngine: React.FC<{
+  orchestrationConfig: AdvancedOrchestrationEngine;
+  onConfigChange: (config: Partial<AdvancedOrchestrationEngine>) => void;
+  crossSPACoordination: CrossSPACoordination;
+  onCoordinationUpdate: (coordination: CrossSPACoordination) => void;
+}> = ({ orchestrationConfig, onConfigChange, crossSPACoordination, onCoordinationUpdate }) => {
+  const [activeWorkflows, setActiveWorkflows] = useState<WorkflowDefinition[]>([]);
+  const [resourcePools, setResourcePools] = useState<ResourcePool[]>([]);
+  const [securityContext, setSecurityContext] = useState<SecurityContext | null>(null);
+  const [monitoringData, setMonitoringData] = useState<any[]>([]);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
+
+  // Initialize advanced orchestration
+  useEffect(() => {
+    initializeAdvancedOrchestration();
+  }, []);
+
+  const initializeAdvancedOrchestration = async () => {
+    try {
+      // Initialize resource pools
+      const pools = await initializeResourcePools();
+      setResourcePools(pools);
+
+      // Setup security context
+      const security = await setupSecurityContext();
+      setSecurityContext(security);
+
+      // Load active workflows
+      const workflows = await loadActiveWorkflows();
+      setActiveWorkflows(workflows);
+
+      // Start monitoring
+      startAdvancedMonitoring();
+    } catch (error) {
+      console.error('Failed to initialize advanced orchestration:', error);
+    }
+  };
+
+  const initializeResourcePools = async (): Promise<ResourcePool[]> => {
+    return [
+      {
+        id: 'compute-pool-primary',
+        name: 'Primary Compute Pool',
+        description: 'Main compute resources for pipeline execution',
+        poolType: 'compute',
+        totalCapacity: { cpu: 1000, memory: 2048, storage: 10000, network: 1000, gpu: 50, custom: {} },
+        availableCapacity: { cpu: 800, memory: 1600, storage: 8000, network: 800, gpu: 40, custom: {} },
+        allocatedCapacity: { cpu: 200, memory: 448, storage: 2000, network: 200, gpu: 10, custom: {} },
+        reservedCapacity: { cpu: 100, memory: 256, storage: 1000, network: 100, gpu: 5, custom: {} },
+        utilizationMetrics: {
+          cpuUtilization: 85,
+          memoryUtilization: 78,
+          storageUtilization: 65,
+          networkUtilization: 60,
+          gpuUtilization: 90
+        },
+        allocationPolicies: [],
+        constraints: [],
+        monitoring: {} as ResourceMonitoring,
+        costTracking: {} as CostTracking
+      },
+      {
+        id: 'storage-pool-primary',
+        name: 'Primary Storage Pool',
+        description: 'High-performance storage for data processing',
+        poolType: 'storage',
+        totalCapacity: { cpu: 0, memory: 0, storage: 50000, network: 500, gpu: 0, custom: {} },
+        availableCapacity: { cpu: 0, memory: 0, storage: 35000, network: 400, gpu: 0, custom: {} },
+        allocatedCapacity: { cpu: 0, memory: 0, storage: 15000, network: 100, gpu: 0, custom: {} },
+        reservedCapacity: { cpu: 0, memory: 0, storage: 5000, network: 50, gpu: 0, custom: {} },
+        utilizationMetrics: {
+          cpuUtilization: 0,
+          memoryUtilization: 0,
+          storageUtilization: 70,
+          networkUtilization: 40,
+          gpuUtilization: 0
+        },
+        allocationPolicies: [],
+        constraints: [],
+        monitoring: {} as ResourceMonitoring,
+        costTracking: {} as CostTracking
+      }
+    ];
+  };
+
+  const setupSecurityContext = async (): Promise<SecurityContext> => {
+    return {
+      id: 'orchestration-security-context',
+      principal: {
+        id: 'system-orchestrator',
+        type: 'system',
+        name: 'Pipeline Orchestration Engine',
+        displayName: 'Pipeline Orchestration Engine',
+        groups: ['orchestration', 'system'],
+        attributes: [],
+        credentials: [],
+        status: 'active'
+      },
+      permissions: [],
+      roles: [],
+      constraints: [],
+      policies: [],
+      auditConfig: {} as AuditConfiguration,
+      encryptionConfig: {} as EncryptionConfiguration,
+      authenticationConfig: {} as AuthenticationConfiguration,
+      authorizationConfig: {} as AuthorizationConfiguration
+    };
+  };
+
+  const loadActiveWorkflows = async (): Promise<WorkflowDefinition[]> => {
+    return [
+      {
+        id: 'data-governance-workflow',
+        name: 'Comprehensive Data Governance Workflow',
+        description: 'End-to-end data governance processing across all SPAs',
+        version: '2.0.0',
+        category: 'data_governance',
+        workflowType: 'dag',
+        nodes: [
+          {
+            id: 'start',
+            name: 'Workflow Start',
+            type: 'start',
+            position: { x: 0, y: 0 },
+            configuration: {} as NodeConfiguration,
+            validation: {} as NodeValidation,
+            monitoring: {} as NodeMonitoring,
+            errorHandling: {} as ErrorHandling,
+            timeout: 0,
+            retries: 0,
+            resources: {} as ResourceRequirements
+          },
+          {
+            id: 'data-discovery',
+            name: 'Data Discovery & Classification',
+            type: 'task',
+            position: { x: 200, y: 0 },
+            configuration: {} as NodeConfiguration,
+            validation: {} as NodeValidation,
+            monitoring: {} as NodeMonitoring,
+            errorHandling: {} as ErrorHandling,
+            timeout: 300000,
+            retries: 3,
+            resources: { cpu: 4, memory: 8, storage: 50, network: 10, gpu: 0 }
+          },
+          {
+            id: 'compliance-check',
+            name: 'Compliance Validation',
+            type: 'task',
+            position: { x: 400, y: 0 },
+            configuration: {} as NodeConfiguration,
+            validation: {} as NodeValidation,
+            monitoring: {} as NodeMonitoring,
+            errorHandling: {} as ErrorHandling,
+            timeout: 180000,
+            retries: 2,
+            resources: { cpu: 2, memory: 4, storage: 20, network: 5, gpu: 0 }
+          },
+          {
+            id: 'catalog-update',
+            name: 'Catalog Update',
+            type: 'task',
+            position: { x: 600, y: 0 },
+            configuration: {} as NodeConfiguration,
+            validation: {} as NodeValidation,
+            monitoring: {} as NodeMonitoring,
+            errorHandling: {} as ErrorHandling,
+            timeout: 120000,
+            retries: 1,
+            resources: { cpu: 1, memory: 2, storage: 10, network: 5, gpu: 0 }
+          },
+          {
+            id: 'end',
+            name: 'Workflow End',
+            type: 'end',
+            position: { x: 800, y: 0 },
+            configuration: {} as NodeConfiguration,
+            validation: {} as NodeValidation,
+            monitoring: {} as NodeMonitoring,
+            errorHandling: {} as ErrorHandling,
+            timeout: 0,
+            retries: 0,
+            resources: {} as ResourceRequirements
+          }
+        ],
+        edges: [
+          {
+            id: 'start-to-discovery',
+            source: 'start',
+            target: 'data-discovery',
+            edgeType: 'default',
+            conditions: [],
+            transformations: [],
+            validation: {} as EdgeValidation,
+            monitoring: {} as EdgeMonitoring
+          },
+          {
+            id: 'discovery-to-compliance',
+            source: 'data-discovery',
+            target: 'compliance-check',
+            edgeType: 'conditional',
+            conditions: [],
+            transformations: [],
+            validation: {} as EdgeValidation,
+            monitoring: {} as EdgeMonitoring
+          },
+          {
+            id: 'compliance-to-catalog',
+            source: 'compliance-check',
+            target: 'catalog-update',
+            edgeType: 'default',
+            conditions: [],
+            transformations: [],
+            validation: {} as EdgeValidation,
+            monitoring: {} as EdgeMonitoring
+          },
+          {
+            id: 'catalog-to-end',
+            source: 'catalog-update',
+            target: 'end',
+            edgeType: 'default',
+            conditions: [],
+            transformations: [],
+            validation: {} as EdgeValidation,
+            monitoring: {} as EdgeMonitoring
+          }
+        ],
+        variables: [],
+        configuration: {} as WorkflowConfiguration,
+        validation: {} as WorkflowValidation,
+        optimization: {
+          enabled: true,
+          strategies: [],
+          objectives: [],
+          constraints: [],
+          algorithms: [],
+          metrics: [],
+          feedback: {} as OptimizationFeedback
+        },
+        monitoring: {} as WorkflowMonitoring,
+        security: {} as WorkflowSecurity
+      }
+    ];
+  };
+
+  const startAdvancedMonitoring = () => {
+    // Initialize monitoring systems
+    const interval = setInterval(() => {
+      updateMonitoringData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  };
+
+  const updateMonitoringData = () => {
+    const newData = {
+      timestamp: new Date(),
+      orchestrationMetrics: {
+        activeWorkflows: activeWorkflows.length,
+        resourceUtilization: calculateResourceUtilization(),
+        performanceMetrics: calculatePerformanceMetrics(),
+        securityEvents: generateSecurityEvents(),
+        healthStatus: assessSystemHealth()
+      }
+    };
+
+    setMonitoringData(prev => [...prev.slice(-99), newData]);
+  };
+
+  const calculateResourceUtilization = () => {
+    return resourcePools.reduce((acc, pool) => {
+      acc[pool.id] = {
+        cpu: pool.utilizationMetrics.cpuUtilization,
+        memory: pool.utilizationMetrics.memoryUtilization,
+        storage: pool.utilizationMetrics.storageUtilization,
+        network: pool.utilizationMetrics.networkUtilization,
+        gpu: pool.utilizationMetrics.gpuUtilization
+      };
+      return acc;
+    }, {} as Record<string, any>);
+  };
+
+  const calculatePerformanceMetrics = () => {
+    return {
+      throughput: Math.random() * 1000,
+      latency: Math.random() * 100,
+      errorRate: Math.random() * 5,
+      availability: 99 + Math.random(),
+      scalabilityIndex: Math.random() * 100
+    };
+  };
+
+  const generateSecurityEvents = () => {
+    return [];
+  };
+
+  const assessSystemHealth = () => {
+    const avgUtilization = resourcePools.reduce((acc, pool) => {
+      return acc + (pool.utilizationMetrics.cpuUtilization + pool.utilizationMetrics.memoryUtilization) / 2;
+    }, 0) / resourcePools.length;
+
+    if (avgUtilization > 90) return 'critical';
+    if (avgUtilization > 75) return 'degraded';
+    if (avgUtilization > 50) return 'good';
+    return 'optimal';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Orchestration Configuration Panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Network className="h-5 w-5" />
+            Advanced Orchestration Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Cross-SPA Coordination</Label>
+              <Switch
+                checked={orchestrationConfig.crossSPACoordination}
+                onCheckedChange={(checked) => onConfigChange({ crossSPACoordination: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Intelligent Workflow</Label>
+              <Switch
+                checked={orchestrationConfig.intelligentWorkflowEngine}
+                onCheckedChange={(checked) => onConfigChange({ intelligentWorkflowEngine: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Adaptive Resources</Label>
+              <Switch
+                checked={orchestrationConfig.adaptiveResourceAllocation}
+                onCheckedChange={(checked) => onConfigChange({ adaptiveResourceAllocation: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Enterprise Security</Label>
+              <Switch
+                checked={orchestrationConfig.enterpriseSecurity}
+                onCheckedChange={(checked) => onConfigChange({ enterpriseSecurity: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Auto Scaling</Label>
+              <Switch
+                checked={orchestrationConfig.autoScaling}
+                onCheckedChange={(checked) => onConfigChange({ autoScaling: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Load Balancing</Label>
+              <Switch
+                checked={orchestrationConfig.loadBalancing}
+                onCheckedChange={(checked) => onConfigChange({ loadBalancing: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Fault Tolerance</Label>
+              <Switch
+                checked={orchestrationConfig.faultTolerance}
+                onCheckedChange={(checked) => onConfigChange({ faultTolerance: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Distributed Execution</Label>
+              <Switch
+                checked={orchestrationConfig.distributedExecution}
+                onCheckedChange={(checked) => onConfigChange({ distributedExecution: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Event-Driven Architecture</Label>
+              <Switch
+                checked={orchestrationConfig.eventDrivenArchitecture}
+                onCheckedChange={(checked) => onConfigChange({ eventDrivenArchitecture: checked })}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cross-SPA Coordination Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Cross-SPA Coordination Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Participant SPAs */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Participant SPAs</h4>
+              <div className="space-y-2">
+                {crossSPACoordination.participantSPAs.map((participant) => (
+                  <Card key={participant.spaId} className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-sm">{participant.spaType.replace('_', ' ')}</div>
+                        <div className="text-xs text-muted-foreground">Role: {participant.role}</div>
+                      </div>
+                      <Badge variant={
+                        participant.healthStatus === 'healthy' ? 'default' :
+                        participant.healthStatus === 'degraded' ? 'secondary' :
+                        participant.healthStatus === 'critical' ? 'destructive' :
+                        'outline'
+                      }>
+                        {participant.healthStatus}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>CPU: {participant.loadMetrics?.cpu || 0}%</span>
+                        <span>Priority: {participant.priority}</span>
+                      </div>
+                      <Progress value={participant.loadMetrics?.cpu || 0} className="h-1" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Dependencies */}
+            <div className="space-y-4">
+              <h4 className="font-medium">SPA Dependencies</h4>
+              <div className="space-y-2">
+                {crossSPACoordination.dependencies.map((dependency) => (
+                  <Card key={dependency.id} className="p-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium">
+                          {dependency.sourceSPA} → {dependency.targetSPA}
+                        </div>
+                        <Badge variant={
+                          dependency.strength === 'critical' ? 'destructive' :
+                          dependency.strength === 'strong' ? 'default' :
+                          'secondary'
+                        }>
+                          {dependency.strength}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Type: {dependency.dependencyType}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Timeout: {dependency.timeout}ms
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Execution Plan */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Current Execution Plan</h4>
+              <Card className="p-3">
+                <div className="space-y-3">
+                  <div>
+                    <div className="font-medium text-sm">{crossSPACoordination.executionPlan.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {crossSPACoordination.executionPlan.description}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span>Phases:</span>
+                      <span>{crossSPACoordination.executionPlan.phases.length}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Est. Duration:</span>
+                      <span>{Math.round(crossSPACoordination.executionPlan.totalEstimatedDuration / 60000)}m</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Success Criteria:</span>
+                      <span>{crossSPACoordination.executionPlan.successCriteria.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Workflows */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Workflows</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {activeWorkflows.map((workflow) => (
+              <Card key={workflow.id} className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="font-medium">{workflow.name}</h4>
+                      <p className="text-sm text-muted-foreground">{workflow.description}</p>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Type:</span>
+                        <span className="ml-1 font-medium">{workflow.workflowType}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Version:</span>
+                        <span className="ml-1 font-medium">{workflow.version}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Nodes:</span>
+                        <span className="ml-1 font-medium">{workflow.nodes.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWorkflow(workflow)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Execute
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resource Pool Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resource Pool Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {resourcePools.map((pool) => (
+              <Card key={pool.id} className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium">{pool.name}</h4>
+                    <p className="text-sm text-muted-foreground">{pool.description}</p>
+                    <Badge variant="outline" className="mt-1">{pool.poolType}</Badge>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h5 className="text-sm font-medium">Resource Utilization</h5>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>CPU Usage</span>
+                        <span>{pool.utilizationMetrics.cpuUtilization}%</span>
+                      </div>
+                      <Progress value={pool.utilizationMetrics.cpuUtilization} className="h-2" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>Memory Usage</span>
+                        <span>{pool.utilizationMetrics.memoryUtilization}%</span>
+                      </div>
+                      <Progress value={pool.utilizationMetrics.memoryUtilization} className="h-2" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>Storage Usage</span>
+                        <span>{pool.utilizationMetrics.storageUtilization}%</span>
+                      </div>
+                      <Progress value={pool.utilizationMetrics.storageUtilization} className="h-2" />
+                    </div>
+
+                    {pool.poolType === 'compute' && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span>GPU Usage</span>
+                          <span>{pool.utilizationMetrics.gpuUtilization}%</span>
+                        </div>
+                        <Progress value={pool.utilizationMetrics.gpuUtilization} className="h-2" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Available:</span>
+                      <div className="font-medium">
+                        CPU: {pool.availableCapacity.cpu} | 
+                        Mem: {pool.availableCapacity.memory}GB
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Allocated:</span>
+                      <div className="font-medium">
+                        CPU: {pool.allocatedCapacity.cpu} | 
+                        Mem: {pool.allocatedCapacity.memory}GB
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monitoring Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Real-time Monitoring</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{activeWorkflows.length}</div>
+              <div className="text-sm text-muted-foreground">Active Workflows</div>
+            </div>
+            
+            <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{crossSPACoordination.participantSPAs.length}</div>
+              <div className="text-sm text-muted-foreground">Connected SPAs</div>
+            </div>
+
+            <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{resourcePools.length}</div>
+              <div className="text-sm text-muted-foreground">Resource Pools</div>
+            </div>
+
+            <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {monitoringData.length > 0 ? 
+                  monitoringData[monitoringData.length - 1].orchestrationMetrics.healthStatus : 'N/A'}
+              </div>
+              <div className="text-sm text-muted-foreground">System Health</div>
+            </div>
+          </div>
+
+          {monitoringData.length > 0 && (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monitoringData.slice(-20)}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="timestamp" 
+                  tickFormatter={(time) => new Date(time).toLocaleTimeString()}
+                />
+                <YAxis />
+                <Tooltip 
+                  labelFormatter={(time) => new Date(time).toLocaleTimeString()}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="orchestrationMetrics.performanceMetrics.throughput" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  name="Throughput"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="orchestrationMetrics.performanceMetrics.latency" 
+                  stroke="#ef4444" 
+                  strokeWidth={2}
+                  name="Latency"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default PipelineOrchestrationEngine;
