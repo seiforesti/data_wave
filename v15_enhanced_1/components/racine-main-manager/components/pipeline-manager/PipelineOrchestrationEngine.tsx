@@ -9,7 +9,7 @@ import {
   Code, Terminal, FileText, MoreHorizontal, X, Plus, Minus, Eye,
   EyeOff, Filter, Download, Upload, Save, Copy, Edit3, Trash2,
   Layers, Route, MapPin, Compass, Navigation, Globe, Monitor,
-  Server, Cloud, Wifi, Link2, Unlink2, Share2, Bell, Volume2
+  Server, Cloud, Wifi, Link2, Unlink2, Share2, Bell, Volume2, Grid
 } from 'lucide-react';
 
 // UI Components
@@ -113,53 +113,67 @@ import {
  * - Comprehensive audit trail and governance controls
  */
 
-// Orchestration Strategies
-const ORCHESTRATION_STRATEGIES = {
-  SEQUENTIAL: {
-    id: 'sequential',
-    name: 'Sequential Execution',
-    description: 'Execute pipelines one after another',
-    icon: ArrowRight,
-    advantages: ['Simple', 'Predictable', 'Resource-efficient'],
-    disadvantages: ['Slower', 'No parallelism'],
-    best_for: ['Simple workflows', 'Resource-constrained environments']
-  },
-  PARALLEL: {
-    id: 'parallel',
-    name: 'Parallel Execution',
-    description: 'Execute independent pipelines simultaneously',
-    icon: Layers,
-    advantages: ['Faster', 'Resource utilization', 'Scalable'],
-    disadvantages: ['Complex', 'Resource-intensive'],
-    best_for: ['Independent workflows', 'High-throughput scenarios']
-  },
-  PRIORITY_BASED: {
-    id: 'priority',
-    name: 'Priority-Based',
-    description: 'Execute pipelines based on priority levels',
-    icon: Target,
-    advantages: ['Business-aligned', 'Fair allocation', 'SLA compliance'],
-    disadvantages: ['Starvation risk', 'Complex scheduling'],
-    best_for: ['Mixed workloads', 'SLA-critical environments']
-  },
-  ADAPTIVE: {
-    id: 'adaptive',
-    name: 'Adaptive Orchestration',
-    description: 'AI-driven dynamic strategy selection',
-    icon: Brain,
-    advantages: ['Self-optimizing', 'Context-aware', 'Performance-driven'],
-    disadvantages: ['Complex', 'Learning overhead'],
-    best_for: ['Dynamic environments', 'Performance-critical systems']
-  },
-  FEDERATED: {
-    id: 'federated',
-    name: 'Federated Execution',
-    description: 'Distribute execution across multiple clusters',
-    icon: Globe,
-    advantages: ['Highly scalable', 'Fault-tolerant', 'Geographic distribution'],
-    disadvantages: ['Network overhead', 'Coordination complexity'],
-    best_for: ['Large-scale deployments', 'Multi-region scenarios']
-  }
+// Orchestration Strategies - Dynamic from Backend
+const useOrchestrationStrategies = () => {
+  const [strategies, setStrategies] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStrategies = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/pipeline-orchestration/strategies');
+        const backendStrategies = await response.json();
+        
+        const dynamicStrategies = backendStrategies.reduce((acc: any, strategy: any) => {
+          acc[strategy.id.toUpperCase()] = {
+            id: strategy.id,
+            name: strategy.name,
+            description: strategy.description,
+            icon: strategy.icon_component || ArrowRight,
+            capabilities: strategy.capabilities || [],
+            limitations: strategy.limitations || [],
+            performance_characteristics: strategy.performance_characteristics || {},
+            resource_requirements: strategy.resource_requirements || {}
+          };
+          return acc;
+        }, {});
+        
+        setStrategies(dynamicStrategies);
+      } catch (error) {
+        console.error('Failed to load orchestration strategies:', error);
+        // Fallback to essential strategies
+        setStrategies({
+          SEQUENTIAL: {
+            id: 'sequential',
+            name: 'Sequential Execution',
+            description: 'Execute pipelines one after another',
+            icon: ArrowRight,
+            capabilities: ['ordered_execution', 'dependency_resolution'],
+            limitations: ['slower_execution'],
+            performance_characteristics: { throughput: 'low', latency: 'high', resource_usage: 'low' },
+            resource_requirements: { cpu: 'low', memory: 'low', storage: 'low' }
+          },
+          PARALLEL: {
+            id: 'parallel',
+            name: 'Parallel Execution',
+            description: 'Execute multiple pipelines simultaneously',
+            icon: Grid,
+            capabilities: ['concurrent_execution', 'high_throughput'],
+            limitations: ['resource_intensive', 'complex_dependency_management'],
+            performance_characteristics: { throughput: 'high', latency: 'low', resource_usage: 'high' },
+            resource_requirements: { cpu: 'high', memory: 'high', storage: 'medium' }
+          }
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStrategies();
+  }, []);
+
+  return { strategies, loading };
 };
 
 // Cross-SPA Integration Points
@@ -326,16 +340,29 @@ interface PipelineOrchestrationEngineProps {
 }
 
 const PipelineOrchestrationEngine: React.FC<PipelineOrchestrationEngineProps> = ({
-  pipelines = [],
-  executions = [],
-  orchestrationStrategy = 'ADAPTIVE',
-  autoOptimize = true,
-  enableCrossGroupOrchestration = true,
-  showAdvancedMetrics = true,
+  pipelineId,
+  orchestrationStrategy = 'sequential',
+  enableCrossGroupIntegration = true,
+  enableRealTimeMonitoring = true,
+  enableAIOptimization = true,
+  enableResourceManagement = true,
+  enableAuditLogging = true,
+  refreshInterval = 5000,
   className = ''
 }) => {
-  // Orchestration State
-  const [activeStrategy, setActiveStrategy] = useState<keyof typeof ORCHESTRATION_STRATEGIES>(orchestrationStrategy);
+  // Dynamic Backend Data Hooks
+  const { strategies: ORCHESTRATION_STRATEGIES, loading: strategiesLoading } = useOrchestrationStrategies();
+
+  // Core Hooks
+  const { orchestratePipeline, getOrchestrationMetrics } = usePipelineManagement();
+  const { getCrossGroupIntegrationPoints } = useCrossGroupIntegration();
+  const { optimizeExecution, predictBottlenecks } = useAIAssistant();
+  const { trackActivity } = useActivityTracker();
+  const { getWorkspaceResourceLimits } = useWorkspaceManagement();
+  const { currentUser } = useUserManagement();
+
+  // Component State
+  const [activeStrategy, setActiveStrategy] = useState<string>(orchestrationStrategy);
   const [executionQueue, setExecutionQueue] = useState<ExecutionQueue[]>([]);
   const [orchestrationRules, setOrchestrationRules] = useState<OrchestrationRule[]>([]);
   const [resourceAllocations, setResourceAllocations] = useState<ResourceAllocation[]>([]);

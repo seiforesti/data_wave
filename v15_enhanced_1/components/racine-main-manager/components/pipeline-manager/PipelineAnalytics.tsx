@@ -264,66 +264,103 @@ const TIME_RANGES = [
   { value: '1y', label: 'Last Year', hours: 24 * 365 }
 ];
 
-// Analytics Categories
-const ANALYTICS_CATEGORIES = [
-  {
-    id: 'performance',
-    name: 'Performance',
-    description: 'Execution time, throughput, and resource utilization',
-    icon: Gauge,
-    color: 'blue',
-    unit: 'ms'
-  },
-  {
-    id: 'reliability',
-    name: 'Reliability',
-    description: 'Success rates, error patterns, and availability',
-    icon: Shield,
-    color: 'green',
-    unit: '%'
-  },
-  {
-    id: 'efficiency',
-    name: 'Efficiency',
-    description: 'Resource optimization and cost effectiveness',
-    icon: Zap,
-    color: 'yellow',
-    unit: 'x'
-  },
-  {
-    id: 'quality',
-    name: 'Quality',
-    description: 'Data quality metrics and validation results',
-    icon: Target,
-    color: 'purple',
-    unit: 'pts'
-  },
-  {
-    id: 'usage',
-    name: 'Usage',
-    description: 'User interactions and system utilization',
-    icon: Users,
-    color: 'orange',
-    unit: 'req/sec'
-  },
-  {
-    id: 'compliance',
-    name: 'Compliance',
-    description: 'Governance rules and regulatory compliance',
-    icon: FileText,
-    color: 'red',
-    unit: 'pts'
-  }
-];
+// Analytics Categories - Dynamic from Backend
+const useAnalyticsCategories = () => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-// Chart Types
-const CHART_TYPES = [
-  { value: 'line', label: 'Line Chart', icon: LineChart },
-  { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
-  { value: 'area', label: 'Area Chart', icon: AreaChart },
-  { value: 'pie', label: 'Pie Chart', icon: PieChart },
-  { value: 'scatter', label: 'Scatter Plot', icon: ScatterChart }
-];
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/pipeline-analytics/categories');
+        const backendCategories = await response.json();
+        
+        const dynamicCategories = backendCategories.map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          description: cat.description,
+          icon: cat.icon_component || Gauge, // Map string to actual icon component
+          color: cat.color || '#3B82F6',
+          metrics: cat.metrics || [],
+          thresholds: cat.thresholds || {}
+        }));
+        
+        setCategories(dynamicCategories);
+      } catch (error) {
+        console.error('Failed to load analytics categories:', error);
+        // Fallback to essential categories
+        setCategories([
+          {
+            id: 'performance',
+            name: 'Performance',
+            description: 'Execution time, throughput, and resource utilization',
+            icon: Gauge,
+            color: '#3B82F6',
+            metrics: ['execution_time', 'throughput', 'resource_utilization'],
+            thresholds: { good: 80, warning: 60, critical: 40 }
+          },
+          {
+            id: 'reliability',
+            name: 'Reliability',
+            description: 'Success rates, error handling, and system stability',
+            icon: Shield,
+            color: '#10B981',
+            metrics: ['success_rate', 'error_rate', 'stability_score'],
+            thresholds: { good: 95, warning: 85, critical: 70 }
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  return { categories, loading };
+};
+
+// Chart Types - Dynamic from Backend
+const useChartTypes = () => {
+  const [chartTypes, setChartTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadChartTypes = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/pipeline-analytics/chart-types');
+        const backendChartTypes = await response.json();
+        
+        const dynamicChartTypes = backendChartTypes.map((chart: any) => ({
+          value: chart.value,
+          label: chart.label,
+          icon: chart.icon_component || LineChart,
+          supported_metrics: chart.supported_metrics || [],
+          configuration: chart.configuration || {}
+        }));
+        
+        setChartTypes(dynamicChartTypes);
+      } catch (error) {
+        console.error('Failed to load chart types:', error);
+        // Fallback to essential chart types
+        setChartTypes([
+          { value: 'line', label: 'Line Chart', icon: LineChart },
+          { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
+          { value: 'area', label: 'Area Chart', icon: AreaChart },
+          { value: 'pie', label: 'Pie Chart', icon: PieChart }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChartTypes();
+  }, []);
+
+  return { chartTypes, loading };
+};
 
 // Main Component
 export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
@@ -368,7 +405,11 @@ export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
     predictTrendsWithAI
   } = useAIAssistant();
 
-  // Component State
+  // Dynamic Backend Data Hooks
+  const { categories: ANALYTICS_CATEGORIES, loading: categoriesLoading } = useAnalyticsCategories();
+  const { chartTypes: CHART_TYPES, loading: chartTypesLoading } = useChartTypes();
+
+  // State Management
   const [state, setState] = useState<PipelineAnalyticsState>({
     currentMetrics: null,
     activeInsight: null,
@@ -805,38 +846,54 @@ export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
         </Card>
       </div>
 
-      {/* Analytics Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ANALYTICS_CATEGORIES.map((category) => {
-          const Icon = category.icon;
-          const trendDirection = trendAnalysis[`${category.id}Trend` as keyof typeof trendAnalysis];
-          const score = analyticsMetrics?.category_scores?.[category.id] || 0; // Real backend analytics
-          
-          return (
-            <Card key={category.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Icon className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <h3 className="font-medium">{category.name}</h3>
-                    <p className="text-sm text-muted-foreground">{category.description}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold">{score.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    {trendDirection === 'up' ? (
-                      <TrendingUp className="h-3 w-3 text-green-500" />
-                    ) : trendDirection === 'down' ? (
-                      <TrendingDown className="h-3 w-3 text-red-500" />
-                    ) : null}
-                    {category.unit}
-                  </div>
-                </div>
+      {/* Analytics Categories Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {categoriesLoading ? (
+          Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} className="p-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-slate-200 rounded mb-2"></div>
+                <div className="h-8 bg-slate-200 rounded mb-2"></div>
+                <div className="h-3 bg-slate-200 rounded"></div>
               </div>
             </Card>
-          );
-        })}
+          ))
+        ) : (
+          ANALYTICS_CATEGORIES.map((category) => {
+            const Icon = category.icon;
+            const trendDirection = trendAnalysis[`${category.id}Trend` as keyof typeof trendAnalysis];
+            const score = analyticsMetrics?.category_scores?.[category.id] || 0; // Real backend analytics
+            
+            return (
+              <Card key={category.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-5 w-5 text-blue-500" />
+                    <div>
+                      <h3 className="font-medium">{category.name}</h3>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold" style={{ color: category.color }}>
+                      {score.toFixed(1)}
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      {trendDirection === 'up' ? (
+                        <TrendingUp className="h-3 w-3 text-green-500" />
+                      ) : trendDirection === 'down' ? (
+                        <TrendingDown className="h-3 w-3 text-red-500" />
+                      ) : (
+                        <Minus className="h-3 w-3 text-slate-400" />
+                      )}
+                      <span>{trendDirection || 'stable'}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Recent Insights */}
