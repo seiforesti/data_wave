@@ -1,1927 +1,1755 @@
 /**
- * ActivitySearchEngine.tsx
- * =========================
+ * ActivitySearchEngine Component
+ * ==============================
  * 
- * Advanced Search and Filtering Engine - Intelligent search system for activity
- * data with AI-powered suggestions, natural language processing, advanced query
- * building, and sophisticated filtering capabilities.
+ * Advanced search and filtering engine for activity data with AI-powered
+ * suggestions, natural language queries, intelligent filtering, and
+ * enterprise-grade search functionality.
  * 
- * Features:
- * - Natural language query processing
- * - AI-powered search suggestions and autocomplete
- * - Advanced filter builder with visual query construction
- * - Fuzzy search and semantic matching
- * - Real-time search results with instant feedback
+ * Key Features:
+ * - Advanced search with natural language processing
+ * - AI-powered search suggestions and auto-complete
+ * - Multi-criteria filtering with visual filter builder
  * - Saved searches and search history
- * - Cross-group activity correlation in search
- * - Smart search recommendations based on patterns
+ * - Real-time search with instant results
+ * - Fuzzy search and typo tolerance
+ * - Cross-group activity search and correlation
+ * - Search analytics and performance metrics
+ * - Export search results in multiple formats
+ * - Advanced query syntax and operators
+ * - Search result highlighting and ranking
+ * - Contextual search recommendations
  * 
- * Design: Modern search interface with intelligent suggestions, advanced filters,
- * and sophisticated query visualization using shadcn/ui, Next.js, and Tailwind CSS.
+ * Backend Integration:
+ * - Maps to: activity-tracking-apis.ts
+ * - Uses: useActivityTracker hook
+ * - Types: ActivitySearchRequest, ActivitySearchResponse
  */
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { 
-  Search, 
-  Filter, 
-  X, 
-  Plus, 
-  Minus, 
-  Edit, 
-  Save, 
-  Star, 
-  StarOff, 
-  History, 
-  Clock, 
-  Calendar, 
-  User, 
-  Database, 
-  Tag, 
-  Hash, 
-  Target, 
-  Zap, 
-  Brain, 
-  BrainCircuit, 
-  Lightbulb, 
-  Sparkles, 
-  Wand2, 
-  Code, 
-  Type, 
-  AlignLeft, 
-  Quote, 
-  Parentheses, 
-  Regex, 
-  CaseSensitive, 
-  WholeWord, 
-  ArrowRight, 
-  ArrowDown, 
-  ArrowUp, 
-  ChevronDown, 
-  ChevronUp, 
-  ChevronRight, 
-  ChevronLeft, 
-  MoreHorizontal, 
-  Eye, 
-  EyeOff, 
-  Download, 
-  Upload, 
-  Copy, 
-  Share, 
-  ExternalLink, 
-  Settings, 
-  Sliders, 
-  RotateCcw, 
-  RefreshCcw, 
-  Play, 
-  Pause, 
-  Square, 
-  SkipForward, 
-  SkipBack, 
-  FastForward, 
-  Rewind, 
-  Volume2, 
-  VolumeX, 
-  Mic, 
-  MicOff, 
-  Keyboard, 
-  Mouse, 
-  Touchpad, 
-  Gamepad2, 
-  Joystick, 
-  MonitorSpeaker, 
-  Headphones, 
-  Speaker, 
-  Smartphone, 
-  Tablet, 
-  Laptop, 
-  Monitor, 
-  Tv, 
-  Watch, 
-  Camera, 
-  Video, 
-  Image, 
-  FileText, 
-  File, 
-  Folder, 
-  FolderOpen, 
-  Archive, 
-  Package, 
-  Box, 
-  Container, 
-  Layers, 
-  Stack, 
-  Grid3X3, 
-  Grid2X2, 
-  LayoutGrid, 
-  LayoutList, 
-  List, 
-  Table, 
-  Columns, 
-  Rows, 
-  SplitSquareHorizontal, 
-  SplitSquareVertical, 
-  Maximize, 
-  Minimize, 
-  Expand, 
-  Shrink, 
-  ZoomIn, 
-  ZoomOut, 
-  Focus, 
-  Scan, 
-  ScanLine, 
-  QrCode, 
-  Fingerprint, 
-  Lock, 
-  Unlock, 
-  Key, 
-  Shield, 
-  ShieldCheck, 
-  ShieldAlert, 
-  ShieldX, 
-  Security, 
-  AlertTriangle, 
-  AlertCircle, 
-  CheckCircle, 
-  XCircle, 
-  Info, 
-  HelpCircle, 
-  MessageCircle, 
-  MessageSquare, 
-  Mail, 
-  Send, 
-  Inbox, 
-  Outbox, 
-  Archive as ArchiveIcon, 
-  Trash, 
-  Trash2, 
-  Delete, 
-  Eraser, 
-  Scissors, 
-  Clipboard, 
-  ClipboardCopy, 
-  ClipboardPaste, 
-  ClipboardList, 
-  ClipboardCheck, 
-  ClipboardX,
-  Command,
+  Search,
+  Filter,
+  Settings,
+  History,
+  Star,
+  BookOpen,
+  Zap,
+  Target,
+  Brain,
+  Sparkles,
+  Clock,
+  Save,
+  Download,
+  RefreshCw,
+  X,
+  ChevronDown,
+  ChevronRight,
+  ArrowRight,
+  Plus,
+  Minus,
+  Calendar,
+  Users,
+  Activity,
+  Database,
+  Tag,
+  Hash,
+  Globe,
+  Building,
+  User,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  HelpCircle,
+  ExternalLink,
+  Copy,
+  Share2,
+  Eye,
+  EyeOff,
+  BarChart3,
+  TrendingUp,
+  FileText,
+  Code,
   Terminal,
-  Binary,
-  Bug,
+  Layers,
+  Grid3X3,
+  List,
+  Table2,
+  Network,
+  GitBranch,
+  Workflow,
   Cpu,
   HardDrive,
-  MemoryStick,
-  SdCard,
-  Usb,
-  Bluetooth,
-  Wifi,
-  WifiOff,
-  Signal,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
-  SignalZero,
-  Antenna,
-  Radio,
-  Rss,
-  Activity,
-  Pulse,
-  HeartHandshake,
-  Heart,
-  ThumbsUp,
-  ThumbsDown,
-  TrendingUp,
-  TrendingDown,
-  BarChart,
-  BarChart2,
-  BarChart3,
-  LineChart,
-  PieChart,
-  ScatterChart,
-  Gauge,
-  Speedometer,
-  Timer,
-  Stopwatch,
-  Clock3,
-  AlarmClock,
-  Hourglass,
-  Loader,
-  Loader2,
-  LoaderCircle,
-  RotateCw,
-  Repeat,
-  Repeat1,
-  Repeat2,
-  Shuffle,
-  SkipBackIcon,
-  SkipForwardIcon,
-  PlayCircle,
-  PauseCircle,
-  StopCircle,
-  Power,
-  PowerOff,
-  Plug,
-  Unplug,
-  Battery,
-  BatteryLow,
-  Fuel,
-  Zap as ZapIcon,
-  Flame,
-  Sun,
-  Moon,
-  CloudSun,
+  Server,
   Cloud,
-  CloudRain,
-  CloudSnow,
-  CloudDrizzle,
-  CloudLightning,
-  Tornado,
-  Wind,
-  Snowflake,
-  Droplets,
-  Waves,
-  Mountain,
-  Trees,
-  Flower,
-  Leaf,
-  Seedling,
-  Sprout,
-  TreePine,
-  TreeDeciduous,
-  Palmtree,
-  Cactus,
-  Mushroom,
-  Apple,
-  Cherry,
-  Grape,
-  Orange,
-  Banana,
-  Carrot,
-  Fish,
-  Bug as BugIcon,
-  Rabbit,
-  Turtle,
-  Bird,
-  Cat,
-  Dog,
-  Squirrel,
-  Cow,
-  Pig,
-  Sheep,
-  Horse,
-  Snail,
-  Ant,
-  Bee,
-  Butterfly,
-  Spider,
-  Worm,
-  Microscope,
-  TestTube,
-  FlaskConical,
-  TestTubes,
-  Dna,
-  Atom,
-  Magnet,
-  Compass,
-  MapPin,
-  Map,
-  Navigation,
-  Route,
-  Milestone,
+  Shield,
+  Lock,
+  Key,
   Flag,
-  FlagTriangleLeft,
-  FlagTriangleRight,
-  Bookmark,
-  BookOpen,
-  Book,
-  Library,
-  GraduationCap,
-  School,
-  Building,
-  Building2,
-  Factory,
-  Warehouse,
-  Store,
-  ShoppingCart,
-  ShoppingBag,
-  CreditCard,
-  Banknote,
-  DollarSign,
-  Euro,
-  PoundSterling,
-  Yen,
-  Bitcoin,
-  Coins,
-  Wallet,
-  PiggyBank,
-  Calculator,
-  Abacus,
-  Scale,
-  Ruler,
-  Scissors as ScissorsIcon,
-  Wrench,
-  Hammer,
-  Screwdriver,
-  Drill,
-  Saw,
-  Pickaxe,
-  Shovel,
-  Axe,
-  Knife,
-  Sword,
-  Shield as ShieldIcon,
-  Crown,
-  Trophy,
-  Award,
-  Medal,
-  Ribbon,
-  Rosette,
-  Gift,
-  Cake,
-  Candle,
-  PartyPopper,
-  Confetti,
-  Balloon,
-  Camera as CameraIcon,
-  Video as VideoIcon,
-  Film,
-  Clapperboard,
-  Music,
-  Music2,
-  Music3,
-  Music4,
-  Disc,
-  Disc2,
-  Disc3,
-  Radio as RadioIcon,
-  Podcast,
-  Headphones as HeadphonesIcon,
-  Speaker as SpeakerIcon,
-  Volume,
-  Volume1,
-  VolumeOff,
-  Gamepad,
-  Joystick as JoystickIcon,
-  Dices,
-  Puzzle,
-  Target as TargetIcon,
-  Crosshair,
-  Scope,
-  Radar as RadarIcon,
-  Satellite,
-  Rocket,
-  Plane,
-  Car,
-  Truck,
-  Bus,
-  Train,
-  Tractor,
-  Bike,
-  Scooter,
-  Motorcycle,
-  Boat,
-  Ship,
-  Anchor,
-  Wheel,
-  Fuel as FuelIcon,
-  Construction,
-  Cone,
-  Barrier,
-  RoadClosed,
-  TrafficCone,
-  Ambulance,
-  FireExtinguisher,
-  Siren,
-  Hospital,
-  Cross,
-  Pill,
-  Stethoscope,
-  Thermometer,
-  Bandage,
-  Syringe,
-  Dumbbell,
-  Weight,
-  Activity as ActivityIcon,
-  HeartPulse,
-  Brain as BrainIcon,
-  Eye as EyeIcon,
-  Ear,
-  Nose,
-  Mouth,
-  Hand,
-  Footprints,
-  Baby,
-  Child,
-  User2,
-  Users,
-  UserPlus,
-  UserMinus,
-  UserCheck,
-  UserX,
-  Users2,
-  TeamIcon,
-  Group,
-  Family,
-  Couple,
-  PersonStanding,
-  Accessibility,
-  WheelchairIcon,
-  Blind,
-  Deaf,
-  SignLanguage,
-  Braille,
-  Languages,
-  Globe,
-  Globe2,
-  Earth,
-  Satellite as SatelliteIcon,
-  Orbit,
-  Planet,
-  MoonIcon,
-  SunIcon,
-  Star as StarIcon,
-  Comet,
-  Meteor,
-  Galaxy,
-  Telescope,
-  Binoculars,
-  Camera2,
-  CameraOff,
-  VideoOff,
-  Image as ImageIcon,
-  ImageOff,
-  ImagePlus,
-  ImageMinus,
-  Crop,
-  RotateCcw as RotateCcwIcon,
-  Rotate3D,
-  FlipHorizontal,
-  FlipVertical,
-  Contrast,
-  SunMedium,
-  Palette,
-  Pipette,
-  Paintbrush,
-  Paintbrush2,
-  PenTool,
-  Pen,
-  Pencil,
-  Highlighter,
-  Marker,
-  Crayon,
-  PaintBucket,
-  Eraser as EraserIcon,
-  Lasso,
-  MoveIcon,
-  Move3D,
-  MousePointer,
-  MousePointer2,
-  CursorArrow,
-  Hand as HandIcon,
-  Grab,
-  GrabIcon,
-  Pointer,
-  Click,
-  Tap,
-  Swipe,
-  Pinch,
-  Zoom,
-  Pan,
-  Rotate,
-  Scale as ScaleIcon,
-  Transform,
-  Flip,
-  Mirror,
-  Symmetry,
-  Align,
-  AlignCenter,
-  AlignCenterHorizontal,
-  AlignCenterVertical,
-  AlignEndHorizontal,
-  AlignEndVertical,
-  AlignHorizontalDistributeCenter,
-  AlignHorizontalDistributeEnd,
-  AlignHorizontalDistributeStart,
-  AlignHorizontalJustifyCenter,
-  AlignHorizontalJustifyEnd,
-  AlignHorizontalJustifyStart,
-  AlignHorizontalSpaceAround,
-  AlignHorizontalSpaceBetween,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
-  AlignStartHorizontal,
-  AlignStartVertical,
-  AlignVerticalDistributeCenter,
-  AlignVerticalDistributeEnd,
-  AlignVerticalDistributeStart,
-  AlignVerticalJustifyCenter,
-  AlignVerticalJustifyEnd,
-  AlignVerticalJustifyStart,
-  AlignVerticalSpaceAround,
-  AlignVerticalSpaceBetween,
-  Distribute,
-  DistributeHorizontal,
-  DistributeVertical,
-  Space,
-  Spacing,
-  Margin,
-  Padding,
-  BorderAll,
-  BorderBottom,
-  BorderLeft,
-  BorderRight,
-  BorderTop,
-  CornerDownLeft,
-  CornerDownRight,
-  CornerLeftDown,
-  CornerLeftUp,
-  CornerRightDown,
-  CornerRightUp,
-  CornerUpLeft,
-  CornerUpRight,
-  RoundedCorner,
-  Square,
-  Rectangle,
-  Circle,
-  Triangle,
-  Diamond,
-  Pentagon,
-  Hexagon,
-  Octagon,
-  Star4,
-  Star5,
-  Star6,
-  Heart as HeartIcon,
-  Spade,
-  Club,
-  Clubs,
-  Diamonds,
-  Hearts,
-  Spades,
-  Dice1,
-  Dice2,
-  Dice3,
-  Dice4,
-  Dice5,
-  Dice6
+  Bell,
+  Mail,
+  MessageSquare,
+  Phone,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
+import { FixedSizeList as List } from 'react-window';
 
-// UI Components
+import { useActivityTracker } from '../../hooks/useActivityTracker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger
-} from '@/components/ui/dropdown-menu';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogFooter 
-} from '@/components/ui/dialog';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
-import { 
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut
-} from '@/components/ui/command';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from '@/components/ui/accordion';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-// Hooks and Services
-import { useActivityTracker } from '../../hooks/useActivityTracker';
-import { useCrossGroupIntegration } from '../../hooks/useCrossGroupIntegration';
-import { useUserManagement } from '../../hooks/useUserManagement';
-import { useWorkspaceManagement } from '../../hooks/useWorkspaceManagement';
-import { useAIAssistant } from '../../hooks/useAIAssistant';
-
-// Types
 import {
   RacineActivity,
-  ActivityFilter,
   ActivityType,
-  ActivitySeverity,
+  ActivityAction,
   UUID,
-  UserRole,
-  WorkspaceContext
+  ISODateString,
+  ComplianceLevel
 } from '../../types/racine-core.types';
 
-// Utils
-import { formatDateTime, formatDuration, formatBytes, formatNumber } from '../../utils/formatting-utils';
-import { cn } from '@/lib/utils';
+import {
+  ActivitySearchRequest,
+  FilterRequest,
+  SortRequest,
+  PaginationRequest
+} from '../../types/api.types';
 
-/**
- * Search modes
- */
-export enum SearchMode {
-  SIMPLE = 'simple',
-  ADVANCED = 'advanced',
-  NATURAL = 'natural',
-  VISUAL = 'visual'
+// =============================================================================
+// TYPES AND INTERFACES
+// =============================================================================
+
+interface ActivitySearchEngineProps {
+  height?: number;
+  showAdvancedFilters?: boolean;
+  enableAI?: boolean;
+  enableSavedSearches?: boolean;
+  enableRealTime?: boolean;
+  autoSuggest?: boolean;
+  className?: string;
 }
 
-/**
- * Query operators
- */
-export enum QueryOperator {
+interface SearchEngineState {
+  // Search Query State
+  query: string;
+  naturalLanguageQuery: string;
+  previousQueries: SearchQuery[];
+  suggestions: SearchSuggestion[];
+  
+  // Search Results
+  results: ActivitySearchResult[];
+  filteredResults: ActivitySearchResult[];
+  selectedResults: Set<UUID>;
+  totalResults: number;
+  searchTime: number;
+  
+  // Search Configuration
+  searchMode: SearchMode;
+  searchScope: SearchScope;
+  searchFilters: SearchFilter[];
+  activeFilters: SearchFilter[];
+  sortBy: SearchSortOption;
+  
+  // AI Features
+  aiSuggestions: AISuggestion[];
+  smartFilters: SmartFilter[];
+  searchInsights: SearchInsight[];
+  queryAnalysis: QueryAnalysis | null;
+  
+  // Saved Searches
+  savedSearches: SavedSearch[];
+  searchHistory: SearchHistoryEntry[];
+  favoriteSearches: SavedSearch[];
+  
+  // Search Analytics
+  searchMetrics: SearchMetrics | null;
+  popularQueries: PopularQuery[];
+  searchTrends: SearchTrend[];
+  
+  // UI State
+  isSearching: boolean;
+  showSuggestions: boolean;
+  showAdvancedFilters: boolean;
+  showSavedSearches: boolean;
+  showSearchHistory: boolean;
+  showAnalytics: boolean;
+  
+  // View Options
+  resultsView: SearchResultsView;
+  resultsPerPage: number;
+  currentPage: number;
+  
+  // Export Options
+  exportConfig: SearchExportConfig;
+  
+  // Error and Loading States
+  loading: boolean;
+  error: string | null;
+  
+  // Real-time Features
+  isRealTimeEnabled: boolean;
+  streamingResults: boolean;
+  lastUpdate: ISODateString | null;
+}
+
+enum SearchMode {
+  SIMPLE = 'simple',
+  ADVANCED = 'advanced',
+  NATURAL_LANGUAGE = 'natural_language',
+  AI_ASSISTED = 'ai_assisted'
+}
+
+enum SearchScope {
+  ALL = 'all',
+  CURRENT_WORKSPACE = 'current_workspace',
+  CURRENT_USER = 'current_user',
+  SPECIFIC_GROUPS = 'specific_groups',
+  TIME_RANGE = 'time_range'
+}
+
+enum SearchResultsView {
+  LIST = 'list',
+  CARDS = 'cards',
+  TABLE = 'table',
+  TIMELINE = 'timeline'
+}
+
+interface SearchQuery {
+  id: UUID;
+  query: string;
+  mode: SearchMode;
+  filters: SearchFilter[];
+  timestamp: ISODateString;
+  resultCount: number;
+  executionTime: number;
+}
+
+interface SearchSuggestion {
+  id: string;
+  text: string;
+  type: SuggestionType;
+  confidence: number;
+  category: string;
+  metadata: Record<string, any>;
+}
+
+enum SuggestionType {
+  QUERY_COMPLETION = 'query_completion',
+  FILTER_SUGGESTION = 'filter_suggestion',
+  RELATED_SEARCH = 'related_search',
+  HISTORICAL_QUERY = 'historical_query',
+  AI_SUGGESTION = 'ai_suggestion'
+}
+
+interface ActivitySearchResult {
+  activity: RacineActivity;
+  relevanceScore: number;
+  matchedFields: string[];
+  highlights: SearchHighlight[];
+  context: SearchContext;
+}
+
+interface SearchHighlight {
+  field: string;
+  text: string;
+  startIndex: number;
+  endIndex: number;
+}
+
+interface SearchContext {
+  relatedActivities: RacineActivity[];
+  userContext: UserContext;
+  temporalContext: TemporalContext;
+  groupContext: GroupContext;
+}
+
+interface SearchFilter {
+  id: string;
+  name: string;
+  type: FilterType;
+  field: string;
+  operator: FilterOperator;
+  value: any;
+  isActive: boolean;
+  isAIGenerated: boolean;
+}
+
+enum FilterType {
+  TEXT = 'text',
+  DATE = 'date',
+  NUMBER = 'number',
+  BOOLEAN = 'boolean',
+  SELECT = 'select',
+  MULTI_SELECT = 'multi_select',
+  RANGE = 'range',
+  CUSTOM = 'custom'
+}
+
+enum FilterOperator {
   EQUALS = 'equals',
   NOT_EQUALS = 'not_equals',
   CONTAINS = 'contains',
   NOT_CONTAINS = 'not_contains',
   STARTS_WITH = 'starts_with',
   ENDS_WITH = 'ends_with',
-  REGEX = 'regex',
-  FUZZY = 'fuzzy',
-  SEMANTIC = 'semantic',
   GREATER_THAN = 'greater_than',
   LESS_THAN = 'less_than',
   BETWEEN = 'between',
   IN = 'in',
   NOT_IN = 'not_in',
-  IS_NULL = 'is_null',
-  IS_NOT_NULL = 'is_not_null'
+  REGEX = 'regex'
 }
 
-/**
- * Query field types
- */
-export enum QueryFieldType {
-  TEXT = 'text',
-  NUMBER = 'number',
-  DATE = 'date',
-  BOOLEAN = 'boolean',
-  ARRAY = 'array',
-  OBJECT = 'object',
-  UUID = 'uuid',
-  JSON = 'json'
-}
-
-/**
- * Search filter interface
- */
-interface SearchFilter {
-  id: string;
+interface SearchSortOption {
   field: string;
-  fieldType: QueryFieldType;
-  operator: QueryOperator;
-  value: any;
+  direction: 'asc' | 'desc';
   label: string;
-  description?: string;
-  required?: boolean;
-  enabled: boolean;
 }
 
-/**
- * Search query interface
- */
-interface SearchQuery {
+interface AISuggestion {
+  id: string;
+  type: AISuggestionType;
+  title: string;
+  description: string;
+  confidence: number;
+  action: string;
+  parameters: Record<string, any>;
+}
+
+enum AISuggestionType {
+  QUERY_REFINEMENT = 'query_refinement',
+  FILTER_RECOMMENDATION = 'filter_recommendation',
+  RELATED_SEARCH = 'related_search',
+  PATTERN_DETECTION = 'pattern_detection',
+  ANOMALY_DETECTION = 'anomaly_detection'
+}
+
+interface SmartFilter {
   id: string;
   name: string;
-  description?: string;
-  mode: SearchMode;
+  description: string;
+  conditions: FilterCondition[];
+  isAIGenerated: boolean;
+  confidence: number;
+  usage: number;
+}
+
+interface FilterCondition {
+  field: string;
+  operator: FilterOperator;
+  value: any;
+  logicalOperator?: 'AND' | 'OR';
+}
+
+interface SearchInsight {
+  id: string;
+  type: InsightType;
+  title: string;
+  description: string;
+  data: any;
+  actionable: boolean;
+  priority: 'low' | 'medium' | 'high';
+}
+
+enum InsightType {
+  SEARCH_PATTERN = 'search_pattern',
+  RESULT_QUALITY = 'result_quality',
+  PERFORMANCE_ISSUE = 'performance_issue',
+  TRENDING_TOPIC = 'trending_topic',
+  ANOMALY_DETECTED = 'anomaly_detected'
+}
+
+interface QueryAnalysis {
+  intent: QueryIntent;
+  entities: ExtractedEntity[];
+  timeframe: TimeframeIntent | null;
+  scope: ScopeIntent | null;
+  complexity: QueryComplexity;
+  suggestions: string[];
+}
+
+interface QueryIntent {
+  primary: string;
+  secondary: string[];
+  confidence: number;
+}
+
+interface ExtractedEntity {
+  type: EntityType;
+  value: string;
+  confidence: number;
+  startIndex: number;
+  endIndex: number;
+}
+
+enum EntityType {
+  USER = 'user',
+  GROUP = 'group',
+  RESOURCE = 'resource',
+  ACTION = 'action',
+  DATE = 'date',
+  TIME = 'time',
+  LOCATION = 'location',
+  SYSTEM = 'system'
+}
+
+interface TimeframeIntent {
+  start: ISODateString | null;
+  end: ISODateString | null;
+  relative: string | null;
+}
+
+interface ScopeIntent {
+  groups: string[];
+  users: string[];
+  resources: string[];
+}
+
+enum QueryComplexity {
+  SIMPLE = 'simple',
+  MODERATE = 'moderate',
+  COMPLEX = 'complex',
+  VERY_COMPLEX = 'very_complex'
+}
+
+interface SavedSearch {
+  id: UUID;
+  name: string;
+  description: string;
   query: string;
+  mode: SearchMode;
   filters: SearchFilter[];
-  sorting: {
-    field: string;
-    direction: 'asc' | 'desc';
-  }[];
-  limit: number;
-  offset: number;
-  facets: string[];
-  highlighting: boolean;
-  fuzzySearch: boolean;
-  semanticSearch: boolean;
-  crossGroup: boolean;
-  realTime: boolean;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: UUID;
   isPublic: boolean;
   isFavorite: boolean;
   tags: string[];
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+  createdBy: UUID;
+  usage: number;
+  lastUsed: ISODateString;
 }
 
-/**
- * Search suggestion interface
- */
-interface SearchSuggestion {
-  id: string;
-  type: 'query' | 'filter' | 'field' | 'value' | 'operator';
-  text: string;
-  description?: string;
-  score: number;
-  category: string;
-  metadata?: any;
-}
-
-/**
- * AI search recommendation interface
- */
-interface AISearchRecommendation {
-  id: string;
-  title: string;
-  description: string;
+interface SearchHistoryEntry {
+  id: UUID;
   query: string;
+  mode: SearchMode;
   filters: SearchFilter[];
-  confidence: number;
-  reasoning: string;
-  examples: string[];
-  tags: string[];
+  resultCount: number;
+  executionTime: number;
+  timestamp: ISODateString;
+  successful: boolean;
 }
 
-/**
- * Component props
- */
-interface ActivitySearchEngineProps {
-  height?: number;
-  defaultMode?: SearchMode;
-  enableAI?: boolean;
-  enableSuggestions?: boolean;
-  enableHistory?: boolean;
-  enableSavedSearches?: boolean;
-  className?: string;
-  onSearchResults?: (results: RacineActivity[]) => void;
-  onQueryChange?: (query: SearchQuery) => void;
+interface SearchMetrics {
+  totalSearches: number;
+  averageExecutionTime: number;
+  successRate: number;
+  popularFilters: FilterUsage[];
+  searchVolumeTrends: SearchVolumeTrend[];
+  userEngagement: SearchEngagement;
 }
 
-/**
- * Component state interface
- */
-interface SearchEngineState {
-  // Search Configuration
-  currentMode: SearchMode;
+interface FilterUsage {
+  filter: string;
+  count: number;
+  percentage: number;
+}
+
+interface SearchVolumeTrend {
+  period: string;
+  searchCount: number;
+  averageExecutionTime: number;
+}
+
+interface SearchEngagement {
+  averageResultsViewed: number;
+  clickThroughRate: number;
+  refinementRate: number;
+  exportRate: number;
+}
+
+interface PopularQuery {
   query: string;
-  activeQuery: SearchQuery | null;
-  
-  // Results and Data
-  results: RacineActivity[];
-  totalResults: number;
-  searchTime: number;
-  
-  // Filters and Facets
-  filters: SearchFilter[];
-  availableFields: { field: string; type: QueryFieldType; label: string; description?: string }[];
-  facets: Record<string, { values: { value: any; count: number }[] }>;
-  
-  // Suggestions and AI
-  suggestions: SearchSuggestion[];
-  recommendations: AISearchRecommendation[];
-  isGeneratingRecommendations: boolean;
-  
-  // History and Saved Searches
-  searchHistory: SearchQuery[];
-  savedSearches: SearchQuery[];
-  
-  // UI State
-  showSuggestions: boolean;
-  showAdvancedFilters: boolean;
-  showSearchHistory: boolean;
-  showSavedSearches: boolean;
-  showRecommendations: boolean;
-  showQueryBuilder: boolean;
-  isFullscreen: boolean;
-  
-  // Performance
-  searchDebounceMs: number;
-  maxSuggestions: number;
+  count: number;
+  trend: 'up' | 'down' | 'stable';
+  averageResults: number;
+}
+
+interface SearchTrend {
+  term: string;
+  volume: number;
+  growth: number;
+  related: string[];
+}
+
+interface SearchExportConfig {
+  format: 'csv' | 'json' | 'xlsx' | 'pdf';
+  includeMetadata: boolean;
+  includeHighlights: boolean;
+  includeContext: boolean;
   maxResults: number;
-  
-  // Loading and Errors
-  loading: {
-    search: boolean;
-    suggestions: boolean;
-    recommendations: boolean;
-    save: boolean;
-  };
-  errors: {
-    search: string | null;
-    suggestions: string | null;
-    recommendations: string | null;
-    save: string | null;
-  };
 }
 
-/**
- * Search field configurations
- */
-const searchFields = [
-  { field: 'id', type: QueryFieldType.UUID, label: 'Activity ID', description: 'Unique identifier for the activity' },
-  { field: 'userId', type: QueryFieldType.UUID, label: 'User ID', description: 'User who performed the activity' },
-  { field: 'activityType', type: QueryFieldType.TEXT, label: 'Activity Type', description: 'Type of activity performed' },
-  { field: 'action', type: QueryFieldType.TEXT, label: 'Action', description: 'Specific action taken' },
-  { field: 'resourceType', type: QueryFieldType.TEXT, label: 'Resource Type', description: 'Type of resource affected' },
-  { field: 'resourceId', type: QueryFieldType.UUID, label: 'Resource ID', description: 'ID of the affected resource' },
-  { field: 'timestamp', type: QueryFieldType.DATE, label: 'Timestamp', description: 'When the activity occurred' },
-  { field: 'duration', type: QueryFieldType.NUMBER, label: 'Duration', description: 'Duration of the activity in milliseconds' },
-  { field: 'severity', type: QueryFieldType.TEXT, label: 'Severity', description: 'Severity level of the activity' },
-  { field: 'status', type: QueryFieldType.TEXT, label: 'Status', description: 'Current status of the activity' },
-  { field: 'description', type: QueryFieldType.TEXT, label: 'Description', description: 'Activity description' },
-  { field: 'metadata', type: QueryFieldType.JSON, label: 'Metadata', description: 'Additional activity metadata' },
-  { field: 'tags', type: QueryFieldType.ARRAY, label: 'Tags', description: 'Tags associated with the activity' },
-  { field: 'ipAddress', type: QueryFieldType.TEXT, label: 'IP Address', description: 'IP address of the user' },
-  { field: 'userAgent', type: QueryFieldType.TEXT, label: 'User Agent', description: 'User agent string' },
-  { field: 'sessionId', type: QueryFieldType.UUID, label: 'Session ID', description: 'User session identifier' },
-  { field: 'workspaceId', type: QueryFieldType.UUID, label: 'Workspace ID', description: 'Workspace context' }
-];
+interface UserContext {
+  userId: UUID;
+  userName: string;
+  role: string;
+  recentActivities: RacineActivity[];
+}
 
-/**
- * Query operator configurations
- */
-const operatorConfigs = {
-  [QueryOperator.EQUALS]: { label: 'Equals', symbol: '=', description: 'Exact match' },
-  [QueryOperator.NOT_EQUALS]: { label: 'Not Equals', symbol: '≠', description: 'Does not match' },
-  [QueryOperator.CONTAINS]: { label: 'Contains', symbol: '∋', description: 'Contains text' },
-  [QueryOperator.NOT_CONTAINS]: { label: 'Not Contains', symbol: '∌', description: 'Does not contain text' },
-  [QueryOperator.STARTS_WITH]: { label: 'Starts With', symbol: '^', description: 'Begins with text' },
-  [QueryOperator.ENDS_WITH]: { label: 'Ends With', symbol: '$', description: 'Ends with text' },
-  [QueryOperator.REGEX]: { label: 'Regular Expression', symbol: '~', description: 'Regular expression match' },
-  [QueryOperator.FUZZY]: { label: 'Fuzzy Match', symbol: '≈', description: 'Approximate match' },
-  [QueryOperator.SEMANTIC]: { label: 'Semantic Search', symbol: '🔍', description: 'AI-powered semantic match' },
-  [QueryOperator.GREATER_THAN]: { label: 'Greater Than', symbol: '>', description: 'Greater than value' },
-  [QueryOperator.LESS_THAN]: { label: 'Less Than', symbol: '<', description: 'Less than value' },
-  [QueryOperator.BETWEEN]: { label: 'Between', symbol: '⟷', description: 'Between two values' },
-  [QueryOperator.IN]: { label: 'In List', symbol: '∈', description: 'In a list of values' },
-  [QueryOperator.NOT_IN]: { label: 'Not In List', symbol: '∉', description: 'Not in a list of values' },
-  [QueryOperator.IS_NULL]: { label: 'Is Empty', symbol: '∅', description: 'Is null or empty' },
-  [QueryOperator.IS_NOT_NULL]: { label: 'Is Not Empty', symbol: '∃', description: 'Is not null or empty' }
-};
+interface TemporalContext {
+  timeRange: { start: ISODateString; end: ISODateString };
+  patterns: string[];
+  anomalies: string[];
+}
 
-/**
- * Initial state
- */
+interface GroupContext {
+  groups: string[];
+  crossGroupActivities: RacineActivity[];
+  relationships: string[];
+}
+
+// =============================================================================
+// INITIAL STATE
+// =============================================================================
+
 const initialState: SearchEngineState = {
-  currentMode: SearchMode.SIMPLE,
   query: '',
-  activeQuery: null,
+  naturalLanguageQuery: '',
+  previousQueries: [],
+  suggestions: [],
+  
   results: [],
+  filteredResults: [],
+  selectedResults: new Set(),
   totalResults: 0,
   searchTime: 0,
-  filters: [],
-  availableFields: searchFields,
-  facets: {},
-  suggestions: [],
-  recommendations: [],
-  isGeneratingRecommendations: false,
-  searchHistory: [],
+  
+  searchMode: SearchMode.SIMPLE,
+  searchScope: SearchScope.ALL,
+  searchFilters: [
+    {
+      id: 'dateRange',
+      name: 'Date Range',
+      type: FilterType.DATE,
+      field: 'timestamp',
+      operator: FilterOperator.BETWEEN,
+      value: null,
+      isActive: false,
+      isAIGenerated: false
+    },
+    {
+      id: 'activityType',
+      name: 'Activity Type',
+      type: FilterType.MULTI_SELECT,
+      field: 'activityType',
+      operator: FilterOperator.IN,
+      value: [],
+      isActive: false,
+      isAIGenerated: false
+    },
+    {
+      id: 'user',
+      name: 'User',
+      type: FilterType.SELECT,
+      field: 'userId',
+      operator: FilterOperator.EQUALS,
+      value: null,
+      isActive: false,
+      isAIGenerated: false
+    },
+    {
+      id: 'complianceLevel',
+      name: 'Compliance Level',
+      type: FilterType.MULTI_SELECT,
+      field: 'complianceLevel',
+      operator: FilterOperator.IN,
+      value: [],
+      isActive: false,
+      isAIGenerated: false
+    }
+  ],
+  activeFilters: [],
+  sortBy: {
+    field: 'relevanceScore',
+    direction: 'desc',
+    label: 'Relevance'
+  },
+  
+  aiSuggestions: [],
+  smartFilters: [],
+  searchInsights: [],
+  queryAnalysis: null,
+  
   savedSearches: [],
+  searchHistory: [],
+  favoriteSearches: [],
+  
+  searchMetrics: null,
+  popularQueries: [],
+  searchTrends: [],
+  
+  isSearching: false,
   showSuggestions: false,
   showAdvancedFilters: false,
-  showSearchHistory: false,
   showSavedSearches: false,
-  showRecommendations: false,
-  showQueryBuilder: false,
-  isFullscreen: false,
-  searchDebounceMs: 300,
-  maxSuggestions: 10,
-  maxResults: 100,
-  loading: {
-    search: false,
-    suggestions: false,
-    recommendations: false,
-    save: false
+  showSearchHistory: false,
+  showAnalytics: false,
+  
+  resultsView: SearchResultsView.LIST,
+  resultsPerPage: 20,
+  currentPage: 1,
+  
+  exportConfig: {
+    format: 'json',
+    includeMetadata: true,
+    includeHighlights: true,
+    includeContext: false,
+    maxResults: 1000
   },
-  errors: {
-    search: null,
-    suggestions: null,
-    recommendations: null,
-    save: null
+  
+  loading: false,
+  error: null,
+  
+  isRealTimeEnabled: true,
+  streamingResults: false,
+  lastUpdate: null
+};
+
+// =============================================================================
+// ANIMATION VARIANTS
+// =============================================================================
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.6,
+      staggerChildren: 0.1
+    }
   }
 };
 
-/**
- * Main ActivitySearchEngine Component
- */
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4 }
+  }
+};
+
+const resultsVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.3,
+      staggerChildren: 0.05
+    }
+  }
+};
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export const ActivitySearchEngine: React.FC<ActivitySearchEngineProps> = ({
   height = 800,
-  defaultMode = SearchMode.SIMPLE,
+  showAdvancedFilters = true,
   enableAI = true,
-  enableSuggestions = true,
-  enableHistory = true,
   enableSavedSearches = true,
-  className,
-  onSearchResults,
-  onQueryChange
+  enableRealTime = true,
+  autoSuggest = true,
+  className
 }) => {
-  // State Management
-  const [state, setState] = useState<SearchEngineState>({
-    ...initialState,
-    currentMode: defaultMode
-  });
+  // =============================================================================
+  // STATE MANAGEMENT
+  // =============================================================================
+
+  const [state, setState] = useState<SearchEngineState>(initialState);
   
   // Refs
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const suggestionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Animation Controls
+  // Animation controls
   const mainAnimationControls = useAnimation();
-  const suggestionsAnimationControls = useAnimation();
+  const resultsAnimationControls = useAnimation();
   
-  // Hooks
-  const { 
-    searchActivities, 
-    getActivitySuggestions, 
-    getActivityFacets,
-    exportActivities 
-  } = useActivityTracker();
-  const { currentUser, userPermissions } = useUserManagement();
-  const { currentWorkspace } = useWorkspaceManagement();
-  const { getAllSPAStatus } = useCrossGroupIntegration();
+  // Activity tracker hook
   const {
-    generateSearchRecommendations,
-    processNaturalLanguageQuery,
-    getSemanticSuggestions,
-    optimizeQuery
-  } = useAIAssistant();
-  
-  // Initialize component
-  useEffect(() => {
-    loadSavedSearches();
-    loadSearchHistory();
-    if (enableAI) {
-      generateInitialRecommendations();
-    }
-  }, []);
-  
-  // Search debouncing
-  useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    searchActivities,
+    loading: searchLoading,
+    error: searchError
+  } = useActivityTracker({
+    autoLoadActivities: false,
+    enableRealTimeUpdates: enableRealTime
+  });
+
+  // =============================================================================
+  // SEARCH FUNCTIONALITY
+  // =============================================================================
+
+  const performSearch = useCallback(async (searchQuery: string, filters: SearchFilter[] = []) => {
+    setState(prev => ({ ...prev, isSearching: true, loading: true, error: null }));
     
-    if (state.query.trim()) {
-      debounceTimerRef.current = setTimeout(() => {
-        performSearch();
-        if (enableSuggestions) {
-          loadSuggestions();
-        }
-      }, state.searchDebounceMs);
-    } else {
-      setState(prev => ({ 
-        ...prev, 
-        results: [], 
-        totalResults: 0, 
-        suggestions: [],
-        showSuggestions: false 
-      }));
-    }
-    
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [state.query, state.filters, state.currentMode]);
-  
-  // Data Loading Functions
-  const loadSavedSearches = useCallback(async () => {
-    try {
-      // Implementation would load saved searches from backend
-      const savedSearches: SearchQuery[] = [
-        {
-          id: 'recent-errors',
-          name: 'Recent Errors',
-          description: 'Activities with error severity in the last 24 hours',
-          mode: SearchMode.ADVANCED,
-          query: 'severity:error',
-          filters: [
-            {
-              id: 'severity-filter',
-              field: 'severity',
-              fieldType: QueryFieldType.TEXT,
-              operator: QueryOperator.EQUALS,
-              value: 'error',
-              label: 'Severity',
-              enabled: true
-            },
-            {
-              id: 'time-filter',
-              field: 'timestamp',
-              fieldType: QueryFieldType.DATE,
-              operator: QueryOperator.GREATER_THAN,
-              value: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-              label: 'Timestamp',
-              enabled: true
-            }
-          ],
-          sorting: [{ field: 'timestamp', direction: 'desc' }],
-          limit: 50,
-          offset: 0,
-          facets: ['activityType', 'userId', 'resourceType'],
-          highlighting: true,
-          fuzzySearch: false,
-          semanticSearch: false,
-          crossGroup: true,
-          realTime: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: currentUser?.id || '',
-          isPublic: false,
-          isFavorite: true,
-          tags: ['errors', 'monitoring']
-        }
-      ];
-      
-      setState(prev => ({ ...prev, savedSearches }));
-    } catch (error) {
-      console.error('Failed to load saved searches:', error);
-    }
-  }, [currentUser]);
-  
-  const loadSearchHistory = useCallback(async () => {
-    try {
-      // Implementation would load search history from backend
-      const searchHistory: SearchQuery[] = [];
-      setState(prev => ({ ...prev, searchHistory }));
-    } catch (error) {
-      console.error('Failed to load search history:', error);
-    }
-  }, []);
-  
-  const generateInitialRecommendations = useCallback(async () => {
-    if (!enableAI) return;
-    
-    setState(prev => ({ ...prev, isGeneratingRecommendations: true }));
-    try {
-      const recommendations = await generateSearchRecommendations({
-        context: 'activity_search',
-        userRole: currentUser?.role,
-        workspaceId: currentWorkspace?.id,
-        recentActivity: state.searchHistory.slice(0, 5)
-      });
-      
-      setState(prev => ({ 
-        ...prev, 
-        recommendations,
-        isGeneratingRecommendations: false,
-        errors: { ...prev.errors, recommendations: null }
-      }));
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isGeneratingRecommendations: false,
-        errors: { ...prev.errors, recommendations: error instanceof Error ? error.message : 'Failed to generate recommendations' }
-      }));
-    }
-  }, [enableAI, currentUser, currentWorkspace, state.searchHistory, generateSearchRecommendations]);
-  
-  // Search Functions
-  const performSearch = useCallback(async () => {
-    setState(prev => ({ 
-      ...prev, 
-      loading: { ...prev.loading, search: true },
-      errors: { ...prev.errors, search: null }
-    }));
+    const startTime = performance.now();
     
     try {
-      const startTime = performance.now();
-      
-      let processedQuery = state.query;
-      let processedFilters = state.filters;
-      
-      // Process natural language query if in natural mode
-      if (state.currentMode === SearchMode.NATURAL && enableAI) {
-        const nlpResult = await processNaturalLanguageQuery(state.query);
-        processedQuery = nlpResult.query;
-        processedFilters = [...processedFilters, ...nlpResult.filters];
-      }
-      
-      const searchParams = {
-        query: processedQuery,
-        filters: processedFilters,
-        mode: state.currentMode,
-        limit: state.maxResults,
-        offset: 0,
-        facets: ['activityType', 'severity', 'userId', 'resourceType'],
-        highlighting: true,
-        fuzzySearch: state.currentMode === SearchMode.SIMPLE,
-        semanticSearch: enableAI && (state.currentMode === SearchMode.NATURAL || state.currentMode === SearchMode.ADVANCED),
-        crossGroup: true
+      // Build search request
+      const searchRequest: ActivitySearchRequest = {
+        query: searchQuery,
+        mode: state.searchMode,
+        filters: filters.filter(f => f.isActive).map(f => ({
+          field: f.field,
+          operator: f.operator,
+          value: f.value
+        })),
+        sort: {
+          field: state.sortBy.field,
+          direction: state.sortBy.direction
+        },
+        pagination: {
+          page: state.currentPage,
+          limit: state.resultsPerPage
+        },
+        includeHighlights: true,
+        includeContext: true,
+        fuzzySearch: true,
+        typoTolerance: true
       };
       
-      const results = await searchActivities(searchParams);
-      const searchTime = performance.now() - startTime;
+      // Perform the search
+      const searchResponse = await searchActivities(searchRequest);
       
+      const endTime = performance.now();
+      const executionTime = endTime - startTime;
+      
+      // Process results
+      const results: ActivitySearchResult[] = searchResponse.activities.map((activity, index) => ({
+        activity,
+        relevanceScore: calculateRelevanceScore(activity, searchQuery),
+        matchedFields: findMatchedFields(activity, searchQuery),
+        highlights: generateHighlights(activity, searchQuery),
+        context: generateSearchContext(activity, searchResponse.activities)
+      }));
+      
+      // Update state with results
       setState(prev => ({
         ...prev,
-        results: results.activities,
-        totalResults: results.total,
-        searchTime,
-        facets: results.facets || {},
-        loading: { ...prev.loading, search: false },
-        errors: { ...prev.errors, search: null }
+        results,
+        filteredResults: results,
+        totalResults: searchResponse.total || results.length,
+        searchTime: executionTime,
+        isSearching: false,
+        loading: false,
+        lastUpdate: new Date().toISOString()
       }));
       
       // Add to search history
-      if (state.query.trim()) {
-        const historyEntry: SearchQuery = {
-          id: `history-${Date.now()}`,
-          name: state.query,
-          mode: state.currentMode,
-          query: state.query,
-          filters: state.filters,
-          sorting: [{ field: 'timestamp', direction: 'desc' }],
-          limit: state.maxResults,
-          offset: 0,
-          facets: [],
-          highlighting: true,
-          fuzzySearch: false,
-          semanticSearch: enableAI,
-          crossGroup: true,
-          realTime: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          createdBy: currentUser?.id || '',
-          isPublic: false,
-          isFavorite: false,
-          tags: []
-        };
-        
-        setState(prev => ({
-          ...prev,
-          searchHistory: [historyEntry, ...prev.searchHistory.slice(0, 9)] // Keep last 10
-        }));
-      }
+      addToSearchHistory(searchQuery, state.searchMode, filters, results.length, executionTime);
       
-      // Notify parent component
-      if (onSearchResults) {
-        onSearchResults(results.activities);
-      }
-      
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, search: false },
-        errors: { ...prev.errors, search: error instanceof Error ? error.message : 'Search failed' }
-      }));
-    }
-  }, [state.query, state.filters, state.currentMode, state.maxResults, enableAI, currentUser, searchActivities, processNaturalLanguageQuery, onSearchResults]);
-  
-  const loadSuggestions = useCallback(async () => {
-    if (!enableSuggestions || !state.query.trim()) return;
-    
-    setState(prev => ({ 
-      ...prev, 
-      loading: { ...prev.loading, suggestions: true },
-      errors: { ...prev.errors, suggestions: null }
-    }));
-    
-    try {
-      let suggestions: SearchSuggestion[] = [];
-      
-      // Get field and value suggestions
-      const fieldSuggestions = await getActivitySuggestions({
-        query: state.query,
-        type: 'field',
-        limit: state.maxSuggestions
-      });
-      
-      suggestions = [...suggestions, ...fieldSuggestions];
-      
-      // Get AI-powered semantic suggestions if enabled
+      // Generate AI suggestions if enabled
       if (enableAI) {
-        const semanticSuggestions = await getSemanticSuggestions({
-          query: state.query,
-          context: 'activity_search',
-          limit: Math.floor(state.maxSuggestions / 2)
-        });
-        
-        suggestions = [...suggestions, ...semanticSuggestions];
+        generateAISuggestions(searchQuery, results);
       }
       
-      // Sort by score and limit
-      suggestions = suggestions
-        .sort((a, b) => b.score - a.score)
-        .slice(0, state.maxSuggestions);
-      
-      setState(prev => ({
-        ...prev,
-        suggestions,
-        showSuggestions: suggestions.length > 0,
-        loading: { ...prev.loading, suggestions: false },
-        errors: { ...prev.errors, suggestions: null }
-      }));
+      // Animate results
+      resultsAnimationControls.start('visible');
       
     } catch (error) {
       setState(prev => ({
         ...prev,
-        loading: { ...prev.loading, suggestions: false },
-        errors: { ...prev.errors, suggestions: error instanceof Error ? error.message : 'Failed to load suggestions' }
+        isSearching: false,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Search failed'
       }));
     }
-  }, [enableSuggestions, enableAI, state.query, state.maxSuggestions, getActivitySuggestions, getSemanticSuggestions]);
-  
-  // Event Handlers
-  const handleQueryChange = useCallback((newQuery: string) => {
-    setState(prev => ({ ...prev, query: newQuery }));
-  }, []);
-  
-  const handleModeChange = useCallback((mode: SearchMode) => {
-    setState(prev => ({ ...prev, currentMode: mode }));
-    mainAnimationControls.start({
-      opacity: [0, 1],
-      scale: [0.95, 1],
-      transition: { duration: 0.3 }
+  }, [state.searchMode, state.sortBy, state.currentPage, state.resultsPerPage, searchActivities, enableAI, resultsAnimationControls]);
+
+  const calculateRelevanceScore = useCallback((activity: RacineActivity, query: string): number => {
+    let score = 0;
+    const queryTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+    
+    // Score based on field matches
+    queryTerms.forEach(term => {
+      if (activity.description.toLowerCase().includes(term)) score += 10;
+      if (activity.action.toLowerCase().includes(term)) score += 8;
+      if (activity.resourceType.toLowerCase().includes(term)) score += 6;
+      if (activity.userId.toLowerCase().includes(term)) score += 4;
     });
-  }, [mainAnimationControls]);
-  
-  const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
-    setState(prev => ({ 
-      ...prev, 
-      query: suggestion.text,
-      showSuggestions: false 
-    }));
     
-    // Focus search input
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
+    // Boost recent activities
+    const now = new Date();
+    const activityDate = new Date(activity.timestamp);
+    const daysDiff = (now.getTime() - activityDate.getTime()) / (1000 * 3600 * 24);
+    if (daysDiff <= 1) score += 5;
+    else if (daysDiff <= 7) score += 3;
+    else if (daysDiff <= 30) score += 1;
+    
+    // Boost high-importance activities
+    if (activity.severity === 'critical') score += 8;
+    else if (activity.severity === 'high') score += 6;
+    else if (activity.severity === 'medium') score += 4;
+    
+    return Math.min(100, Math.max(0, score));
   }, []);
-  
-  const handleFilterAdd = useCallback((field: string, operator: QueryOperator, value: any) => {
-    const fieldConfig = searchFields.find(f => f.field === field);
-    if (!fieldConfig) return;
+
+  const findMatchedFields = useCallback((activity: RacineActivity, query: string): string[] => {
+    const matchedFields: string[] = [];
+    const queryTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
     
-    const newFilter: SearchFilter = {
-      id: `filter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      field,
-      fieldType: fieldConfig.type,
-      operator,
-      value,
-      label: fieldConfig.label,
-      description: fieldConfig.description,
-      enabled: true
+    const fieldChecks = [
+      { field: 'description', value: activity.description },
+      { field: 'action', value: activity.action },
+      { field: 'resourceType', value: activity.resourceType },
+      { field: 'userId', value: activity.userId }
+    ];
+    
+    fieldChecks.forEach(({ field, value }) => {
+      if (queryTerms.some(term => value.toLowerCase().includes(term))) {
+        matchedFields.push(field);
+      }
+    });
+    
+    return matchedFields;
+  }, []);
+
+  const generateHighlights = useCallback((activity: RacineActivity, query: string): SearchHighlight[] => {
+    const highlights: SearchHighlight[] = [];
+    const queryTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+    
+    const textFields = [
+      { field: 'description', text: activity.description },
+      { field: 'action', text: activity.action },
+      { field: 'resourceType', text: activity.resourceType }
+    ];
+    
+    textFields.forEach(({ field, text }) => {
+      queryTerms.forEach(term => {
+        const index = text.toLowerCase().indexOf(term);
+        if (index !== -1) {
+          highlights.push({
+            field,
+            text: text.substring(index, index + term.length),
+            startIndex: index,
+            endIndex: index + term.length
+          });
+        }
+      });
+    });
+    
+    return highlights;
+  }, []);
+
+  const generateSearchContext = useCallback((activity: RacineActivity, allActivities: RacineActivity[]): SearchContext => {
+    // Find related activities (same user, similar time, etc.)
+    const relatedActivities = allActivities.filter(a => 
+      a.id !== activity.id && (
+        a.userId === activity.userId ||
+        Math.abs(new Date(a.timestamp).getTime() - new Date(activity.timestamp).getTime()) < 300000 // 5 minutes
+      )
+    ).slice(0, 5);
+    
+    return {
+      relatedActivities,
+      userContext: {
+        userId: activity.userId,
+        userName: activity.userId, // In real implementation, this would be resolved
+        role: 'user',
+        recentActivities: relatedActivities.filter(a => a.userId === activity.userId).slice(0, 3)
+      },
+      temporalContext: {
+        timeRange: {
+          start: new Date(Date.now() - 3600000).toISOString(), // 1 hour before
+          end: new Date(Date.now() + 3600000).toISOString()    // 1 hour after
+        },
+        patterns: ['normal_activity'],
+        anomalies: []
+      },
+      groupContext: {
+        groups: [activity.resourceType],
+        crossGroupActivities: [],
+        relationships: []
+      }
+    };
+  }, []);
+
+  const addToSearchHistory = useCallback((query: string, mode: SearchMode, filters: SearchFilter[], resultCount: number, executionTime: number) => {
+    const historyEntry: SearchHistoryEntry = {
+      id: `search-${Date.now()}`,
+      query,
+      mode,
+      filters: filters.filter(f => f.isActive),
+      resultCount,
+      executionTime,
+      timestamp: new Date().toISOString(),
+      successful: resultCount > 0
     };
     
     setState(prev => ({
       ...prev,
-      filters: [...prev.filters, newFilter]
+      searchHistory: [historyEntry, ...prev.searchHistory.slice(0, 99)] // Keep last 100 searches
     }));
   }, []);
-  
-  const handleFilterUpdate = useCallback((filterId: string, updates: Partial<SearchFilter>) => {
-    setState(prev => ({
-      ...prev,
-      filters: prev.filters.map(filter =>
-        filter.id === filterId ? { ...filter, ...updates } : filter
-      )
-    }));
+
+  const generateAISuggestions = useCallback(async (query: string, results: ActivitySearchResult[]) => {
+    // Simulate AI suggestion generation
+    const suggestions: AISuggestion[] = [];
+    
+    // Query refinement suggestions
+    if (results.length < 5) {
+      suggestions.push({
+        id: 'refine-1',
+        type: AISuggestionType.QUERY_REFINEMENT,
+        title: 'Try broader terms',
+        description: 'Your search returned few results. Try using more general terms or synonyms.',
+        confidence: 0.8,
+        action: 'refine_query',
+        parameters: { suggestion: query.split(' ').slice(0, -1).join(' ') }
+      });
+    }
+    
+    // Filter recommendations
+    if (results.length > 100) {
+      suggestions.push({
+        id: 'filter-1',
+        type: AISuggestionType.FILTER_RECOMMENDATION,
+        title: 'Add time filter',
+        description: 'Many results found. Consider filtering by date range to narrow results.',
+        confidence: 0.9,
+        action: 'add_filter',
+        parameters: { filterType: 'dateRange' }
+      });
+    }
+    
+    // Pattern detection
+    const userPatterns = results.reduce((acc, result) => {
+      acc[result.activity.userId] = (acc[result.activity.userId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const dominantUser = Object.entries(userPatterns).reduce((a, b) => 
+      userPatterns[a[0]] > userPatterns[b[0]] ? a : b, ['', 0]
+    );
+    
+    if (dominantUser[1] > results.length * 0.7) {
+      suggestions.push({
+        id: 'pattern-1',
+        type: AISuggestionType.PATTERN_DETECTION,
+        title: 'User activity pattern detected',
+        description: `Most results are from user ${dominantUser[0]}. This might indicate focused activity.`,
+        confidence: 0.85,
+        action: 'explore_pattern',
+        parameters: { userId: dominantUser[0] }
+      });
+    }
+    
+    setState(prev => ({ ...prev, aiSuggestions: suggestions }));
   }, []);
-  
-  const handleFilterRemove = useCallback((filterId: string) => {
-    setState(prev => ({
-      ...prev,
-      filters: prev.filters.filter(filter => filter.id !== filterId)
-    }));
-  }, []);
-  
-  const handleSaveSearch = useCallback(async (name: string, description?: string, isPublic = false) => {
+
+  // =============================================================================
+  // SUGGESTION FUNCTIONALITY
+  // =============================================================================
+
+  const generateSuggestions = useCallback(async (inputQuery: string) => {
+    if (!autoSuggest || inputQuery.length < 2) {
+      setState(prev => ({ ...prev, suggestions: [], showSuggestions: false }));
+      return;
+    }
+    
+    const suggestions: SearchSuggestion[] = [];
+    
+    // Query completion suggestions
+    const commonQueries = [
+      'user login activities',
+      'failed authentication',
+      'data access events',
+      'system errors',
+      'configuration changes',
+      'file uploads',
+      'admin actions',
+      'compliance violations'
+    ];
+    
+    commonQueries.forEach((query, index) => {
+      if (query.toLowerCase().includes(inputQuery.toLowerCase())) {
+        suggestions.push({
+          id: `completion-${index}`,
+          text: query,
+          type: SuggestionType.QUERY_COMPLETION,
+          confidence: 0.8,
+          category: 'completion',
+          metadata: { isCommon: true }
+        });
+      }
+    });
+    
+    // Historical query suggestions
+    state.searchHistory.forEach((entry, index) => {
+      if (entry.query.toLowerCase().includes(inputQuery.toLowerCase()) && entry.successful) {
+        suggestions.push({
+          id: `history-${index}`,
+          text: entry.query,
+          type: SuggestionType.HISTORICAL_QUERY,
+          confidence: 0.9,
+          category: 'history',
+          metadata: { resultCount: entry.resultCount, timestamp: entry.timestamp }
+        });
+      }
+    });
+    
+    // Filter suggestions
+    if (inputQuery.toLowerCase().includes('error') || inputQuery.toLowerCase().includes('fail')) {
+      suggestions.push({
+        id: 'filter-error',
+        text: 'Add severity filter: Critical errors only',
+        type: SuggestionType.FILTER_SUGGESTION,
+        confidence: 0.85,
+        category: 'filter',
+        metadata: { filterType: 'severity', value: 'critical' }
+      });
+    }
+    
+    // Limit and sort suggestions
+    const sortedSuggestions = suggestions
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 8);
+    
     setState(prev => ({ 
       ...prev, 
-      loading: { ...prev.loading, save: true },
-      errors: { ...prev.errors, save: null }
+      suggestions: sortedSuggestions,
+      showSuggestions: sortedSuggestions.length > 0
     }));
+  }, [autoSuggest, state.searchHistory]);
+
+  // =============================================================================
+  // EVENT HANDLERS
+  // =============================================================================
+
+  const handleSearchInputChange = useCallback((value: string) => {
+    setState(prev => ({ ...prev, query: value }));
     
-    try {
-      const searchQuery: SearchQuery = {
-        id: `saved-${Date.now()}`,
-        name,
-        description,
-        mode: state.currentMode,
-        query: state.query,
-        filters: state.filters,
-        sorting: [{ field: 'timestamp', direction: 'desc' }],
-        limit: state.maxResults,
-        offset: 0,
-        facets: Object.keys(state.facets),
-        highlighting: true,
-        fuzzySearch: state.currentMode === SearchMode.SIMPLE,
-        semanticSearch: enableAI,
-        crossGroup: true,
-        realTime: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: currentUser?.id || '',
-        isPublic,
-        isFavorite: false,
-        tags: []
-      };
-      
-      // Implementation would save to backend
-      setState(prev => ({
-        ...prev,
-        savedSearches: [searchQuery, ...prev.savedSearches],
-        loading: { ...prev.loading, save: false },
-        errors: { ...prev.errors, save: null }
-      }));
-      
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: { ...prev.loading, save: false },
-        errors: { ...prev.errors, save: error instanceof Error ? error.message : 'Failed to save search' }
-      }));
+    // Debounce suggestion generation
+    if (suggestionTimerRef.current) {
+      clearTimeout(suggestionTimerRef.current);
     }
-  }, [state.currentMode, state.query, state.filters, state.maxResults, state.facets, enableAI, currentUser]);
-  
-  const handleLoadSavedSearch = useCallback((searchQuery: SearchQuery) => {
+    
+    suggestionTimerRef.current = setTimeout(() => {
+      generateSuggestions(value);
+    }, 300);
+  }, [generateSuggestions]);
+
+  const handleSearch = useCallback((searchQuery?: string) => {
+    const query = searchQuery || state.query;
+    if (!query.trim()) return;
+    
+    performSearch(query, state.activeFilters);
+    setState(prev => ({ ...prev, showSuggestions: false }));
+  }, [state.query, state.activeFilters, performSearch]);
+
+  const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
+    if (suggestion.type === SuggestionType.FILTER_SUGGESTION) {
+      // Apply suggested filter
+      const { filterType, value } = suggestion.metadata;
+      const filter = state.searchFilters.find(f => f.id === filterType);
+      if (filter) {
+        const updatedFilter = { ...filter, value, isActive: true };
+        const updatedFilters = state.activeFilters.filter(f => f.id !== filterType);
+        updatedFilters.push(updatedFilter);
+        setState(prev => ({ ...prev, activeFilters: updatedFilters }));
+      }
+    } else {
+      // Use suggestion as query
+      setState(prev => ({ ...prev, query: suggestion.text, showSuggestions: false }));
+      handleSearch(suggestion.text);
+    }
+  }, [state.searchFilters, state.activeFilters, handleSearch]);
+
+  const handleFilterChange = useCallback((filterId: string, value: any, isActive: boolean) => {
+    const filter = state.searchFilters.find(f => f.id === filterId);
+    if (!filter) return;
+    
+    const updatedFilter = { ...filter, value, isActive };
+    const updatedActiveFilters = state.activeFilters.filter(f => f.id !== filterId);
+    
+    if (isActive) {
+      updatedActiveFilters.push(updatedFilter);
+    }
+    
+    setState(prev => ({ ...prev, activeFilters: updatedActiveFilters }));
+    
+    // Auto-search if query exists
+    if (state.query.trim()) {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+      searchTimerRef.current = setTimeout(() => {
+        performSearch(state.query, updatedActiveFilters);
+      }, 500);
+    }
+  }, [state.searchFilters, state.activeFilters, state.query, performSearch]);
+
+  const handleSaveSearch = useCallback((name: string, description: string, isPublic: boolean) => {
+    const savedSearch: SavedSearch = {
+      id: `saved-${Date.now()}`,
+      name,
+      description,
+      query: state.query,
+      mode: state.searchMode,
+      filters: state.activeFilters,
+      isPublic,
+      isFavorite: false,
+      tags: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: 'current-user', // In real implementation, get from auth
+      usage: 0,
+      lastUsed: new Date().toISOString()
+    };
+    
     setState(prev => ({
       ...prev,
-      currentMode: searchQuery.mode,
-      query: searchQuery.query,
-      filters: searchQuery.filters,
-      activeQuery: searchQuery
+      savedSearches: [savedSearch, ...prev.savedSearches]
     }));
-    
-    if (onQueryChange) {
-      onQueryChange(searchQuery);
-    }
-  }, [onQueryChange]);
-  
-  const handleRecommendationApply = useCallback((recommendation: AISearchRecommendation) => {
+  }, [state.query, state.searchMode, state.activeFilters]);
+
+  const handleLoadSavedSearch = useCallback((savedSearch: SavedSearch) => {
     setState(prev => ({
       ...prev,
-      query: recommendation.query,
-      filters: recommendation.filters,
-      showRecommendations: false
+      query: savedSearch.query,
+      searchMode: savedSearch.mode,
+      activeFilters: savedSearch.filters
     }));
+    
+    // Update usage
+    const updatedSearch = {
+      ...savedSearch,
+      usage: savedSearch.usage + 1,
+      lastUsed: new Date().toISOString()
+    };
+    
+    setState(prev => ({
+      ...prev,
+      savedSearches: prev.savedSearches.map(s => 
+        s.id === savedSearch.id ? updatedSearch : s
+      )
+    }));
+    
+    // Perform the search
+    handleSearch(savedSearch.query);
+  }, [handleSearch]);
+
+  const handleExportResults = useCallback(async () => {
+    const selectedResults = Array.from(state.selectedResults);
+    const dataToExport = selectedResults.length > 0 
+      ? state.filteredResults.filter(r => selectedResults.includes(r.activity.id))
+      : state.filteredResults.slice(0, state.exportConfig.maxResults);
+    
+    const exportData = {
+      query: state.query,
+      searchMode: state.searchMode,
+      filters: state.activeFilters,
+      totalResults: state.totalResults,
+      searchTime: state.searchTime,
+      exportedAt: new Date().toISOString(),
+      results: dataToExport.map(result => ({
+        activity: result.activity,
+        relevanceScore: result.relevanceScore,
+        ...(state.exportConfig.includeHighlights && { highlights: result.highlights }),
+        ...(state.exportConfig.includeContext && { context: result.context }),
+        ...(state.exportConfig.includeMetadata && { 
+          matchedFields: result.matchedFields,
+          searchQuery: state.query
+        })
+      }))
+    };
+    
+    // Convert to requested format and download
+    const { format } = state.exportConfig;
+    let blob: Blob;
+    let filename: string;
+    
+    switch (format) {
+      case 'json':
+        blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        filename = `search-results-${Date.now()}.json`;
+        break;
+      case 'csv':
+        const csvData = convertToCSV(exportData.results);
+        blob = new Blob([csvData], { type: 'text/csv' });
+        filename = `search-results-${Date.now()}.csv`;
+        break;
+      default:
+        blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        filename = `search-results-${Date.now()}.json`;
+    }
+    
+    // Download file
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [state.selectedResults, state.filteredResults, state.exportConfig, state.query, state.searchMode, state.activeFilters, state.totalResults, state.searchTime]);
+
+  const convertToCSV = useCallback((results: any[]): string => {
+    const headers = [
+      'Activity ID',
+      'Description',
+      'Action',
+      'User ID',
+      'Resource Type',
+      'Timestamp',
+      'Relevance Score'
+    ];
+    
+    const rows = results.map(result => [
+      result.activity.id,
+      result.activity.description,
+      result.activity.action,
+      result.activity.userId,
+      result.activity.resourceType,
+      result.activity.timestamp,
+      result.relevanceScore
+    ]);
+    
+    return [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
   }, []);
-  
-  // Computed Values
-  const searchStatistics = useMemo(() => {
+
+  // =============================================================================
+  // MEMOIZED COMPUTATIONS
+  // =============================================================================
+
+  const searchStats = useMemo(() => {
     return {
       totalResults: state.totalResults,
       searchTime: state.searchTime,
-      resultsShown: state.results.length,
-      hasMoreResults: state.totalResults > state.results.length,
-      averageRelevance: state.results.length > 0 ? 
-        state.results.reduce((sum, r) => sum + (r.relevanceScore || 0), 0) / state.results.length : 0
+      averageRelevance: state.filteredResults.length > 0 
+        ? state.filteredResults.reduce((sum, r) => sum + r.relevanceScore, 0) / state.filteredResults.length
+        : 0,
+      selectedCount: state.selectedResults.size
     };
-  }, [state.totalResults, state.searchTime, state.results]);
-  
-  const availableOperators = useMemo(() => {
-    return Object.values(QueryOperator).map(op => ({
-      value: op,
-      label: operatorConfigs[op].label,
-      symbol: operatorConfigs[op].symbol,
-      description: operatorConfigs[op].description
-    }));
-  }, []);
-  
-  // Render Functions
-  const renderSearchHeader = () => (
-    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <Search className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Activity Search Engine
-          </h2>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          {/* Search Mode Selector */}
-          <Tabs value={state.currentMode} onValueChange={(value) => handleModeChange(value as SearchMode)}>
-            <TabsList>
-              <TabsTrigger value={SearchMode.SIMPLE} className="text-xs">
-                <Type className="h-3 w-3 mr-1" />
+  }, [state.totalResults, state.searchTime, state.filteredResults, state.selectedResults]);
+
+  // =============================================================================
+  // RENDER FUNCTIONS
+  // =============================================================================
+
+  const renderSearchInterface = () => (
+    <Card className="mb-6">
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          {/* Search Mode Tabs */}
+          <Tabs value={state.searchMode} onValueChange={(value) => setState(prev => ({ ...prev, searchMode: value as SearchMode }))}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value={SearchMode.SIMPLE}>
+                <Search className="w-4 h-4 mr-2" />
                 Simple
               </TabsTrigger>
-              <TabsTrigger value={SearchMode.ADVANCED} className="text-xs">
-                <Sliders className="h-3 w-3 mr-1" />
+              <TabsTrigger value={SearchMode.ADVANCED}>
+                <Filter className="w-4 h-4 mr-2" />
                 Advanced
               </TabsTrigger>
+              <TabsTrigger value={SearchMode.NATURAL_LANGUAGE}>
+                <Brain className="w-4 h-4 mr-2" />
+                Natural Language
+              </TabsTrigger>
               {enableAI && (
-                <TabsTrigger value={SearchMode.NATURAL} className="text-xs">
-                  <BrainCircuit className="h-3 w-3 mr-1" />
-                  Natural
+                <TabsTrigger value={SearchMode.AI_ASSISTED}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  AI Assisted
                 </TabsTrigger>
               )}
-              <TabsTrigger value={SearchMode.VISUAL} className="text-xs">
-                <LayoutGrid className="h-3 w-3 mr-1" />
-                Visual
-              </TabsTrigger>
             </TabsList>
           </Tabs>
-          
-          {/* Action Controls */}
-          <div className="flex items-center space-x-1">
-            {enableHistory && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setState(prev => ({ ...prev, showSearchHistory: !prev.showSearchHistory }))}
-                      className={cn(state.showSearchHistory && "bg-blue-50 border-blue-300")}
-                    >
-                      <History className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Search History</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+
+          {/* Main Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Input
+              ref={searchInputRef}
+              placeholder={
+                state.searchMode === SearchMode.NATURAL_LANGUAGE 
+                  ? "Ask in plain English: 'Show me all failed login attempts from last week'"
+                  : state.searchMode === SearchMode.AI_ASSISTED
+                  ? "Describe what you're looking for and I'll help you find it"
+                  : "Search activities, users, actions, resources..."
+              }
+              value={state.query}
+              onChange={(e) => handleSearchInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                } else if (e.key === 'Escape') {
+                  setState(prev => ({ ...prev, showSuggestions: false }));
+                }
+              }}
+              className="pl-10 pr-20 text-lg"
+            />
             
-            {enableSavedSearches && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setState(prev => ({ ...prev, showSavedSearches: !prev.showSavedSearches }))}
-                      className={cn(state.showSavedSearches && "bg-green-50 border-green-300")}
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Saved Searches</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            
-            {enableAI && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setState(prev => ({ ...prev, showRecommendations: !prev.showRecommendations }))}
-                      className={cn(state.showRecommendations && "bg-purple-50 border-purple-300")}
-                      disabled={state.isGeneratingRecommendations}
-                    >
-                      {state.isGeneratingRecommendations ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Lightbulb className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>AI Recommendations</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setState(prev => ({ ...prev, showAdvancedFilters: !prev.showAdvancedFilters }))}
-                    className={cn(state.showAdvancedFilters && "bg-orange-50 border-orange-300")}
-                  >
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Advanced Filters</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setState(prev => ({ ...prev, showQueryBuilder: true }))}>
-                  <Code className="h-4 w-4 mr-2" />
-                  Query Builder
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Results
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setState(prev => ({ ...prev, isFullscreen: !prev.isFullscreen }))}>
-                  {state.isFullscreen ? <Minimize className="h-4 w-4 mr-2" /> : <Maximize className="h-4 w-4 mr-2" />}
-                  {state.isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </div>
-      
-      {/* Search Statistics */}
-      {searchStatistics.totalResults > 0 && (
-        <div className="flex items-center space-x-4 text-sm text-gray-500">
-          <span>
-            {formatNumber(searchStatistics.totalResults)} results found
-          </span>
-          <span>•</span>
-          <span>
-            {searchStatistics.searchTime.toFixed(2)}ms search time
-          </span>
-          {searchStatistics.averageRelevance > 0 && (
-            <>
-              <span>•</span>
-              <span>
-                {(searchStatistics.averageRelevance * 100).toFixed(1)}% avg relevance
-              </span>
-            </>
-          )}
-          {searchStatistics.hasMoreResults && (
-            <>
-              <span>•</span>
-              <span className="text-blue-600">
-                Showing {searchStatistics.resultsShown} of {searchStatistics.totalResults}
-              </span>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-  
-  const renderSearchInput = () => (
-    <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder={
-              state.currentMode === SearchMode.NATURAL
-                ? "Ask questions in natural language... (e.g., 'Show me all errors from yesterday')"
-                : state.currentMode === SearchMode.ADVANCED
-                ? "Enter advanced search query with operators..."
-                : "Search activities..."
-            }
-            value={state.query}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            className="pl-10 pr-12 h-12 text-lg"
-            disabled={state.loading.search}
-          />
-          
-          {state.loading.search && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-            </div>
-          )}
-          
-          {state.query && !state.loading.search && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              onClick={() => handleQueryChange('')}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        
-        {/* Search Mode Specific Hints */}
-        {state.currentMode === SearchMode.NATURAL && enableAI && (
-          <div className="mt-2 flex items-center space-x-2 text-sm text-blue-600">
-            <BrainCircuit className="h-4 w-4" />
-            <span>AI-powered natural language search is active</span>
-          </div>
-        )}
-        
-        {state.currentMode === SearchMode.ADVANCED && (
-          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Code className="h-3 w-3" />
-              <span>field:value</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Quote className="h-3 w-3" />
-              <span>"exact phrase"</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Parentheses className="h-3 w-3" />
-              <span>(group terms)</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Plus className="h-3 w-3" />
-              <span>+required</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Minus className="h-3 w-3" />
-              <span>-excluded</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Active Filters */}
-        {state.filters.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {state.filters.map(filter => (
-              <Badge 
-                key={filter.id} 
-                variant="secondary" 
-                className="flex items-center space-x-1 px-2 py-1"
-              >
-                <span className="text-xs">
-                  {filter.label}: {operatorConfigs[filter.operator].symbol} {String(filter.value)}
-                </span>
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+              {state.query && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-3 w-3 p-0 ml-1"
-                  onClick={() => handleFilterRemove(filter.id)}
+                  onClick={() => setState(prev => ({ ...prev, query: '', showSuggestions: false }))}
                 >
-                  <X className="h-2 w-2" />
+                  <X className="w-4 h-4" />
                 </Button>
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Search Suggestions */}
-      <AnimatePresence>
-        {state.showSuggestions && state.suggestions.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg"
-          >
-            <div className="p-2">
-              <div className="text-xs font-medium text-gray-500 mb-2 px-2">Suggestions</div>
-              {state.suggestions.map((suggestion, index) => (
-                <Button
-                  key={suggestion.id}
-                  variant="ghost"
-                  className="w-full justify-start text-left h-auto py-2 px-2"
-                  onClick={() => handleSuggestionSelect(suggestion)}
+              )}
+              
+              <Button
+                onClick={() => handleSearch()}
+                disabled={!state.query.trim() || state.isSearching}
+                size="sm"
+              >
+                {state.isSearching ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Suggestions Dropdown */}
+            <AnimatePresence>
+              {state.showSuggestions && state.suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600">
-                        {suggestion.type === 'query' ? '?' : 
-                         suggestion.type === 'filter' ? 'F' :
-                         suggestion.type === 'field' ? '#' :
-                         suggestion.type === 'value' ? 'V' : 'O'}
-                      </span>
-                    </div>
+                  {state.suggestions.map((suggestion, index) => (
+                    <button
+                      key={suggestion.id}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 flex items-center justify-between"
+                      onClick={() => handleSuggestionSelect(suggestion)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {suggestion.type === SuggestionType.HISTORICAL_QUERY && <History className="w-4 h-4 text-gray-400" />}
+                        {suggestion.type === SuggestionType.FILTER_SUGGESTION && <Filter className="w-4 h-4 text-gray-400" />}
+                        {suggestion.type === SuggestionType.AI_SUGGESTION && <Sparkles className="w-4 h-4 text-purple-500" />}
+                        {suggestion.type === SuggestionType.QUERY_COMPLETION && <Search className="w-4 h-4 text-gray-400" />}
+                        
+                        <div>
+                          <div className="font-medium">{suggestion.text}</div>
+                          {suggestion.metadata.resultCount && (
+                            <div className="text-xs text-gray-500">
+                              {suggestion.metadata.resultCount} results
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-gray-400">
+                        {Math.round(suggestion.confidence * 100)}%
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              {showAdvancedFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setState(prev => ({ ...prev, showAdvancedFilters: !prev.showAdvancedFilters }))}
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                  {state.activeFilters.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {state.activeFilters.length}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+
+              {enableSavedSearches && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setState(prev => ({ ...prev, showSavedSearches: !prev.showSavedSearches }))}
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Saved
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setState(prev => ({ ...prev, showSearchHistory: !prev.showSearchHistory }))}
+              >
+                <History className="w-4 h-4 mr-2" />
+                History
+              </Button>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              {state.query && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setState(prev => ({ ...prev, showSavedSearches: true }))}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Search
+                </Button>
+              )}
+
+              {state.results.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportResults}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderSearchResults = () => (
+    <motion.div
+      variants={resultsVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Target className="w-5 h-5 mr-2" />
+                Search Results
+              </CardTitle>
+              <CardDescription>
+                {searchStats.totalResults} results found in {searchStats.searchTime.toFixed(0)}ms
+                {searchStats.averageRelevance > 0 && (
+                  <span className="ml-2">
+                    • Average relevance: {searchStats.averageRelevance.toFixed(1)}%
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Select
+                value={state.sortBy.field}
+                onValueChange={(value) => {
+                  const direction = value === 'timestamp' ? 'desc' : 'desc';
+                  const label = value === 'relevanceScore' ? 'Relevance' : 
+                               value === 'timestamp' ? 'Date' : 'Field';
+                  setState(prev => ({ 
+                    ...prev, 
+                    sortBy: { field: value, direction, label }
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="relevanceScore">Relevance</SelectItem>
+                  <SelectItem value="timestamp">Date</SelectItem>
+                  <SelectItem value="action">Action</SelectItem>
+                  <SelectItem value="userId">User</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Tabs value={state.resultsView} onValueChange={(value) => setState(prev => ({ ...prev, resultsView: value as SearchResultsView }))}>
+                <TabsList>
+                  <TabsTrigger value={SearchResultsView.LIST}>
+                    <List className="w-4 h-4" />
+                  </TabsTrigger>
+                  <TabsTrigger value={SearchResultsView.CARDS}>
+                    <Grid3X3 className="w-4 h-4" />
+                  </TabsTrigger>
+                  <TabsTrigger value={SearchResultsView.TABLE}>
+                    <Table2 className="w-4 h-4" />
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          {state.loading ? (
+            <div className="flex items-center justify-center h-32">
+              <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-600">Searching...</span>
+            </div>
+          ) : state.error ? (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Search Error</AlertTitle>
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          ) : state.filteredResults.length === 0 && state.query ? (
+            <div className="text-center py-12">
+              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+              <p className="text-gray-600 mb-4">
+                Try adjusting your search terms or filters
+              </p>
+              {enableAI && state.aiSuggestions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">AI Suggestions:</p>
+                  {state.aiSuggestions.slice(0, 3).map((suggestion) => (
+                    <Button
+                      key={suggestion.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Handle AI suggestion action
+                        if (suggestion.action === 'refine_query') {
+                          setState(prev => ({ ...prev, query: suggestion.parameters.suggestion }));
+                          handleSearch(suggestion.parameters.suggestion);
+                        }
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      {suggestion.title}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {state.filteredResults.map((result, index) => (
+                <motion.div
+                  key={result.activity.id}
+                  variants={itemVariants}
+                  className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    const newSelected = new Set(state.selectedResults);
+                    if (newSelected.has(result.activity.id)) {
+                      newSelected.delete(result.activity.id);
+                    } else {
+                      newSelected.add(result.activity.id);
+                    }
+                    setState(prev => ({ ...prev, selectedResults: newSelected }));
+                  }}
+                >
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="text-sm font-medium">{suggestion.text}</div>
-                      {suggestion.description && (
-                        <div className="text-xs text-gray-500">{suggestion.description}</div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Badge variant="outline">{result.activity.action}</Badge>
+                        <Badge variant="secondary">
+                          {result.relevanceScore}% relevant
+                        </Badge>
+                        {result.activity.severity && (
+                          <Badge 
+                            variant={result.activity.severity === 'critical' ? 'destructive' : 'outline'}
+                          >
+                            {result.activity.severity}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <h4 className="font-medium mb-1">
+                        {highlightText(result.activity.description, state.query)}
+                      </h4>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium">User:</span> {result.activity.userId}
+                        </div>
+                        <div>
+                          <span className="font-medium">Resource:</span> {result.activity.resourceType}
+                        </div>
+                        <div>
+                          <span className="font-medium">Time:</span> {new Date(result.activity.timestamp).toLocaleString()}
+                        </div>
+                        <div>
+                          <span className="font-medium">Matched:</span> {result.matchedFields.join(', ')}
+                        </div>
+                      </div>
+                      
+                      {result.context.relatedActivities.length > 0 && (
+                        <div className="mt-2">
+                          <Button variant="ghost" size="sm">
+                            <Network className="w-4 h-4 mr-2" />
+                            {result.context.relatedActivities.length} related activities
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {(suggestion.score * 100).toFixed(0)}%
-                    </Badge>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        checked={state.selectedResults.has(result.activity.id)}
+                        onCheckedChange={() => {
+                          const newSelected = new Set(state.selectedResults);
+                          if (newSelected.has(result.activity.id)) {
+                            newSelected.delete(result.activity.id);
+                          } else {
+                            newSelected.add(result.activity.id);
+                          }
+                          setState(prev => ({ ...prev, selectedResults: newSelected }));
+                        }}
+                      />
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                </Button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-  
-  const renderMainContent = () => (
-    <motion.div
-      animate={mainAnimationControls}
-      className="flex-1 overflow-hidden"
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-4 h-full">
-        {/* Search Results */}
-        <div className="lg:col-span-3 overflow-auto p-6">
-          {state.loading.search ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-                <p className="text-gray-500">Searching activities...</p>
-              </div>
-            </div>
-          ) : state.results.length > 0 ? (
-            <div className="space-y-4">
-              {state.results.map((activity, index) => (
-                <motion.div
-                  key={activity.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline">{activity.activityType}</Badge>
-                            <Badge variant="outline">{activity.action}</Badge>
-                            {activity.severity && (
-                              <Badge 
-                                variant={activity.severity === 'error' ? 'destructive' : 'secondary'}
-                              >
-                                {activity.severity}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600">{activity.description}</p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <User className="h-3 w-3" />
-                              <span>{activity.userId}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Database className="h-3 w-3" />
-                              <span>{activity.resourceType}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatDateTime(activity.timestamp)}</span>
-                            </div>
-                            {activity.relevanceScore && (
-                              <div className="flex items-center space-x-1">
-                                <Target className="h-3 w-3" />
-                                <span>{(activity.relevanceScore * 100).toFixed(0)}% match</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </motion.div>
               ))}
             </div>
-          ) : state.query ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Search className="h-8 w-8 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No activities found matching your search</p>
-                <p className="text-sm text-gray-400 mt-2">Try adjusting your search terms or filters</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Start searching to see results</p>
-                <p className="text-sm text-gray-400 mt-2">Enter keywords, use filters, or try natural language</p>
-              </div>
-            </div>
           )}
-        </div>
-        
-        {/* Facets and Filters */}
-        <div className="lg:col-span-1 border-l border-gray-200 dark:border-gray-800 overflow-auto">
-          <div className="p-4">
-            <h3 className="font-semibold mb-4">Refine Results</h3>
-            
-            {/* Quick Filters */}
-            {Object.entries(state.facets).map(([facetName, facetData]) => (
-              <div key={facetName} className="mb-6">
-                <h4 className="text-sm font-medium mb-2 capitalize">{facetName.replace(/([A-Z])/g, ' $1')}</h4>
-                <div className="space-y-2">
-                  {facetData.values.slice(0, 5).map((facetValue, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <Checkbox
-                        id={`${facetName}-${index}`}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            handleFilterAdd(facetName, QueryOperator.EQUALS, facetValue.value);
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`${facetName}-${index}`} className="flex-1 text-sm ml-2">
-                        {String(facetValue.value)}
-                      </Label>
-                      <Badge variant="outline" className="text-xs">
-                        {facetValue.count}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
-  
-  // Error Handling
-  if (Object.values(state.errors).some(error => error !== null)) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Alert className="max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Search Error</AlertTitle>
-          <AlertDescription>
-            {Object.values(state.errors).find(error => error !== null)}
-          </AlertDescription>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2"
-            onClick={() => setState(prev => ({ 
-              ...prev, 
-              errors: { search: null, suggestions: null, recommendations: null, save: null }
-            }))}
-          >
-            Retry
-          </Button>
-        </Alert>
-      </div>
-    );
-  }
-  
-  // Main Render
+
+  const highlightText = (text: string, query: string): React.ReactNode => {
+    if (!query) return text;
+    
+    const queryTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+    let highlightedText = text;
+    
+    queryTerms.forEach(term => {
+      const regex = new RegExp(`(${term})`, 'gi');
+      highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
+    });
+    
+    return <span dangerouslySetInnerHTML={{ __html: highlightedText }} />;
+  };
+
+  // =============================================================================
+  // MAIN RENDER
+  // =============================================================================
+
   return (
-    <div 
-      ref={containerRef}
-      className={cn(
-        "flex flex-col h-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden",
-        state.isFullscreen && "fixed inset-0 z-50 rounded-none",
-        className
-      )}
-      style={{ height: state.isFullscreen ? '100vh' : height }}
+    <motion.div
+      className={`h-full bg-gray-50 ${className}`}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ height }}
     >
-      {/* Header */}
-      {renderSearchHeader()}
-      
-      {/* Search Input */}
-      {renderSearchInput()}
-      
-      {/* Main Content */}
-      {renderMainContent()}
-    </div>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <Search className="w-6 h-6 mr-2" />
+              Activity Search Engine
+            </h2>
+            <p className="text-gray-600">
+              Advanced search with AI-powered suggestions and intelligent filtering
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setState(prev => ({ ...prev, showAnalytics: !prev.showAnalytics }))}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setState(prev => ({ ...prev, showAdvancedFilters: true }))}
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Interface */}
+        {renderSearchInterface()}
+
+        {/* AI Suggestions */}
+        {enableAI && state.aiSuggestions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+                AI Suggestions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {state.aiSuggestions.map((suggestion) => (
+                  <div key={suggestion.id} className="p-4 border rounded-lg">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium">{suggestion.title}</h4>
+                      <Badge variant="outline">
+                        {Math.round(suggestion.confidence * 100)}%
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{suggestion.description}</p>
+                    <Button variant="outline" size="sm">
+                      Apply Suggestion
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search Results */}
+        {(state.results.length > 0 || state.loading || state.error) && renderSearchResults()}
+      </div>
+    </motion.div>
   );
 };
 
