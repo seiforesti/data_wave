@@ -434,7 +434,7 @@ const PipelineOrchestrationEngine: React.FC<PipelineOrchestrationEngineProps> = 
       cpu: spa.resource_requirements.cpu,
       memory: spa.resource_requirements.memory,
       storage: spa.resource_requirements.storage,
-      utilization: Math.random() * 100 // In real implementation, get from backend
+      utilization: orchestrationMetrics?.resourceUtilization?.[spa.id] || 0
     }));
   }, []);
 

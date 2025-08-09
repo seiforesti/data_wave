@@ -11,7 +11,8 @@ import {
   Network, Globe, Monitor, Server, Cloud, RefreshCw, AlertTriangle, 
   CheckCircle, XCircle, Clock, Eye, EyeOff, Filter, MoreHorizontal, X,
   Zap, TrendingUp, BarChart3, PieChart, LineChart, DollarSign, Award,
-  Star, Crown, Diamond, Circle, Square, Triangle, Hexagon, Octagon
+  Star, Crown, Diamond, Circle, Square, Triangle, Hexagon, Octagon,
+  MessageSquare, Share2, Send, List
 } from 'lucide-react';
 
 // UI Components
@@ -889,1043 +890,2182 @@ const PipelineDesigner: React.FC<PipelineDesignerProps> = ({
     return () => clearTimeout(timer);
   }, [pipeline, readonly, updatePipeline]);
 
-  return (
-    <TooltipProvider>
-      <div className={`flex h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${className}`}>
-        {/* Stage Library Sidebar */}
-        <AnimatePresence>
-          {showStageLibrary && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-hidden"
+  // Advanced Canvas Engine - Enhanced drag and drop with infinite zoom
+interface AdvancedCanvasEngine {
+  infiniteZoom: boolean;
+  gridSnapping: boolean;
+  magneticGuides: boolean;
+  multiSelection: boolean;
+  groupOperations: boolean;
+  undoRedoSystem: boolean;
+  contextMenus: boolean;
+  performanceOptimization: boolean;
+  collaborativeEditing: boolean;
+  realTimeSync: boolean;
+}
+
+interface CanvasState {
+  zoom: number;
+  pan: { x: number; y: number };
+  selectedNodes: string[];
+  selectedEdges: string[];
+  dragState: DragState | null;
+  gridSize: number;
+  snapThreshold: number;
+  guides: Guide[];
+  history: CanvasAction[];
+  historyIndex: number;
+  collaborators: Collaborator[];
+  cursorPositions: Map<string, { x: number; y: number }>;
+}
+
+interface DragState {
+  type: 'node' | 'edge' | 'selection' | 'pan' | 'resize';
+  startPosition: { x: number; y: number };
+  currentPosition: { x: number; y: number };
+  draggedItems: string[];
+  snapToGrid: boolean;
+  magneticSnap: boolean;
+  ghostElements: GhostElement[];
+}
+
+interface GhostElement {
+  id: string;
+  type: 'node' | 'edge';
+  position: { x: number; y: number };
+  opacity: number;
+  isValid: boolean;
+}
+
+interface Guide {
+  type: 'horizontal' | 'vertical' | 'diagonal';
+  position: number;
+  isActive: boolean;
+  snapDistance: number;
+  color: string;
+  thickness: number;
+}
+
+interface CanvasAction {
+  type: 'add' | 'delete' | 'move' | 'edit' | 'group' | 'ungroup' | 'connect' | 'disconnect';
+  timestamp: Date;
+  data: any;
+  inverse: CanvasAction | null;
+  userId?: string;
+  description: string;
+}
+
+interface Collaborator {
+  id: string;
+  name: string;
+  color: string;
+  cursor: { x: number; y: number };
+  selection: string[];
+  isActive: boolean;
+  lastActivity: Date;
+}
+
+// Enterprise Stage Templates Library
+const ENTERPRISE_STAGE_TEMPLATES = {
+  DATA_INGESTION: {
+    category: 'Data Ingestion & Connectivity',
+    description: 'Advanced data ingestion with real-time and batch processing capabilities',
+    templates: [
+      {
+        id: 'real_time_streaming',
+        name: 'Real-Time Streaming Ingestion',
+        description: 'High-throughput streaming data ingestion with Apache Kafka, Pulsar, and Kinesis support',
+        icon: Database,
+        complexity: 'advanced',
+        estimatedDuration: 180,
+        resourceRequirements: { 
+          cpu: 4, 
+          memory: '8GB', 
+          storage: '50GB',
+          network: '10Gbps'
+        },
+        crossSPAIntegration: {
+          dataSources: { 
+            required: true, 
+            minConnections: 1,
+            supportedTypes: ['kafka', 'pulsar', 'kinesis', 'rabbitmq']
+          },
+          scanLogic: { 
+            required: true, 
+            realTimeScanning: true,
+            streamProcessing: true
+          },
+          classifications: { 
+            required: true, 
+            autoClassification: true,
+            mlClassification: true
+          }
+        },
+        configurationSchema: {
+          type: 'object',
+          properties: {
+            streamingConfig: {
+              type: 'object',
+              properties: {
+                platform: {
+                  type: 'string',
+                  enum: ['kafka', 'pulsar', 'kinesis', 'eventhub'],
+                  description: 'Streaming platform to use'
+                },
+                brokers: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'List of broker endpoints'
+                },
+                topics: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Topics to consume from'
+                },
+                consumerGroup: {
+                  type: 'string',
+                  description: 'Consumer group identifier'
+                },
+                batchSize: {
+                  type: 'number',
+                  minimum: 1,
+                  maximum: 10000,
+                  default: 1000
+                },
+                maxLatency: {
+                  type: 'number',
+                  description: 'Maximum acceptable latency in ms'
+                }
+              },
+              required: ['platform', 'brokers', 'topics']
+            },
+            outputConfig: {
+              type: 'object',
+              properties: {
+                format: {
+                  type: 'string',
+                  enum: ['parquet', 'delta', 'avro', 'json', 'orc'],
+                  default: 'delta'
+                },
+                compression: {
+                  type: 'string',
+                  enum: ['gzip', 'snappy', 'lz4', 'zstd'],
+                  default: 'snappy'
+                },
+                partitioning: {
+                  type: 'object',
+                  properties: {
+                    strategy: {
+                      type: 'string',
+                      enum: ['time', 'hash', 'range', 'custom']
+                    },
+                    columns: {
+                      type: 'array',
+                      items: { type: 'string' }
+                    },
+                    partitionSize: {
+                      type: 'string',
+                      description: 'Target partition size (e.g., 1GB, 500MB)'
+                    }
+                  }
+                }
+              }
+            },
+            qualityConfig: {
+              type: 'object',
+              properties: {
+                enableValidation: { type: 'boolean', default: true },
+                schemaEvolution: { type: 'boolean', default: true },
+                duplicateDetection: { type: 'boolean', default: true },
+                anomalyDetection: { type: 'boolean', default: false }
+              }
+            }
+          }
+        },
+        performanceProfile: {
+          throughput: '1M records/sec',
+          latency: '<100ms',
+          scalability: 'horizontal',
+          reliability: '99.9% uptime'
+        },
+        monitoring: {
+          metrics: ['throughput', 'latency', 'error_rate', 'backlog'],
+          alerts: ['high_latency', 'throughput_drop', 'connection_failure'],
+          dashboards: ['real_time_metrics', 'performance_trends']
+        }
+      },
+      {
+        id: 'batch_ingestion_optimized',
+        name: 'Optimized Batch Ingestion',
+        description: 'Large-scale batch processing with auto-scaling and intelligent optimization',
+        icon: Package,
+        complexity: 'intermediate',
+        estimatedDuration: 300,
+        resourceRequirements: { 
+          cpu: 8, 
+          memory: '16GB', 
+          storage: '200GB',
+          network: '5Gbps'
+        },
+        crossSPAIntegration: {
+          dataSources: { 
+            required: true, 
+            minConnections: 1,
+            supportedTypes: ['database', 'file', 'api', 'warehouse']
+          },
+          scanLogic: { 
+            required: true, 
+            batchScanning: true,
+            incrementalProcessing: true
+          },
+          compliance: { 
+            required: true, 
+            dataLineage: true,
+            auditLogging: true
+          }
+        },
+        configurationSchema: {
+          type: 'object',
+          properties: {
+            sourceConfig: {
+              type: 'object',
+              properties: {
+                type: {
+                  type: 'string',
+                  enum: ['database', 'file', 'api', 'warehouse']
+                },
+                connectionString: { type: 'string' },
+                batchSize: {
+                  type: 'number',
+                  minimum: 1000,
+                  maximum: 1000000,
+                  default: 10000
+                },
+                parallelism: {
+                  type: 'number',
+                  minimum: 1,
+                  maximum: 100,
+                  default: 4
+                },
+                incrementalColumn: {
+                  type: 'string',
+                  description: 'Column for incremental processing'
+                }
+              }
+            },
+            optimizationConfig: {
+              type: 'object',
+              properties: {
+                autoTuning: { type: 'boolean', default: true },
+                adaptiveScheduling: { type: 'boolean', default: true },
+                resourceOptimization: { type: 'boolean', default: true },
+                costOptimization: { type: 'boolean', default: false }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  DATA_TRANSFORMATION: {
+    category: 'Data Transformation & Processing',
+    description: 'Advanced data transformation with ML-powered operations',
+    templates: [
+      {
+        id: 'ml_feature_engineering',
+        name: 'ML Feature Engineering Pipeline',
+        description: 'Advanced feature engineering with automated ML feature selection and generation',
+        icon: Brain,
+        complexity: 'expert',
+        estimatedDuration: 240,
+        resourceRequirements: { 
+          cpu: 6, 
+          memory: '12GB', 
+          storage: '75GB', 
+          gpu: 1 
+        },
+        crossSPAIntegration: {
+          classifications: { 
+            required: true, 
+            featureAnnotation: true,
+            semanticUnderstanding: true
+          },
+          advancedCatalog: { 
+            required: true, 
+            featureStore: true,
+            metadataEnrichment: true
+          },
+          compliance: { 
+            required: true, 
+            dataPrivacy: true,
+            biasDetection: true
+          }
+        },
+        configurationSchema: {
+          type: 'object',
+          properties: {
+            featureConfig: {
+              type: 'object',
+              properties: {
+                featureTypes: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['numerical', 'categorical', 'text', 'image', 'time_series', 'graph']
+                  }
+                },
+                targetColumn: { type: 'string' },
+                featureSelection: {
+                  type: 'object',
+                  properties: {
+                    method: {
+                      type: 'string',
+                      enum: ['correlation', 'mutual_info', 'chi2', 'recursive', 'lasso']
+                    },
+                    numFeatures: { type: 'number', minimum: 1 },
+                    threshold: { type: 'number', minimum: 0, maximum: 1 }
+                  }
+                }
+              }
+            },
+            transformationConfig: {
+              type: 'object',
+              properties: {
+                scaling: {
+                  type: 'string',
+                  enum: ['standard', 'minmax', 'robust', 'quantile', 'power']
+                },
+                encoding: {
+                  type: 'string',
+                  enum: ['onehot', 'label', 'target', 'embedding', 'hash']
+                },
+                dimensionalityReduction: {
+                  type: 'string',
+                  enum: ['pca', 'tsne', 'umap', 'autoencoder']
+                },
+                textProcessing: {
+                  type: 'object',
+                  properties: {
+                    tokenization: { type: 'string', enum: ['word', 'subword', 'character'] },
+                    vectorization: { type: 'string', enum: ['tfidf', 'word2vec', 'bert', 'fasttext'] },
+                    sentimentAnalysis: { type: 'boolean', default: false }
+                  }
+                }
+              }
+            },
+            mlConfig: {
+              type: 'object',
+              properties: {
+                autoML: { type: 'boolean', default: false },
+                featureGeneration: { type: 'boolean', default: true },
+                crossValidation: { type: 'number', minimum: 2, maximum: 10, default: 5 },
+                hyperparameterTuning: { type: 'boolean', default: false }
+              }
+            }
+          }
+        }
+      },
+      {
+        id: 'real_time_transformation',
+        name: 'Real-Time Data Transformation',
+        description: 'Stream processing transformations with low-latency requirements',
+        icon: Zap,
+        complexity: 'advanced',
+        estimatedDuration: 180,
+        resourceRequirements: { 
+          cpu: 4, 
+          memory: '8GB', 
+          storage: '30GB' 
+        },
+        crossSPAIntegration: {
+          scanLogic: { 
+            required: true, 
+            streamScanning: true 
+          },
+          classifications: { 
+            required: true, 
+            realTimeClassification: true 
+          }
+        }
+      }
+    ]
+  },
+  DATA_QUALITY: {
+    category: 'Data Quality & Validation',
+    description: 'Comprehensive data quality assessment and validation',
+    templates: [
+      {
+        id: 'comprehensive_quality_check',
+        name: 'AI-Powered Data Quality Assessment',
+        description: 'Multi-dimensional data quality validation with ML anomaly detection and automated remediation',
+        icon: Shield,
+        complexity: 'advanced',
+        estimatedDuration: 120,
+        resourceRequirements: { 
+          cpu: 4, 
+          memory: '6GB', 
+          storage: '25GB' 
+        },
+        crossSPAIntegration: {
+          classifications: { 
+            required: true, 
+            qualityMetrics: true,
+            dataTyping: true
+          },
+          compliance: { 
+            required: true, 
+            qualityStandards: true,
+            regulatoryCompliance: true
+          },
+          scanLogic: { 
+            required: true, 
+            qualityScans: true,
+            profilingScans: true
+          }
+        },
+        configurationSchema: {
+          type: 'object',
+          properties: {
+            qualityChecks: {
+              type: 'object',
+              properties: {
+                completeness: {
+                  type: 'object',
+                  properties: {
+                    enabled: { type: 'boolean', default: true },
+                    threshold: { type: 'number', minimum: 0, maximum: 100, default: 95 },
+                    criticalColumns: {
+                      type: 'array',
+                      items: { type: 'string' }
+                    }
+                  }
+                },
+                accuracy: {
+                  type: 'object',
+                  properties: {
+                    enabled: { type: 'boolean', default: true },
+                    validationRules: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          column: { type: 'string' },
+                          rule: { type: 'string' },
+                          severity: { type: 'string', enum: ['warning', 'error', 'critical'] }
+                        }
+                      }
+                    }
+                  }
+                },
+                consistency: {
+                  type: 'object',
+                  properties: {
+                    enabled: { type: 'boolean', default: true },
+                    crossColumnChecks: { type: 'boolean', default: true },
+                    referentialIntegrity: { type: 'boolean', default: true }
+                  }
+                },
+                validity: {
+                  type: 'object',
+                  properties: {
+                    enabled: { type: 'boolean', default: true },
+                    dataTypeValidation: { type: 'boolean', default: true },
+                    formatValidation: { type: 'boolean', default: true },
+                    rangeValidation: { type: 'boolean', default: true }
+                  }
+                },
+                uniqueness: {
+                  type: 'object',
+                  properties: {
+                    enabled: { type: 'boolean', default: true },
+                    duplicateDetection: { type: 'boolean', default: true },
+                    fuzzyMatching: { type: 'boolean', default: false }
+                  }
+                }
+              }
+            },
+            anomalyDetection: {
+              type: 'object',
+              properties: {
+                enabled: { type: 'boolean', default: true },
+                algorithms: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['isolation_forest', 'one_class_svm', 'autoencoder', 'statistical']
+                  },
+                  default: ['isolation_forest', 'statistical']
+                },
+                sensitivity: {
+                  type: 'number',
+                  minimum: 0.1,
+                  maximum: 1.0,
+                  default: 0.1
+                },
+                features: {
+                  type: 'array',
+                  items: { type: 'string' }
+                }
+              }
+            },
+            remediationConfig: {
+              type: 'object',
+              properties: {
+                autoRemediation: { type: 'boolean', default: false },
+                quarantinePolicy: {
+                  type: 'string',
+                  enum: ['none', 'flag', 'isolate', 'reject'],
+                  default: 'flag'
+                },
+                notificationPolicy: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'boolean', default: true },
+                    slack: { type: 'boolean', default: false },
+                    threshold: { type: 'string', enum: ['any', 'warning', 'error', 'critical'] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  COMPLIANCE_GOVERNANCE: {
+    category: 'Compliance & Data Governance',
+    description: 'Regulatory compliance and data governance automation',
+    templates: [
+      {
+        id: 'gdpr_compliance_automation',
+        name: 'GDPR Compliance Automation Suite',
+        description: 'Comprehensive GDPR compliance validation with automated data subject rights management',
+        icon: Users,
+        complexity: 'expert',
+        estimatedDuration: 200,
+        resourceRequirements: { 
+          cpu: 3, 
+          memory: '6GB', 
+          storage: '30GB' 
+        },
+        crossSPAIntegration: {
+          compliance: { 
+            required: true, 
+            gdprRules: true,
+            dataSubjectRights: true
+          },
+          classifications: { 
+            required: true, 
+            piiDetection: true,
+            sensitiveDataIdentification: true
+          },
+          rbac: { 
+            required: true, 
+            accessAuditing: true,
+            consentManagement: true
+          }
+        },
+        configurationSchema: {
+          type: 'object',
+          properties: {
+            gdprConfig: {
+              type: 'object',
+              properties: {
+                dataSubjectRights: {
+                  type: 'object',
+                  properties: {
+                    rightToAccess: { type: 'boolean', default: true },
+                    rightToRectification: { type: 'boolean', default: true },
+                    rightToErasure: { type: 'boolean', default: true },
+                    rightToPortability: { type: 'boolean', default: true },
+                    rightToRestriction: { type: 'boolean', default: true }
+                  }
+                },
+                legalBasis: {
+                  type: 'string',
+                  enum: ['consent', 'contract', 'legal_obligation', 'vital_interests', 'public_task', 'legitimate_interests']
+                },
+                dataRetention: {
+                  type: 'object',
+                  properties: {
+                    policy: { type: 'string' },
+                    period: { type: 'string' },
+                    autoDelete: { type: 'boolean', default: false }
+                  }
+                }
+              }
+            },
+            piiDetection: {
+              type: 'object',
+              properties: {
+                enabled: { type: 'boolean', default: true },
+                algorithms: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['regex', 'ml_classifier', 'ner', 'hybrid']
+                  }
+                },
+                categories: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['email', 'phone', 'ssn', 'credit_card', 'address', 'name']
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  AI_ML_OPERATIONS: {
+    category: 'AI/ML Operations',
+    description: 'Machine learning model operations and MLOps',
+    templates: [
+      {
+        id: 'mlops_pipeline',
+        name: 'Complete MLOps Pipeline',
+        description: 'End-to-end ML pipeline with training, validation, deployment, and monitoring',
+        icon: Brain,
+        complexity: 'expert',
+        estimatedDuration: 400,
+        resourceRequirements: { 
+          cpu: 8, 
+          memory: '16GB', 
+          storage: '100GB', 
+          gpu: 2 
+        },
+        crossSPAIntegration: {
+          advancedCatalog: { 
+            required: true, 
+            modelRegistry: true,
+            experimentTracking: true
+          },
+          compliance: { 
+            required: true, 
+            modelGovernance: true,
+            biasDetection: true
+          },
+          scanLogic: { 
+            required: true, 
+            modelValidation: true,
+            performanceMonitoring: true
+          }
+        }
+      }
+    ]
+  }
+};
+
+// AI-Powered Pipeline Builder
+interface AIPipelineBuilder {
+  intelligentSuggestions: boolean;
+  automaticOptimization: boolean;
+  patternRecognition: boolean;
+  costOptimization: boolean;
+  performancePrediction: boolean;
+  securityAnalysis: boolean;
+  complianceValidation: boolean;
+  resourceOptimization: boolean;
+}
+
+interface PipelinePattern {
+  id: string;
+  name: string;
+  description: string;
+  confidence: number;
+  suggestedStages: StageSuggestion[];
+  optimizations: OptimizationSuggestion[];
+  estimatedPerformance: PerformanceEstimate;
+  costAnalysis: CostAnalysis;
+  securityAssessment: SecurityAssessment;
+  complianceCheck: ComplianceCheck;
+  usagePatterns: UsagePattern[];
+}
+
+interface StageSuggestion {
+  templateId: string;
+  position: number;
+  reasoning: string;
+  confidence: number;
+  alternatives: AlternativeSuggestion[];
+  dependencies: string[];
+  prerequisites: string[];
+  estimatedDuration: number;
+  resourceImpact: ResourceImpact;
+}
+
+interface AlternativeSuggestion {
+  templateId: string;
+  reasoning: string;
+  confidence: number;
+  tradeoffs: string[];
+  benefits: string[];
+  drawbacks: string[];
+}
+
+interface OptimizationSuggestion {
+  type: 'performance' | 'cost' | 'reliability' | 'security' | 'compliance';
+  description: string;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  effort: 'low' | 'medium' | 'high';
+  expectedBenefit: string;
+  implementation: string[];
+  prerequisites: string[];
+  risks: string[];
+  successMetrics: string[];
+}
+
+interface PerformanceEstimate {
+  executionTime: number;
+  throughput: number;
+  resourceUtilization: ResourceUtilization;
+  bottlenecks: BottleneckPrediction[];
+  scalabilityProfile: ScalabilityProfile;
+  reliabilityScore: number;
+  concurrencyLimits: ConcurrencyLimits;
+}
+
+interface ResourceUtilization {
+  cpu: { min: number; avg: number; max: number; peak: number };
+  memory: { min: number; avg: number; max: number; peak: number };
+  storage: { read: number; write: number; total: number };
+  network: { ingress: number; egress: number; latency: number };
+  gpu: { utilization: number; memory: number };
+}
+
+interface BottleneckPrediction {
+  stageId: string;
+  type: 'cpu' | 'memory' | 'io' | 'network' | 'gpu' | 'concurrency';
+  severity: number;
+  likelihood: number;
+  suggestedMitigation: string[];
+  preventionStrategies: string[];
+  monitoringRecommendations: string[];
+}
+
+interface ScalabilityProfile {
+  horizontalScaling: {
+    supported: boolean;
+    maxInstances: number;
+    efficiency: number;
+    costPerInstance: number;
+    scalingTriggers: string[];
+  };
+  verticalScaling: {
+    supported: boolean;
+    maxResources: ResourceSpec;
+    efficiency: number;
+    costPerUpgrade: number;
+    limitations: string[];
+  };
+  autoScaling: {
+    supported: boolean;
+    strategies: string[];
+    responseTime: number;
+    minInstances: number;
+    maxInstances: number;
+  };
+}
+
+interface ConcurrencyLimits {
+  maxParallelStages: number;
+  maxConcurrentExecutions: number;
+  resourceContention: string[];
+  lockingStrategy: string;
+  deadlockPrevention: string[];
+}
+
+interface SecurityAssessment {
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  vulnerabilities: SecurityVulnerability[];
+  recommendations: SecurityRecommendation[];
+  complianceStatus: ComplianceStatus;
+  threatModel: ThreatModel;
+}
+
+interface SecurityVulnerability {
+  id: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  affectedComponents: string[];
+  mitigation: string[];
+  remediation: string[];
+}
+
+interface SecurityRecommendation {
+  category: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  implementation: string[];
+  tools: string[];
+  bestPractices: string[];
+}
+
+interface ComplianceCheck {
+  frameworks: ComplianceFramework[];
+  status: 'compliant' | 'partial' | 'non_compliant';
+  gaps: ComplianceGap[];
+  recommendations: ComplianceRecommendation[];
+  auditTrail: AuditEntry[];
+}
+
+interface ComplianceFramework {
+  name: string;
+  version: string;
+  applicableControls: string[];
+  status: 'compliant' | 'partial' | 'non_compliant';
+  lastAssessment: Date;
+}
+
+interface ComplianceGap {
+  control: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  remediation: string[];
+  timeline: string;
+}
+
+interface UsagePattern {
+  pattern: string;
+  frequency: number;
+  context: string;
+  recommendations: string[];
+  alternatives: string[];
+}
+
+// Advanced Configuration Panel
+interface AdvancedConfigurationPanel {
+  richParameterEditors: boolean;
+  schemaValidation: boolean;
+  resourceEstimation: boolean;
+  dependencyVisualization: boolean;
+  environmentConfigs: boolean;
+  secretsManagement: boolean;
+  configurationVersioning: boolean;
+  templateInheritance: boolean;
+}
+
+interface ParameterEditor {
+  type: 'text' | 'number' | 'boolean' | 'select' | 'multiselect' | 'json' | 'sql' | 'python' | 'regex' | 'file' | 'secret' | 'expression';
+  validation: ValidationRule[];
+  suggestions: ParameterSuggestion[];
+  dependencies: ParameterDependency[];
+  documentation: string;
+  examples: any[];
+  defaultValue: any;
+  constraints: ParameterConstraints;
+  metadata: ParameterMetadata;
+}
+
+interface ValidationRule {
+  type: 'required' | 'min' | 'max' | 'pattern' | 'custom' | 'async' | 'conditional';
+  value: any;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+  code: string;
+  validator?: (value: any) => Promise<boolean>;
+}
+
+interface ParameterSuggestion {
+  value: any;
+  description: string;
+  confidence: number;
+  context: string;
+  source: 'ai' | 'template' | 'history' | 'best_practice';
+  usage: number;
+}
+
+interface ParameterDependency {
+  parameter: string;
+  condition: string;
+  action: 'show' | 'hide' | 'enable' | 'disable' | 'validate' | 'transform' | 'suggest';
+  expression: string;
+  priority: number;
+}
+
+interface ParameterConstraints {
+  readonly: boolean;
+  immutable: boolean;
+  sensitive: boolean;
+  required: boolean;
+  experimental: boolean;
+  deprecated: boolean;
+  environmentSpecific: boolean;
+}
+
+interface ParameterMetadata {
+  category: string;
+  tags: string[];
+  version: string;
+  author: string;
+  lastModified: Date;
+  usage: number;
+  impact: 'low' | 'medium' | 'high';
+}
+
+// Enhanced Canvas Component with AI
+const EnhancedPipelineCanvas: React.FC<{
+  pipeline: Pipeline;
+  onPipelineChange: (pipeline: Pipeline) => void;
+  canvasState: CanvasState;
+  onCanvasStateChange: (state: CanvasState) => void;
+  aiBuilder: AIPipelineBuilder;
+}> = ({ pipeline, onPipelineChange, canvasState, onCanvasStateChange, aiBuilder }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [aiSuggestions, setAISuggestions] = useState<PipelinePattern[]>([]);
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentSuggestion, setCurrentSuggestion] = useState<PipelinePattern | null>(null);
+  
+  // AI Pattern Recognition
+  const analyzeCurrentPipeline = useCallback(async () => {
+    if (!aiBuilder.patternRecognition || !pipeline.stages.length) return;
+    
+    setIsAnalyzing(true);
+    try {
+      // Analyze current pipeline structure
+      const patterns = await analyzePipelinePatterns(pipeline);
+      const suggestions = await generateAISuggestions(patterns);
+      
+      setAISuggestions(suggestions);
+      if (suggestions.length > 0) {
+        setCurrentSuggestion(suggestions[0]);
+        setShowAISuggestions(true);
+      }
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [pipeline, aiBuilder.patternRecognition]);
+
+  // Intelligent Stage Suggestions
+  const generateStageRecommendations = useCallback(async (position: { x: number; y: number }) => {
+    if (!aiBuilder.intelligentSuggestions) return [];
+
+    try {
+      const context = {
+        currentStages: pipeline.stages,
+        position,
+        previousStage: findNearestStage(position, pipeline.stages),
+        pipelineType: inferPipelineType(pipeline),
+        dataFlow: analyzeDataFlow(pipeline)
+      };
+
+      const recommendations = await getStageRecommendations(context);
+      return recommendations;
+    } catch (error) {
+      console.error('Failed to generate recommendations:', error);
+      return [];
+    }
+  }, [pipeline, aiBuilder.intelligentSuggestions]);
+
+  // Performance Optimization Analysis
+  const analyzePerformanceOptimizations = useCallback(async () => {
+    if (!aiBuilder.automaticOptimization) return [];
+
+    try {
+      const analysis = await analyzePerformanceBottlenecks(pipeline);
+      const optimizations = await generateOptimizationRecommendations(analysis);
+      
+      return optimizations;
+    } catch (error) {
+      console.error('Performance analysis failed:', error);
+      return [];
+    }
+  }, [pipeline, aiBuilder.automaticOptimization]);
+
+  // Cost Optimization Analysis
+  const analyzeCostOptimizations = useCallback(async () => {
+    if (!aiBuilder.costOptimization) return [];
+
+    try {
+      const costAnalysis = await analyzePipelineCosts(pipeline);
+      const optimizations = await generateCostOptimizations(costAnalysis);
+      
+      return optimizations;
+    } catch (error) {
+      console.error('Cost analysis failed:', error);
+      return [];
+    }
+  }, [pipeline, aiBuilder.costOptimization]);
+
+  // Security Analysis
+  const analyzeSecurityVulnerabilities = useCallback(async () => {
+    if (!aiBuilder.securityAnalysis) return [];
+
+    try {
+      const securityAssessment = await analyzePipelineSecurity(pipeline);
+      return securityAssessment;
+    } catch (error) {
+      console.error('Security analysis failed:', error);
+      return [];
+    }
+  }, [pipeline, aiBuilder.securityAnalysis]);
+
+  // Canvas Rendering with Performance Optimization
+  const renderCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Apply transformations
+    ctx.save();
+    ctx.translate(canvasState.pan.x, canvasState.pan.y);
+    ctx.scale(canvasState.zoom, canvasState.zoom);
+
+    // Render grid if enabled
+    if (canvasState.gridSize > 0) {
+      renderGrid(ctx, canvasState.gridSize);
+    }
+
+    // Render guides
+    canvasState.guides.forEach(guide => {
+      if (guide.isActive) {
+        renderGuide(ctx, guide);
+      }
+    });
+
+    // Render pipeline stages
+    pipeline.stages.forEach(stage => {
+      renderStage(ctx, stage, canvasState.selectedNodes.includes(stage.id));
+    });
+
+    // Render connections
+    pipeline.connections?.forEach(connection => {
+      renderConnection(ctx, connection, canvasState.selectedEdges.includes(connection.id));
+    });
+
+    // Render drag state
+    if (canvasState.dragState) {
+      renderDragState(ctx, canvasState.dragState);
+    }
+
+    // Render collaborator cursors
+    canvasState.collaborators.forEach(collaborator => {
+      if (collaborator.isActive && collaborator.id !== getCurrentUserId()) {
+        renderCollaboratorCursor(ctx, collaborator);
+      }
+    });
+
+    ctx.restore();
+  }, [pipeline, canvasState]);
+
+  // AI Suggestion Components
+  const AISuggestionPanel: React.FC = () => (
+    <AnimatePresence>
+      {showAISuggestions && currentSuggestion && (
+        <motion.div
+          initial={{ opacity: 0, x: 300 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 300 }}
+          className="fixed right-4 top-20 w-80 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-4 z-50"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              AI Suggestions
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAISuggestions(false)}
             >
-              <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">Pipeline Stages</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowStageLibrary(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search stages..."
-                    value={stageLibrarySearch}
-                    onChange={(e) => setStageLibrarySearch(e.target.value)}
-                    className="pl-9"
-                  />
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-sm font-medium">{currentSuggestion.name}</h4>
+              <p className="text-xs text-muted-foreground">{currentSuggestion.description}</p>
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {(currentSuggestion.confidence * 100).toFixed(0)}% confident
+                  </Badge>
+                  <Badge variant="secondary">
+                    {currentSuggestion.suggestedStages.length} stages
+                  </Badge>
                 </div>
               </div>
+            </div>
 
-              <ScrollArea className="h-[calc(100vh-12rem)]">
-                <div className="p-4 space-y-3">
-                  {filteredStages.map((stage) => (
-                    <motion.div
-                      key={stage.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Card 
-                        className="cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
-                        draggable
-                        onDragStart={() => handleStageDragStart(stage)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start space-x-3">
-                            <div className={`p-2 rounded-lg bg-gradient-to-r ${stage.gradient}`}>
-                              <stage.icon className="h-4 w-4 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
-                                {stage.name}
-                              </h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                                {stage.description}
-                              </p>
-                              <div className="flex items-center justify-between mt-2">
-                                <Badge variant="secondary" className="text-xs">
-                                  {stage.category}
-                                </Badge>
-                                <div className="flex items-center space-x-1 text-xs text-slate-500">
-                                  <Clock className="h-3 w-3" />
-                                  <span>{Math.round(stage.typical_duration / 60)}m</span>
-                                </div>
-                              </div>
-                            </div>
+            {currentSuggestion.optimizations.length > 0 && (
+              <div>
+                <h5 className="text-xs font-medium mb-2">Optimizations:</h5>
+                <div className="space-y-2">
+                  {currentSuggestion.optimizations.slice(0, 3).map((opt, index) => (
+                    <div key={index} className="text-xs p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                      <div className="font-medium">{opt.description}</div>
+                      <div className="text-muted-foreground">
+                        Impact: {opt.impact} | Effort: {opt.effort}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onClick={() => applySuggestion(currentSuggestion)}>
+                Apply
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setCurrentSuggestion(null)}>
+                Skip
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <div className="relative w-full h-full overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        width={2000}
+        height={2000}
+        className="absolute inset-0 cursor-crosshair"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
+        onContextMenu={handleContextMenu}
+      />
+      
+      {/* AI Analysis Overlay */}
+      {isAnalyzing && (
+        <div className="absolute top-4 left-4 bg-white dark:bg-gray-800 border rounded-lg p-3 shadow-lg">
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 animate-pulse" />
+            <span className="text-sm">Analyzing pipeline...</span>
+          </div>
+        </div>
+      )}
+
+      <AISuggestionPanel />
+
+      {/* Canvas Controls */}
+      <div className="absolute bottom-4 left-4 flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCanvasState(prev => ({ ...prev, zoom: Math.min(prev.zoom * 1.2, 5) }))}
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCanvasState(prev => ({ ...prev, zoom: Math.max(prev.zoom / 1.2, 0.1) }))}
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCanvasState(prev => ({ 
+            ...prev, 
+            zoom: 1, 
+            pan: { x: 0, y: 0 } 
+          }))}
+        >
+          <Target className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={analyzeCurrentPipeline}
+          disabled={isAnalyzing}
+        >
+          <Brain className="h-4 w-4" />
+          AI Analysis
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Collaborative Editing Features
+interface CollaborativeEditingEngine {
+  realTimeSync: boolean;
+  conflictResolution: boolean;
+  userPresence: boolean;
+  commentSystem: boolean;
+  reviewWorkflow: boolean;
+  changeTracking: boolean;
+  permissionSystem: boolean;
+  auditLogging: boolean;
+}
+
+interface CollaborativeSession {
+  id: string;
+  pipelineId: string;
+  participants: Participant[];
+  currentEditor: string | null;
+  conflictResolution: ConflictResolution;
+  changeHistory: CollaborationChange[];
+  permissions: CollaborationPermission[];
+  comments: Comment[];
+  reviews: Review[];
+}
+
+interface Participant {
+  userId: string;
+  username: string;
+  avatar: string;
+  role: 'viewer' | 'editor' | 'admin' | 'reviewer';
+  isOnline: boolean;
+  lastActivity: Date;
+  cursor: { x: number; y: number } | null;
+  selection: string[];
+  permissions: Permission[];
+  presence: PresenceData;
+}
+
+interface PresenceData {
+  currentView: string;
+  currentAction: string;
+  isTyping: boolean;
+  lastHeartbeat: Date;
+  connectionStatus: 'connected' | 'disconnected' | 'reconnecting';
+}
+
+interface CollaborationChange {
+  id: string;
+  userId: string;
+  timestamp: Date;
+  type: 'add' | 'edit' | 'delete' | 'move' | 'comment' | 'review';
+  target: string;
+  oldValue: any;
+  newValue: any;
+  comment?: string;
+  approved?: boolean;
+  reviewerId?: string;
+}
+
+interface Comment {
+  id: string;
+  userId: string;
+  targetId: string;
+  targetType: 'stage' | 'connection' | 'pipeline';
+  content: string;
+  timestamp: Date;
+  resolved: boolean;
+  replies: CommentReply[];
+  position?: { x: number; y: number };
+}
+
+interface CommentReply {
+  id: string;
+  userId: string;
+  content: string;
+  timestamp: Date;
+}
+
+interface Review {
+  id: string;
+  reviewerId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'changes_requested';
+  timestamp: Date;
+  comments: string;
+  checklist: ReviewChecklist[];
+}
+
+interface ReviewChecklist {
+  id: string;
+  description: string;
+  checked: boolean;
+  required: boolean;
+}
+
+// Advanced Template System
+interface AdvancedTemplateSystem {
+  templateInheritance: boolean;
+  templateVersioning: boolean;
+  templateMarketplace: boolean;
+  customTemplates: boolean;
+  templateValidation: boolean;
+  templateTesting: boolean;
+  templateDocumentation: boolean;
+  templateAnalytics: boolean;
+}
+
+interface PipelineTemplate {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  author: TemplateAuthor;
+  category: string;
+  tags: string[];
+  complexity: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  estimatedDuration: number;
+  stages: TemplateStage[];
+  connections: TemplateConnection[];
+  configuration: TemplateConfiguration;
+  documentation: TemplateDocumentation;
+  validation: TemplateValidation;
+  testing: TemplateTestSuite;
+  analytics: TemplateAnalytics;
+  marketplace: MarketplaceData;
+}
+
+interface TemplateStage {
+  id: string;
+  templateId: string;
+  type: string;
+  name: string;
+  description: string;
+  position: { x: number; y: number };
+  configuration: StageConfiguration;
+  requirements: StageRequirements;
+  validation: StageValidation;
+  documentation: StageDocumentation;
+}
+
+interface TemplateConnection {
+  id: string;
+  sourceStageId: string;
+  targetStageId: string;
+  type: string;
+  configuration: ConnectionConfiguration;
+  validation: ConnectionValidation;
+}
+
+interface TemplateConfiguration {
+  parameters: TemplateParameter[];
+  environments: EnvironmentConfiguration[];
+  resourceProfiles: ResourceProfile[];
+  securitySettings: SecurityConfiguration;
+  complianceSettings: ComplianceConfiguration;
+}
+
+interface TemplateParameter {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  defaultValue: any;
+  required: boolean;
+  validation: ParameterValidation;
+  dependencies: ParameterDependency[];
+  scope: 'global' | 'stage' | 'connection';
+  category: string;
+}
+
+interface EnvironmentConfiguration {
+  name: string;
+  type: 'development' | 'staging' | 'production' | 'testing';
+  parameters: EnvironmentParameter[];
+  resourceLimits: ResourceLimits;
+  securityPolicy: SecurityPolicy;
+  monitoring: MonitoringConfiguration;
+}
+
+interface ResourceProfile {
+  name: string;
+  description: string;
+  resources: ResourceAllocation;
+  scalingPolicy: ScalingPolicy;
+  costOptimization: CostOptimizationSettings;
+}
+
+interface TemplateDocumentation {
+  overview: string;
+  requirements: string[];
+  setup: SetupInstructions[];
+  usage: UsageInstructions[];
+  troubleshooting: TroubleshootingGuide[];
+  examples: TemplateExample[];
+  changelog: ChangelogEntry[];
+}
+
+interface TemplateValidation {
+  schema: ValidationSchema;
+  rules: ValidationRule[];
+  dependencies: DependencyValidation[];
+  performance: PerformanceValidation;
+  security: SecurityValidation;
+  compliance: ComplianceValidation;
+}
+
+interface TemplateTestSuite {
+  unitTests: UnitTest[];
+  integrationTests: IntegrationTest[];
+  performanceTests: PerformanceTest[];
+  securityTests: SecurityTest[];
+  endToEndTests: EndToEndTest[];
+  mockData: MockDataSet[];
+}
+
+interface TemplateAnalytics {
+  usage: UsageAnalytics;
+  performance: PerformanceAnalytics;
+  errors: ErrorAnalytics;
+  feedback: FeedbackAnalytics;
+  adoption: AdoptionAnalytics;
+}
+
+interface MarketplaceData {
+  isPublic: boolean;
+  price: number;
+  currency: string;
+  license: TemplateLicense;
+  ratings: TemplateRating[];
+  reviews: TemplateReview[];
+  downloads: number;
+  lastUpdated: Date;
+  certification: TemplateCertification;
+}
+
+// Enterprise Configuration Management
+interface EnterpriseConfigurationManagement {
+  hierarchicalConfiguration: boolean;
+  configurationInheritance: boolean;
+  environmentManagement: boolean;
+  secretsManagement: boolean;
+  configurationVersioning: boolean;
+  configurationValidation: boolean;
+  configurationAuditing: boolean;
+  configurationSync: boolean;
+}
+
+interface ConfigurationHierarchy {
+  global: GlobalConfiguration;
+  organization: OrganizationConfiguration;
+  workspace: WorkspaceConfiguration;
+  pipeline: PipelineConfiguration;
+  stage: StageConfiguration;
+}
+
+interface GlobalConfiguration {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  parameters: ConfigurationParameter[];
+  policies: ConfigurationPolicy[];
+  defaults: ConfigurationDefaults;
+  validation: ConfigurationValidation;
+  audit: ConfigurationAudit;
+}
+
+interface OrganizationConfiguration extends GlobalConfiguration {
+  organizationId: string;
+  parentId?: string;
+  inheritance: InheritanceRules;
+  overrides: ConfigurationOverride[];
+}
+
+interface WorkspaceConfiguration extends OrganizationConfiguration {
+  workspaceId: string;
+  resourceLimits: ResourceLimits;
+  accessControls: AccessControl[];
+  compliance: ComplianceRequirements;
+}
+
+interface ConfigurationParameter {
+  id: string;
+  key: string;
+  value: any;
+  type: ParameterType;
+  description: string;
+  sensitive: boolean;
+  required: boolean;
+  validation: ParameterValidation;
+  scope: ConfigurationScope;
+  inheritance: InheritanceRule;
+  audit: ParameterAudit;
+}
+
+interface ConfigurationPolicy {
+  id: string;
+  name: string;
+  description: string;
+  type: 'security' | 'compliance' | 'performance' | 'cost';
+  rules: PolicyRule[];
+  enforcement: EnforcementLevel;
+  exceptions: PolicyException[];
+  audit: PolicyAudit;
+}
+
+interface SecretsManagement {
+  provider: 'vault' | 'aws' | 'azure' | 'gcp' | 'kubernetes';
+  encryption: EncryptionSettings;
+  accessControl: SecretAccessControl;
+  rotation: SecretRotation;
+  audit: SecretAudit;
+  compliance: SecretCompliance;
+}
+
+interface EncryptionSettings {
+  algorithm: string;
+  keyManagement: KeyManagement;
+  inTransit: boolean;
+  atRest: boolean;
+  keyRotation: KeyRotationPolicy;
+}
+
+// Advanced Validation Engine
+interface AdvancedValidationEngine {
+  realTimeValidation: boolean;
+  crossStageValidation: boolean;
+  semanticValidation: boolean;
+  performanceValidation: boolean;
+  securityValidation: boolean;
+  complianceValidation: boolean;
+  customValidators: boolean;
+  validationPipeline: boolean;
+}
+
+interface ValidationPipeline {
+  stages: ValidationStage[];
+  configuration: ValidationConfiguration;
+  reporting: ValidationReporting;
+  remediation: ValidationRemediation;
+}
+
+interface ValidationStage {
+  id: string;
+  name: string;
+  type: ValidationType;
+  validators: Validator[];
+  configuration: ValidationStageConfiguration;
+  dependencies: ValidationDependency[];
+  parallel: boolean;
+  timeout: number;
+}
+
+interface Validator {
+  id: string;
+  name: string;
+  type: 'builtin' | 'custom' | 'plugin';
+  implementation: ValidatorImplementation;
+  configuration: ValidatorConfiguration;
+  severity: ValidationSeverity;
+  enabled: boolean;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  suggestions: ValidationSuggestion[];
+  performance: ValidationPerformance;
+  remediation: RemediationAction[];
+}
+
+interface ValidationError {
+  id: string;
+  code: string;
+  message: string;
+  severity: 'error' | 'critical';
+  location: ValidationLocation;
+  context: ValidationContext;
+  remediation: RemediationSuggestion[];
+}
+
+interface ValidationWarning {
+  id: string;
+  code: string;
+  message: string;
+  severity: 'warning' | 'info';
+  location: ValidationLocation;
+  context: ValidationContext;
+  improvement: ImprovementSuggestion[];
+}
+
+// Real-time Collaboration Component
+const RealTimeCollaboration: React.FC<{
+  pipelineId: string;
+  currentUser: User;
+  onCollaborationChange: (session: CollaborativeSession) => void;
+}> = ({ pipelineId, currentUser, onCollaborationChange }) => {
+  const [session, setSession] = useState<CollaborativeSession | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [activeReviews, setActiveReviews] = useState<Review[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  
+  // Presence Management
+  const updatePresence = useCallback(async (presence: Partial<PresenceData>) => {
+    try {
+      await updateUserPresence(pipelineId, currentUser.id, presence);
+    } catch (error) {
+      console.error('Failed to update presence:', error);
+    }
+  }, [pipelineId, currentUser.id]);
+
+  // Comment System
+  const addComment = useCallback(async (
+    targetId: string,
+    targetType: string,
+    content: string,
+    position?: { x: number; y: number }
+  ) => {
+    try {
+      const comment: Comment = {
+        id: crypto.randomUUID(),
+        userId: currentUser.id,
+        targetId,
+        targetType: targetType as 'stage' | 'connection' | 'pipeline',
+        content,
+        timestamp: new Date(),
+        resolved: false,
+        replies: [],
+        position
+      };
+
+      await createComment(pipelineId, comment);
+      setComments(prev => [...prev, comment]);
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    }
+  }, [pipelineId, currentUser.id]);
+
+  // Review Workflow
+  const initiateReview = useCallback(async (reviewers: string[]) => {
+    try {
+      const review: Review = {
+        id: crypto.randomUUID(),
+        reviewerId: currentUser.id,
+        status: 'pending',
+        timestamp: new Date(),
+        comments: '',
+        checklist: []
+      };
+
+      await createReview(pipelineId, review, reviewers);
+      setActiveReviews(prev => [...prev, review]);
+    } catch (error) {
+      console.error('Failed to initiate review:', error);
+    }
+  }, [pipelineId, currentUser.id]);
+
+  return (
+    <div className="absolute top-4 right-4 space-y-2">
+      {/* Participant Avatars */}
+      <div className="flex items-center space-x-2">
+        {participants.slice(0, 5).map((participant) => (
+          <Tooltip key={participant.userId}>
+            <TooltipTrigger>
+              <div 
+                className={`w-8 h-8 rounded-full border-2 ${
+                  participant.isOnline ? 'border-green-400' : 'border-gray-300'
+                } relative`}
+              >
+                <img 
+                  src={participant.avatar} 
+                  alt={participant.username}
+                  className="w-full h-full rounded-full"
+                />
+                {participant.isOnline && (
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border border-white" />
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div>
+                <div className="font-medium">{participant.username}</div>
+                <div className="text-sm text-muted-foreground">{participant.role}</div>
+                {participant.presence && (
+                  <div className="text-xs text-muted-foreground">
+                    {participant.presence.currentAction}
+                  </div>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+        
+        {participants.length > 5 && (
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium">
+            +{participants.length - 5}
+          </div>
+        )}
+      </div>
+
+      {/* Collaboration Controls */}
+      <Card className="p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Collaboration</h4>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowComments(!showComments)}
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => initiateReview(participants.map(p => p.userId))}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Request Review
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => {/* Share pipeline */}}
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share Pipeline
+          </Button>
+        </div>
+
+        {activeReviews.length > 0 && (
+          <div className="border-t pt-2">
+            <div className="text-xs text-muted-foreground mb-1">Active Reviews</div>
+            {activeReviews.map((review) => (
+              <div key={review.id} className="text-xs p-2 bg-muted rounded">
+                <div className="flex items-center justify-between">
+                  <span>Review #{review.id.slice(0, 8)}</span>
+                  <Badge variant={
+                    review.status === 'approved' ? 'default' :
+                    review.status === 'rejected' ? 'destructive' :
+                    'secondary'
+                  }>
+                    {review.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Comments Panel */}
+      <AnimatePresence>
+        {showComments && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="w-80"
+          >
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium">Comments</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowComments(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <ScrollArea className="max-h-64">
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                          {comment.userId.slice(0, 1).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm">{comment.content}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {comment.timestamp.toLocaleTimeString()}
                           </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+                        </div>
+                      </div>
+                      
+                      {comment.replies.length > 0 && (
+                        <div className="ml-8 space-y-1">
+                          {comment.replies.map((reply) => (
+                            <div key={reply.id} className="text-sm p-2 bg-muted rounded">
+                              {reply.content}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </ScrollArea>
 
-              {enableTemplates && (
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowTemplateDialog(true)}
-                    className="w-full"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Pipeline Templates
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Main Canvas Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Top Toolbar */}
-          <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                {!showStageLibrary && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowStageLibrary(true)}
-                  >
-                    <Layers className="h-4 w-4 mr-2" />
-                    Stages
-                  </Button>
-                )}
-                
-                <div className="flex items-center space-x-2">
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex space-x-2">
                   <Input
-                    value={pipeline.name}
-                    onChange={(e) => setPipeline(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-64"
-                    placeholder="Pipeline name..."
+                    placeholder="Add a comment..."
+                    className="flex-1"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                        addComment('pipeline', 'pipeline', e.currentTarget.value.trim());
+                        e.currentTarget.value = '';
+                      }
+                    }}
                   />
-                  <Badge variant={pipeline.status === 'draft' ? 'secondary' : 'default'}>
-                    {pipeline.status}
-                  </Badge>
+                  <Button size="sm">
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
-              <div className="flex items-center space-x-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <ZoomOut className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Zoom Out</TooltipContent>
-                </Tooltip>
+// Advanced Template Browser Component
+const AdvancedTemplateBrowser: React.FC<{
+  onTemplateSelect: (template: PipelineTemplate) => void;
+  onClose: () => void;
+}> = ({ onTemplateSelect, onClose }) => {
+  const [templates, setTemplates] = useState<PipelineTemplate[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedComplexity, setSelectedComplexity] = useState('all');
+  const [sortBy, setSortBy] = useState('popularity');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedTemplate, setSelectedTemplate] = useState<PipelineTemplate | null>(null);
 
-                <span className="text-sm text-slate-500 min-w-[4rem] text-center">
-                  {Math.round(canvasTransform.scale * 100)}%
-                </span>
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(template => {
+      const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           template.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
+      const matchesComplexity = selectedComplexity === 'all' || template.complexity === selectedComplexity;
+      
+      return matchesSearch && matchesCategory && matchesComplexity;
+    });
+  }, [templates, searchQuery, selectedCategory, selectedComplexity]);
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <ZoomIn className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Zoom In</TooltipContent>
-                </Tooltip>
+  const sortedTemplates = useMemo(() => {
+    return [...filteredTemplates].sort((a, b) => {
+      switch (sortBy) {
+        case 'popularity':
+          return (b.marketplace?.downloads || 0) - (a.marketplace?.downloads || 0);
+        case 'rating':
+          const aRating = a.marketplace?.ratings?.reduce((acc, r) => acc + r.rating, 0) / (a.marketplace?.ratings?.length || 1) || 0;
+          const bRating = b.marketplace?.ratings?.reduce((acc, r) => acc + r.rating, 0) / (b.marketplace?.ratings?.length || 1) || 0;
+          return bRating - aRating;
+        case 'recent':
+          return new Date(b.marketplace?.lastUpdated || 0).getTime() - new Date(a.marketplace?.lastUpdated || 0).getTime();
+        case 'name':
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+  }, [filteredTemplates, sortBy]);
 
-                <Separator orientation="vertical" className="h-6" />
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-6xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Enterprise Template Library</DialogTitle>
+          <DialogDescription>
+            Choose from enterprise-grade pipeline templates with advanced features and validations.
+          </DialogDescription>
+        </DialogHeader>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowTemplateDialog(true)}
-                    >
-                      <Package className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Templates</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Save className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Save Pipeline</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowExecutionDialog(true)}
-                      disabled={!pipeline.stages.length || isExecuting}
-                    >
-                      {isExecuting ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </motion.div>
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Execute Pipeline</TooltipContent>
-                </Tooltip>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setShowAdvancedConfig(true)}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Advanced Configuration
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowResourceDialog(true)}>
-                      <Cpu className="h-4 w-4 mr-2" />
-                      Resource Management
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Pipeline
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import Pipeline
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+        {/* Search and Filters */}
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search templates, tags, or descriptions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          </div>
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Object.keys(ENTERPRISE_STAGE_TEMPLATES).map(category => (
+                  <SelectItem key={category} value={category}>
+                    {ENTERPRISE_STAGE_TEMPLATES[category as keyof typeof ENTERPRISE_STAGE_TEMPLATES].category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Pipeline Canvas */}
-          <div 
-            ref={containerRef}
-            className="flex-1 relative overflow-hidden bg-slate-50 dark:bg-slate-900"
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onWheel={handleCanvasWheel}
-            onDrop={handleCanvasDrop}
-            onDragOver={handleCanvasDragOver}
-          >
-            {/* Grid Background */}
-            <svg
-              className="absolute inset-0 w-full h-full"
-              style={{
-                backgroundImage: `
-                  radial-gradient(circle, #e2e8f0 1px, transparent 1px)
-                `,
-                backgroundSize: `${20 * canvasTransform.scale}px ${20 * canvasTransform.scale}px`,
-                backgroundPosition: `${canvasTransform.x}px ${canvasTransform.y}px`
-              }}
-            />
+            <Select value={selectedComplexity} onValueChange={setSelectedComplexity}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Complexity" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+                <SelectItem value="expert">Expert</SelectItem>
+              </SelectContent>
+            </Select>
 
-            {/* Pipeline Canvas */}
-            <svg
-              ref={canvasRef}
-              className="absolute inset-0 w-full h-full"
-              style={{
-                cursor: isDragging ? 'grabbing' : 'grab'
-              }}
-            >
-              <g transform={`translate(${canvasTransform.x}, ${canvasTransform.y}) scale(${canvasTransform.scale})`}>
-                {/* Render Connections */}
-                {pipeline.connections.map((connection) => {
-                  const sourceStage = pipeline.stages.find(s => s.id === connection.source_stage_id);
-                  const targetStage = pipeline.stages.find(s => s.id === connection.target_stage_id);
-                  
-                  if (!sourceStage || !targetStage) return null;
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="popularity">Popularity</SelectItem>
+                <SelectItem value="rating">Rating</SelectItem>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+              </SelectContent>
+            </Select>
 
-                  const flowConfig = CONDITIONAL_FLOW_TYPES[connection.type as keyof typeof CONDITIONAL_FLOW_TYPES];
-                  
-                  return (
-                    <g key={connection.id}>
-                      <motion.path
-                        d={`M ${sourceStage.position.x + 120} ${sourceStage.position.y + 40} 
-                            L ${targetStage.position.x} ${targetStage.position.y + 40}`}
-                        stroke={flowConfig.color}
-                        strokeWidth={selectedConnection === connection.id ? 3 : 2}
-                        strokeDasharray={connection.type === 'CONDITIONAL' ? '5,5' : 'none'}
-                        fill="none"
-                        markerEnd="url(#arrowhead)"
-                        className="cursor-pointer hover:stroke-opacity-80"
-                        onClick={() => setSelectedConnection(connection.id)}
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 0.5 }}
-                      />
-                      
-                      {/* Connection Label */}
-                      <text
-                        x={(sourceStage.position.x + targetStage.position.x + 120) / 2}
-                        y={(sourceStage.position.y + targetStage.position.y) / 2 - 10}
-                        textAnchor="middle"
-                        className="text-xs fill-slate-600 dark:fill-slate-300"
-                      >
-                        {flowConfig.label}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* Arrow Marker Definition */}
-                <defs>
-                  <marker
-                    id="arrowhead"
-                    markerWidth="10"
-                    markerHeight="7"
-                    refX="9"
-                    refY="3.5"
-                    orient="auto"
-                  >
-                    <polygon
-                      points="0 0, 10 3.5, 0 7"
-                      fill="#64748b"
-                    />
-                  </marker>
-                </defs>
-
-                {/* Render Stages */}
-                {pipeline.stages.map((stage) => {
-                  const stageConfig = CROSS_SPA_PIPELINE_STAGES[stage.type.toUpperCase() as keyof typeof CROSS_SPA_PIPELINE_STAGES];
-                  if (!stageConfig) return null;
-
-                  return (
-                    <motion.g
-                      key={stage.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <foreignObject
-                        x={stage.position.x}
-                        y={stage.position.y}
-                        width={240}
-                        height={80}
-                        className="cursor-move"
-                      >
-                        <div
-                          className={`
-                            relative bg-white dark:bg-slate-800 rounded-lg border-2 shadow-lg
-                            hover:shadow-xl transition-all duration-200
-                            ${selectedStage === stage.id ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-slate-200 dark:border-slate-700'}
-                            ${hoveredStage === stage.id ? 'scale-105' : ''}
-                          `}
-                          onClick={() => setSelectedStage(stage.id)}
-                          onMouseEnter={() => setHoveredStage(stage.id)}
-                          onMouseLeave={() => setHoveredStage(null)}
-                        >
-                          {/* Stage Header */}
-                          <div className={`flex items-center space-x-3 p-3 bg-gradient-to-r ${stageConfig.gradient} rounded-t-lg`}>
-                            <stageConfig.icon className="h-5 w-5 text-white" />
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-white text-sm truncate">
-                                {stage.name}
-                              </h4>
-                              <p className="text-white/80 text-xs truncate">
-                                {stageConfig.spa_integration}
-                              </p>
-                            </div>
-                            <div className="flex space-x-1">
-                              {stage.status === 'running' && (
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                >
-                                  <RefreshCw className="h-4 w-4 text-white" />
-                                </motion.div>
-                              )}
-                              {stage.status === 'completed' && (
-                                <CheckCircle className="h-4 w-4 text-white" />
-                              )}
-                              {stage.status === 'failed' && (
-                                <XCircle className="h-4 w-4 text-white" />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Stage Content */}
-                          <div className="p-3">
-                            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3" />
-                                <span>{Math.round(stage.metadata.estimated_duration / 60)}m</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Target className="h-3 w-3" />
-                                <span>{stage.configuration.steps.length} steps</span>
-                              </div>
-                              <Badge variant="secondary" className="text-xs">
-                                {stage.metadata.category}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* Connection Points */}
-                          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          </div>
-                          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          </div>
-
-                          {/* Stage Actions */}
-                          {selectedStage === stage.id && (
-                            <div className="absolute -top-2 -right-2 flex space-x-1">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeStage(stage.id);
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </foreignObject>
-                    </motion.g>
-                  );
-                })}
-              </g>
-            </svg>
-
-            {/* Empty State */}
-            {pipeline.stages.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center max-w-md">
-                  <Workflow className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
-                    Start Building Your Pipeline
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-400 mb-6">
-                    Drag stages from the library or use a template to get started with your data governance pipeline.
-                  </p>
-                  <div className="flex justify-center space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowTemplateDialog(true)}
-                    >
-                      <Package className="h-4 w-4 mr-2" />
-                      Use Template
-                    </Button>
-                    <Button
-                      onClick={() => setShowStageLibrary(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Stage
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Pipeline Stats Footer */}
-          <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-3">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-6 text-slate-600 dark:text-slate-300">
-                <div className="flex items-center space-x-1">
-                  <Layers className="h-4 w-4" />
-                  <span>{pipeline.stages.length} stages</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <GitBranch className="h-4 w-4" />
-                  <span>{pipeline.connections.length} connections</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>~{Math.round(pipeline.estimated_duration / 60)} minutes</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Target className="h-4 w-4" />
-                  <span>Complexity: {pipeline.complexity_score.toFixed(1)}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                {isValidating && (
-                  <Badge variant="secondary" className="text-xs">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="mr-1"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                    </motion.div>
-                    Validating
-                  </Badge>
-                )}
-                
-                <Badge variant={pipeline.status === 'valid' ? 'default' : 'secondary'}>
-                  {pipeline.status}
-                </Badge>
-              </div>
+            <div className="flex items-center space-x-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Properties Panel */}
-        <AnimatePresence>
-          {showProperties && selectedStage && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 360, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 overflow-hidden"
-            >
-              {(() => {
-                const stage = pipeline.stages.find(s => s.id === selectedStage);
-                if (!stage) return null;
-
-                const stageConfig = CROSS_SPA_PIPELINE_STAGES[stage.type.toUpperCase() as keyof typeof CROSS_SPA_PIPELINE_STAGES];
-
-                return (
-                  <div className="h-full flex flex-col">
-                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">Stage Properties</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedStage(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg bg-gradient-to-r ${stageConfig.gradient}`}>
-                          <stageConfig.icon className="h-4 w-4 text-white" />
-                        </div>
+        {/* Template Grid/List */}
+        <ScrollArea className="max-h-[50vh]">
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-2'}>
+            {sortedTemplates.map((template) => (
+              <Card 
+                key={template.id}
+                className={`cursor-pointer hover:shadow-lg transition-shadow ${
+                  selectedTemplate?.id === template.id ? 'ring-2 ring-blue-500' : ''
+                }`}
+                onClick={() => setSelectedTemplate(template)}
+              >
+                {viewMode === 'grid' ? (
+                  <>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="font-medium text-slate-900 dark:text-slate-100">{stage.name}</h4>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{stageConfig.spa_integration}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <ScrollArea className="flex-1">
-                      <div className="p-4 space-y-6">
-                        {/* Basic Information */}
-                        <div>
-                          <Label htmlFor="stage-name" className="text-sm font-medium">Stage Name</Label>
-                          <Input
-                            id="stage-name"
-                            value={stage.name}
-                            onChange={(e) => setPipeline(prev => ({
-                              ...prev,
-                              stages: prev.stages.map(s => 
-                                s.id === selectedStage ? { ...s, name: e.target.value } : s
-                              )
-                            }))}
-                            className="mt-1"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="stage-description" className="text-sm font-medium">Description</Label>
-                          <Textarea
-                            id="stage-description"
-                            value={stage.description}
-                            onChange={(e) => setPipeline(prev => ({
-                              ...prev,
-                              stages: prev.stages.map(s => 
-                                s.id === selectedStage ? { ...s, description: e.target.value } : s
-                              )
-                            }))}
-                            className="mt-1"
-                            rows={3}
-                          />
-                        </div>
-
-                        {/* Resource Requirements */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-3">Resource Requirements</h4>
-                          <div className="space-y-3">
-                            <div>
-                              <Label className="text-xs text-slate-600 dark:text-slate-400">CPU Cores</Label>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Slider
-                                  value={[stage.configuration.resource_requirements.cpu]}
-                                  onValueChange={([value]) => setPipeline(prev => ({
-                                    ...prev,
-                                    stages: prev.stages.map(s => 
-                                      s.id === selectedStage ? {
-                                        ...s,
-                                        configuration: {
-                                          ...s.configuration,
-                                          resource_requirements: {
-                                            ...s.configuration.resource_requirements,
-                                            cpu: value
-                                          }
-                                        }
-                                      } : s
-                                    )
-                                  }))}
-                                  max={16}
-                                  min={0.5}
-                                  step={0.5}
-                                  className="flex-1"
-                                />
-                                <span className="text-sm text-slate-600 dark:text-slate-400 min-w-[3rem]">
-                                  {stage.configuration.resource_requirements.cpu}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label className="text-xs text-slate-600 dark:text-slate-400">Memory (GB)</Label>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Slider
-                                  value={[stage.configuration.resource_requirements.memory]}
-                                  onValueChange={([value]) => setPipeline(prev => ({
-                                    ...prev,
-                                    stages: prev.stages.map(s => 
-                                      s.id === selectedStage ? {
-                                        ...s,
-                                        configuration: {
-                                          ...s.configuration,
-                                          resource_requirements: {
-                                            ...s.configuration.resource_requirements,
-                                            memory: value
-                                          }
-                                        }
-                                      } : s
-                                    )
-                                  }))}
-                                  max={64}
-                                  min={1}
-                                  step={1}
-                                  className="flex-1"
-                                />
-                                <span className="text-sm text-slate-600 dark:text-slate-400 min-w-[3rem]">
-                                  {stage.configuration.resource_requirements.memory}GB
-                                </span>
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label className="text-xs text-slate-600 dark:text-slate-400">Storage (GB)</Label>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Slider
-                                  value={[stage.configuration.resource_requirements.storage]}
-                                  onValueChange={([value]) => setPipeline(prev => ({
-                                    ...prev,
-                                    stages: prev.stages.map(s => 
-                                      s.id === selectedStage ? {
-                                        ...s,
-                                        configuration: {
-                                          ...s.configuration,
-                                          resource_requirements: {
-                                            ...s.configuration.resource_requirements,
-                                            storage: value
-                                          }
-                                        }
-                                      } : s
-                                    )
-                                  }))}
-                                  max={100}
-                                  min={0.1}
-                                  step={0.1}
-                                  className="flex-1"
-                                />
-                                <span className="text-sm text-slate-600 dark:text-slate-400 min-w-[3rem]">
-                                  {stage.configuration.resource_requirements.storage}GB
-                                </span>
-                              </div>
-                            </div>
+                          <CardTitle className="text-lg">{template.name}</CardTitle>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge variant="secondary">{template.category}</Badge>
+                            <Badge variant={
+                              template.complexity === 'expert' ? 'destructive' :
+                              template.complexity === 'advanced' ? 'default' :
+                              template.complexity === 'intermediate' ? 'secondary' :
+                              'outline'
+                            }>
+                              {template.complexity}
+                            </Badge>
                           </div>
                         </div>
-
-                        {/* Execution Settings */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-3">Execution Settings</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm">Parallel Execution</Label>
-                              <Switch
-                                checked={stage.configuration.parallel_execution}
-                                onCheckedChange={(checked) => setPipeline(prev => ({
-                                  ...prev,
-                                  stages: prev.stages.map(s => 
-                                    s.id === selectedStage ? {
-                                      ...s,
-                                      configuration: {
-                                        ...s.configuration,
-                                        parallel_execution: checked
-                                      }
-                                    } : s
-                                  )
-                                }))}
-                              />
-                            </div>
-
-                            <div>
-                              <Label className="text-sm">Timeout (minutes)</Label>
-                              <Input
-                                type="number"
-                                value={Math.round(stage.configuration.timeout / 60000)}
-                                onChange={(e) => setPipeline(prev => ({
-                                  ...prev,
-                                  stages: prev.stages.map(s => 
-                                    s.id === selectedStage ? {
-                                      ...s,
-                                      configuration: {
-                                        ...s.configuration,
-                                        timeout: parseInt(e.target.value) * 60000
-                                      }
-                                    } : s
-                                  )
-                                }))}
-                                className="mt-1"
-                                min="1"
-                              />
-                            </div>
-
-                            <div>
-                              <Label className="text-sm">Max Retries</Label>
-                              <Input
-                                type="number"
-                                value={stage.configuration.retry_policy.max_retries}
-                                onChange={(e) => setPipeline(prev => ({
-                                  ...prev,
-                                  stages: prev.stages.map(s => 
-                                    s.id === selectedStage ? {
-                                      ...s,
-                                      configuration: {
-                                        ...s.configuration,
-                                        retry_policy: {
-                                          ...s.configuration.retry_policy,
-                                          max_retries: parseInt(e.target.value)
-                                        }
-                                      }
-                                    } : s
-                                  )
-                                }))}
-                                className="mt-1"
-                                min="0"
-                                max="10"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Stage Steps */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-3">Pipeline Steps</h4>
-                          <div className="space-y-2">
-                            {stage.configuration.steps.map((step, index) => (
-                              <Card key={step.id} className="p-3">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                                      {index + 1}
-                                    </span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                                      {step.name}
-                                    </h5>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                      {step.description}
-                                    </p>
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">
-                                    {Math.round(step.estimated_duration / 60)}m
-                                  </Badge>
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Health Status */}
-                        <div>
-                          <h4 className="text-sm font-medium mb-3">Health Status</h4>
-                          <div className="flex items-center space-x-2">
-                            {stage.health === 'healthy' && (
-                              <>
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                <span className="text-sm text-green-600 dark:text-green-400">Healthy</span>
-                              </>
-                            )}
-                            {stage.health === 'degraded' && (
-                              <>
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                <span className="text-sm text-yellow-600 dark:text-yellow-400">Degraded</span>
-                              </>
-                            )}
-                            {stage.health === 'failed' && (
-                              <>
-                                <XCircle className="h-4 w-4 text-red-500" />
-                                <span className="text-sm text-red-600 dark:text-red-400">Failed</span>
-                              </>
-                            )}
-                            {stage.health === 'unknown' && (
-                              <>
-                                <Circle className="h-4 w-4 text-slate-400" />
-                                <span className="text-sm text-slate-500 dark:text-slate-400">Unknown</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  </div>
-                );
-              })()}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Pipeline Templates Dialog */}
-        <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Pipeline Templates</DialogTitle>
-              <DialogDescription>
-                Choose from pre-built pipeline templates to get started quickly.
-              </DialogDescription>
-            </DialogHeader>
-
-            <ScrollArea className="max-h-[60vh]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-1">
-                {Object.entries(PIPELINE_TEMPLATES).map(([key, template]) => (
-                  <Card 
-                    key={key}
-                    className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedTemplate === key ? 'ring-2 ring-blue-500' : ''}`}
-                    onClick={() => setSelectedTemplate(key)}
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">{template.category}</Badge>
-                        <Badge variant={template.complexity === 'high' ? 'destructive' : template.complexity === 'medium' ? 'default' : 'secondary'}>
-                          {template.complexity}
-                        </Badge>
+                        {template.marketplace?.certification && (
+                          <Badge variant="default">
+                            <Award className="h-3 w-3 mr-1" />
+                            Certified
+                          </Badge>
+                        )}
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                    
+                    <CardContent className="pt-0">
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {template.description}
                       </p>
                       
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500">Estimated Duration:</span>
-                          <span className="font-medium">{Math.round(template.estimated_duration / 3600)} hours</span>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Duration:</span>
+                          <span>{Math.round(template.estimatedDuration / 3600)}h</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-500">Stages:</span>
-                          <span className="font-medium">{template.stages.length}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Stages:</span>
+                          <span>{template.stages.length}</span>
                         </div>
+                        {template.marketplace && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Downloads:</span>
+                              <span>{template.marketplace.downloads}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Rating:</span>
+                              <div className="flex items-center">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span className="ml-1">
+                                  {(template.marketplace.ratings?.reduce((acc, r) => acc + r.rating, 0) / 
+                                    Math.max(1, template.marketplace.ratings?.length || 0)).toFixed(1)}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
 
-                      <div className="mt-4">
-                        <h5 className="text-sm font-medium mb-2">Included Stages:</h5>
-                        <div className="flex flex-wrap gap-1">
-                          {template.stages.slice(0, 4).map((stageType) => {
-                            const stageConfig = CROSS_SPA_PIPELINE_STAGES[stageType.toUpperCase() as keyof typeof CROSS_SPA_PIPELINE_STAGES];
-                            return (
-                              <Badge key={stageType} variant="outline" className="text-xs">
-                                {stageConfig.name}
-                              </Badge>
-                            );
-                          })}
-                          {template.stages.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{template.stages.length - 4} more
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {template.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {template.tags.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{template.tags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </>
+                ) : (
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h4 className="font-medium">{template.name}</h4>
+                          <Badge variant="secondary">{template.category}</Badge>
+                          <Badge variant="outline">{template.complexity}</Badge>
+                          {template.marketplace?.certification && (
+                            <Badge variant="default">
+                              <Award className="h-3 w-3 mr-1" />
+                              Certified
                             </Badge>
                           )}
                         </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {template.description}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => selectedTemplate && applyTemplate(selectedTemplate)}
-                disabled={!selectedTemplate}
-              >
-                Apply Template
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Pipeline Execution Dialog */}
-        <Dialog open={showExecutionDialog} onOpenChange={setShowExecutionDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Execute Pipeline</DialogTitle>
-              <DialogDescription>
-                Review pipeline configuration and start execution.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                <h4 className="font-medium mb-2">Pipeline Summary</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-500">Stages:</span>
-                    <span className="ml-2 font-medium">{pipeline.stages.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Connections:</span>
-                    <span className="ml-2 font-medium">{pipeline.connections.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Est. Duration:</span>
-                    <span className="ml-2 font-medium">{Math.round(pipeline.estimated_duration / 60)} minutes</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Complexity:</span>
-                    <span className="ml-2 font-medium">{pipeline.complexity_score.toFixed(1)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {pipeline.stages.length === 0 && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>No Stages</AlertTitle>
-                  <AlertDescription>
-                    Add at least one stage to the pipeline before execution.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowExecutionDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleExecutePipeline}
-                disabled={!pipeline.stages.length || isExecuting}
-              >
-                {isExecuting ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="mr-2"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </motion.div>
-                    Executing...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Execute Pipeline
-                  </>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div>{template.stages.length} stages</div>
+                        <div>{Math.round(template.estimatedDuration / 3600)}h duration</div>
+                        {template.marketplace && (
+                          <div className="flex items-center mt-1">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <span className="ml-1">
+                              {(template.marketplace.ratings?.reduce((acc, r) => acc + r.rating, 0) / 
+                                Math.max(1, template.marketplace.ratings?.length || 0)).toFixed(1)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
                 )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
 
-        {/* Resource Management Dialog */}
-        <Dialog open={showResourceDialog} onOpenChange={setShowResourceDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Resource Management</DialogTitle>
-              <DialogDescription>
-                Configure resource allocation and monitoring for the pipeline.
-              </DialogDescription>
-            </DialogHeader>
-
-            <Tabs defaultValue="allocation" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="allocation">Allocation</TabsTrigger>
-                <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-                <TabsTrigger value="optimization">Optimization</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="allocation" className="space-y-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Total Resource Requirements</h4>
+        {/* Template Preview */}
+        {selectedTemplate && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Template Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h5 className="font-medium mb-2">Overview</h5>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {selectedTemplate.documentation?.overview || selectedTemplate.description}
+                  </p>
                   
-                  {Object.entries(RESOURCE_TYPES).map(([key, config]) => {
-                    const totalUsage = pipeline.stages.reduce((acc, stage) => {
-                      const requirement = stage.configuration.resource_requirements[key.toLowerCase() as keyof typeof stage.configuration.resource_requirements];
-                      return acc + (typeof requirement === 'number' ? requirement : parseFloat(requirement as string) || 0);
-                    }, 0);
-
-                    return (
-                      <div key={key} className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label>{config.name}</Label>
-                          <span className="text-sm text-slate-600 dark:text-slate-400">
-                            {totalUsage.toFixed(1)} {config.unit}
-                          </span>
+                  <h5 className="font-medium mb-2">Requirements</h5>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {selectedTemplate.documentation?.requirements?.map((req, index) => (
+                      <li key={index}>• {req}</li>
+                    )) || <li>• No specific requirements</li>}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium mb-2">Pipeline Structure</h5>
+                  <div className="space-y-2">
+                    {selectedTemplate.stages.map((stage, index) => (
+                      <div key={stage.id} className="flex items-center space-x-2 text-sm">
+                        <div className="w-4 h-4 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                          {index + 1}
                         </div>
-                        <Progress value={(totalUsage / config.max) * 100} className="h-2" />
+                        <span>{stage.name}</span>
+                        <Badge variant="outline" className="text-xs">{stage.type}</Badge>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </TabsContent>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <TabsContent value="monitoring" className="space-y-4">
-                <div className="text-center py-8">
-                  <Monitor className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h4 className="font-medium mb-2">Real-time Resource Monitoring</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Monitor resource usage during pipeline execution
-                  </p>
-                </div>
-              </TabsContent>
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => selectedTemplate && onTemplateSelect(selectedTemplate)}
+            disabled={!selectedTemplate}
+          >
+            Use Template
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
-              <TabsContent value="optimization" className="space-y-4">
-                <div className="text-center py-8">
-                  <Zap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h4 className="font-medium mb-2">AI-Powered Optimization</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Get AI recommendations for optimal resource allocation
-                  </p>
-                </div>
-              </TabsContent>
-            </Tabs>
+  return (
+    <TooltipProvider>
+      <div className={`flex h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${className}`}>
+        {/* Enhanced Canvas with AI */}
+        <div className="flex-1 relative">
+          <EnhancedPipelineCanvas
+            pipeline={pipeline}
+            onPipelineChange={onPipelineChange}
+            canvasState={canvasState}
+            onCanvasStateChange={onCanvasStateChange}
+            aiBuilder={aiBuilder}
+          />
+          
+          {/* Real-time Collaboration */}
+          <RealTimeCollaboration
+            pipelineId={pipeline.id}
+            currentUser={currentUser}
+            onCollaborationChange={onCollaborationChange}
+          />
+        </div>
 
-            <div className="flex justify-end">
-              <Button onClick={() => setShowResourceDialog(false)}>
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Advanced Template Browser */}
+        {showTemplateDialog && (
+          <AdvancedTemplateBrowser
+            onTemplateSelect={handleTemplateSelect}
+            onClose={() => setShowTemplateDialog(false)}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
