@@ -913,21 +913,19 @@ export const ErrorHandlingFramework: React.FC<ErrorHandlingFrameworkProps> = ({
           <div className="space-y-4">
             {RECOVERY_STRATEGIES.map((strategy) => {
               const Icon = strategy.icon;
-              const successRate = Math.random() * 100; // Mock data
+              const successRate = recoveryEffectiveness?.strategy_success_rates?.[strategy.id] || 0; // Real backend data
               return (
                 <div key={strategy.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                      <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    </div>
+                    <Icon className="h-5 w-5 text-blue-500" />
                     <div>
-                      <div className="font-medium">{strategy.name}</div>
-                      <div className="text-sm text-muted-foreground">{strategy.category}</div>
+                      <h4 className="font-medium">{strategy.name}</h4>
+                      <p className="text-sm text-muted-foreground">{strategy.description}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{successRate.toFixed(1)}%</div>
-                    <div className="text-sm text-muted-foreground">Success Rate</div>
+                    <div className="text-lg font-semibold">{successRate.toFixed(1)}%</div>
+                    <div className="text-xs text-muted-foreground">Success Rate</div>
                   </div>
                 </div>
               );
@@ -1078,11 +1076,11 @@ export const ErrorHandlingFramework: React.FC<ErrorHandlingFrameworkProps> = ({
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <div className="text-center">
-                  <div className="font-medium">{pattern.frequency || Math.floor(Math.random() * 100)}</div>
+                  <div className="font-medium">{pattern.frequency || errorPatterns?.pattern_frequency?.[pattern.id] || 0}</div>
                   <div className="text-muted-foreground">Occurrences</div>
                 </div>
                 <div className="text-center">
-                  <div className="font-medium">{pattern.confidence || (Math.random() * 100).toFixed(1)}%</div>
+                  <div className="font-medium">{pattern.confidence || errorPatterns?.pattern_confidence?.[pattern.id]?.toFixed(1) || '0.0'}%</div>
                   <div className="text-muted-foreground">Confidence</div>
                 </div>
                 <Button variant="outline" size="sm">
@@ -1224,7 +1222,7 @@ export const ErrorHandlingFramework: React.FC<ErrorHandlingFrameworkProps> = ({
                   {recovery.success ? "Success" : "Failed"}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {recovery.executionTime || Math.floor(Math.random() * 1000)}ms
+                  {recovery.executionTime || recoveryMetrics?.execution_times?.[recovery.id] || 'N/A'}ms
                 </span>
                 <Button variant="ghost" size="sm">
                   <Eye className="h-4 w-4" />
