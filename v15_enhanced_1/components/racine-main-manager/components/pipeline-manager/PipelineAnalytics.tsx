@@ -271,42 +271,48 @@ const ANALYTICS_CATEGORIES = [
     name: 'Performance',
     description: 'Execution time, throughput, and resource utilization',
     icon: Gauge,
-    color: 'blue'
+    color: 'blue',
+    unit: 'ms'
   },
   {
     id: 'reliability',
     name: 'Reliability',
     description: 'Success rates, error patterns, and availability',
     icon: Shield,
-    color: 'green'
+    color: 'green',
+    unit: '%'
   },
   {
     id: 'efficiency',
     name: 'Efficiency',
     description: 'Resource optimization and cost effectiveness',
     icon: Zap,
-    color: 'yellow'
+    color: 'yellow',
+    unit: 'x'
   },
   {
     id: 'quality',
     name: 'Quality',
     description: 'Data quality metrics and validation results',
     icon: Target,
-    color: 'purple'
+    color: 'purple',
+    unit: 'pts'
   },
   {
     id: 'usage',
     name: 'Usage',
     description: 'User interactions and system utilization',
     icon: Users,
-    color: 'orange'
+    color: 'orange',
+    unit: 'req/sec'
   },
   {
     id: 'compliance',
     name: 'Compliance',
     description: 'Governance rules and regulatory compliance',
     icon: FileText,
-    color: 'red'
+    color: 'red',
+    unit: 'pts'
   }
 ];
 
@@ -804,37 +810,29 @@ export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
         {ANALYTICS_CATEGORIES.map((category) => {
           const Icon = category.icon;
           const trendDirection = trendAnalysis[`${category.id}Trend` as keyof typeof trendAnalysis];
-          const score = Math.random() * 100; // Mock score
+          const score = analyticsMetrics?.category_scores?.[category.id] || 0; // Real backend analytics
           
           return (
             <Card key={category.id} className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 bg-${category.color}-100 dark:bg-${category.color}-900 rounded-lg`}>
-                      <Icon className={`h-4 w-4 text-${category.color}-600 dark:text-${category.color}-400`} />
-                    </div>
-                    <div>
-                      <div className="font-medium">{category.name}</div>
-                      <div className="text-sm text-muted-foreground">{category.description}</div>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <h3 className="font-medium">{category.name}</h3>
+                    <p className="text-sm text-muted-foreground">{category.description}</p>
                   </div>
-                  {trendDirection === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
-                  {trendDirection === 'down' && <TrendingDown className="h-4 w-4 text-red-500" />}
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Score</span>
-                    <span className="font-medium">{score.toFixed(0)}/100</span>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">{score.toFixed(1)}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    {trendDirection === 'up' ? (
+                      <TrendingUp className="h-3 w-3 text-green-500" />
+                    ) : trendDirection === 'down' ? (
+                      <TrendingDown className="h-3 w-3 text-red-500" />
+                    ) : null}
+                    {category.unit}
                   </div>
-                  <Progress value={score} className="h-2" />
                 </div>
-                
-                <Button variant="outline" size="sm" className="w-full">
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                </Button>
               </div>
             </Card>
           );
@@ -1073,7 +1071,7 @@ export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
         {ANALYTICS_CATEGORIES.map((category) => {
           const Icon = category.icon;
           const trend = trendAnalysis[`${category.id}Trend` as keyof typeof trendAnalysis];
-          const change = (Math.random() - 0.5) * 20; // Mock change percentage
+          const change = analyticsMetrics?.category_changes?.[category.id] || 0; // Real backend trend data
           
           return (
             <Card key={category.id} className="p-4">
@@ -1213,7 +1211,7 @@ export const PipelineAnalytics: React.FC<PipelineAnalyticsProps> = ({
                     Learn More
                   </Button>
                   <div className="text-sm text-muted-foreground">
-                    Confidence: {insight.confidence || Math.floor(Math.random() * 30 + 70)}%
+                    Confidence: {insight.confidence || analyticsMetrics?.insight_confidence?.[insight.id] || 70}%
                   </div>
                 </div>
               </div>

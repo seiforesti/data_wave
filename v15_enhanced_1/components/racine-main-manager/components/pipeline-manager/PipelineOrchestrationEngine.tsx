@@ -434,9 +434,9 @@ const PipelineOrchestrationEngine: React.FC<PipelineOrchestrationEngineProps> = 
       cpu: spa.resource_requirements.cpu,
       memory: spa.resource_requirements.memory,
       storage: spa.resource_requirements.storage,
-      utilization: Math.random() * 100 // In real implementation, get from backend
+      utilization: orchestrationMetrics?.spa_utilization?.[spa.spa_id] || 0 // Real backend data
     }));
-  }, []);
+  }, [orchestrationMetrics]);
 
   // Execution Timeline Data
   const executionTimelineData = useMemo(() => {
