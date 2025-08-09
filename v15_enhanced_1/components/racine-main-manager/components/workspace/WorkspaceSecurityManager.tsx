@@ -48,6 +48,12 @@ import { useAIAssistant } from '../../hooks/useAIAssistant'
 import { useCrossGroupIntegration } from '../../hooks/useCrossGroupIntegration'
 
 import { 
+  activityTrackingAPI, 
+  rbacAdminAPI, 
+  workspaceManagementAPI as wsAPI 
+} from '../../services'
+
+import { 
   WorkspaceConfiguration, 
   WorkspaceMember,
   WorkspaceResource,
@@ -228,117 +234,188 @@ const WorkspaceSecurityManager: React.FC = () => {
     return () => clearInterval(interval)
   }, [selectedWorkspace, selectedTimeRange])
 
-  // Mock API functions (these would connect to actual backend)
+  // Backend API functions using activityTrackingAPI
   const fetchSecurityEvents = async (workspaceId: string, timeRange: string): Promise<SecurityEvent[]> => {
-    // This would call the actual backend API
-    return [
-      {
-        id: 'evt-001',
-        type: 'suspicious_activity',
-        severity: 'high',
-        userId: 'user-001',
-        userName: 'John Doe',
-        workspaceId,
-        workspaceName: 'Production Workspace',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        details: { action: 'multiple_failed_logins', attempts: 5 },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        location: { country: 'US', city: 'New York', coordinates: [40.7128, -74.0060] },
-        resolved: false
-      },
-      {
-        id: 'evt-002',
-        type: 'access_denied',
-        severity: 'medium',
-        userId: 'user-002',
-        userName: 'Jane Smith',
-        workspaceId,
-        workspaceName: 'Development Workspace',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        details: { resource: 'sensitive-dataset', reason: 'insufficient_permissions' },
-        ipAddress: '10.0.0.50',
-        userAgent: 'Chrome/96.0...',
-        resolved: true,
-        assignedTo: 'security-team'
-      }
-    ]
+    try {
+      const endDate = new Date().toISOString()
+      const startDate = new Date(Date.now() - (timeRange === '1d' ? 86400000 : timeRange === '7d' ? 604800000 : timeRange === '30d' ? 2592000000 : 7776000000)).toISOString()
+      
+      const response = await activityTrackingAPI.getActivitiesByWorkspace(workspaceId, {
+        start_date: startDate,
+        end_date: endDate,
+        activity_types: ['security_event', 'access_violation', 'authentication_failure', 'suspicious_activity'],
+        include_metadata: true
+      })
+
+      // Transform backend activity records to SecurityEvent format
+      return response.activities.map(activity => ({
+        id: activity.id,
+        type: activity.activity_type as any,
+        severity: activity.metadata?.severity || 'medium',
+        userId: activity.user_id,
+        userName: activity.metadata?.user_name || 'Unknown',
+        workspaceId: activity.workspace_id || workspaceId,
+        workspaceName: activity.metadata?.workspace_name || 'Unknown',
+        timestamp: activity.timestamp,
+        details: activity.metadata?.details || {},
+        ipAddress: activity.metadata?.ip_address || 'Unknown',
+        userAgent: activity.metadata?.user_agent || 'Unknown',
+        location: activity.metadata?.location,
+        resolved: activity.metadata?.resolved || false,
+        assignedTo: activity.metadata?.assigned_to,
+        notes: activity.metadata?.notes
+      }))
+    } catch (error) {
+      console.error('Error fetching security events:', error)
+      return []
+    }
   }
 
   const fetchThreatIntelligence = async (workspaceId: string): Promise<ThreatIntelligence[]> => {
-    return [
-      {
-        id: 'threat-001',
-        type: 'unauthorized_access',
-        riskLevel: 'critical',
-        description: 'Detected unusual access patterns from external IP addresses',
-        indicators: ['IP: 203.0.113.0', 'User-Agent: Suspicious Bot'],
-        mitigations: ['Block IP range', 'Enable MFA', 'Review access logs'],
-        affectedResources: ['workspace-prod', 'dataset-sensitive'],
-        detectionTime: new Date(Date.now() - 1800000).toISOString(),
-        status: 'investigating',
-        analyst: 'security-analyst-01'
-      }
-    ]
+    try {
+      const response = await activityTrackingAPI.getAnomalies({
+        workspace_id: workspaceId,
+        anomaly_types: ['security_threat', 'unauthorized_access', 'suspicious_activity'],
+        time_range: '24h',
+        include_analysis: true
+      })
+
+      // Transform backend anomalies to ThreatIntelligence format
+      return response.anomalies.map(anomaly => ({
+        id: anomaly.id,
+        type: anomaly.anomaly_type as any,
+        riskLevel: anomaly.severity,
+        description: anomaly.description,
+        indicators: anomaly.metadata?.indicators || [],
+        mitigations: anomaly.metadata?.recommended_actions || [],
+        affectedResources: anomaly.metadata?.affected_resources || [],
+        detectionTime: anomaly.detected_at,
+        status: anomaly.status === 'active' ? 'active' : anomaly.status === 'resolved' ? 'resolved' : 'investigating',
+        analyst: anomaly.metadata?.assigned_analyst
+      }))
+    } catch (error) {
+      console.error('Error fetching threat intelligence:', error)
+      return []
+    }
   }
 
   const fetchComplianceFrameworks = async (workspaceId: string): Promise<ComplianceFramework[]> => {
-    return [
-      {
-        id: 'gdpr-001',
-        name: 'GDPR',
-        version: '2018',
-        requirements: [
-          {
-            id: 'gdpr-art-32',
-            title: 'Security of processing',
-            description: 'Implement appropriate technical and organizational measures',
-            category: 'Security',
-            mandatory: true,
-            status: 'compliant',
-            evidence: ['encryption-policy.pdf', 'access-control-matrix.xlsx'],
-            lastChecked: new Date().toISOString(),
-            responsibleParty: 'Data Protection Officer'
-          }
-        ],
-        status: 'compliant',
-        lastAssessment: new Date(Date.now() - 86400000 * 30).toISOString(),
-        nextAssessment: new Date(Date.now() + 86400000 * 60).toISOString(),
-        complianceScore: 95
-      }
-    ]
+    try {
+      const response = await rbacAdminAPI.getComplianceFrameworks({
+        workspace_id: workspaceId,
+        include_requirements: true,
+        include_assessment_history: true
+      })
+
+      // Transform backend compliance data to ComplianceFramework format
+      return response.frameworks.map(framework => ({
+        id: framework.id,
+        name: framework.name,
+        version: framework.version,
+        requirements: framework.requirements?.map(req => ({
+          id: req.id,
+          title: req.title,
+          description: req.description,
+          category: req.category,
+          mandatory: req.mandatory,
+          status: req.compliance_status,
+          evidence: req.evidence_files || [],
+          lastChecked: req.last_checked,
+          responsibleParty: req.responsible_party
+        })) || [],
+        status: framework.compliance_status,
+        lastAssessment: framework.last_assessment,
+        nextAssessment: framework.next_assessment,
+        complianceScore: framework.compliance_score
+      }))
+    } catch (error) {
+      console.error('Error fetching compliance frameworks:', error)
+      return []
+    }
   }
 
   const fetchSecurityMetrics = async (workspaceId: string, timeRange: string): Promise<SecurityMetrics> => {
-    return {
-      overallSecurityScore: 85,
-      threatLevel: 'medium',
-      activeThreats: 3,
-      resolvedThreats: 15,
-      complianceScore: 92,
-      accessViolations: 2,
-      securityIncidents: 1,
-      vulnerabilities: {
-        critical: 0,
-        high: 2,
-        medium: 5,
-        low: 12
-      },
-      trends: {
-        period: timeRange,
-        securityScore: [82, 84, 83, 85, 86, 85, 85],
-        threatCount: [5, 4, 6, 3, 2, 3, 3],
-        complianceScore: [90, 91, 90, 92, 93, 92, 92]
+    try {
+      const endDate = new Date().toISOString()
+      const startDate = new Date(Date.now() - (timeRange === '1d' ? 86400000 : timeRange === '7d' ? 604800000 : timeRange === '30d' ? 2592000000 : 7776000000)).toISOString()
+      
+      // Fetch security analytics from activity tracking
+      const securityAnalytics = await activityTrackingAPI.getActivityAnalytics({
+        workspace_id: workspaceId,
+        start_date: startDate,
+        end_date: endDate,
+        analytics_types: ['security_metrics', 'threat_analysis', 'compliance_metrics'],
+        include_trends: true
+      })
+
+      // Fetch workspace security status
+      const securityStatus = await wsAPI.getWorkspaceSecurity(workspaceId)
+
+      return {
+        overallSecurityScore: securityStatus.security_score || 85,
+        threatLevel: securityStatus.threat_level || 'medium',
+        activeThreats: securityAnalytics.metrics?.active_threats || 0,
+        resolvedThreats: securityAnalytics.metrics?.resolved_threats || 0,
+        complianceScore: securityStatus.compliance_score || 90,
+        accessViolations: securityAnalytics.metrics?.access_violations || 0,
+        securityIncidents: securityAnalytics.metrics?.security_incidents || 0,
+        vulnerabilities: {
+          critical: securityStatus.vulnerabilities?.critical || 0,
+          high: securityStatus.vulnerabilities?.high || 0,
+          medium: securityStatus.vulnerabilities?.medium || 0,
+          low: securityStatus.vulnerabilities?.low || 0
+        },
+        trends: {
+          period: timeRange,
+          securityScore: securityAnalytics.trends?.security_score || [],
+          threatCount: securityAnalytics.trends?.threat_count || [],
+          complianceScore: securityAnalytics.trends?.compliance_score || []
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching security metrics:', error)
+      return {
+        overallSecurityScore: 0,
+        threatLevel: 'unknown',
+        activeThreats: 0,
+        resolvedThreats: 0,
+        complianceScore: 0,
+        accessViolations: 0,
+        securityIncidents: 0,
+        vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 },
+        trends: { period: timeRange, securityScore: [], threatCount: [], complianceScore: [] }
       }
     }
   }
 
   const fetchSecurityPolicies = async (workspaceId: string): Promise<SecurityPolicy[]> => {
-    return []
+    try {
+      const response = await rbacAdminAPI.getSecurityPolicies({
+        workspace_id: workspaceId,
+        include_rules: true,
+        include_enforcement_history: true
+      })
+
+      return response.policies || []
+    } catch (error) {
+      console.error('Error fetching security policies:', error)
+      return []
+    }
   }
 
   const fetchAccessControlRules = async (workspaceId: string): Promise<AccessControl[]> => {
-    return []
+    try {
+      const response = await rbacAdminAPI.getAccessControlRules({
+        workspace_id: workspaceId,
+        include_permissions: true,
+        include_inheritance: true
+      })
+
+      return response.access_rules || []
+    } catch (error) {
+      console.error('Error fetching access control rules:', error)
+      return []
+    }
   }
 
   // Filtered and sorted data
@@ -358,8 +435,21 @@ const WorkspaceSecurityManager: React.FC = () => {
   const handleCreateSecurityPolicy = async () => {
     try {
       setIsLoading(true)
-      // Create security policy via API
-      console.log('Creating security policy:', newPolicyForm)
+      
+      await rbacAdminAPI.createSecurityPolicy({
+        workspace_id: selectedWorkspace,
+        name: newPolicyForm.name,
+        description: newPolicyForm.description,
+        category: newPolicyForm.category,
+        severity: newPolicyForm.severity,
+        rules: newPolicyForm.rules,
+        enabled: newPolicyForm.enabled
+      })
+
+      // Refresh security policies
+      const updatedPolicies = await fetchSecurityPolicies(selectedWorkspace)
+      setSecurityPolicies(updatedPolicies)
+      
       setShowCreatePolicy(false)
       setNewPolicyForm({
         name: '',
@@ -379,12 +469,14 @@ const WorkspaceSecurityManager: React.FC = () => {
   const handleResolveSecurityEvent = async (eventId: string) => {
     try {
       setIsLoading(true)
-      // Resolve security event via API
-      setSecurityEvents(prev => 
-        prev.map(event => 
-          event.id === eventId ? { ...event, resolved: true } : event
-        )
-      )
+      
+      await activityTrackingAPI.updateActivity(eventId, {
+        metadata: { resolved: true, resolved_at: new Date().toISOString(), resolved_by: currentUser?.id }
+      })
+
+      // Refresh security events
+      const updatedEvents = await fetchSecurityEvents(selectedWorkspace, selectedTimeRange)
+      setSecurityEvents(updatedEvents)
     } catch (error) {
       console.error('Error resolving security event:', error)
     } finally {
@@ -395,12 +487,17 @@ const WorkspaceSecurityManager: React.FC = () => {
   const handleMitigateThreat = async (threatId: string) => {
     try {
       setIsLoading(true)
-      // Mitigate threat via API
-      setThreatIntelligence(prev => 
-        prev.map(threat => 
-          threat.id === threatId ? { ...threat, status: 'mitigated' } : threat
-        )
-      )
+      
+      await activityTrackingAPI.resolveAnomaly(threatId, {
+        resolution_status: 'mitigated',
+        resolution_notes: 'Threat mitigated through security controls',
+        resolved_by: currentUser?.id,
+        mitigation_actions: ['security_policy_applied', 'access_restricted']
+      })
+
+      // Refresh threat intelligence
+      const updatedThreats = await fetchThreatIntelligence(selectedWorkspace)
+      setThreatIntelligence(updatedThreats)
     } catch (error) {
       console.error('Error mitigating threat:', error)
     } finally {

@@ -216,6 +216,8 @@ import { useCrossGroupIntegration } from '../../hooks/useCrossGroupIntegration';
 import { useUserManagement } from '../../hooks/useUserManagement';
 import { useAIAssistant } from '../../hooks/useAIAssistant';
 
+import { collaborationAPI, activityTrackingAPI } from '../../services';
+
 // Types
 import {
   RacineWorkspace,
@@ -438,93 +440,100 @@ export const CollaborativeWorkspaces: React.FC = () => {
   // COMPUTED VALUES AND MEMOIZED DATA
   // ============================================================================
 
-  // Sample collaboration sessions
-  const sampleSessions = useMemo((): CollaborationSession[] => {
+  // Load collaboration sessions from backend
+  const loadCollaborationSessions = useCallback(async (): Promise<CollaborationSession[]> => {
     if (!currentUser || !currentWorkspace) return [];
 
-    return [
-      {
-        id: 'session-1' as UUID,
-        workspaceId: currentWorkspace.id,
-        name: 'Data Governance Review',
-        description: 'Collaborative review of data governance policies and procedures',
-        participants: [
-          {
-            userId: currentUser.id,
-            userDetails: {
-              id: currentUser.id,
-              workspaceId: currentWorkspace.id,
-              userId: currentUser.id,
-              role: WorkspaceRole.ADMIN,
-              permissions: [],
-              joinedAt: new Date().toISOString() as ISODateString,
-              lastActiveAt: new Date().toISOString() as ISODateString,
-              isActive: true
-            },
-            joinedAt: new Date().toISOString() as ISODateString,
-            role: 'owner',
-            isOnline: true,
-            lastSeenAt: new Date().toISOString() as ISODateString,
-            cursor: { x: 150, y: 200, color: '#3b82f6' },
-            currentView: 'workspace-overview'
-          }
-        ],
-        status: 'active',
-        type: 'workspace',
-        sharedResources: [],
-        activeEditors: [currentUser.id],
+    try {
+      const response = await collaborationAPI.getCollaborationSpaces({
+        workspace_id: currentWorkspace.id,
+        include_participants: true,
+        include_messages: false,
+        status: 'active'
+      })
+
+      return response.spaces.map(space => ({
+        id: space.id,
+        workspaceId: space.workspace_id,
+        name: space.name,
+        description: space.description,
+        participants: space.participants?.map(p => ({
+          userId: p.user_id,
+          userDetails: {
+            id: p.user_id,
+            workspaceId: space.workspace_id,
+            userId: p.user_id,
+            role: p.role as WorkspaceRole,
+            permissions: p.permissions || [],
+            joinedAt: p.joined_at,
+            lastActiveAt: p.last_active_at,
+            isActive: p.is_active
+          },
+          joinedAt: p.joined_at,
+          role: p.collaboration_role || 'member',
+          isOnline: p.presence?.is_online || false,
+          lastSeenAt: p.presence?.last_seen || p.last_active_at,
+          cursor: p.presence?.cursor_position,
+          currentView: p.presence?.current_view
+        })) || [],
+        status: space.status,
+        type: space.space_type as any,
+        sharedResources: space.shared_resources || [],
+        activeEditors: space.active_editors || [],
         chatMessages: [],
-        annotations: [],
-        isPublic: false,
-        allowGuests: true,
-        recordSession: true,
-        enableVoiceChat: true,
-        enableVideoChat: false,
-        enableScreenShare: true,
-        startedAt: new Date().toISOString() as ISODateString,
-        lastActivityAt: new Date().toISOString() as ISODateString,
-        createdBy: currentUser.id
-      }
-    ];
+        annotations: space.annotations || [],
+        isPublic: space.is_public,
+        allowGuests: space.allow_guests,
+        recordSession: space.settings?.record_session || false,
+        enableVoiceChat: space.settings?.enable_voice_chat || false,
+        enableVideoChat: space.settings?.enable_video_chat || false,
+        enableScreenShare: space.settings?.enable_screen_share || false,
+        startedAt: space.created_at,
+        lastActivityAt: space.last_activity_at,
+        createdBy: space.created_by
+      }))
+    } catch (error) {
+      console.error('Error loading collaboration sessions:', error)
+      return []
+    }
   }, [currentUser, currentWorkspace]);
 
-  // Sample chat messages
-  const sampleMessages = useMemo((): ChatMessage[] => {
-    if (!currentUser || !currentSession) return [];
+  // Load chat messages from backend
+  const loadChatMessages = useCallback(async (sessionId: UUID): Promise<ChatMessage[]> => {
+    if (!currentUser || !sessionId) return [];
 
-    return [
-      {
-        id: 'msg-1' as UUID,
-        sessionId: currentSession.id,
-        senderId: currentUser.id,
-        senderDetails: {
-          id: currentUser.id,
-          workspaceId: currentSession.workspaceId,
-          userId: currentUser.id,
-          role: WorkspaceRole.ADMIN,
-          permissions: [],
-          joinedAt: new Date().toISOString() as ISODateString,
-          lastActiveAt: new Date().toISOString() as ISODateString,
-          isActive: true
-        },
-        content: 'Welcome to the collaborative workspace! Let\'s review the data governance policies together.',
-        type: 'text',
-        mentions: [],
-        attachments: [],
-        reactions: [
-          {
-            emoji: '👍',
-            users: [currentUser.id],
-            addedAt: new Date().toISOString() as ISODateString
-          }
-        ],
-        isEdited: false,
-        isDeleted: false,
-        sentAt: new Date().toISOString() as ISODateString,
-        readBy: { [currentUser.id]: new Date().toISOString() as ISODateString }
-      }
-    ];
-  }, [currentUser, currentSession]);
+    try {
+      const response = await collaborationAPI.getMessages(sessionId, {
+        include_reactions: true,
+        include_attachments: true,
+        limit: 100,
+        order: 'desc'
+      })
+
+      return response.messages.map(msg => ({
+        id: msg.id,
+        sessionId: sessionId,
+        senderId: msg.sender_id,
+        senderDetails: msg.sender_details,
+        content: msg.content,
+        type: msg.message_type,
+        mentions: msg.mentions || [],
+        attachments: msg.attachments || [],
+        reactions: msg.reactions?.map(r => ({
+          emoji: r.emoji,
+          users: r.user_ids,
+          addedAt: r.added_at
+        })) || [],
+        isEdited: msg.is_edited,
+        isDeleted: msg.is_deleted,
+        sentAt: msg.sent_at,
+        readBy: msg.read_by || {}
+      }))
+    } catch (error) {
+      console.error('Error loading chat messages:', error)
+      return []
+    }
+  }, [currentUser]);
 
   // Online participants
   const onlineParticipants = useMemo(() => {
@@ -710,23 +719,46 @@ export const CollaborativeWorkspaces: React.FC = () => {
   // ============================================================================
 
   /**
-   * Initialize component
+   * Initialize component and load collaboration sessions
    */
   useEffect(() => {
-    if (sessions.length === 0 && currentUser && currentWorkspace) {
-      setSessions(sampleSessions);
-      setCurrentSession(sampleSessions[0]);
+    const initializeCollaboration = async () => {
+      if (currentUser && currentWorkspace) {
+        try {
+          setIsLoading(true)
+          const loadedSessions = await loadCollaborationSessions()
+          setSessions(loadedSessions)
+          if (loadedSessions.length > 0 && !currentSession) {
+            setCurrentSession(loadedSessions[0])
+          }
+        } catch (error) {
+          console.error('Error initializing collaboration:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
     }
-  }, [sessions.length, currentUser, currentWorkspace, sampleSessions]);
+
+    initializeCollaboration()
+  }, [currentUser, currentWorkspace, loadCollaborationSessions]);
 
   /**
-   * Initialize chat messages
+   * Load chat messages when session changes
    */
   useEffect(() => {
-    if (chatMessages.length === 0 && currentSession) {
-      setChatMessages(sampleMessages);
+    const loadMessages = async () => {
+      if (currentSession) {
+        try {
+          const messages = await loadChatMessages(currentSession.id)
+          setChatMessages(messages)
+        } catch (error) {
+          console.error('Error loading chat messages:', error)
+        }
+      }
     }
-  }, [chatMessages.length, currentSession, sampleMessages]);
+
+    loadMessages()
+  }, [currentSession, loadChatMessages]);
 
   /**
    * Auto-scroll chat to bottom

@@ -293,6 +293,8 @@ import { useAIAssistant } from '../../hooks/useAIAssistant';
 import { useJobWorkflowSpace } from '../../hooks/useJobWorkflowSpace';
 import { usePipelineManagement } from '../../hooks/usePipelineManagement';
 
+import { workspaceManagementAPI, dashboardAPI, activityTrackingAPI } from '../../services';
+
 // Types
 import {
   RacineWorkspace,
@@ -851,165 +853,158 @@ export const WorkspaceAnalytics: React.FC = () => {
     return { start, end };
   }, [filters.timeRange, filters.customDateRange]);
 
-  // Sample analytics metrics
-  const sampleMetrics = useMemo((): WorkspaceAnalyticsMetrics => {
-    return {
-      // Usage metrics
-      totalUsers: 1247,
-      activeUsers: 892,
-      dailyActiveUsers: 156,
-      weeklyActiveUsers: 534,
-      monthlyActiveUsers: 892,
-      sessionDuration: 2340, // seconds
-      pageViews: 15670,
-      uniqueVisitors: 1089,
-      
-      // Performance metrics
-      averageLoadTime: 1.2, // seconds
-      errorRate: 0.5, // percentage
-      uptime: 99.8, // percentage
-      throughput: 1250, // requests per minute
-      responseTime: 145, // milliseconds
-      resourceUtilization: 68, // percentage
-      
-      // Collaboration metrics
-      totalProjects: 89,
-      activeProjects: 34,
-      completedTasks: 1456,
-      pendingTasks: 234,
-      teamCollaboration: 78, // score
-      sharedResources: 156,
-      
-      // Cost metrics
-      totalCost: 12450.50,
-      costPerUser: 13.96,
-      costPerProject: 139.89,
-      resourceCosts: {
-        'compute': 4500.00,
-        'storage': 2800.00,
-        'network': 1200.00,
-        'licenses': 3950.50
-      },
-      optimizationSavings: 2340.75,
-      
-      // Security metrics
-      securityScore: 94,
-      vulnerabilities: 3,
-      complianceScore: 97,
-      accessViolations: 1,
-      dataBreaches: 0,
-      
-      // SPA-specific metrics
-      spaMetrics: {
-        'data-sources': {
-          usage: 95,
-          performance: 92,
-          errors: 2,
-          users: 45,
-          resources: 123,
-          lastActivity: new Date().toISOString() as ISODateString
-        },
-        'classifications': {
-          usage: 87,
-          performance: 89,
-          errors: 1,
-          users: 23,
-          resources: 67,
-          lastActivity: subDays(new Date(), 1).toISOString() as ISODateString
-        },
-        'compliance-rule': {
-          usage: 78,
-          performance: 94,
-          errors: 0,
-          users: 12,
-          resources: 34,
-          lastActivity: subDays(new Date(), 2).toISOString() as ISODateString
+  // Load analytics metrics from backend
+  const loadAnalyticsMetrics = useCallback(async (): Promise<WorkspaceAnalyticsMetrics> => {
+    if (!currentWorkspace) return {} as WorkspaceAnalyticsMetrics;
+
+    try {
+      const [workspaceAnalytics, dashboardMetrics, activityMetrics] = await Promise.all([
+        workspaceManagementAPI.getWorkspaceAnalytics(currentWorkspace.id, timeRange),
+        dashboardAPI.getDashboardMetrics({
+          workspace_id: currentWorkspace.id,
+          time_range: filters.timeRange,
+          include_cross_group: true
+        }),
+        activityTrackingAPI.getActivityAnalytics({
+          workspace_id: currentWorkspace.id,
+          start_date: timeRange.start,
+          end_date: timeRange.end,
+          analytics_types: ['usage', 'performance', 'collaboration', 'security'],
+          include_trends: true
+        })
+      ]);
+
+      return {
+        // Usage metrics from activity tracking
+        totalUsers: activityMetrics.metrics?.total_users || 0,
+        activeUsers: activityMetrics.metrics?.active_users || 0,
+        dailyActiveUsers: activityMetrics.metrics?.daily_active_users || 0,
+        weeklyActiveUsers: activityMetrics.metrics?.weekly_active_users || 0,
+        monthlyActiveUsers: activityMetrics.metrics?.monthly_active_users || 0,
+        sessionDuration: activityMetrics.metrics?.avg_session_duration || 0,
+        pageViews: activityMetrics.metrics?.page_views || 0,
+        uniqueVisitors: activityMetrics.metrics?.unique_visitors || 0,
+        
+        // Performance metrics from workspace analytics
+        averageLoadTime: workspaceAnalytics.performance?.avg_load_time || 0,
+        errorRate: workspaceAnalytics.performance?.error_rate || 0,
+        uptime: workspaceAnalytics.performance?.uptime || 0,
+        throughput: workspaceAnalytics.performance?.throughput || 0,
+        responseTime: workspaceAnalytics.performance?.response_time || 0,
+        resourceUtilization: workspaceAnalytics.performance?.resource_utilization || 0,
+        
+        // Collaboration metrics from dashboard
+        totalProjects: dashboardMetrics.metrics?.total_projects || 0,
+        activeProjects: dashboardMetrics.metrics?.active_projects || 0,
+        completedTasks: dashboardMetrics.metrics?.completed_tasks || 0,
+        pendingTasks: dashboardMetrics.metrics?.pending_tasks || 0,
+        teamCollaboration: dashboardMetrics.metrics?.collaboration_score || 0,
+        sharedResources: dashboardMetrics.metrics?.shared_resources || 0,
+        
+        // Cost metrics from workspace analytics
+        totalCost: workspaceAnalytics.cost?.total_cost || 0,
+        costPerUser: workspaceAnalytics.cost?.cost_per_user || 0,
+        costPerProject: workspaceAnalytics.cost?.cost_per_project || 0,
+        resourceCosts: workspaceAnalytics.cost?.resource_breakdown || {},
+        optimizationSavings: workspaceAnalytics.cost?.optimization_savings || 0,
+        
+        // Security metrics from activity tracking
+        securityScore: activityMetrics.metrics?.security_score || 0,
+        vulnerabilities: activityMetrics.metrics?.vulnerabilities || 0,
+        complianceScore: activityMetrics.metrics?.compliance_score || 0,
+        accessViolations: activityMetrics.metrics?.access_violations || 0,
+        dataBreaches: activityMetrics.metrics?.data_breaches || 0,
+        
+        // SPA-specific metrics from dashboard
+        spaMetrics: dashboardMetrics.spa_metrics || {},
+        
+        // Cross-group metrics from dashboard
+        crossGroupMetrics: dashboardMetrics.cross_group_metrics || {
+          totalLinks: 0,
+          activeLinks: 0,
+          linkQuality: 0,
+          syncSuccess: 0,
+          conflicts: 0,
+          dataFlow: 0
         }
-      },
-      
-      // Cross-group metrics
-      crossGroupMetrics: {
-        totalLinks: 156,
-        activeLinks: 142,
-        linkQuality: 94,
-        syncSuccess: 98.5,
-        conflicts: 3,
-        dataFlow: 2.5 // GB/hour
-      }
-    };
-  }, []);
+      };
+    } catch (error) {
+      console.error('Error loading analytics metrics:', error);
+      return {} as WorkspaceAnalyticsMetrics;
+    }
+  }, [currentWorkspace, timeRange, filters.timeRange]);
 
-  // Sample insights
-  const sampleInsights = useMemo((): AnalyticsInsight[] => {
-    if (!currentUser) return [];
+  // Load insights from backend
+  const loadAnalyticsInsights = useCallback(async (): Promise<AnalyticsInsight[]> => {
+    if (!currentUser || !currentWorkspace) return [];
 
-    return [
-      {
-        id: 'insight-1' as UUID,
-        type: 'trend',
-        severity: 'info',
-        title: 'User Activity Increasing',
-        description: 'Daily active users have increased by 23% over the past week',
-        impact: 'medium',
-        confidence: 89,
-        metric: 'daily_active_users',
-        currentValue: 156,
-        expectedValue: 127,
-        trend: 'up',
-        actionable: true,
-        suggestedActions: [
-          'Consider scaling compute resources',
-          'Monitor system performance',
-          'Review capacity planning'
-        ],
-        automationAvailable: true,
-        detectedAt: subDays(new Date(), 1).toISOString() as ISODateString
-      },
-      {
-        id: 'insight-2' as UUID,
-        type: 'anomaly',
-        severity: 'warning',
-        title: 'Unusual Error Rate in Classifications SPA',
-        description: 'Error rate has spiked to 3.2% in the last 4 hours, significantly above normal',
-        impact: 'high',
-        confidence: 95,
-        metric: 'error_rate',
-        currentValue: 3.2,
-        expectedValue: 0.8,
-        threshold: 2.0,
-        trend: 'up',
-        actionable: true,
-        suggestedActions: [
-          'Investigate recent deployments',
-          'Check system logs',
-          'Review resource allocation'
-        ],
-        automationAvailable: false,
-        detectedAt: subDays(new Date(), 0.17).toISOString() as ISODateString
-      },
-      {
-        id: 'insight-3' as UUID,
-        type: 'prediction',
-        severity: 'info',
-        title: 'Storage Capacity Warning',
-        description: 'Based on current growth trends, storage will reach 80% capacity in 14 days',
-        impact: 'medium',
-        confidence: 78,
-        metric: 'storage_usage',
-        currentValue: 65,
-        threshold: 80,
-        trend: 'up',
-        actionable: true,
-        suggestedActions: [
-          'Plan storage expansion',
-          'Implement data archiving',
-          'Optimize data retention policies'
-        ],
-        automationAvailable: true,
-        detectedAt: new Date().toISOString() as ISODateString
-      }
-    ];
-  }, [currentUser]);
+    try {
+      const [anomalies, aiInsights, performanceInsights] = await Promise.all([
+        activityTrackingAPI.getAnomalies({
+          workspace_id: currentWorkspace.id,
+          anomaly_types: ['performance', 'usage', 'security', 'cost'],
+          time_range: filters.timeRange,
+          include_analysis: true
+        }),
+        dashboardAPI.getAIInsights({
+          workspace_id: currentWorkspace.id,
+          insight_types: ['trend', 'prediction', 'recommendation'],
+          time_range: filters.timeRange
+        }),
+        workspaceManagementAPI.getWorkspaceAnalytics(currentWorkspace.id, timeRange)
+      ]);
+
+      const insights: AnalyticsInsight[] = [];
+
+      // Transform anomalies to insights
+      anomalies.anomalies.forEach(anomaly => {
+        insights.push({
+          id: anomaly.id,
+          type: 'anomaly',
+          severity: anomaly.severity === 'critical' ? 'error' : anomaly.severity === 'high' ? 'warning' : 'info',
+          title: anomaly.title || `${anomaly.anomaly_type} Anomaly`,
+          description: anomaly.description,
+          impact: anomaly.impact_level || 'medium',
+          confidence: anomaly.confidence_score || 80,
+          metric: anomaly.metric_name || anomaly.anomaly_type,
+          currentValue: anomaly.current_value,
+          expectedValue: anomaly.expected_value,
+          threshold: anomaly.threshold,
+          trend: anomaly.trend_direction || 'stable',
+          actionable: true,
+          suggestedActions: anomaly.metadata?.recommended_actions || [],
+          automationAvailable: anomaly.metadata?.automation_available || false,
+          detectedAt: anomaly.detected_at
+        });
+      });
+
+      // Transform AI insights
+      aiInsights.insights.forEach(insight => {
+        insights.push({
+          id: insight.id,
+          type: insight.insight_type,
+          severity: insight.priority === 'high' ? 'warning' : 'info',
+          title: insight.title,
+          description: insight.description,
+          impact: insight.impact_level,
+          confidence: insight.confidence_score,
+          metric: insight.metric_name,
+          currentValue: insight.current_value,
+          expectedValue: insight.predicted_value,
+          trend: insight.trend_direction,
+          actionable: insight.is_actionable,
+          suggestedActions: insight.recommended_actions || [],
+          automationAvailable: insight.automation_available,
+          detectedAt: insight.generated_at
+        });
+      });
+
+      return insights;
+    } catch (error) {
+      console.error('Error loading analytics insights:', error);
+      return [];
+    }
+  }, [currentUser, currentWorkspace, filters.timeRange, timeRange]);
 
   // Default dashboard widgets
   const defaultWidgets = useMemo((): AnalyticsDashboardWidget[] => {
@@ -1406,7 +1401,7 @@ export const WorkspaceAnalytics: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [sampleMetrics, sampleInsights]);
+  }, [loadAnalyticsMetrics, loadAnalyticsInsights]);
 
   /**
    * Handle insight acknowledgment
@@ -1500,14 +1495,16 @@ export const WorkspaceAnalytics: React.FC = () => {
           setDashboardWidgets(defaultWidgets);
         }
         
-        // Load analytics metrics
+        // Load analytics metrics from backend
         if (!analyticsMetrics) {
-          setAnalyticsMetrics(sampleMetrics);
+          const metrics = await loadAnalyticsMetrics();
+          setAnalyticsMetrics(metrics);
         }
         
-        // Load insights
+        // Load insights from backend
         if (insights.length === 0) {
-          setInsights(sampleInsights);
+          const loadedInsights = await loadAnalyticsInsights();
+          setInsights(loadedInsights);
         }
         
         // Update last update timestamp
@@ -1523,7 +1520,7 @@ export const WorkspaceAnalytics: React.FC = () => {
     };
 
     initializeAnalytics();
-  }, [dashboardWidgets.length, analyticsMetrics, insights.length, currentUser, defaultWidgets, sampleMetrics, sampleInsights]);
+  }, [dashboardWidgets.length, analyticsMetrics, insights.length, currentUser, defaultWidgets, loadAnalyticsMetrics, loadAnalyticsInsights]);
 
   /**
    * Auto-refresh data
