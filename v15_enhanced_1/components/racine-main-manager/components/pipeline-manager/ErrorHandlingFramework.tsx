@@ -913,7 +913,8 @@ export const ErrorHandlingFramework: React.FC<ErrorHandlingFrameworkProps> = ({
           <div className="space-y-4">
             {RECOVERY_STRATEGIES.map((strategy) => {
               const Icon = strategy.icon;
-              const successRate = Math.random() * 100; // Mock data
+              const strategyMetrics = state.recoveryMetrics?.strategies?.find(s => s.strategyId === strategy.id);
+              const successRate = strategyMetrics?.successRate || 0;
               return (
                 <div key={strategy.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">

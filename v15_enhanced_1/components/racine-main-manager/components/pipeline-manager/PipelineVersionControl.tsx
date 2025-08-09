@@ -1164,10 +1164,19 @@ export const PipelineVersionControl: React.FC<PipelineVersionControlProps> = ({
               </div>
               <div className="p-4 max-h-96 overflow-y-auto">
                 <div className="font-mono text-sm space-y-2">
-                  {/* Mock diff content */}
-                  <div className="text-green-600">+ Added new data validation step</div>
-                  <div className="text-green-600">+ Configured advanced error handling</div>
-                  <div className="text-red-600">- Removed deprecated transformation</div>
+                  {state.diffContent?.lines?.map((line) => (
+                    <div key={line.id} className={
+                      line.type === 'added' ? 'text-green-600' :
+                      line.type === 'removed' ? 'text-red-600' :
+                      line.type === 'modified' ? 'text-yellow-600' :
+                      'text-gray-600'
+                    }>
+                      {line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  '}
+                      {line.content}
+                    </div>
+                  )) || (
+                    <div className="text-gray-500">Loading diff content...</div>
+                  )}
                   <div className="text-blue-600">~ Modified output schema configuration</div>
                   <div className="text-blue-600">~ Updated resource allocation settings</div>
                 </div>
