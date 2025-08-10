@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { useDataSourceCatalogQuery } from "@/hooks/useDataSources"
-
 // Import enhanced enterprise APIs for catalog discovery
 import { 
   useDiscoverAndCatalogSchemaMutation,

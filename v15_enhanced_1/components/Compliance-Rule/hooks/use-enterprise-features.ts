@@ -1546,22 +1546,6 @@ export const ComplianceHooks = {
   useComplianceDataSources
 }
 
-// Export individual hooks for direct use
-export {
-  useEnterpriseFeatures,
-  useComplianceMonitoring,
-  useRiskAssessment,
-  useFrameworkIntegration,
-  useAuditFeatures,
-  useWorkflowIntegration,
-  useAnalyticsIntegration,
-  useEvidenceManagement,
-  useIntegrationManagement,
-  useComplianceRules,
-  useComplianceTemplates,
-  useComplianceIssues,
-  useComplianceAnalytics,
-  useComplianceDataSources
-}
+// Individual hooks are already exported at their declaration points
 
 export default ComplianceHooks

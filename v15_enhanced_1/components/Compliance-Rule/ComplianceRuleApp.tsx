@@ -11,11 +11,13 @@ import { ComplianceIssueList } from "./components/ComplianceIssueList"
 import { ComplianceReports } from "./components/ComplianceReports"
 import { ComplianceIntegrations } from "./components/ComplianceIntegrations"
 import { ComplianceWorkflows } from "./components/ComplianceWorkflows"
-import { useComplianceRules } from "./hooks/useComplianceRules"
-import { useComplianceIssues } from "./hooks/useComplianceIssues"
-import { useComplianceDashboard } from "./hooks/useComplianceDashboard"
+import { 
+  useComplianceRules, 
+  useComplianceIssues, 
+  useComplianceAnalytics as useComplianceDashboard,
+  useIntegrationManagement as useIntegrations 
+} from "./hooks/use-enterprise-features"
 import { useNotifications } from "@/components/Scan-Rule-Sets/hooks/useNotifications"
-import { useIntegrations } from "./hooks/useIntegrations"
 import { useWorkflows } from "./hooks/useWorkflows"
 import { useReports } from "./hooks/useReports" // Import for reports hooks
 import type { ComplianceRule, ComplianceReport, IntegrationConfig, ComplianceWorkflow } from "./types"

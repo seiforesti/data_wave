@@ -54,12 +54,12 @@ interface ComplianceRuleDetailsProps {
 export function ComplianceRuleDetails({ 
   isOpen, 
   onClose, 
-  requirement, 
+  requirement: initialRequirement, 
   onEdit, 
   onDelete 
 }: ComplianceRuleDetailsProps) {
   // State
-  const [requirement, setRequirement] = useState<ComplianceRequirement | null>(null)
+  const [requirement, setRequirement] = useState<ComplianceRequirement | null>(initialRequirement || null)
   const [assessmentHistory, setAssessmentHistory] = useState<any[]>([])
   const [evidenceFiles, setEvidenceFiles] = useState<any[]>([])
   const [relatedRequirements, setRelatedRequirements] = useState<ComplianceRequirement[]>([])

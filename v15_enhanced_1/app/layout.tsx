@@ -12,8 +12,15 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Data Governance Platform",
-  description: "A comprehensive data governance application built with Next.js and shadcn/ui.",
+  title: 'Enterprise Data Governance Platform',
+  description: 'Advanced data governance platform with AI-powered insights and enterprise security',
+  keywords: 'data governance, enterprise, AI, security, compliance, analytics',
+  authors: [{ name: 'Data Governance Team' }],
+  openGraph: {
+    title: 'Enterprise Data Governance Platform',
+    description: 'Advanced data governance platform with AI-powered insights',
+    type: 'website'
+  },
   generator: "v0.dev",
 }
 

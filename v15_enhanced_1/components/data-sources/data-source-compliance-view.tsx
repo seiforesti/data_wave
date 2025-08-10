@@ -377,7 +377,7 @@ export function DataSourceComplianceView({
     if (!dataSource) return null
     
     return {
-    currentStatus: {
+      currentStatus: {
       overallScore: 87,
       lastUpdated: new Date().toISOString(),
       totalRules: 24,
@@ -495,8 +495,9 @@ export function DataSourceComplianceView({
           },
         ],
       },
-    ],
-  }), [])
+    ]
+    };
+  }, [])
 
   // Use API data if available, otherwise fall back to derived data from data source
   const data = complianceData || realComplianceData

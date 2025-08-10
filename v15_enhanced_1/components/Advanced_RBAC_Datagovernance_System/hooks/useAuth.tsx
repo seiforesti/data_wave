@@ -1,7 +1,7 @@
 // useAuth Hook - Maps to backend auth_service.py
 // Provides comprehensive authentication state management and operations
 
-import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { AuthService } from '../services/auth.service';
 import type {
   AuthResponse,
