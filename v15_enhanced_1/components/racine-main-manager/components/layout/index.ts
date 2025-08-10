@@ -18,9 +18,8 @@ export { default as LayoutPersonalization } from './LayoutPersonalization';
 
 // Layout Subcomponents (Quick Actions Integration)
 export { default as QuickLayoutSwitch } from './subcomponents/QuickLayoutSwitch';
-export { default as QuickPaneManager } from './subcomponents/QuickPaneManager';
-export { default as QuickTabControls } from './subcomponents/QuickTabControls';
-export { default as QuickOverlayControls } from './subcomponents/QuickOverlayControls';
+export { default as QuickWorkspaceActions } from './subcomponents/QuickWorkspaceActions';
+export { default as QuickSPANavigator } from './subcomponents/QuickSPANavigator';
 
 // Type Exports
 export type {
@@ -72,3 +71,15 @@ export type {
   UserLayoutPreferences,
   LayoutAdaptation
 } from './LayoutPersonalization';
+
+export type {
+  QuickLayoutSwitchProps
+} from './subcomponents/QuickLayoutSwitch';
+
+export type {
+  QuickWorkspaceActionsProps
+} from './subcomponents/QuickWorkspaceActions';
+
+export type {
+  QuickSPANavigatorProps
+} from './subcomponents/QuickSPANavigator';
