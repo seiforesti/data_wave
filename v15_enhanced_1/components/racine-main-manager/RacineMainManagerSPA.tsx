@@ -160,10 +160,23 @@ import { usePipelineManagement } from './hooks/usePipelineManagement';
 import { useCollaboration } from './hooks/useCollaboration';
 import { usePerformanceMonitoring } from './hooks/usePerformanceMonitoring';
 
-// Racine Components
+// Layout Components (Critical for Enterprise Architecture)
+import { 
+  LayoutContent,
+  DynamicWorkspaceManager,
+  ResponsiveLayoutEngine,
+  ContextualOverlayManager,
+  TabManager,
+  SplitScreenManager,
+  LayoutPersonalization
+} from './components/layout';
+
+// Navigation Components
 import { AppNavbar } from './components/navigation/AppNavbar';
 import { AppSidebar } from './components/navigation/AppSidebar';
 import { GlobalQuickActionsSidebar } from './components/quick-actions-sidebar/GlobalQuickActionsSidebar';
+
+// Core Racine Components  
 import { AIAssistantInterface } from './components/ai-assistant/AIAssistantInterface';
 import { IntelligentDashboardOrchestrator } from './components/intelligent-dashboard/IntelligentDashboardOrchestrator';
 import { ActivityTrackingHub } from './components/activity-tracker/ActivityTrackingHub';
@@ -172,6 +185,15 @@ import { JobWorkflowBuilder } from './components/job-workflow-space/JobWorkflowB
 import { PipelineDesigner } from './components/pipeline-manager/PipelineDesigner';
 import { WorkspaceOrchestrator } from './components/workspace/WorkspaceOrchestrator';
 import { UserProfileManager } from './components/user-management/UserProfileManager';
+
+// Group SPA Orchestrators (Each manages the full SPA for its respective group)
+import { DataSourcesSPAOrchestrator } from './components/spa-orchestrators/DataSourcesSPAOrchestrator';
+import { ScanRuleSetsSPAOrchestrator } from './components/spa-orchestrators/ScanRuleSetsSPAOrchestrator';
+import { ClassificationsSPAOrchestrator } from './components/spa-orchestrators/ClassificationsSPAOrchestrator';
+import { ComplianceRuleSPAOrchestrator } from './components/spa-orchestrators/ComplianceRuleSPAOrchestrator';
+import { AdvancedCatalogSPAOrchestrator } from './components/spa-orchestrators/AdvancedCatalogSPAOrchestrator';
+import { ScanLogicSPAOrchestrator } from './components/spa-orchestrators/ScanLogicSPAOrchestrator';
+import { RBACSystemSPAOrchestrator } from './components/spa-orchestrators/RBACSystemSPAOrchestrator';
 
 // Utilities
 import { formatBytes, formatDuration, formatNumber } from './utils/formatting-utils';
@@ -5931,71 +5953,69 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
     switch (enhancedCurrentView) {
       case ViewMode.DASHBOARD:
         return (
-          <div className="space-y-6">
-            {/* Dashboard Mode Selector */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  Data Governance Command Center
-                </h1>
-                <Badge variant="outline" className="bg-white/50 dark:bg-gray-900/50">
-                  Enterprise Edition
-                </Badge>
+          <DynamicWorkspaceManager>
+            <div className="space-y-6">
+              {/* Dashboard Mode Selector */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    Data Governance Command Center
+                  </h1>
+                  <Badge variant="outline" className="bg-white/50 dark:bg-gray-900/50">
+                    Enterprise Edition
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tabs value={dashboardMode} onValueChange={(v) => handleDashboardModeChange(v as any)}>
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="executive" className="text-xs">Executive</TabsTrigger>
+                      <TabsTrigger value="operational" className="text-xs">Operational</TabsTrigger>
+                      <TabsTrigger value="technical" className="text-xs">Technical</TabsTrigger>
+                      <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFullScreenToggle}
+                    className="bg-white/80 dark:bg-gray-900/80"
+                  >
+                    {fullScreenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSplitViewToggle}
+                    className="bg-white/80 dark:bg-gray-900/80"
+                  >
+                    <Layout className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Tabs value={dashboardMode} onValueChange={(v) => handleDashboardModeChange(v as any)}>
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="executive" className="text-xs">Executive</TabsTrigger>
-                    <TabsTrigger value="operational" className="text-xs">Operational</TabsTrigger>
-                    <TabsTrigger value="technical" className="text-xs">Technical</TabsTrigger>
-                    <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFullScreenToggle}
-                  className="bg-white/80 dark:bg-gray-900/80"
-                >
-                  {fullScreenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSplitViewToggle}
-                  className="bg-white/80 dark:bg-gray-900/80"
-                >
-                  <Layout className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
 
-            {/* Enhanced Dashboard Content */}
-            {splitViewMode ? (
-              <div className="grid grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Primary View</h3>
-                  {renderEnhancedDashboard()}
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Secondary View</h3>
-                  <Card className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
-                    <CardContent className="h-full flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <Monitor className="w-12 h-12 mx-auto text-gray-400" />
-                        <p className="text-gray-500">Secondary view content</p>
-                        <Button variant="outline" size="sm">
-                          Configure View
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            ) : (
-              renderEnhancedDashboard()
-            )}
-          </div>
+              {/* Enhanced Dashboard Content */}
+              {splitViewMode ? (
+                <SplitScreenManager
+                  leftPane={renderEnhancedDashboard()}
+                  rightPane={
+                    <Card className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+                      <CardContent className="h-full flex items-center justify-center">
+                        <div className="text-center space-y-4">
+                          <Monitor className="w-12 h-12 mx-auto text-gray-400" />
+                          <p className="text-gray-500">Secondary view content</p>
+                          <Button variant="outline" size="sm">
+                            Configure View
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  }
+                />
+              ) : (
+                renderEnhancedDashboard()
+              )}
+            </div>
+          </DynamicWorkspaceManager>
         );
 
       case ViewMode.WORKSPACE:
@@ -6003,42 +6023,46 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
 
       case ViewMode.WORKFLOWS:
         return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Intelligent Workflow Management</h2>
-              <div className="flex items-center gap-2">
-                <Button onClick={() => createWorkflowFromTemplate('default')}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Workflow
-                </Button>
-                <Button variant="outline" onClick={() => setCommandPaletteOpen(true)}>
-                  <Search className="w-4 h-4 mr-2" />
-                  Command Palette
-                </Button>
+          <TabManager defaultTab="builder">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Intelligent Workflow Management</h2>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => createWorkflowFromTemplate('default')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Workflow
+                  </Button>
+                  <Button variant="outline" onClick={() => setCommandPaletteOpen(true)}>
+                    <Search className="w-4 h-4 mr-2" />
+                    Command Palette
+                  </Button>
+                </div>
               </div>
+              <JobWorkflowBuilder />
             </div>
-            <JobWorkflowBuilder />
-          </div>
+          </TabManager>
         );
 
       case ViewMode.PIPELINES:
         return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Advanced Pipeline Designer</h2>
-              <div className="flex items-center gap-2">
-                <Button onClick={() => deployStreamingPipeline('new-pipeline', 'production')}>
-                  <GitBranch className="w-4 h-4 mr-2" />
-                  Deploy Pipeline
-                </Button>
-                <Button variant="outline">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Monitor Pipelines
-                </Button>
+          <TabManager defaultTab="designer">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Advanced Pipeline Designer</h2>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => deployStreamingPipeline('new-pipeline', 'production')}>
+                    <GitBranch className="w-4 h-4 mr-2" />
+                    Deploy Pipeline
+                  </Button>
+                  <Button variant="outline">
+                    <Eye className="w-4 h-4 mr-2" />
+                    Monitor Pipelines
+                  </Button>
+                </div>
               </div>
+              <PipelineDesigner />
             </div>
-            <PipelineDesigner />
-          </div>
+          </TabManager>
         );
 
       case ViewMode.AI_ASSISTANT:
@@ -6131,6 +6155,136 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
             </div>
             <UserProfileManager />
           </div>
+        );
+
+      // ============================================================================
+      // DATA GOVERNANCE GROUP SPAs - FULL ROUTING SUPPORT
+      // ============================================================================
+
+      case ViewMode.DATA_SOURCES:
+        return (
+          <LayoutPersonalization groupId="data_sources">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Database className="w-6 h-6 text-blue-500" />
+                  Data Sources Management
+                </h2>
+                <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <DataSourcesSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.SCAN_RULE_SETS:
+        return (
+          <LayoutPersonalization groupId="scan_rule_sets">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Scan className="w-6 h-6 text-green-500" />
+                  Advanced Scan Rule Sets
+                </h2>
+                <Badge variant="outline" className="bg-green-100 dark:bg-green-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <ScanRuleSetsSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.CLASSIFICATIONS:
+        return (
+          <LayoutPersonalization groupId="classifications">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Tag className="w-6 h-6 text-purple-500" />
+                  Data Classifications
+                </h2>
+                <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <ClassificationsSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.COMPLIANCE_RULES:
+        return (
+          <LayoutPersonalization groupId="compliance_rules">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Shield className="w-6 h-6 text-orange-500" />
+                  Compliance Rules
+                </h2>
+                <Badge variant="outline" className="bg-orange-100 dark:bg-orange-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <ComplianceRuleSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.ADVANCED_CATALOG:
+        return (
+          <LayoutPersonalization groupId="advanced_catalog">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Layers className="w-6 h-6 text-indigo-500" />
+                  Advanced Data Catalog
+                </h2>
+                <Badge variant="outline" className="bg-indigo-100 dark:bg-indigo-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <AdvancedCatalogSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.SCAN_LOGIC:
+        return (
+          <LayoutPersonalization groupId="scan_logic">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-yellow-500" />
+                  Advanced Scan Logic
+                </h2>
+                <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <ScanLogicSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
+        );
+
+      case ViewMode.RBAC_SYSTEM:
+        return (
+          <LayoutPersonalization groupId="rbac_system">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <UserCheck className="w-6 h-6 text-red-500" />
+                  RBAC & Security Management
+                </h2>
+                <Badge variant="outline" className="bg-red-100 dark:bg-red-900">
+                  Complete SPA Integration
+                </Badge>
+              </div>
+              <RBACSystemSPAOrchestrator />
+            </div>
+          </LayoutPersonalization>
         );
 
       default:

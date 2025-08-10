@@ -57,7 +57,15 @@ export enum ViewMode {
   AI_ASSISTANT = "ai_assistant",
   ACTIVITY = "activity",
   COLLABORATION = "collaboration",
-  SETTINGS = "settings"
+  SETTINGS = "settings",
+  // Data Governance Group SPAs - Full routing support
+  DATA_SOURCES = "data_sources",
+  SCAN_RULE_SETS = "scan_rule_sets", 
+  CLASSIFICATIONS = "classifications",
+  COMPLIANCE_RULES = "compliance_rules",
+  ADVANCED_CATALOG = "advanced_catalog",
+  SCAN_LOGIC = "scan_logic",
+  RBAC_SYSTEM = "rbac_system"
 }
 
 export enum LayoutMode {
