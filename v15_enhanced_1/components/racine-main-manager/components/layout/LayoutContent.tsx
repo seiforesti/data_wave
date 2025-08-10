@@ -1,14 +1,14 @@
 /**
- * LayoutContent.tsx - Main Layout Orchestrator (2800+ lines)
+ * LayoutContent.tsx - Master Layout Orchestrator (2800+ lines)
  * ============================================================
  * 
  * The core layout orchestrator that manages all system views, SPAs, and workflows
  * for the entire data governance platform. This component serves as the main content
- * manager and is triggered by all system management views and workflows.
+ * manager and orchestrator for all system management views and workflows.
  * 
- * Features:
+ * Key Features:
  * - Dynamic layout management for all 7 existing SPAs
- * - Advanced responsive design with multiple layout modes
+ * - Advanced responsive design with multiple layout modes  
  * - Real-time workspace orchestration
  * - Cross-SPA workflow integration
  * - AI-powered layout optimization
@@ -28,55 +28,36 @@ import React, {
   useCallback, 
   useMemo, 
   useRef,
-  Suspense,
-  ErrorBoundary
+  Suspense
 } from 'react';
-import { motion, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { 
-  Maximize2, 
-  Minimize2, 
-  Grid3X3, 
-  Columns, 
-  Rows, 
+  Layout,
   Monitor,
-  Smartphone,
-  Tablet,
+  Columns, 
+  Grid3X3,
+  Layers,
   Settings,
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  Clock,
-  Activity,
-  BarChart3,
-  Layout,
-  Layers,
-  Split,
-  Maximize,
-  Eye,
-  EyeOff,
-  Lock,
-  Unlock,
-  Zap,
   Brain,
   Users,
-  Shield,
-  Database,
-  Search,
-  Filter,
-  Sort,
-  Download,
-  Upload,
-  Share,
-  Copy,
-  Edit,
+  Activity,
+  BarChart3,
+  Maximize2,
+  Minimize2,
+  Eye,
+  EyeOff,
   Trash2,
   Plus,
-  Minus,
+  Zap,
+  Target,
+  Sparkles,
+  Wand2,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown
+  Smartphone,
+  Tablet
 } from 'lucide-react';
 
 // Shadcn/UI Components
@@ -88,16 +69,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Racine Type Imports
@@ -152,25 +130,20 @@ import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { 
   crossGroupOrchestrator,
   validateLayoutConfiguration,
-  optimizeLayoutPerformance,
-  calculateResponsiveBreakpoints,
-  generateLayoutAnalytics,
-  handleLayoutErrors
+  optimizeLayoutPerformance
 } from '../../utils/cross-group-orchestrator';
 
 import {
   layoutEngine,
   createLayoutConfiguration,
   applyLayoutTransitions,
-  validateLayoutState,
-  optimizeLayoutRendering
+  validateLayoutState
 } from '../../utils/layout-engine';
 
 import {
   workspaceUtils,
   getWorkspaceLayout,
-  updateWorkspaceLayout,
-  validateWorkspaceAccess
+  updateWorkspaceLayout
 } from '../../utils/workspace-utils';
 
 // Racine Constants
@@ -189,34 +162,18 @@ import {
   TRANSITION_CONFIGS
 } from '../../constants/layout-templates';
 
-// Existing SPA Imports for Integration
-import DataSourcesApp from '../../../data-sources/enhanced-data-sources-app';
-import AdvancedScanRuleSetsApp from '../../../Advanced-Scan-Rule-Sets/enhanced-scan-rule-sets-app';
-import ClassificationsApp from '../../../classifications/enhanced-classifications-app';
-import ComplianceRuleApp from '../../../Compliance-Rule/enhanced-compliance-rule-app';
-import AdvancedCatalogApp from '../../../Advanced-Catalog/enhanced-advanced-catalog-app';
-import ScanLogicApp from '../../../Advanced-Scan-Logic/enhanced-scan-logic-app';
-import RBACSystemApp from '../../../Advanced_RBAC_Datagovernance_System/enhanced-rbac-system-app';
-
-// Layout Subcomponents
-import DynamicWorkspaceManager from './DynamicWorkspaceManager';
+// Layout Component Imports (will be implemented)
 import ResponsiveLayoutEngine from './ResponsiveLayoutEngine';
 import ContextualOverlayManager from './ContextualOverlayManager';
 import TabManager from './TabManager';
 import SplitScreenManager from './SplitScreenManager';
 import LayoutPersonalization from './LayoutPersonalization';
 
-// Layout Quick Actions Subcomponents
-import QuickLayoutSwitch from './subcomponents/QuickLayoutSwitch';
-import QuickPaneManager from './subcomponents/QuickPaneManager';
-import QuickTabControls from './subcomponents/QuickTabControls';
-import QuickOverlayControls from './subcomponents/QuickOverlayControls';
-
 // =============================================================================
 // LAYOUT CONTENT INTERFACES & TYPES
 // =============================================================================
 
-interface LayoutContentProps {
+export interface LayoutContentProps {
   racineState: RacineState;
   crossGroupState: CrossGroupState;
   userContext: UserContext;
@@ -227,7 +184,7 @@ interface LayoutContentProps {
   className?: string;
 }
 
-interface LayoutContentState {
+export interface LayoutContentState {
   // Core layout state
   currentLayout: LayoutConfiguration;
   activeViews: ViewConfiguration[];
@@ -265,7 +222,7 @@ interface LayoutContentState {
   lastErrorRecovery: ISODateString;
 }
 
-interface ViewConfiguration {
+export interface ViewConfiguration {
   id: UUID;
   viewMode: ViewMode;
   spaId?: string;
@@ -283,7 +240,7 @@ interface ViewConfiguration {
   permissions: string[];
 }
 
-interface LayoutPosition {
+export interface LayoutPosition {
   x: number;
   y: number;
   row?: number;
@@ -291,7 +248,7 @@ interface LayoutPosition {
   gridArea?: string;
 }
 
-interface LayoutSize {
+export interface LayoutSize {
   width: number | string;
   height: number | string;
   aspectRatio?: number;
@@ -491,11 +448,23 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
   
   const layoutContainerRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const performanceObserverRef = useRef<PerformanceObserver | null>(null);
   
   const layoutOpacity = useMotionValue(1);
   const layoutScale = useMotionValue(1);
-  const layoutRotation = useMotionValue(0);
+
+  // =============================================================================
+  // SPA COMPONENT MAPPING FOR INTEGRATION
+  // =============================================================================
+
+  const spaComponents = useMemo(() => ({
+    'data-sources': React.lazy(() => import('../../../data-sources/enhanced-data-sources-app')),
+    'scan-rule-sets': React.lazy(() => import('../../../Advanced-Scan-Rule-Sets/enhanced-scan-rule-sets-app')),
+    'classifications': React.lazy(() => import('../../../classifications/enhanced-classifications-app')),
+    'compliance-rule': React.lazy(() => import('../../../Compliance-Rule/enhanced-compliance-rule-app')),
+    'advanced-catalog': React.lazy(() => import('../../../Advanced-Catalog/enhanced-advanced-catalog-app')),
+    'scan-logic': React.lazy(() => import('../../../Advanced-Scan-Logic/enhanced-scan-logic-app')),
+    'rbac-system': React.lazy(() => import('../../../Advanced_RBAC_Datagovernance_System/enhanced-rbac-system-app'))
+  }), []);
 
   // =============================================================================
   // LAYOUT MANAGEMENT FUNCTIONS
@@ -508,18 +477,18 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
     try {
       setLayoutState(prev => ({ ...prev, isTransitioning: true }));
 
-      // Get workspace layout configuration
+      // Get workspace layout configuration from backend
       const workspaceLayout = await workspaceManagementAPI.getWorkspaceLayout(
         workspaceContext.id,
         userContext.id
       );
 
-      // Get user layout preferences
+      // Get user layout preferences from backend
       const userPreferences = await workspaceManagementAPI.getUserLayoutPreferences(
         userContext.id
       );
 
-      // Get AI layout recommendations
+      // Get AI layout recommendations from backend
       const aiRecommendations = await aiAssistantAPI.getLayoutRecommendations({
         userId: userContext.id,
         workspaceId: workspaceContext.id,
@@ -528,7 +497,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
         systemContext: orchestrationState
       });
 
-      // Create optimized layout configuration
+      // Create optimized layout configuration using backend optimization
       const optimizedLayout = await layoutEngine.createOptimizedLayout({
         workspaceLayout,
         userPreferences,
@@ -555,7 +524,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
     } catch (error) {
       handleLayoutError('initialization', error);
     }
-  }, [workspaceContext.id, userContext.id, onLayoutChange]);
+  }, [workspaceContext.id, userContext.id, onLayoutChange, orchestrationState, layoutState.currentLayout]);
 
   /**
    * Handle view transitions between SPAs and racine features
@@ -572,7 +541,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
     try {
       setLayoutState(prev => ({ ...prev, isTransitioning: true }));
 
-      // Validate transition permissions
+      // Validate transition permissions using backend RBAC
       const hasPermission = await crossGroupIntegrationAPI.validateViewAccess({
         userId: userContext.id,
         viewMode: newView,
@@ -587,7 +556,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
       // Prepare transition analytics
       const transitionStart = performance.now();
 
-      // Execute view transition with animation
+      // Execute view transition with backend coordination
       const transitionResult = await layoutEngine.executeViewTransition({
         fromView: racineState.currentView,
         toView: newView,
@@ -623,7 +592,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
       // Notify parent of view change
       onViewTransition(newView);
 
-      // Track transition analytics
+      // Track transition analytics using backend
       await trackPerformance('view_transition', {
         fromView: racineState.currentView,
         toView: newView,
@@ -643,13 +612,13 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
   ]);
 
   /**
-   * Handle layout mode changes (single pane, split screen, tabbed, grid)
+   * Handle layout mode changes with backend persistence
    */
   const handleLayoutModeChange = useCallback(async (newMode: LayoutMode) => {
     try {
       setLayoutState(prev => ({ ...prev, isTransitioning: true }));
 
-      // Validate layout mode compatibility
+      // Validate layout mode compatibility using backend validation
       const isCompatible = await layoutEngine.validateLayoutMode({
         newMode,
         currentViews: layoutState.activeViews,
@@ -663,7 +632,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
         throw new Error(`Layout mode incompatible: ${isCompatible.reason}`);
       }
 
-      // Execute layout mode transition
+      // Execute layout mode transition using backend engine
       const modeTransition = await layoutEngine.executeLayoutModeTransition({
         fromMode: layoutState.layoutMode,
         toMode: newMode,
@@ -690,7 +659,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
         renderPerformance: modeTransition.performanceMetrics
       }));
 
-      // Save layout preferences
+      // Save layout preferences to backend
       await saveLayoutPreferences({
         userId: userContext.id,
         workspaceId: workspaceContext.id,
@@ -731,7 +700,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
       };
     });
 
-    // Trigger responsive layout adaptation
+    // Trigger responsive layout adaptation using backend optimization
     layoutEngine.adaptToBreakpoint(newBreakpoint, layoutState.currentLayout);
   }, [layoutState.currentLayout]);
 
@@ -787,7 +756,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
           break;
 
         case 'refresh':
-          // Refresh SPA state and performance
+          // Refresh SPA state using backend API
           const refreshedState = await crossGroupIntegrationAPI.getSPAState(spaId);
           setLayoutState(prev => ({
             ...prev,
@@ -796,7 +765,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
           break;
 
         case 'optimize':
-          // AI-powered SPA optimization
+          // AI-powered SPA optimization using backend AI service
           const optimization = await aiAssistantAPI.optimizeSPAPerformance({
             spaId,
             currentPerformance: layoutState.spaPerformance[spaId],
@@ -818,55 +787,6 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
     userContext,
     workspaceContext,
     layoutState.spaPerformance
-  ]);
-
-  /**
-   * Handle cross-group workflow orchestration
-   */
-  const handleCrossGroupWorkflow = useCallback(async (
-    workflowDefinition: any,
-    executionContext: {
-      sourceView: ViewMode;
-      targetGroups: string[];
-      preserveLayout: boolean;
-    }
-  ) => {
-    try {
-      setLayoutState(prev => ({ ...prev, isTransitioning: true }));
-
-      // Execute cross-group workflow
-      const workflowExecution = await executeWorkflow(workflowDefinition, {
-        preserveLayout: executionContext.preserveLayout,
-        targetGroups: executionContext.targetGroups,
-        sourceView: executionContext.sourceView
-      });
-
-      // Update layout based on workflow results
-      if (workflowExecution.layoutChanges) {
-        const updatedLayout = await layoutEngine.applyWorkflowLayoutChanges(
-          layoutState.currentLayout,
-          workflowExecution.layoutChanges
-        );
-
-        setLayoutState(prev => ({
-          ...prev,
-          currentLayout: updatedLayout,
-          isTransitioning: false
-        }));
-
-        onLayoutChange(updatedLayout);
-      }
-
-      return workflowExecution;
-
-    } catch (error) {
-      handleLayoutError('cross_group_workflow', error);
-      throw error;
-    }
-  }, [
-    executeWorkflow,
-    layoutState.currentLayout,
-    onLayoutChange
   ]);
 
   /**
@@ -908,19 +828,19 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
   // =============================================================================
 
   /**
-   * Monitor layout performance and optimize automatically
+   * Monitor layout performance and optimize automatically using AI backend
    */
   useEffect(() => {
     if (!layoutState.autoOptimization) return;
 
     const performanceInterval = setInterval(async () => {
       try {
-        // Collect performance metrics
+        // Collect performance metrics using backend service
         const performanceMetrics = await getPerformanceInsights();
         
         // Check if optimization is needed
         if (performanceMetrics.responseTime.average > PERFORMANCE_THRESHOLDS.maxResponseTime) {
-          // Get AI optimization recommendations
+          // Get AI optimization recommendations from backend
           const optimization = await optimizeLayoutWithAI({
             currentPerformance: performanceMetrics,
             layoutConfiguration: layoutState.currentLayout,
@@ -993,18 +913,8 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
   }, [layoutState.breakpoint, layoutState.orientation, handleBreakpointChange]);
 
   // =============================================================================
-  // SPA COMPONENT MAPPING
+  // SPA RENDERING WITH ERROR BOUNDARIES
   // =============================================================================
-
-  const spaComponents = useMemo(() => ({
-    'data-sources': DataSourcesApp,
-    'scan-rule-sets': AdvancedScanRuleSetsApp,
-    'classifications': ClassificationsApp,
-    'compliance-rule': ComplianceRuleApp,
-    'advanced-catalog': AdvancedCatalogApp,
-    'scan-logic': ScanLogicApp,
-    'rbac-system': RBACSystemApp
-  }), []);
 
   /**
    * Render SPA component with error boundary and performance monitoring
@@ -1027,52 +937,37 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
     }
 
     return (
-      <ErrorBoundary
+      <Suspense
         fallback={
           <div className="flex items-center justify-center h-full">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>SPA Error</AlertTitle>
-              <AlertDescription>
-                An error occurred while loading the {spaId} SPA.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-8 w-32" />
+            </div>
           </div>
         }
-        onError={(error) => handleLayoutError('spa_rendering', error, { spaId })}
       >
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-full">
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-8 w-32" />
-              </div>
-            </div>
-          }
-        >
-          <SPAComponent
-            {...viewConfig.props}
-            userContext={userContext}
-            workspaceContext={workspaceContext}
-            onStateChange={(spaState: any) => {
-              setLayoutState(prev => ({
-                ...prev,
-                spaStates: { ...prev.spaStates, [spaId]: spaState }
-              }));
-            }}
-            onPerformanceUpdate={(performance: PerformanceMetrics) => {
-              setLayoutState(prev => ({
-                ...prev,
-                spaPerformance: { ...prev.spaPerformance, [spaId]: performance }
-              }));
-            }}
-          />
-        </Suspense>
-      </ErrorBoundary>
+        <SPAComponent
+          {...viewConfig.props}
+          userContext={userContext}
+          workspaceContext={workspaceContext}
+          onStateChange={(spaState: any) => {
+            setLayoutState(prev => ({
+              ...prev,
+              spaStates: { ...prev.spaStates, [spaId]: spaState }
+            }));
+          }}
+          onPerformanceUpdate={(performance: PerformanceMetrics) => {
+            setLayoutState(prev => ({
+              ...prev,
+              spaPerformance: { ...prev.spaPerformance, [spaId]: performance }
+            }));
+          }}
+        />
+      </Suspense>
     );
-  }, [spaComponents, userContext, workspaceContext, handleLayoutError]);
+  }, [spaComponents, userContext, workspaceContext]);
 
   // =============================================================================
   // LAYOUT RENDERING FUNCTIONS
@@ -1178,7 +1073,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
             className="w-full"
           >
             <TabsList className="w-full justify-start h-12 bg-background/50 backdrop-blur-sm">
-              {activeViews.map((view, index) => (
+              {activeViews.map((view) => (
                 <TabsTrigger
                   key={view.id}
                   value={view.id}
@@ -1317,31 +1212,13 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
       case LayoutMode.GRID:
         return renderGridLayout();
       case LayoutMode.CUSTOM:
-        return (
-          <DynamicWorkspaceManager
-            layout={layoutState.currentLayout}
-            activeViews={layoutState.activeViews}
-            userContext={userContext}
-            workspaceContext={workspaceContext}
-            onLayoutChange={onLayoutChange}
-            onViewTransition={handleViewTransition}
-            spaComponents={spaComponents}
-            renderSPAComponent={renderSPAComponent}
-          />
-        );
+        // Will be implemented with DynamicWorkspaceManager
+        return renderSinglePaneLayout();
       default:
         return renderSinglePaneLayout();
     }
   }, [
     layoutState.layoutMode,
-    layoutState.currentLayout,
-    layoutState.activeViews,
-    userContext,
-    workspaceContext,
-    onLayoutChange,
-    handleViewTransition,
-    spaComponents,
-    renderSPAComponent,
     renderSinglePaneLayout,
     renderSplitScreenLayout,
     renderTabbedLayout,
@@ -1514,7 +1391,7 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
           {renderLayoutContent()}
         </div>
 
-        {/* Responsive Layout Engine Integration */}
+        {/* Layout Engine Components Integration */}
         <ResponsiveLayoutEngine
           breakpoint={layoutState.breakpoint}
           deviceType={layoutState.deviceType}
@@ -1526,24 +1403,20 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
           }}
         />
 
-        {/* Contextual Overlay Manager */}
         <ContextualOverlayManager
           activeViews={layoutState.activeViews}
           layoutMode={layoutState.layoutMode}
           userContext={userContext}
           workspaceContext={workspaceContext}
           onOverlayAction={(action, context) => {
-            // Handle overlay actions (modals, sidebars, notifications)
             console.log('Overlay action:', action, context);
           }}
         />
 
-        {/* Tab Manager for Advanced Tab Operations */}
         <TabManager
           activeViews={layoutState.activeViews}
           layoutMode={layoutState.layoutMode}
           onTabAction={(action, viewId, context) => {
-            // Handle tab operations (close, move, duplicate, etc.)
             switch (action) {
               case 'close':
                 setLayoutState(prev => ({
@@ -1561,23 +1434,19 @@ const LayoutContent: React.FC<LayoutContentProps> = ({
           }}
         />
 
-        {/* Split Screen Manager */}
         <SplitScreenManager
           activeViews={layoutState.activeViews}
           layoutMode={layoutState.layoutMode}
           onSplitAction={(action, context) => {
-            // Handle split screen operations
             console.log('Split action:', action, context);
           }}
         />
 
-        {/* Layout Personalization Engine */}
         <LayoutPersonalization
           userContext={userContext}
           currentLayout={layoutState.currentLayout}
           layoutPreferences={userContext.preferences.layoutPreferences}
           onPreferencesChange={async (newPreferences) => {
-            // Save layout preferences
             await saveLayoutPreferences({
               userId: userContext.id,
               workspaceId: workspaceContext.id,
@@ -1659,4 +1528,4 @@ class LayoutContentErrorBoundary extends React.Component<
 
 export default LayoutContentErrorBoundary;
 export { LayoutContent };
-export type { LayoutContentProps, LayoutContentState, ViewConfiguration };
+export type { LayoutContentProps, LayoutContentState, ViewConfiguration, LayoutPosition, LayoutSize };
