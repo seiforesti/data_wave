@@ -786,7 +786,7 @@ export default function ReviewWorkflowEngine({
   const [showInstanceDialog, setShowInstanceDialog] = useState(false);
   const [showWorkflowDesigner, setShowWorkflowDesigner] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [selectedInstances, setSelectedInstances] = new Set<string>());
+  const [selectedInstances, setSelectedInstances] = useState(new Set<string>());
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'kanban' | 'timeline'>('list');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');

@@ -1501,7 +1501,7 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
     impactAnalysis,
     anomalies,
     predictions,
-    analyzePatterns,
+    analyzePatterns: analyzeIntelligencePatterns,
     performSemanticAnalysis,
     assessImpact,
     detectAnomalies,

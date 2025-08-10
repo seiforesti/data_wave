@@ -132,9 +132,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Existing RBAC System SPA Components - CRITICAL: Import without modification
-const RBACManager = lazy(() => 
-  import('../../../Advanced_RBAC_Datagovernance_System').then(module => ({
-    default: module.RBACManager || module.default
+const RBACSystemSPA = lazy(() => 
+  import('../../../Advanced_RBAC_Datagovernance_System/RBACSystemSPA').then(module => ({
+    default: module.RBACSystemSPA || module.default
   }))
 );
 
@@ -1330,7 +1330,7 @@ export const RBACSystemSPAOrchestrator: React.FC<RBACSystemSPAOrchestratorProps>
                 </div>
               </div>
             }>
-              <RBACManager
+              <RBACSystemSPA
                 ref={originalSPARef}
                 workspaceId={workspaceId}
                 userId={userId}

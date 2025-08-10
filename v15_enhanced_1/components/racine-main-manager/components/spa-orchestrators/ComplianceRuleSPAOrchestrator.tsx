@@ -127,9 +127,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Existing Compliance Rule SPA Components - CRITICAL: Import without modification
-const ComplianceManager = lazy(() => 
-  import('../../../Compliance-Rule').then(module => ({
-    default: module.ComplianceManager || module.default
+const EnhancedComplianceRuleApp = lazy(() => 
+  import('../../../Compliance-Rule/enhanced-compliance-rule-app').then(module => ({
+    default: module.default
   }))
 );
 
@@ -950,7 +950,7 @@ export const ComplianceRuleSPAOrchestrator: React.FC<ComplianceRuleSPAOrchestrat
                 </div>
               </div>
             }>
-              <ComplianceManager
+              <EnhancedComplianceRuleApp
                 ref={originalSPARef}
                 workspaceId={workspaceId}
                 userId={userId}

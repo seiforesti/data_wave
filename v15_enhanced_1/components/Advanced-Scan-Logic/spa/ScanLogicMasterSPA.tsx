@@ -192,7 +192,7 @@ import { ScanIntelligenceEngine } from '../components/scan-intelligence/ScanInte
 import { ThreatDetectionEngine } from '../components/scan-intelligence/ThreatDetectionEngine';
 
 import { CrossSystemCoordinator } from '../components/scan-orchestration/CrossSystemCoordinator';
-import { ExecutionPipeline } from '../components/scan-orchestration/ExecutionPipeline';
+import { ExecutionPipeline as ExecutionPipelineComponent } from '../components/scan-orchestration/ExecutionPipeline';
 import { IntelligentScheduler } from '../components/scan-orchestration/IntelligentScheduler';
 import { ResourceCoordinator } from '../components/scan-orchestration/ResourceCoordinator';
 import { ScanOrchestrationDashboard } from '../components/scan-orchestration/ScanOrchestrationDashboard';
@@ -1433,7 +1433,7 @@ export const ScanLogicMasterSPA: React.FC<ScanLogicMasterSPAProps> = ({
       description: 'Unified orchestration and workflow management',
       subTabs: [
         { id: 'cross-system-coordinator', label: 'Cross-System Coordinator', component: CrossSystemCoordinator },
-        { id: 'execution-pipeline', label: 'Execution Pipeline', component: ExecutionPipeline },
+        { id: 'execution-pipeline', label: 'Execution Pipeline', component: ExecutionPipelineComponent },
         { id: 'intelligent-scheduler', label: 'Intelligent Scheduler', component: IntelligentScheduler },
         { id: 'resource-coordinator', label: 'Resource Coordinator', component: ResourceCoordinator },
         { id: 'orchestration-dashboard', label: 'Orchestration Dashboard', component: ScanOrchestrationDashboard },

@@ -1783,7 +1783,7 @@ export const DependencyResolver = forwardRef<
     }
   }, [state.config, lineageService]);
   
-  const detectCircularDependencies = useCallback(async () => {
+  const detectCircularDependenciesAsync = useCallback(async () => {
     try {
       setState(prev => ({
         ...prev,

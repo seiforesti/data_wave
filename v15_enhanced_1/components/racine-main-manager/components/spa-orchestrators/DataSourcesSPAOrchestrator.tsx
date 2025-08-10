@@ -1050,7 +1050,7 @@ export const DataSourcesSPAOrchestrator: React.FC<DataSourcesSPAOrchestratorProp
               </div>
             }>
               {activeView === 'catalog' && (
-                <DataSourceCatalog
+                <EnhancedDataSourcesApp
                   ref={originalSPARef}
                   workspaceId={workspaceId}
                   userId={userId}

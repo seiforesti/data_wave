@@ -454,17 +454,5 @@ export default function MainApp() {
 }
 
 // ============================================================================
-// APP METADATA
+// APP METADATA - Moved to layout.tsx since this is a client component
 // ============================================================================
-
-export const metadata = {
-  title: 'Enterprise Data Governance Platform',
-  description: 'Advanced data governance platform with AI-powered insights and enterprise security',
-  keywords: 'data governance, enterprise, AI, security, compliance, analytics',
-  authors: [{ name: 'Data Governance Team' }],
-  openGraph: {
-    title: 'Enterprise Data Governance Platform',
-    description: 'Advanced data governance platform with AI-powered insights',
-    type: 'website'
-  }
-};

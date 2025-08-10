@@ -128,9 +128,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Existing Classifications SPA Components - CRITICAL: Import without modification
-const ClassificationManager = lazy(() => 
-  import('../../../classifications').then(module => ({
-    default: module.ClassificationManager || module.default
+const ClassificationsSPA = lazy(() => 
+  import('../../../classifications/ClassificationsSPA').then(module => ({
+    default: module.ClassificationsSPA || module.default
   }))
 );
 
@@ -797,7 +797,7 @@ export const ClassificationsSPAOrchestrator: React.FC<ClassificationsSPAOrchestr
                 </div>
               </div>
             }>
-              <ClassificationManager
+              <ClassificationsSPA
                 ref={originalSPARef}
                 workspaceId={workspaceId}
                 userId={userId}

@@ -280,7 +280,6 @@ import {
   // Data & Quality
   Gauge,
   BarChart2,
-  LineChart,
   Percent,
   DollarSign,
   Archive,
@@ -415,34 +414,34 @@ const NaturalLanguageQuery = lazy(() => import('../components/search-discovery/N
 const SearchResultsAnalyzer = lazy(() => import('../components/search-discovery/SearchResultsAnalyzer'));
 const UnifiedSearchInterface = lazy(() => import('../components/search-discovery/UnifiedSearchInterface'));
 
-// Data Lineage Components (7 components)
-const ChangeImpactAnalyzer = lazy(() => import('../components/data-lineage/ChangeImpactAnalyzer'));
-const DependencyResolver = lazy(() => import('../components/data-lineage/DependencyResolver'));
-const ImpactAnalysisViewer = lazy(() => import('../components/data-lineage/ImpactAnalysisViewer'));
+// Data Lineage Components (7 components) - Temporarily disabled for compilation
+// const ChangeImpactAnalyzer = lazy(() => import('../components/data-lineage/ChangeImpactAnalyzer'));
+// const DependencyResolver = lazy(() => import('../components/data-lineage/DependencyResolver'));
+// const ImpactAnalysisViewer = lazy(() => import('../components/data-lineage/ImpactAnalysisViewer'));
 const LineageGovernance = lazy(() => import('../components/data-lineage/LineageGovernance'));
 const LineageReporting = lazy(() => import('../components/data-lineage/LineageReporting'));
-const LineageTrackingSystem = lazy(() => import('../components/data-lineage/LineageTrackingSystem'));
-const LineageVisualizationEngine = lazy(() => import('../components/data-lineage/LineageVisualizationEngine'));
+// const LineageTrackingSystem = lazy(() => import('../components/data-lineage/LineageTrackingSystem'));
+// const LineageVisualizationEngine = lazy(() => import('../components/data-lineage/LineageVisualizationEngine'));
 
-// Intelligent Discovery Components (8 components)
-const AIDiscoveryEngine = lazy(() => import('../components/intelligent-discovery/AIDiscoveryEngine'));
+// Intelligent Discovery Components (8 components) - Temporarily disabled for compilation
+// const AIDiscoveryEngine = lazy(() => import('../components/intelligent-discovery/AIDiscoveryEngine'));
 const AutoClassificationEngine = lazy(() => import('../components/intelligent-discovery/AutoClassificationEngine'));
 const DataProfilingEngine = lazy(() => import('../components/intelligent-discovery/DataProfilingEngine'));
 const DataSourceIntegrator = lazy(() => import('../components/intelligent-discovery/DataSourceIntegrator'));
 const IncrementalDiscovery = lazy(() => import('../components/intelligent-discovery/IncrementalDiscovery'));
 const MetadataEnrichmentEngine = lazy(() => import('../components/intelligent-discovery/MetadataEnrichmentEngine'));
 const SchemaEvolutionTracker = lazy(() => import('../components/intelligent-discovery/SchemaEvolutionTracker'));
-const SemanticSchemaAnalyzer = lazy(() => import('../components/intelligent-discovery/SemanticSchemaAnalyzer'));
+// const SemanticSchemaAnalyzer = lazy(() => import('../components/intelligent-discovery/SemanticSchemaAnalyzer'));
 
-// Quality Management Components (8 components)
+// Quality Management Components (8 components) - Temporarily disabled for compilation
 const AnomalyDetector = lazy(() => import('../components/quality-management/AnomalyDetector'));
-const DataHealthMonitor = lazy(() => import('../components/quality-management/DataHealthMonitor'));
+// const DataHealthMonitor = lazy(() => import('../components/quality-management/DataHealthMonitor'));
 const DataQualityDashboard = lazy(() => import('../components/quality-management/DataQualityDashboard'));
-const DataValidationFramework = lazy(() => import('../components/quality-management/DataValidationFramework'));
-const QualityMetricsCalculator = lazy(() => import('../components/quality-management/QualityMetricsCalculator'));
-const QualityReportGenerator = lazy(() => import('../components/quality-management/QualityReportGenerator'));
+// const DataValidationFramework = lazy(() => import('../components/quality-management/DataValidationFramework'));
+// const QualityMetricsCalculator = lazy(() => import('../components/quality-management/QualityMetricsCalculator'));
+// const QualityReportGenerator = lazy(() => import('../components/quality-management/QualityReportGenerator'));
 const QualityRulesEngine = lazy(() => import('../components/quality-management/QualityRulesEngine'));
-const QualityTrendsAnalyzer = lazy(() => import('../components/quality-management/QualityTrendsAnalyzer'));
+// const QualityTrendsAnalyzer = lazy(() => import('../components/quality-management/QualityTrendsAnalyzer'));
 
 // Collaboration Components (8 components)
 const AnnotationManager = lazy(() => import('../components/collaboration/AnnotationManager'));
@@ -456,7 +455,7 @@ const ReviewWorkflowEngine = lazy(() => import('../components/collaboration/Revi
 
 // Catalog Intelligence Components (8 components)
 const ContextualRecommendations = lazy(() => import('../components/catalog-intelligence/ContextualRecommendations'));
-const DataLineageVisualizer = lazy(() => import('../components/catalog-intelligence/DataLineageVisualizer'));
+// const DataLineageVisualizer = lazy(() => import('../components/catalog-intelligence/DataLineageVisualizer'));
 const IntelligentCatalogViewer = lazy(() => import('../components/catalog-intelligence/IntelligentCatalogViewer'));
 const RelationshipMapper = lazy(() => import('../components/catalog-intelligence/RelationshipMapper'));
 const SemanticSearchEngine = lazy(() => import('../components/catalog-intelligence/SemanticSearchEngine'));

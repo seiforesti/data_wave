@@ -119,7 +119,6 @@ import {
   List,
   Map,
   BarChart3,
-  PieChart,
   TrendingUp,
   TrendingDown,
   Activity,
