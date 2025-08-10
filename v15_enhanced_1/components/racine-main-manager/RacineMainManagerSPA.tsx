@@ -165,6 +165,14 @@ import { MasterLayoutOrchestrator } from './components/layout/MasterLayoutOrches
 
 // Routing System - FIXED: Complete routing integration
 import { RacineRouter } from './components/routing/RacineRouter';
+import { 
+  RouteGuardsProvider, 
+  RouteMiddlewareProvider, 
+  DeepLinkManagerProvider,
+  BreadcrumbManagerProvider,
+  QuickNavigationProvider,
+  QuickNavigationPanel
+} from './components/routing';
 
 // Navigation Components
 import { AppNavbar } from './components/navigation/AppNavbar';
@@ -7037,14 +7045,19 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
   // ============================================================================
 
   return (
-    <MasterLayoutOrchestrator
-      mode="app-root"
-      currentView={enhancedCurrentView}
-      layoutMode={layoutMode}
-      spaContext={{
-        activeSPA: getSPAFromView(enhancedCurrentView),
-        spaData: { dashboardMode, splitViewMode, fullScreenMode },
-        crossSPAWorkflows: intelligentActiveWorkflows,
+    <RouteGuardsProvider>
+      <RouteMiddlewareProvider>
+        <DeepLinkManagerProvider>
+          <BreadcrumbManagerProvider>
+            <QuickNavigationProvider>
+              <MasterLayoutOrchestrator
+                mode="app-root"
+                currentView={enhancedCurrentView}
+                layoutMode={layoutMode}
+                spaContext={{
+                  activeSPA: getSPAFromView(enhancedCurrentView),
+                  spaData: { dashboardMode, splitViewMode, fullScreenMode },
+                  crossSPAWorkflows: intelligentActiveWorkflows,
         spaIntegrations: []
       }}
       userPreferences={{
@@ -7454,8 +7467,17 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
           </div>
         </div>
         </TooltipProvider>
+        
+        {/* Quick Navigation Panel */}
+        <QuickNavigationPanel />
+        
       </RacineRouter>
     </MasterLayoutOrchestrator>
+            </QuickNavigationProvider>
+          </BreadcrumbManagerProvider>
+        </DeepLinkManagerProvider>
+      </RouteMiddlewareProvider>
+    </RouteGuardsProvider>
   );
 };
 
