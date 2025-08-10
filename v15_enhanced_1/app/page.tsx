@@ -34,12 +34,8 @@ import { LoginForm } from '@/components/Advanced_RBAC_Datagovernance_System/comp
 // Main System Components
 import { RacineMainManagerSPA } from '@/components/racine-main-manager';
 
-// Layout Components
-import { 
-  LayoutContent,
-  ResponsiveLayoutEngine,
-  ContextualOverlayManager 
-} from '@/components/racine-main-manager/components/layout';
+// Layout Components - REMOVED: Now handled by MasterLayoutOrchestrator
+// Previous layout components are now orchestrated by MasterLayoutOrchestrator
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -440,25 +436,20 @@ export default function MainApp() {
   // Show login form if not authenticated
   if (!authState.isAuthenticated) {
     return (
-      <ResponsiveLayoutEngine>
-        <ContextualOverlayManager>
-          {renderSystemHealthCheck()}
-          <LoginForm />
-        </ContextualOverlayManager>
-      </ResponsiveLayoutEngine>
+      <>
+        {renderSystemHealthCheck()}
+        <LoginForm />
+      </>
     );
   }
 
   // Show main application if authenticated
+  // Layout is now handled by MasterLayoutOrchestrator inside RacineMainManagerSPA
   return (
-    <ResponsiveLayoutEngine>
-      <ContextualOverlayManager>
-        {renderSystemHealthCheck()}
-        <LayoutContent>
-          <RacineMainManagerSPA />
-        </LayoutContent>
-      </ContextualOverlayManager>
-    </ResponsiveLayoutEngine>
+    <>
+      {renderSystemHealthCheck()}
+      <RacineMainManagerSPA />
+    </>
   );
 }
 

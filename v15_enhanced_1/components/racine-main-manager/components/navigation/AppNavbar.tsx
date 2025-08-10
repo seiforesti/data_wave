@@ -75,6 +75,9 @@ import { useNotificationManager } from '../../hooks/useNotificationManager'
 import { useGlobalSearch } from '../../hooks/useGlobalSearch'
 import { useQuickActions } from '../../hooks/useQuickActions'
 
+// Router Integration - ENHANCED: Complete routing integration
+import { useRacineRouter } from '../routing/RacineRouter'
+
 // Import types (already implemented)
 import {
   RacineState,

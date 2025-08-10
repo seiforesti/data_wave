@@ -160,16 +160,11 @@ import { usePipelineManagement } from './hooks/usePipelineManagement';
 import { useCollaboration } from './hooks/useCollaboration';
 import { usePerformanceMonitoring } from './hooks/usePerformanceMonitoring';
 
-// Layout Components (Critical for Enterprise Architecture)
-import { 
-  LayoutContent,
-  DynamicWorkspaceManager,
-  ResponsiveLayoutEngine,
-  ContextualOverlayManager,
-  TabManager,
-  SplitScreenManager,
-  LayoutPersonalization
-} from './components/layout';
+// Master Layout Orchestrator - FIXED: Complete layout integration
+import { MasterLayoutOrchestrator } from './components/layout/MasterLayoutOrchestrator';
+
+// Routing System - FIXED: Complete routing integration
+import { RacineRouter } from './components/routing/RacineRouter';
 
 // Navigation Components
 import { AppNavbar } from './components/navigation/AppNavbar';
@@ -1248,6 +1243,37 @@ export const RacineMainManagerSPA: React.FC = () => {
       </div>
     );
   }
+
+  // ============================================================================
+  // HELPER FUNCTIONS
+  // ============================================================================
+
+  // Map ViewMode to SPA identifier for layout orchestration
+  const getSPAFromView = useCallback((view: ViewMode): string => {
+    const spaMapping: Record<ViewMode, string> = {
+      [ViewMode.DATA_SOURCES]: 'data-sources',
+      [ViewMode.SCAN_RULE_SETS]: 'scan-rule-sets',
+      [ViewMode.CLASSIFICATIONS]: 'classifications',
+      [ViewMode.COMPLIANCE_RULES]: 'compliance-rule',
+      [ViewMode.ADVANCED_CATALOG]: 'advanced-catalog',
+      [ViewMode.SCAN_LOGIC]: 'scan-logic',
+      [ViewMode.RBAC_SYSTEM]: 'rbac-system',
+      [ViewMode.DASHBOARD]: 'racine-dashboard',
+      [ViewMode.WORKSPACE]: 'racine-workspace',
+      [ViewMode.WORKFLOWS]: 'racine-workflows',
+      [ViewMode.PIPELINES]: 'racine-pipelines',
+      [ViewMode.AI_ASSISTANT]: 'racine-ai',
+      [ViewMode.ANALYTICS]: 'racine-analytics',
+      [ViewMode.MONITORING]: 'racine-monitoring',
+      [ViewMode.COLLABORATION]: 'racine-collaboration',
+      [ViewMode.STREAMING]: 'racine-streaming',
+      [ViewMode.COST_OPTIMIZATION]: 'racine-cost',
+      [ViewMode.REPORTS]: 'racine-reports',
+      [ViewMode.SEARCH]: 'racine-search',
+      [ViewMode.NOTIFICATIONS]: 'racine-notifications'
+    };
+    return spaMapping[view] || 'racine-default';
+  }, []);
 
   // ============================================================================
   // MAIN RENDER
@@ -5953,8 +5979,7 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
     switch (enhancedCurrentView) {
       case ViewMode.DASHBOARD:
         return (
-          <DynamicWorkspaceManager>
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Dashboard Mode Selector */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -6015,7 +6040,6 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
                 renderEnhancedDashboard()
               )}
             </div>
-          </DynamicWorkspaceManager>
         );
 
       case ViewMode.WORKSPACE:
@@ -6023,8 +6047,7 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
 
       case ViewMode.WORKFLOWS:
         return (
-          <TabManager defaultTab="builder">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Intelligent Workflow Management</h2>
                 <div className="flex items-center gap-2">
@@ -6040,13 +6063,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <JobWorkflowBuilder />
             </div>
-          </TabManager>
         );
 
       case ViewMode.PIPELINES:
         return (
-          <TabManager defaultTab="designer">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Advanced Pipeline Designer</h2>
                 <div className="flex items-center gap-2">
@@ -6062,7 +6083,6 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <PipelineDesigner />
             </div>
-          </TabManager>
         );
 
       case ViewMode.AI_ASSISTANT:
@@ -6163,8 +6183,7 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
 
       case ViewMode.DATA_SOURCES:
         return (
-          <LayoutPersonalization groupId="data_sources">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Database className="w-6 h-6 text-blue-500" />
@@ -6176,13 +6195,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <DataSourcesSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.SCAN_RULE_SETS:
         return (
-          <LayoutPersonalization groupId="scan_rule_sets">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Scan className="w-6 h-6 text-green-500" />
@@ -6194,13 +6211,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <ScanRuleSetsSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.CLASSIFICATIONS:
         return (
-          <LayoutPersonalization groupId="classifications">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Tag className="w-6 h-6 text-purple-500" />
@@ -6212,13 +6227,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <ClassificationsSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.COMPLIANCE_RULES:
         return (
-          <LayoutPersonalization groupId="compliance_rules">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Shield className="w-6 h-6 text-orange-500" />
@@ -6230,13 +6243,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <ComplianceRuleSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.ADVANCED_CATALOG:
         return (
-          <LayoutPersonalization groupId="advanced_catalog">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Layers className="w-6 h-6 text-indigo-500" />
@@ -6248,13 +6259,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <AdvancedCatalogSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.SCAN_LOGIC:
         return (
-          <LayoutPersonalization groupId="scan_logic">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <Zap className="w-6 h-6 text-yellow-500" />
@@ -6266,13 +6275,11 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <ScanLogicSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       case ViewMode.RBAC_SYSTEM:
         return (
-          <LayoutPersonalization groupId="rbac_system">
-            <div className="space-y-6">
+          <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
                   <UserCheck className="w-6 h-6 text-red-500" />
@@ -6284,7 +6291,6 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
               </div>
               <RBACSystemSPAOrchestrator />
             </div>
-          </LayoutPersonalization>
         );
 
       default:
@@ -7031,79 +7037,115 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
   // ============================================================================
 
   return (
-    <TooltipProvider>
-      <div 
-        ref={containerRef}
-        className={cn(
-          "min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-blue-950/30 dark:to-purple-950/30 relative overflow-hidden transition-all duration-500",
-          fullScreenMode && "fixed inset-0 z-50"
-        )}
+    <MasterLayoutOrchestrator
+      mode="app-root"
+      currentView={enhancedCurrentView}
+      layoutMode={layoutMode}
+      spaContext={{
+        activeSPA: getSPAFromView(enhancedCurrentView),
+        spaData: { dashboardMode, splitViewMode, fullScreenMode },
+        crossSPAWorkflows: intelligentActiveWorkflows,
+        spaIntegrations: []
+      }}
+      userPreferences={{
+        defaultLayout: layoutMode,
+        responsiveEnabled: true,
+        animationsEnabled: !reducedMotion,
+        accessibilityLevel: 'AA',
+        customLayouts: [],
+        workspaceLayouts: {},
+        spaLayouts: {}
+      }}
+      responsive={true}
+      accessibility="AA"
+      performance="high"
+      onLayoutChange={setLayoutMode}
+      onViewChange={handleEnhancedViewChange}
+    >
+      <RacineRouter
+        currentView={enhancedCurrentView}
+        onViewChange={handleEnhancedViewChange}
+        userPermissions={userPermissions}
+        workspaceId={activeWorkspace?.id}
+        enableAnalytics={true}
+        enableDeepLinking={true}
+        enableBreadcrumbs={true}
+        enableHistory={true}
+        maxHistoryItems={50}
       >
-        {/* Enhanced Background Effects */}
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20" />
-        
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"
-          animate={{
-            background: [
-              'linear-gradient(0deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
-              'linear-gradient(120deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
-              'linear-gradient(240deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
-              'linear-gradient(360deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))'
-            ]
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        />
-
-        {/* Enhanced Navigation */}
-        <AppNavbar 
-          currentUser={currentUser}
-          systemHealth={systemHealth}
-          notifications={[...notifications, ...recentNotifications]}
-          onSearch={setSearchQuery}
-          onQuickAction={handleQuickAction}
-          onAIAssistant={() => setAIAssistantOpen(true)}
-        />
-
-        {/* Enhanced Main Layout */}
-        <div className="flex h-screen pt-16">
-          {/* Enhanced Main Sidebar */}
-          <AppSidebar
-            collapsed={sidebarCollapsed}
-            onCollapse={setSidebarCollapsed}
-            currentView={enhancedCurrentView}
-            onViewChange={handleEnhancedViewChange}
-            workspaces={workspaces}
-            activeWorkspace={activeWorkspace}
-            onWorkspaceSwitch={handleWorkspaceSwitch}
-            systemHealth={systemHealth}
-            userPermissions={userPermissions}
-            onQuickAction={handleQuickAction}
+        <TooltipProvider>
+        <div 
+          ref={containerRef}
+          className={cn(
+            "min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-blue-950/30 dark:to-purple-950/30 relative overflow-hidden transition-all duration-500",
+            fullScreenMode && "fixed inset-0 z-50"
+          )}
+        >
+          {/* Enhanced Background Effects */}
+          <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20" />
+          
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"
+            animate={{
+              background: [
+                'linear-gradient(0deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
+                'linear-gradient(120deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
+                'linear-gradient(240deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))',
+                'linear-gradient(360deg, rgba(59,130,246,0.05), rgba(147,51,234,0.05), rgba(236,72,153,0.05))'
+              ]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
 
-          {/* Enhanced Main Content Area */}
-          <main className={cn(
-            "flex-1 transition-all duration-300 ease-in-out",
-            sidebarCollapsed ? "ml-16" : "ml-64"
-          )}>
-            <div className="h-full overflow-auto">
-              <div className="container mx-auto p-6 space-y-6">
-                {/* Enhanced Main Content */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${enhancedCurrentView}-${dashboardMode}`}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {renderEnhancedMainContent()}
-                  </motion.div>
-                </AnimatePresence>
+          {/* Enhanced Navigation */}
+          <AppNavbar 
+            currentUser={currentUser}
+            systemHealth={systemHealth}
+            notifications={[...notifications, ...recentNotifications]}
+            onSearch={setSearchQuery}
+            onQuickAction={handleQuickAction}
+            onAIAssistant={() => setAIAssistantOpen(true)}
+          />
+
+          {/* Enhanced Main Layout */}
+          <div className="flex h-screen pt-16">
+            {/* Enhanced Main Sidebar */}
+            <AppSidebar
+              collapsed={sidebarCollapsed}
+              onCollapse={setSidebarCollapsed}
+              currentView={enhancedCurrentView}
+              onViewChange={handleEnhancedViewChange}
+              workspaces={workspaces}
+              activeWorkspace={activeWorkspace}
+              onWorkspaceSwitch={handleWorkspaceSwitch}
+              systemHealth={systemHealth}
+              userPermissions={userPermissions}
+              onQuickAction={handleQuickAction}
+            />
+
+            {/* Enhanced Main Content Area */}
+            <main className={cn(
+              "flex-1 transition-all duration-300 ease-in-out",
+              sidebarCollapsed ? "ml-16" : "ml-64"
+            )}>
+              <div className="h-full overflow-auto">
+                <div className="container mx-auto p-6 space-y-6">
+                  {/* Enhanced Main Content */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${enhancedCurrentView}-${dashboardMode}`}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {renderEnhancedMainContent()}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
-            </div>
-          </main>
-        </div>
+            </main>
+          </div>
 
         {/* Enhanced Global Quick Actions Sidebar */}
         <GlobalQuickActionsSidebar
@@ -7402,16 +7444,18 @@ const EnhancedRacineMainManagerSPA: React.FC = () => {
         {SettingsDialog}
         {KeyboardShortcuts}
 
-        {/* Global Accessibility Announcements */}
-        <div className="sr-only" aria-live="polite" aria-atomic="true">
-          <span>
-            Data Governance System Status: {systemHealth?.overall || 'Loading'}. 
-            Active workflows: {intelligentActiveWorkflows.length}. 
-            System health: {systemOverview.systemHealth}%.
-          </span>
+          {/* Global Accessibility Announcements */}
+          <div className="sr-only" aria-live="polite" aria-atomic="true">
+            <span>
+              Data Governance System Status: {systemHealth?.overall || 'Loading'}. 
+              Active workflows: {intelligentActiveWorkflows.length}. 
+              System health: {systemOverview.systemHealth}%.
+            </span>
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
+        </TooltipProvider>
+      </RacineRouter>
+    </MasterLayoutOrchestrator>
   );
 };
 

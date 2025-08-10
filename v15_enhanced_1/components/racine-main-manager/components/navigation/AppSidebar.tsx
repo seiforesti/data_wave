@@ -99,6 +99,12 @@ import { useQuickActions } from '../../hooks/useQuickActions'
 import { useNavigationAnalytics } from '../../hooks/useNavigationAnalytics'
 import { useUserPreferences } from '../../hooks/useUserPreferences'
 
+// Router Integration - ENHANCED: Complete routing integration
+import { useRacineRouter } from '../routing/RacineRouter'
+
+// Navigation Group Manager - ENHANCED: Advanced navigation system
+import { NavigationGroupManager } from './NavigationGroupManager'
+
 // Import types (already implemented)
 import {
   UserContext,
