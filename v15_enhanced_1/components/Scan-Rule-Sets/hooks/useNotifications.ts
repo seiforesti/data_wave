@@ -43,7 +43,7 @@ export function useNotifications() {
       toast({
         variant: variant,
         title: title,
-        description: <span className={descriptionColor}>{message}</span>,
+        description: message,
         duration: duration,
       })
     },

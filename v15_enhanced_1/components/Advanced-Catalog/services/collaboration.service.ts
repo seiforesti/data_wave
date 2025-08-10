@@ -6,7 +6,7 @@
 // and collaborative governance processes
 // ============================================================================
 
-import { apiClient } from '../../../shared/services/api-client';
+import { apiClient } from '@/lib/api-client';
 import {
   CatalogCollaborationHub,
   CollaborationTeam,
@@ -1067,6 +1067,16 @@ class AdvancedCatalogCollaborationService {
    */
   async getCollaborationInsights(
     timeRange: { start: Date; end: Date }
+  ): Promise<any> {
+    const response = await apiClient.get(`${this.baseUrl}/insights`, {
+      params: {
+        start_date: timeRange.start.toISOString(),
+        end_date: timeRange.end.toISOString()
+      }
+    });
+    return response.data;
+  }
+
   // ========================================================================
   // ANALYTICS & INSIGHTS OPERATIONS  
   // ========================================================================
