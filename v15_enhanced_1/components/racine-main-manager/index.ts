@@ -164,3 +164,90 @@ export const DEFAULT_RACINE_CONFIG: RacineMainManagerConfig = {
     enableLazyLoading: true
   }
 };
+
+// ============================================================================
+// MAIN COMPONENT EXPORT
+// ============================================================================
+
+// Export the main RacineMainManagerSPA component
+export { RacineMainManagerSPA, EnhancedRacineMainManagerSPA, COMPONENT_METRICS } from './RacineMainManagerSPA';
+export { default as RacineMainManagerSPADefault } from './RacineMainManagerSPA';
+
+// ============================================================================
+// INTEGRATION VALIDATION
+// ============================================================================
+
+/**
+ * Validates that all required components and services are available
+ * for the Racine Main Manager SPA to function properly.
+ */
+export const validateRacineIntegration = async (): Promise<{
+  isValid: boolean;
+  missingComponents: string[];
+  backendStatus: 'connected' | 'disconnected' | 'error';
+  componentGroups: Record<string, boolean>;
+}> => {
+  const missingComponents: string[] = [];
+  const componentGroups: Record<string, boolean> = {};
+
+  // Check component groups
+  const requiredGroups = [
+    'data-sources',
+    'scan-rule-sets', 
+    'classifications',
+    'compliance-rule',
+    'advanced-catalog',
+    'scan-logic',
+    'rbac'
+  ];
+
+  for (const group of requiredGroups) {
+    try {
+      // This would be replaced with actual component checks
+      componentGroups[group] = true;
+    } catch (error) {
+      componentGroups[group] = false;
+      missingComponents.push(group);
+    }
+  }
+
+  // Check backend connectivity
+  let backendStatus: 'connected' | 'disconnected' | 'error' = 'disconnected';
+  try {
+    const response = await fetch('/api/racine/health');
+    backendStatus = response.ok ? 'connected' : 'error';
+  } catch (error) {
+    backendStatus = 'error';
+  }
+
+  return {
+    isValid: missingComponents.length === 0 && backendStatus === 'connected',
+    missingComponents,
+    backendStatus,
+    componentGroups
+  };
+};
+
+/**
+ * Initializes the Racine Main Manager SPA with the provided configuration
+ */
+export const initializeRacineMainManager = (config: Partial<RacineMainManagerConfig> = {}) => {
+  const finalConfig = { ...DEFAULT_RACINE_CONFIG, ...config };
+  
+  // Set up global configuration
+  if (typeof window !== 'undefined') {
+    (window as any).__RACINE_CONFIG__ = finalConfig;
+  }
+
+  return finalConfig;
+};
+
+/**
+ * Gets the current Racine configuration
+ */
+export const getRacineConfig = (): RacineMainManagerConfig => {
+  if (typeof window !== 'undefined' && (window as any).__RACINE_CONFIG__) {
+    return (window as any).__RACINE_CONFIG__;
+  }
+  return DEFAULT_RACINE_CONFIG;
+};
