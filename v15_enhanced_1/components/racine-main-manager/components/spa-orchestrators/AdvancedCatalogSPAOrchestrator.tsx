@@ -127,9 +127,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Existing Advanced Catalog SPA Components - CRITICAL: Import without modification
-const CatalogManager = lazy(() => 
-  import('../../../Advanced-Catalog').then(module => ({
-    default: module.CatalogManager || module.default
+const AdvancedCatalogSPA = lazy(() => 
+  import('../../../Advanced-Catalog/spa/AdvancedCatalogSPA-minimal').then(module => ({
+    default: module.default
   }))
 );
 
@@ -1026,7 +1026,7 @@ export const AdvancedCatalogSPAOrchestrator: React.FC<AdvancedCatalogSPAOrchestr
                 </div>
               </div>
             }>
-              <CatalogManager
+              <AdvancedCatalogSPA
                 ref={originalSPARef}
                 workspaceId={workspaceId}
                 userId={userId}

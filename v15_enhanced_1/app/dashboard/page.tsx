@@ -1,30 +1,60 @@
-import { AppSidebar } from '@/components/app-sidebar'
-import { ChartAreaInteractive } from '@/components/chart-area-interactive'
-import { DataTable } from '@/components/data-table'
-import { SectionCards } from '@/components/section-cards'
-import { SiteHeader } from '@/components/site-header'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+/**
+ * Dashboard Page - Next.js App Router
+ * ===================================
+ */
 
-import data from "./data.json"
+'use client';
 
-export default function Page() {
+import React, { Suspense } from 'react';
+import { motion } from 'framer-motion';
+import { BarChart3, Loader2 } from 'lucide-react';
+
+import { IntelligentDashboardOrchestrator } from '@/components/racine-main-manager/components/intelligent-dashboard/IntelligentDashboardOrchestrator';
+import { RouteGuard } from '@/components/racine-main-manager/components/routing/RouteGuards';
+import { Card, CardContent } from '@/components/ui/card';
+
+const DashboardLoading = () => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100/50 dark:from-blue-950/50 dark:to-purple-900/30 flex items-center justify-center">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="text-center space-y-4"
+    >
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        className="w-16 h-16 mx-auto border-4 border-blue-500/30 border-t-blue-500 rounded-full"
+      />
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2 justify-center">
+          <BarChart3 className="w-5 h-5" />
+          Loading Dashboard
+        </h2>
+        <p className="text-blue-600 dark:text-blue-400">
+          Initializing intelligent dashboard...
+        </p>
+      </div>
+    </motion.div>
+  </div>
+);
+
+export default function DashboardPage() {
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
-              <div className="px-4 lg:px-6">
-                <ChartAreaInteractive />
-              </div>
-              <DataTable data={data} />
-            </div>
-          </div>
+    <RouteGuard 
+      requiredPermissions={['dashboard.read']}
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Card>
+            <CardContent className="p-6">
+              <p>You don't have permission to access the Dashboard.</p>
+            </CardContent>
+          </Card>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+      }
+    >
+      <Suspense fallback={<DashboardLoading />}>
+        <IntelligentDashboardOrchestrator />
+      </Suspense>
+    </RouteGuard>
+  );
 }

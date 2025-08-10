@@ -484,7 +484,7 @@ export default function AnnotationManager({
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
-  const [selectedAnnotations, setSelectedAnnotations] = new Set<string>());
+  const [selectedAnnotations, setSelectedAnnotations] = useState(new Set<string>());
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'timeline' | 'kanban'>('list');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');

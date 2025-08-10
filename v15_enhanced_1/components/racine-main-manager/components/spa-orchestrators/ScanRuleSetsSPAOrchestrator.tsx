@@ -152,9 +152,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Existing Scan Rule Sets SPA Components - CRITICAL: Import without modification
-const RuleDesigner = lazy(() => 
-  import('../../../Advanced-Scan-Rule-Sets/components/rule-designer').then(module => ({
-    default: module.RuleDesigner || module.default
+const ScanRuleSetsSPA = lazy(() => 
+  import('../../../Advanced-Scan-Rule-Sets/spa/ScanRuleSetsSPA-minimal').then(module => ({
+    default: module.ScanRuleSetsSPA || module.default
   }))
 );
 
@@ -1154,7 +1154,7 @@ export const ScanRuleSetsSPAOrchestrator: React.FC<ScanRuleSetsSPAOrchestratorPr
               </div>
             }>
               {activeView === 'designer' && (
-                <RuleDesigner
+                <ScanRuleSetsSPA
                   ref={originalSPARef}
                   workspaceId={workspaceId}
                   userId={userId}

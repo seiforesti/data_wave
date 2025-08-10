@@ -182,7 +182,7 @@ import {
   Brain,
   Cpu,
   Database,
-  Table,
+  Table as TableIcon,
   Columns,
   FileText,
   File,
@@ -940,7 +940,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
 
   const getAssetIcon = useCallback((assetType: DataAssetType) => {
     switch (assetType) {
-      case 'TABLE': return Table;
+      case 'TABLE': return TableIcon;
       case 'VIEW': return Eye;
       case 'FILE': return File;
       case 'API': return Network;
@@ -1841,7 +1841,7 @@ const IntelligentCatalogViewer: React.FC = () => {
                   Grid View
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setViewMode('TABLE')}>
-                  <Table className="h-4 w-4 mr-2" />
+                  <TableIcon className="h-4 w-4 mr-2" />
                   Table View
                 </DropdownMenuItem>
               </DropdownMenuContent>
