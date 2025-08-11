@@ -147,6 +147,9 @@ import { Line, LineChart, Bar, BarChart, Area, AreaChart, Pie, PieChart, Cell, X
 // Toast notifications
 import { toast } from 'sonner';
 
+// RBAC Integration
+import { useScanRBAC, SCAN_LOGIC_PERMISSIONS, ScanLogicRBACProvider } from '../hooks/use-rbac-integration';
+
 // Advanced Scan Logic Components
 import { AdvancedAnalyticsDashboard } from '../components/advanced-analytics/AdvancedAnalyticsDashboard';
 import { BusinessIntelligence } from '../components/advanced-analytics/BusinessIntelligence';
@@ -506,6 +509,51 @@ export const ScanLogicMasterSPA: React.FC<ScanLogicMasterSPAProps> = ({
   showNavigationSidebar = true,
   enableAdvancedFeatures = true
 }) => {
+  // ==================== RBAC INTEGRATION ====================
+  const rbac = useScanRBAC();
+
+  // ==================== RBAC PERMISSION-BASED RENDERING ====================
+
+  const renderComponentWithPermission = useCallback((
+    ComponentToRender: React.ComponentType,
+    requiredPermission?: string
+  ) => {
+    if (!requiredPermission) {
+      return <ComponentToRender />;
+    }
+
+    if (rbac.isLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-2">Loading permissions...</span>
+        </div>
+      );
+    }
+
+    if (!rbac.hasPermission(requiredPermission)) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <Shield className="h-16 w-16 text-muted-foreground" />
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">Access Denied</h3>
+            <p className="text-muted-foreground">
+              You don't have permission to access this component.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Required permission: {requiredPermission}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => rbac.refreshUser()}>
+            Refresh Permissions
+          </Button>
+        </div>
+      );
+    }
+
+    return <ComponentToRender />;
+  }, [rbac]);
+
   // ==================== ENTERPRISE STATE MANAGEMENT ====================
 
   const [activeTab, setActiveTab] = useState(initialActiveTab);
@@ -2266,7 +2314,7 @@ export const ScanLogicMasterSPA: React.FC<ScanLogicMasterSPAProps> = ({
 
                       {tab.subTabs.map((subTab) => (
                         <TabsContent key={subTab.id} value={subTab.id} className="mt-0 h-full">
-                          <subTab.component />
+                          {renderComponentWithPermission(subTab.component, subTab.requiredPermission)}
                         </TabsContent>
                       ))}
                     </Tabs>
@@ -2307,7 +2355,16 @@ export const ScanLogicMasterSPA: React.FC<ScanLogicMasterSPAProps> = ({
   );
 };
 
-export default ScanLogicMasterSPA;
+// RBAC-wrapped SPA component
+const ScanLogicMasterSPAWithRBAC: React.FC<ScanLogicMasterSPAProps> = (props) => {
+  return (
+    <ScanLogicRBACProvider>
+      <ScanLogicMasterSPA {...props} />
+    </ScanLogicRBACProvider>
+  );
+};
+
+export default ScanLogicMasterSPAWithRBAC;
 
 // ==================== HELPER FUNCTION IMPLEMENTATIONS ====================
 

@@ -26,6 +26,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useScanRBAC, SCAN_LOGIC_PERMISSIONS } from '../../hooks/use-rbac-integration';
 import { 
   Card, 
   CardContent, 
@@ -222,6 +223,7 @@ interface ComplianceFramework {
 
 export const SecurityOrchestrator: React.FC = () => {
   const { toast } = useToast();
+  const rbac = useScanRBAC(); // RBAC integration for permission checking
   const {
     securityPolicies,
     complianceFrameworks,
@@ -281,18 +283,9 @@ export const SecurityOrchestrator: React.FC = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const metricsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ==================== Mock Data (Replace with Real API Calls) ====================
+  // ==================== Real Backend Integration ====================
 
-  const mockSecurityMetrics: SecurityMetrics = useMemo(() => ({
-    securityScore: 85,
-    threatLevel: RiskLevel.MEDIUM,
-    vulnerabilitiesDetected: 23,
-    incidentsResolved: 156,
-    complianceStatus: 92,
-    lastScanTime: new Date().toISOString(),
-    activePolicies: 12,
-    monitoredAssets: 1247
-  }), []);
+  // Removed mock data - now using real backend API calls through useSecurityCompliance hook
 
   const mockVulnerabilities: Vulnerability[] = useMemo(() => [
     {

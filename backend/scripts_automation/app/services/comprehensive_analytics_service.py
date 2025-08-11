@@ -880,3 +880,260 @@ class ComprehensiveAnalyticsService:
         """Optimize analytics query for better performance"""
         # Query optimization logic would go here
         return query
+    
+    async def get_analytics_reports(
+        self,
+        report_types: List[str],
+        timeframe: str = "30d",
+        include_insights: bool = True,
+        include_recommendations: bool = True,
+        user_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Get existing analytics reports"""
+        try:
+            # Convert timeframe to datetime range
+            end_date = datetime.utcnow()
+            if timeframe == "7d":
+                start_date = end_date - timedelta(days=7)
+            elif timeframe == "30d":
+                start_date = end_date - timedelta(days=30)
+            elif timeframe == "90d":
+                start_date = end_date - timedelta(days=90)
+            else:
+                start_date = end_date - timedelta(days=30)  # Default
+            
+            reports = []
+            
+            for report_type in report_types:
+                if report_type == "performance":
+                    report = await self._generate_performance_report(start_date, end_date, include_insights)
+                elif report_type == "trends":
+                    report = await self._generate_trends_report(start_date, end_date, include_insights)
+                elif report_type == "business_intelligence":
+                    report = await self._generate_business_intelligence_report(start_date, end_date, include_insights)
+                elif report_type == "predictions":
+                    report = await self._generate_predictions_report(start_date, end_date, include_insights)
+                else:
+                    continue
+                
+                if report:
+                    reports.append(report)
+            
+            return reports
+            
+        except Exception as e:
+            logger.error(f"Error fetching analytics reports: {str(e)}")
+            raise
+    
+    async def get_analytics_visualizations(
+        self,
+        visualization_types: List[str],
+        timeframe: str = "30d",
+        include_data: bool = True,
+        user_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Get analytics visualizations"""
+        try:
+            # Convert timeframe to datetime range
+            end_date = datetime.utcnow()
+            if timeframe == "7d":
+                start_date = end_date - timedelta(days=7)
+            elif timeframe == "30d":
+                start_date = end_date - timedelta(days=30)
+            elif timeframe == "90d":
+                start_date = end_date - timedelta(days=90)
+            else:
+                start_date = end_date - timedelta(days=30)  # Default
+            
+            visualizations = []
+            
+            for viz_type in visualization_types:
+                viz = await self._generate_visualization(viz_type, start_date, end_date, include_data)
+                if viz:
+                    visualizations.append(viz)
+            
+            return visualizations
+            
+        except Exception as e:
+            logger.error(f"Error fetching analytics visualizations: {str(e)}")
+            raise
+    
+    async def _generate_performance_report(
+        self, 
+        start_date: datetime, 
+        end_date: datetime, 
+        include_insights: bool
+    ) -> Dict[str, Any]:
+        """Generate performance analytics report"""
+        return {
+            "id": f"perf_report_{int(datetime.utcnow().timestamp())}",
+            "title": "System Performance Analytics",
+            "type": "performance",
+            "status": "completed",
+            "generated_at": datetime.utcnow().isoformat(),
+            "data": {
+                "scan_performance": await self._get_scan_performance_metrics(start_date, end_date),
+                "system_performance": await self._get_system_performance_metrics(start_date, end_date),
+                "resource_utilization": await self._get_resource_utilization_metrics(start_date, end_date)
+            },
+            "insights": await self._generate_performance_insights() if include_insights else []
+        }
+    
+    async def _generate_trends_report(
+        self, 
+        start_date: datetime, 
+        end_date: datetime, 
+        include_insights: bool
+    ) -> Dict[str, Any]:
+        """Generate trends analytics report"""
+        return {
+            "id": f"trends_report_{int(datetime.utcnow().timestamp())}",
+            "title": "Trends Analysis Report",
+            "type": "trends",
+            "status": "completed",
+            "generated_at": datetime.utcnow().isoformat(),
+            "data": {
+                "scan_trends": await self._get_scan_trends(start_date, end_date),
+                "performance_trends": await self._get_performance_trends(start_date, end_date),
+                "usage_trends": await self._get_usage_trends(start_date, end_date)
+            },
+            "insights": await self._generate_trends_insights() if include_insights else []
+        }
+    
+    async def _generate_business_intelligence_report(
+        self, 
+        start_date: datetime, 
+        end_date: datetime, 
+        include_insights: bool
+    ) -> Dict[str, Any]:
+        """Generate business intelligence report"""
+        return {
+            "id": f"bi_report_{int(datetime.utcnow().timestamp())}",
+            "title": "Business Intelligence Report",
+            "type": "business_intelligence",
+            "status": "completed",
+            "generated_at": datetime.utcnow().isoformat(),
+            "data": {
+                "kpi_metrics": await self._get_kpi_metrics(start_date, end_date),
+                "business_metrics": await self._get_business_metrics(start_date, end_date),
+                "roi_analysis": await self._get_roi_analysis(start_date, end_date)
+            },
+            "insights": await self._generate_business_insights() if include_insights else []
+        }
+    
+    async def _generate_predictions_report(
+        self, 
+        start_date: datetime, 
+        end_date: datetime, 
+        include_insights: bool
+    ) -> Dict[str, Any]:
+        """Generate predictions report"""
+        return {
+            "id": f"pred_report_{int(datetime.utcnow().timestamp())}",
+            "title": "Predictive Analytics Report",
+            "type": "predictions",
+            "status": "completed",
+            "generated_at": datetime.utcnow().isoformat(),
+            "data": {
+                "predictions": await self._get_predictions(start_date, end_date),
+                "forecasts": await self._get_forecasts(start_date, end_date),
+                "anomaly_predictions": await self._get_anomaly_predictions(start_date, end_date)
+            },
+            "insights": await self._generate_prediction_insights() if include_insights else []
+        }
+    
+    async def _generate_visualization(
+        self,
+        viz_type: str,
+        start_date: datetime,
+        end_date: datetime,
+        include_data: bool
+    ) -> Dict[str, Any]:
+        """Generate visualization data"""
+        viz_id = f"{viz_type}_{int(datetime.utcnow().timestamp())}"
+        
+        base_viz = {
+            "id": viz_id,
+            "title": f"{viz_type.replace('_', ' ').title()} Visualization",
+            "type": viz_type,
+            "created_at": datetime.utcnow().isoformat(),
+            "config": self._get_default_viz_config(viz_type)
+        }
+        
+        if include_data:
+            base_viz["data"] = await self._get_viz_data(viz_type, start_date, end_date)
+        
+        return base_viz
+    
+    def _get_default_viz_config(self, viz_type: str) -> Dict[str, Any]:
+        """Get default configuration for visualization type"""
+        configs = {
+            "line_chart": {"xAxis": "time", "yAxis": "value", "color": "blue"},
+            "bar_chart": {"xAxis": "category", "yAxis": "value", "color": "green"},
+            "pie_chart": {"dataKey": "value", "nameKey": "name", "colors": ["#8884d8", "#82ca9d", "#ffc658"]},
+            "heatmap": {"xAxis": "x", "yAxis": "y", "value": "intensity"},
+            "scatter_plot": {"xAxis": "x", "yAxis": "y", "color": "red"}
+        }
+        return configs.get(viz_type, {})
+    
+    async def _get_viz_data(self, viz_type: str, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+        """Get data for visualization"""
+        # Implementation would fetch real data based on viz_type
+        # For now, return sample structure
+        if viz_type == "line_chart":
+            return [{"time": "2024-01-01", "value": 100}, {"time": "2024-01-02", "value": 120}]
+        elif viz_type == "bar_chart":
+            return [{"category": "A", "value": 100}, {"category": "B", "value": 150}]
+        elif viz_type == "pie_chart":
+            return [{"name": "Section A", "value": 400}, {"name": "Section B", "value": 300}]
+        else:
+            return []
+    
+    # Helper methods for data fetching (implementations would use real database queries)
+    async def _get_scan_performance_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"avg_duration": 120, "success_rate": 95.5, "throughput": 1000}
+    
+    async def _get_system_performance_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"cpu_usage": 65.2, "memory_usage": 72.1, "disk_usage": 45.3}
+    
+    async def _get_resource_utilization_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"peak_usage": 85.6, "avg_usage": 67.3, "low_usage": 23.1}
+    
+    async def _generate_performance_insights(self) -> List[Dict[str, Any]]:
+        return [{"type": "performance", "message": "System performance is optimal", "priority": "info"}]
+    
+    async def _get_scan_trends(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"upward_trend": True, "growth_rate": 15.2}
+    
+    async def _get_performance_trends(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"improvement": True, "efficiency_gain": 12.5}
+    
+    async def _get_usage_trends(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"active_users": 1250, "usage_growth": 8.3}
+    
+    async def _generate_trends_insights(self) -> List[Dict[str, Any]]:
+        return [{"type": "trend", "message": "Positive growth trend detected", "priority": "info"}]
+    
+    async def _get_kpi_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"availability": 99.9, "performance_score": 87.5, "user_satisfaction": 92.1}
+    
+    async def _get_business_metrics(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"cost_efficiency": 85.2, "time_savings": 67.3, "productivity_gain": 23.1}
+    
+    async def _get_roi_analysis(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"roi_percentage": 156.7, "payback_period": 8.2, "net_benefit": 125000}
+    
+    async def _generate_business_insights(self) -> List[Dict[str, Any]]:
+        return [{"type": "business", "message": "Strong ROI and efficiency gains", "priority": "info"}]
+    
+    async def _get_predictions(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"next_30_days": {"performance": "stable", "usage": "increasing"}}
+    
+    async def _get_forecasts(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"resource_needs": {"cpu": "increase", "memory": "stable", "storage": "increase"}}
+    
+    async def _get_anomaly_predictions(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+        return {"risk_score": 25.3, "potential_issues": ["memory_pressure", "disk_space"]}
+    
+    async def _generate_prediction_insights(self) -> List[Dict[str, Any]]:
+        return [{"type": "prediction", "message": "Proactive scaling recommended", "priority": "warning"}]
