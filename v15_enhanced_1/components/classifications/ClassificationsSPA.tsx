@@ -42,7 +42,7 @@ import {
   Navigation, Compass, Route, Layers, Grid, List, Table, Kanban,
   Timeline, Chart, PieChart as PieChartIcon, LineChart as LineChartIcon,
   Building, Briefcase, Calculator, CreditCard, FileText, Presentation,
-  Lightbulb, Zap, Brain, Network, Bot, Workflow, GitBranch, Boxes,
+  Lightbulb, Zap, Brain, Network, Bot, Workflow, GitBranch, Boxes, Rocket,
   Package, Server, Cloud, HardDrive, Wifi, Bluetooth, Smartphone,
   Laptop, Desktop, Tablet, Watch, Headphones, Speaker, Gamepad2,
   Joystick, Home, Car, Plane, Train, Ship, Truck, Bike, Bus,
@@ -121,6 +121,7 @@ import { useAIIntelligence } from './core/hooks/useAIIntelligence';
 import { useMLIntelligence } from './core/hooks/useMLIntelligence';
 import { useRealTimeMonitoring } from './core/hooks/useRealTimeMonitoring';
 import { useWorkflowOrchestration } from './core/hooks/useWorkflowOrchestration';
+import { useClassificationWorkflowOrchestrator } from './core/hooks/useClassificationWorkflowOrchestrator';
 import { ClassificationApi } from './core/api/classificationApi';
 import { aiApi } from './core/api/aiApi';
 import { mlApi } from './core/api/mlApi';
@@ -137,6 +138,7 @@ import WorkflowStepper from './shared/ui/WorkflowStepper';
 // Import providers
 import { ClassificationProvider } from './shared/providers/ClassificationProvider';
 import { IntelligenceProvider } from './shared/providers/IntelligenceProvider';
+import { ClassificationsRBACProvider, useClassificationsRBAC } from './core/hooks/useClassificationsRBAC';
 
 // Import utility processors
 import { defaultProcessor } from './core/utils/intelligenceProcessor';
@@ -2922,8 +2924,8 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Main Component
-export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
+// Internal ClassificationsSPA Component (with RBAC context)
+const ClassificationsSPAInternal: React.FC<ClassificationsSPAProps> = ({
   initialView = 'overview',
   embedded = false,
   theme = 'auto',
@@ -2937,6 +2939,42 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
   onNavigate,
   onWorkflowComplete
 }) => {
+  // RBAC Integration
+  const rbac = useClassificationsRBAC();
+
+  // Authentication check
+  if (!rbac.isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md p-6">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-4">Please log in to access the Classifications system.</p>
+            <Button onClick={() => window.location.href = '/login'} className="w-full">
+              <Lock className="h-4 w-4 mr-2" />
+              Log In
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (rbac.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md p-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Classifications</h2>
+            <p className="text-gray-600">Verifying permissions and initializing system...</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
   // State Management
   const [state, setState] = useState<ClassificationsSPAState>({
     isLoading: false,
@@ -3038,6 +3076,22 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
   const { models: mlModels, trainingJobs, deployments, isLoading: mlLoading } = useMLIntelligence();
   const { systemMetrics, notifications, activities, isLoading: monitoringLoading } = useRealTimeMonitoring();
   const { workflows, createWorkflow: createWorkflowFromHook, executeWorkflow: executeWorkflowFromHook, isLoading: workflowLoading } = useWorkflowOrchestration();
+  
+  // Advanced workflow orchestration with RBAC integration
+  const {
+    availableTemplates,
+    activeWorkflows,
+    workflowMetrics,
+    isExecuting,
+    executeWorkflow,
+    pauseWorkflow,
+    resumeWorkflow,
+    cancelWorkflow,
+    getWorkflowProgress,
+    getRecommendedWorkflows,
+    canExecuteWorkflows,
+    canManageWorkflows
+  } = useClassificationWorkflowOrchestrator();
 
   // Refs for performance optimization
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -3201,6 +3255,13 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
   }, []);
 
   const handleVersionChange = useCallback((version: ClassificationVersion) => {
+    // Log navigation action
+    rbac.logUserAction('navigate_version', 'classification_spa', undefined, {
+      version,
+      previousVersion: state.currentVersion,
+      timestamp: new Date().toISOString()
+    });
+
     setState(prev => ({
       ...prev,
       currentVersion: version,
@@ -3210,13 +3271,21 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         { id: version, label: CLASSIFICATION_VERSIONS.find(v => v.id === version)?.name || version, href: `/${version}` }
       ]
     }));
-  }, []);
+  }, [rbac, state.currentVersion]);
 
   const handleComponentSelect = useCallback((componentId: string) => {
     const version = CLASSIFICATION_VERSIONS.find(v => 
       v.components.some(c => c.id === componentId)
     );
     const component = version?.components.find(c => c.id === componentId);
+    
+    // Log component access
+    rbac.logUserAction('access_component', 'classification_component', undefined, {
+      componentId,
+      componentName: component?.name,
+      version: version?.id,
+      timestamp: new Date().toISOString()
+    });
     
     setState(prev => ({
       ...prev,
@@ -3227,10 +3296,16 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         { id: componentId, label: component?.name || componentId, href: `/${version?.id}/${componentId}` }
       ]
     }));
-  }, []);
+  }, [rbac]);
 
   const handleQuickAction = useCallback(async (actionId: string) => {
     setState(prev => ({ ...prev, isLoading: true }));
+    
+    // Log quick action
+    rbac.logUserAction('quick_action', 'classification_spa', undefined, {
+      actionId,
+      timestamp: new Date().toISOString()
+    });
     
     try {
       switch (actionId) {
@@ -3267,7 +3342,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, []);
+  }, [rbac]);
 
   // Advanced workflow action handlers
   const handleNewClassification = useCallback(async () => {
@@ -4256,8 +4331,63 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
       'business-intelligence-hub': BusinessIntelligenceHub
     };
 
+    // Component permission mapping
+    const componentPermissions: { [key: string]: string } = {
+      'framework-manager': 'classification.frameworks.view',
+      'rule-engine': 'classification.rules.view',
+      'policy-orchestrator': 'classification.policies.view',
+      'bulk-operation-center': 'classification.bulk.operations',
+      'audit-trail-analyzer': 'classification.audit.view',
+      'compliance-dashboard': 'classification.audit.compliance_reports',
+      'ml-model-orchestrator': 'classification.ml.view_models',
+      'training-pipeline-manager': 'classification.ml.train_models',
+      'adaptive-learning-center': 'classification.ml.manage_experiments',
+      'hyperparameter-optimizer': 'classification.ml.optimize_hyperparameters',
+      'drift-detection-monitor': 'classification.ml.monitor_drift',
+      'feature-engineering-studio': 'classification.ml.feature_engineering',
+      'model-ensemble-builder': 'classification.ml.manage_ensembles',
+      'ml-analytics-dashboard': 'classification.ml.view_analytics',
+      'ai-intelligence-orchestrator': 'classification.ai.view_intelligence',
+      'conversation-manager': 'classification.ai.create_conversations',
+      'explainable-reasoning-viewer': 'classification.ai.view_reasoning',
+      'auto-tagging-engine': 'classification.ai.auto_tagging',
+      'workload-optimizer': 'classification.ai.workload_optimization',
+      'real-time-intelligence-stream': 'classification.ai.real_time_streaming',
+      'knowledge-synthesizer': 'classification.ai.manage_knowledge',
+      'ai-analytics-dashboard': 'classification.ai.view_intelligence',
+      'classification-workflow': 'classification.workflows.view',
+      'intelligence-coordinator': 'classification.workflows.coordinate',
+      'business-intelligence-hub': 'classification.bi.view'
+    };
+
     const Component = componentMap[state.currentComponent];
     if (!Component) return <div>Component not found</div>;
+
+    const requiredPermission = componentPermissions[state.currentComponent];
+    
+    // Check permission before rendering
+    if (requiredPermission && !rbac.hasPermission(requiredPermission)) {
+      return (
+        <Card className="p-6">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+            <p className="text-gray-600">You don't have permission to access this component.</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Required permission: <code className="bg-gray-100 px-2 py-1 rounded">{requiredPermission}</code>
+            </p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => setState(prev => ({ ...prev, currentComponent: null, currentView: 'overview' }))}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Overview
+            </Button>
+          </div>
+        </Card>
+      );
+    }
 
     return (
       <ErrorBoundary>
@@ -4266,7 +4396,7 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         </Suspense>
       </ErrorBoundary>
     );
-  }, [state.currentComponent]);
+  }, [state.currentComponent, rbac]);
 
   // Render functions
   const renderSidebar = () => (
@@ -4919,6 +5049,46 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         </Card>
       </div>
 
+      {/* User Welcome Section with RBAC Context */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={rbac.currentUser?.avatar} />
+                <AvatarFallback className="bg-blue-600 text-white">
+                  {rbac.currentUser?.username?.charAt(0)?.toUpperCase() || 
+                   rbac.currentUser?.email?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Welcome back, {rbac.currentUser?.username || rbac.currentUser?.email?.split('@')[0] || 'User'}!
+                </h2>
+                <p className="text-gray-600">
+                  Role: <Badge variant="outline" className="ml-1">{rbac.currentUser?.role}</Badge>
+                  {rbac.currentUser?.department && (
+                    <span className="ml-2">Department: <Badge variant="outline" className="ml-1">{rbac.currentUser.department}</Badge></span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <rbac.PermissionGuard permission="classification.admin.system_config">
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  System Config
+                </Button>
+              </rbac.PermissionGuard>
+              <Button variant="outline" size="sm" onClick={rbac.refreshUser}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Main Dashboard Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Analytics Chart */}
@@ -4982,6 +5152,143 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
           </CardContent>
         </Card>
       </div>
+
+      {/* Active Workflows Section */}
+      {activeWorkflows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Workflow className="h-5 w-5" />
+                Active Workflows ({activeWorkflows.length})
+              </CardTitle>
+              <rbac.PermissionGuard permission="classification.workflows.manage">
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage All
+                </Button>
+              </rbac.PermissionGuard>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {activeWorkflows.slice(0, 3).map((workflow) => {
+                const progress = getWorkflowProgress(workflow.id);
+                return (
+                  <div key={workflow.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="font-medium">{workflow.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          Step {workflow.currentStepIndex + 1} of {workflow.steps.length}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={
+                          workflow.status === 'running' ? 'bg-blue-100 text-blue-800' :
+                          workflow.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                          workflow.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }>
+                          {workflow.status}
+                        </Badge>
+                        <rbac.PermissionGuard permission="classification.workflows.manage">
+                          <div className="flex space-x-1">
+                            {workflow.status === 'running' && (
+                              <Button size="sm" variant="outline" onClick={() => pauseWorkflow(workflow.id)}>
+                                <Pause className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {workflow.status === 'paused' && (
+                              <Button size="sm" variant="outline" onClick={() => resumeWorkflow(workflow.id)}>
+                                <Play className="h-3 w-3" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => cancelWorkflow(workflow.id)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </rbac.PermissionGuard>
+                      </div>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>{Math.round(progress)}% complete</span>
+                      <span>Started {new Date(workflow.startTime).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {activeWorkflows.length > 3 && (
+                <Button variant="outline" className="w-full">
+                  View All {activeWorkflows.length} Workflows
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Start Workflows */}
+      <rbac.PermissionGuard permission="classification.workflows.execute">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5" />
+              Quick Start Workflows
+            </CardTitle>
+            <CardDescription>
+              Launch pre-built workflows to accelerate your classification tasks
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {availableTemplates.slice(0, 3).map((template) => (
+                <Card key={template.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{template.name}</CardTitle>
+                    <CardDescription className="text-sm">{template.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-xs">
+                        <span>Complexity</span>
+                        <Badge variant="outline" className="text-xs">{template.complexity}</Badge>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span>Duration</span>
+                        <span>{Math.round(template.estimatedTotalDuration / 60)} min</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span>Steps</span>
+                        <span>{template.steps.length}</span>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => executeWorkflow(template.id)}
+                      disabled={isExecuting}
+                    >
+                      {isExecuting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                          Starting...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3 w-3 mr-2" />
+                          Start Workflow
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </rbac.PermissionGuard>
 
       {/* Classification Versions Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -5183,6 +5490,19 @@ export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = ({
         )}
       </div>
     </TooltipProvider>
+  );
+};
+
+// Main Component with RBAC Provider Wrapper
+export const ClassificationsSPA: React.FC<ClassificationsSPAProps> = (props) => {
+  return (
+    <ClassificationsRBACProvider>
+      <ClassificationProvider>
+        <IntelligenceProvider>
+          <ClassificationsSPAInternal {...props} />
+        </IntelligenceProvider>
+      </ClassificationProvider>
+    </ClassificationsRBACProvider>
   );
 };
 
