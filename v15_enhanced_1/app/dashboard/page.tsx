@@ -1,30 +1,55 @@
-import { AppSidebar } from '@/components/app-sidebar'
-import { ChartAreaInteractive } from '@/components/chart-area-interactive'
-import { DataTable } from '@/components/data-table'
-import { SectionCards } from '@/components/section-cards'
-import { SiteHeader } from '@/components/site-header'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+/**
+ * 📊 GLOBAL DASHBOARD PAGE
+ * ========================
+ * 
+ * Next.js App Router page for the Global Dashboard
+ * Integrates with the IntelligentDashboardOrchestrator to provide
+ * comprehensive cross-SPA analytics and system monitoring.
+ */
 
-import data from "./data.json"
+import React from 'react';
+import { Metadata } from 'next';
+import { IntelligentDashboardOrchestrator } from '@/components/racine-main-manager/components/dashboard';
 
-export default function Page() {
+// ============================================================================
+// METADATA
+// ============================================================================
+
+export const metadata: Metadata = {
+  title: 'Global Dashboard | Enterprise Data Governance Platform',
+  description: 'Comprehensive analytics dashboard with real-time KPIs, system health monitoring, and cross-SPA insights.',
+  keywords: 'dashboard, analytics, KPIs, monitoring, insights, real-time, governance',
+  openGraph: {
+    title: 'Global Dashboard',
+    description: 'Real-time analytics and monitoring across all data governance groups',
+    type: 'website'
+  }
+};
+
+// ============================================================================
+// MAIN DASHBOARD PAGE
+// ============================================================================
+
+export default function DashboardPage() {
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
-              <div className="px-4 lg:px-6">
-                <ChartAreaInteractive />
-              </div>
-              <DataTable data={data} />
-            </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+    <IntelligentDashboardOrchestrator 
+      mode="full-dashboard"
+      enableRealTimeUpdates={true}
+      enableCustomWidgets={true}
+      enableDrillDownAnalytics={true}
+      enableExportCapabilities={true}
+      enableAlertManagement={true}
+      enablePredictiveAnalytics={true}
+      enableCrossGroupCorrelation={true}
+      enablePerformanceMetrics={true}
+      enableNotifications={true}
+      showSystemHealth={true}
+      showDataQuality={true}
+      showComplianceScores={true}
+      showUsageStatistics={true}
+      showTrendAnalysis={true}
+      showQuickActions={true}
+      autoRefreshInterval={30000}
+    />
+  );
 }

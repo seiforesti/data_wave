@@ -130,3 +130,28 @@ export type {
   UseRBACSystemOptions,
   UseRBACSystemReturn
 } from './useRBACSystem';
+
+// Navigation & UI hooks (CRITICAL ADDITIONS)
+export { default as useGlobalSearch } from './useGlobalSearch';
+export type {
+  GlobalSearchState,
+  GlobalSearchActions
+} from './useGlobalSearch';
+
+export { default as useQuickActions } from './useQuickActions';
+export type {
+  QuickActionsState,
+  QuickActionsManager
+} from './useQuickActions';
+
+export { default as useNavigationAnalytics } from './useNavigationAnalytics';
+export type {
+  NavigationAnalyticsState,
+  NavigationAnalyticsActions
+} from './useNavigationAnalytics';
+
+export { default as useUserPreferences } from './useUserPreferences';
+export type {
+  UserPreferencesState,
+  UserPreferencesActions
+} from './useUserPreferences';
