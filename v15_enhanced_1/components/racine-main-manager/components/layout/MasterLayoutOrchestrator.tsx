@@ -1,1152 +1,990 @@
 /**
- * 🎯 MASTER LAYOUT ORCHESTRATOR - ENTERPRISE LAYOUT CONTROLLER
- * ============================================================
+ * 🏗️ MASTER LAYOUT ORCHESTRATOR - ENTERPRISE LAYOUT SYSTEM
+ * ========================================================
  * 
- * The ultimate layout orchestration system for the entire data governance platform.
- * This component provides intelligent, adaptive layout management that surpasses
- * Databricks, Microsoft Purview, and Azure in flexibility and enterprise power.
- * 
- * Features:
- * - SPA-aware layout management with intelligent adaptation
- * - Dynamic layout switching with smooth transitions
- * - Cross-SPA workflow layout coordination
- * - Enterprise accessibility compliance (WCAG 2.1 AAA)
- * - Performance-optimized layout rendering
- * - User preference persistence and workspace-specific layouts
- * - Mobile-responsive layout adaptation
- * - Advanced overlay and modal management
- * 
- * Architecture:
- * - Orchestrates all existing layout components
- * - Provides unified layout API for all SPAs and Racine features
- * - Manages layout state across the entire application
- * - Integrates with routing system for layout-aware navigation
- * - Supports advanced layout modes (split-screen, tabbed, grid, custom)
- * 
- * Backend Integration:
- * - 100% mapped to workspace and user management services
- * - Real-time layout synchronization across sessions
- * - Layout analytics and optimization
- * - Cross-group layout coordination
+ * The ultimate layout orchestrator that provides intelligent layout management
+ * across all SPAs and data governance groups. Features include:
+ * - SPA-aware layout adaptation
+ * - Dynamic layout switching
+ * - Performance-optimized layout orchestration
+ * - Advanced responsive design
+ * - Accessibility compliance (WCAG 2.1 AAA)
+ * - Real-time layout optimization
+ * - Cross-device layout synchronization
+ * - Enterprise-grade layout analytics
  */
 
 'use client';
 
-import React, { 
-  useState, 
-  useEffect, 
-  useCallback, 
-  useMemo, 
-  useRef,
-  createContext,
-  useContext,
-  Suspense,
-  ReactNode,
-  ComponentType
-} from 'react';
-import { motion, AnimatePresence, useAnimation, LayoutGroup } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { 
+  Monitor, 
+  Smartphone, 
+  Tablet, 
   Layout,
+  Grid,
+  Columns,
   Maximize2,
   Minimize2,
-  SplitSquareHorizontal,
-  SplitSquareVertical,
-  Grid3X3,
-  Layers,
   Settings,
-  Monitor,
-  Smartphone,
-  Tablet,
-  Laptop,
-  Desktop,
-  Eye,
-  EyeOff,
-  RotateCcw,
-  Save,
-  Download,
-  Upload,
-  Share2,
-  Copy,
-  Palette,
-  Accessibility,
   Zap,
-  Activity,
-  BarChart3,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  HelpCircle,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
-  X,
-  Plus,
-  Minus
+  Eye,
+  Accessibility,
+  Palette,
+  RefreshCw
 } from 'lucide-react';
 
 // UI Components
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem
-} from '@/components/ui/dropdown-menu';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetDescription, 
-  SheetHeader, 
-  SheetTitle,
-  SheetTrigger 
-} from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
-// Racine Core Imports
-import { 
-  LayoutMode, 
-  ViewMode, 
-  SystemStatus,
+// Racine Integration
+import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { useRacineOrchestration } from '../../hooks/useRacineOrchestration';
+import { useWorkspaceManagement } from '../../hooks/useWorkspaceManagement';
+import { useNavigationAnalytics } from '../../hooks/useNavigationAnalytics';
+
+// Type Definitions
+import {
+  ViewMode,
+  LayoutMode,
+  SPAContext,
+  LayoutPreferences,
   UserContext,
-  WorkspaceConfiguration,
-  PerformanceMetrics,
-  UUID,
+  ResponsiveBreakpoint,
+  LayoutConfiguration,
+  LayoutPerformanceMetrics,
+  SPAType,
   ISODateString
 } from '../../types/racine-core.types';
 
-// Racine Hooks
-import { useWorkspaceManagement } from '../../hooks/useWorkspaceManagement';
-import { useUserManagement } from '../../hooks/useUserManagement';
-import { useCrossGroupIntegration } from '../../hooks/useCrossGroupIntegration';
-import { useRacineOrchestration } from '../../hooks/useRacineOrchestration';
-
-// Existing Layout Components (Enhanced Integration)
+// Layout Components
 import { LayoutContent } from './LayoutContent';
-import { DynamicWorkspaceManager } from './DynamicWorkspaceManager';
 import { ResponsiveLayoutEngine } from './ResponsiveLayoutEngine';
 import { ContextualOverlayManager } from './ContextualOverlayManager';
 import { TabManager } from './TabManager';
 import { SplitScreenManager } from './SplitScreenManager';
 import { LayoutPersonalization } from './LayoutPersonalization';
 
-// Layout Utilities
-import { cn } from '../../utils/ui-utils';
-import { formatBytes, formatDuration } from '../../utils/formatting-utils';
-import { optimizeLayoutPerformance, validateLayoutConfiguration } from '../../utils/layout-utils';
-
-// Layout Constants
-import { 
-  LAYOUT_PRESETS,
-  RESPONSIVE_BREAKPOINTS,
-  ANIMATION_CONFIGS,
-  ACCESSIBILITY_CONFIGS
-} from '../../constants/layout-constants';
-
 // ============================================================================
-// INTERFACES AND TYPES
+// INTERFACES & TYPES
 // ============================================================================
 
-interface MasterLayoutOrchestratorProps {
-  children: ReactNode;
-  mode?: 'app-root' | 'spa-container' | 'embedded';
-  currentView?: ViewMode;
-  layoutMode?: LayoutMode;
-  spaContext?: SPAContext;
-  userPreferences?: LayoutPreferences;
-  responsive?: boolean;
-  accessibility?: 'A' | 'AA' | 'AAA';
-  performance?: 'standard' | 'high' | 'ultra';
-  onLayoutChange?: (layout: LayoutMode) => void;
-  onViewChange?: (view: ViewMode) => void;
+export interface MasterLayoutOrchestratorProps {
+  // Core Layout Configuration
+  currentView: ViewMode;
+  layoutMode: LayoutMode;
+  spaContext: SPAContext | null;
+  userPreferences: LayoutPreferences;
+  children: React.ReactNode;
+  
+  // Advanced Configuration
+  enableResponsive?: boolean;
+  enableAnalytics?: boolean;
+  enableAccessibility?: boolean;
+  enablePerformanceOptimization?: boolean;
+  
+  // Layout Constraints
+  minWidth?: number;
+  maxWidth?: number;
+  aspectRatio?: 'auto' | '16:9' | '4:3' | '1:1';
+  
+  // Event Handlers
+  onLayoutChange?: (layout: LayoutConfiguration) => void;
+  onSPASwitch?: (spaType: SPAType) => void;
+  onPerformanceAlert?: (metrics: LayoutPerformanceMetrics) => void;
+  
+  // Customization
+  className?: string;
+  style?: React.CSSProperties;
+  theme?: 'light' | 'dark' | 'system';
 }
 
-interface SPAContext {
-  activeSPA?: string;
-  spaData?: Record<string, any>;
-  crossSPAWorkflows?: any[];
-  spaIntegrations?: Integration[];
-}
-
-interface LayoutPreferences {
-  defaultLayout: LayoutMode;
-  responsiveEnabled: boolean;
-  animationsEnabled: boolean;
-  accessibilityLevel: 'A' | 'AA' | 'AAA';
-  customLayouts: CustomLayout[];
-  workspaceLayouts: Record<string, LayoutMode>;
-  spaLayouts: Record<string, LayoutMode>;
-}
-
-interface CustomLayout {
-  id: string;
-  name: string;
-  description: string;
-  configuration: LayoutConfiguration;
-  preview?: string;
-  isDefault?: boolean;
-  workspaceSpecific?: boolean;
-  permissions?: string[];
-}
-
-interface LayoutConfiguration {
-  mode: LayoutMode;
-  dimensions: {
-    sidebarWidth: number;
-    contentWidth: number;
-    panelHeights: number[];
-  };
-  responsive: ResponsiveConfig;
-  animations: AnimationConfig;
-  accessibility: AccessibilityConfig;
-  performance: PerformanceConfig;
-}
-
-interface ResponsiveConfig {
-  enabled: boolean;
-  breakpoints: Record<string, number>;
-  adaptiveLayouts: Record<string, LayoutMode>;
-  mobileOptimizations: boolean;
-}
-
-interface AnimationConfig {
-  enabled: boolean;
-  duration: number;
-  easing: string;
-  reducedMotion: boolean;
-  performanceMode: boolean;
-}
-
-interface AccessibilityConfig {
-  level: 'A' | 'AA' | 'AAA';
-  highContrast: boolean;
-  largeText: boolean;
-  keyboardNavigation: boolean;
-  screenReaderOptimized: boolean;
-  colorBlindSupport: boolean;
-}
-
-interface PerformanceConfig {
-  mode: 'standard' | 'high' | 'ultra';
-  lazyLoading: boolean;
-  virtualScrolling: boolean;
-  memoization: boolean;
-  bundleSplitting: boolean;
-}
-
-interface LayoutState {
-  currentLayout: LayoutMode;
-  isTransitioning: boolean;
-  transitionProgress: number;
-  activeOverlays: string[];
-  splitPanes: SplitPaneConfig[];
-  tabGroups: TabGroupConfig[];
-  customPanels: CustomPanelConfig[];
+interface LayoutOrchestratorState {
+  // Current Layout State
+  activeLayout: LayoutConfiguration;
+  layoutHistory: LayoutConfiguration[];
+  adaptiveSettings: Record<string, any>;
+  
+  // Performance Monitoring
   performanceMetrics: LayoutPerformanceMetrics;
-}
-
-interface SplitPaneConfig {
-  id: string;
-  orientation: 'horizontal' | 'vertical';
-  sizes: number[];
-  minSizes: number[];
-  maxSizes: number[];
-  resizable: boolean;
-  collapsible: boolean;
-}
-
-interface TabGroupConfig {
-  id: string;
-  tabs: TabConfig[];
-  activeTab: string;
-  closable: boolean;
-  reorderable: boolean;
-  persistent: boolean;
-}
-
-interface TabConfig {
-  id: string;
-  title: string;
-  component: ComponentType;
-  closable: boolean;
-  modified: boolean;
-  icon?: ComponentType;
-}
-
-interface CustomPanelConfig {
-  id: string;
-  title: string;
-  component: ComponentType;
-  position: 'left' | 'right' | 'top' | 'bottom' | 'floating';
-  size: number;
-  resizable: boolean;
-  collapsible: boolean;
-  persistent: boolean;
-}
-
-interface LayoutPerformanceMetrics {
   renderTime: number;
   memoryUsage: number;
-  componentCount: number;
-  updateFrequency: number;
-  lastOptimization: ISODateString;
-}
-
-interface Integration {
-  id: string;
-  type: string;
-  status: SystemStatus;
-  metadata: Record<string, any>;
+  
+  // Responsive State
+  breakpoint: ResponsiveBreakpoint;
+  deviceType: 'desktop' | 'tablet' | 'mobile';
+  orientation: 'portrait' | 'landscape';
+  
+  // SPA Context
+  currentSPA: SPAType | null;
+  spaLayoutRequirements: Record<SPAType, LayoutConfiguration>;
+  
+  // Error Handling
+  layoutError: string | null;
+  fallbackLayout: LayoutConfiguration | null;
+  
+  // Accessibility
+  accessibilityMode: boolean;
+  screenReaderOptimized: boolean;
+  highContrastMode: boolean;
+  
+  // Animation & Transitions
+  isTransitioning: boolean;
+  transitionDirection: 'in' | 'out' | 'cross';
+  animationPreference: 'none' | 'reduced' | 'full';
 }
 
 // ============================================================================
-// LAYOUT CONTEXT
+// LAYOUT CONFIGURATIONS
 // ============================================================================
 
-interface LayoutContextValue {
-  layoutState: LayoutState;
-  layoutPreferences: LayoutPreferences;
-  spaContext: SPAContext;
-  updateLayout: (layout: LayoutMode) => void;
-  updatePreferences: (preferences: Partial<LayoutPreferences>) => void;
-  addOverlay: (overlayId: string, component: ComponentType) => void;
-  removeOverlay: (overlayId: string) => void;
-  createSplitPane: (config: SplitPaneConfig) => void;
-  createTabGroup: (config: TabGroupConfig) => void;
-  optimizePerformance: () => void;
-}
-
-const LayoutContext = createContext<LayoutContextValue | null>(null);
-
-export const useLayoutContext = () => {
-  const context = useContext(LayoutContext);
-  if (!context) {
-    throw new Error('useLayoutContext must be used within MasterLayoutOrchestrator');
+const DEFAULT_LAYOUT_CONFIGURATIONS: Record<LayoutMode, LayoutConfiguration> = {
+  default: {
+    id: 'default',
+    name: 'Default Layout',
+    type: 'default',
+    structure: {
+      header: { height: 64, fixed: true },
+      sidebar: { width: 280, collapsible: true, position: 'left' },
+      content: { padding: 24, scrollable: true },
+      footer: { height: 0, visible: false }
+    },
+    responsive: {
+      mobile: { sidebar: { width: 0, overlay: true } },
+      tablet: { sidebar: { width: 240 } },
+      desktop: { sidebar: { width: 280 } }
+    },
+    performance: {
+      virtualScrolling: false,
+      lazyLoading: true,
+      memoization: true
+    }
+  },
+  
+  compact: {
+    id: 'compact',
+    name: 'Compact Layout',
+    type: 'compact',
+    structure: {
+      header: { height: 48, fixed: true },
+      sidebar: { width: 240, collapsible: true, position: 'left' },
+      content: { padding: 16, scrollable: true },
+      footer: { height: 0, visible: false }
+    },
+    responsive: {
+      mobile: { sidebar: { width: 0, overlay: true } },
+      tablet: { sidebar: { width: 200 } },
+      desktop: { sidebar: { width: 240 } }
+    },
+    performance: {
+      virtualScrolling: true,
+      lazyLoading: true,
+      memoization: true
+    }
+  },
+  
+  fullscreen: {
+    id: 'fullscreen',
+    name: 'Fullscreen Layout',
+    type: 'fullscreen',
+    structure: {
+      header: { height: 0, fixed: false },
+      sidebar: { width: 0, collapsible: false, position: 'left' },
+      content: { padding: 0, scrollable: true },
+      footer: { height: 0, visible: false }
+    },
+    responsive: {
+      mobile: {},
+      tablet: {},
+      desktop: {}
+    },
+    performance: {
+      virtualScrolling: true,
+      lazyLoading: true,
+      memoization: true
+    }
+  },
+  
+  'split-screen': {
+    id: 'split-screen',
+    name: 'Split Screen Layout',
+    type: 'split-screen',
+    structure: {
+      header: { height: 56, fixed: true },
+      sidebar: { width: 200, collapsible: true, position: 'left' },
+      content: { padding: 16, scrollable: true, split: true },
+      footer: { height: 0, visible: false }
+    },
+    responsive: {
+      mobile: { 
+        content: { split: false },
+        sidebar: { width: 0, overlay: true }
+      },
+      tablet: { content: { split: true } },
+      desktop: { content: { split: true } }
+    },
+    performance: {
+      virtualScrolling: true,
+      lazyLoading: true,
+      memoization: true
+    }
+  },
+  
+  dashboard: {
+    id: 'dashboard',
+    name: 'Dashboard Layout',
+    type: 'dashboard',
+    structure: {
+      header: { height: 64, fixed: true },
+      sidebar: { width: 260, collapsible: true, position: 'left' },
+      content: { padding: 20, scrollable: true, grid: true },
+      footer: { height: 32, visible: true }
+    },
+    responsive: {
+      mobile: { 
+        sidebar: { width: 0, overlay: true },
+        content: { grid: false, padding: 12 }
+      },
+      tablet: { content: { grid: true } },
+      desktop: { content: { grid: true } }
+    },
+    performance: {
+      virtualScrolling: true,
+      lazyLoading: true,
+      memoization: true
+    }
   }
-  return context;
 };
 
 // ============================================================================
-// MAIN COMPONENT
+// MAIN COMPONENT IMPLEMENTATION
 // ============================================================================
 
 export const MasterLayoutOrchestrator: React.FC<MasterLayoutOrchestratorProps> = ({
-  children,
-  mode = 'spa-container',
-  currentView = ViewMode.DASHBOARD,
-  layoutMode = LayoutMode.SINGLE_PANE,
-  spaContext = {},
+  currentView,
+  layoutMode,
+  spaContext,
   userPreferences,
-  responsive = true,
-  accessibility = 'AA',
-  performance = 'standard',
+  children,
+  enableResponsive = true,
+  enableAnalytics = true,
+  enableAccessibility = true,
+  enablePerformanceOptimization = true,
+  minWidth = 320,
+  maxWidth,
+  aspectRatio = 'auto',
   onLayoutChange,
-  onViewChange
+  onSPASwitch,
+  onPerformanceAlert,
+  className,
+  style,
+  theme = 'system'
 }) => {
-  // ============================================================================
+  // ========================================================================
   // STATE MANAGEMENT
-  // ============================================================================
-
-  // Racine Hooks
-  const {
-    workspaces,
-    activeWorkspace,
-    updateWorkspaceLayout,
-    getWorkspaceLayoutPreferences
-  } = useWorkspaceManagement();
-
-  const {
-    currentUser,
-    userPermissions,
-    updateUserPreferences,
-    getUserLayoutPreferences
-  } = useUserManagement();
-
-  const {
-    integrationStatus,
-    coordinateLayout,
-    optimizeLayoutPerformance
-  } = useCrossGroupIntegration();
-
-  const {
-    systemHealth,
-    performanceMetrics,
-    optimizeSystem
-  } = useRacineOrchestration();
-
-  // Layout State
-  const [layoutState, setLayoutState] = useState<LayoutState>({
-    currentLayout: layoutMode,
-    isTransitioning: false,
-    transitionProgress: 0,
-    activeOverlays: [],
-    splitPanes: [],
-    tabGroups: [],
-    customPanels: [],
+  // ========================================================================
+  
+  const [layoutState, setLayoutState] = useState<LayoutOrchestratorState>({
+    // Current Layout State
+    activeLayout: DEFAULT_LAYOUT_CONFIGURATIONS[layoutMode] || DEFAULT_LAYOUT_CONFIGURATIONS.default,
+    layoutHistory: [],
+    adaptiveSettings: {},
+    
+    // Performance Monitoring
     performanceMetrics: {
       renderTime: 0,
       memoryUsage: 0,
-      componentCount: 0,
-      updateFrequency: 0,
-      lastOptimization: new Date().toISOString()
-    }
+      layoutShifts: 0,
+      interactionLatency: 0,
+      frameRate: 60,
+      bundleSize: 0
+    },
+    renderTime: 0,
+    memoryUsage: 0,
+    
+    // Responsive State
+    breakpoint: 'desktop',
+    deviceType: 'desktop',
+    orientation: 'landscape',
+    
+    // SPA Context
+    currentSPA: spaContext?.spaType || null,
+    spaLayoutRequirements: {},
+    
+    // Error Handling
+    layoutError: null,
+    fallbackLayout: null,
+    
+    // Accessibility
+    accessibilityMode: userPreferences.accessibility?.screenReaderOptimized || false,
+    screenReaderOptimized: userPreferences.accessibility?.screenReaderOptimized || false,
+    highContrastMode: userPreferences.accessibility?.highContrast || false,
+    
+    // Animation & Transitions
+    isTransitioning: false,
+    transitionDirection: 'in',
+    animationPreference: userPreferences.accessibility?.reducedMotion ? 'reduced' : 'full'
   });
 
-  const [layoutPreferences, setLayoutPreferences] = useState<LayoutPreferences>(
-    userPreferences || {
-      defaultLayout: LayoutMode.SINGLE_PANE,
-      responsiveEnabled: true,
-      animationsEnabled: true,
-      accessibilityLevel: accessibility,
-      customLayouts: [],
-      workspaceLayouts: {},
-      spaLayouts: {}
+  // ========================================================================
+  // HOOKS & REFS
+  // ========================================================================
+  
+  const router = useRouter();
+  const pathname = usePathname();
+  const animationControls = useAnimation();
+  
+  const {
+    theme: themePrefs,
+    layout: layoutPrefs,
+    accessibility: a11yPrefs,
+    setLayout: updateLayoutPrefs
+  } = useUserPreferences({
+    autoSave: true,
+    enableAnalytics: true
+  });
+  
+  const { 
+    monitorSystemHealth,
+    optimizePerformance,
+    trackLayoutEvent
+  } = useRacineOrchestration();
+  
+  const {
+    getCurrentWorkspace,
+    getWorkspaceLayout
+  } = useWorkspaceManagement();
+  
+  const {
+    trackUserAction,
+    analyzeUserBehavior
+  } = useNavigationAnalytics({
+    enableRealTimeTracking: enableAnalytics
+  });
+
+  // Performance monitoring refs
+  const performanceObserver = useRef<PerformanceObserver | null>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const renderStartTime = useRef<number>(0);
+  const resizeObserver = useRef<ResizeObserver | null>(null);
+
+  // ========================================================================
+  // RESPONSIVE BREAKPOINT DETECTION
+  // ========================================================================
+
+  const detectBreakpoint = useCallback(() => {
+    if (typeof window === 'undefined') return 'desktop';
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    let breakpoint: ResponsiveBreakpoint;
+    let deviceType: 'desktop' | 'tablet' | 'mobile';
+    
+    if (width < 768) {
+      breakpoint = 'mobile';
+      deviceType = 'mobile';
+    } else if (width < 1024) {
+      breakpoint = 'tablet';
+      deviceType = 'tablet';
+    } else if (width < 1440) {
+      breakpoint = 'desktop';
+      deviceType = 'desktop';
+    } else {
+      breakpoint = 'wide';
+      deviceType = 'desktop';
     }
-  );
+    
+    const orientation = width > height ? 'landscape' : 'portrait';
+    
+    setLayoutState(prev => ({
+      ...prev,
+      breakpoint,
+      deviceType,
+      orientation
+    }));
+    
+    return { breakpoint, deviceType, orientation };
+  }, []);
 
-  const [isLayoutPanelOpen, setIsLayoutPanelOpen] = useState(false);
-  const [performanceMode, setPerformanceMode] = useState(performance);
-  const [debugMode, setDebugMode] = useState(false);
+  // ========================================================================
+  // LAYOUT ADAPTATION LOGIC
+  // ========================================================================
 
-  // Refs for layout management
-  const containerRef = useRef<HTMLDivElement>(null);
-  const layoutEngine = useRef<any>(null);
-  const performanceMonitor = useRef<any>(null);
-
-  // Animation controls
-  const layoutAnimation = useAnimation();
-  const transitionAnimation = useAnimation();
-
-  // ============================================================================
-  // COMPUTED VALUES
-  // ============================================================================
-
-  // Responsive layout configuration
-  const responsiveConfig = useMemo(() => ({
-    enabled: responsive && layoutPreferences.responsiveEnabled,
-    breakpoints: RESPONSIVE_BREAKPOINTS,
-    adaptiveLayouts: {
-      mobile: LayoutMode.SINGLE_PANE,
-      tablet: layoutPreferences.spaLayouts[spaContext.activeSPA || ''] || LayoutMode.SINGLE_PANE,
-      desktop: layoutState.currentLayout,
-      ultrawide: LayoutMode.GRID
-    }
-  }), [responsive, layoutPreferences, layoutState.currentLayout, spaContext.activeSPA]);
-
-  // Performance configuration
-  const performanceConfig = useMemo(() => ({
-    mode: performanceMode,
-    lazyLoading: performanceMode !== 'standard',
-    virtualScrolling: performanceMode === 'ultra',
-    memoization: true,
-    bundleSplitting: performanceMode !== 'standard'
-  }), [performanceMode]);
-
-  // Accessibility configuration
-  const accessibilityConfig = useMemo(() => ({
-    level: layoutPreferences.accessibilityLevel,
-    highContrast: false, // Will be dynamic based on user settings
-    largeText: false,
-    keyboardNavigation: true,
-    screenReaderOptimized: layoutPreferences.accessibilityLevel === 'AAA',
-    colorBlindSupport: true
-  }), [layoutPreferences.accessibilityLevel]);
-
-  // ============================================================================
-  // LAYOUT MANAGEMENT FUNCTIONS
-  // ============================================================================
-
-  const updateLayout = useCallback(async (newLayout: LayoutMode) => {
-    if (layoutState.isTransitioning) return;
-
-    try {
-      setLayoutState(prev => ({ ...prev, isTransitioning: true, transitionProgress: 0 }));
-
-      // Validate layout compatibility
-      const isValid = await validateLayoutConfiguration({
-        layout: newLayout,
-        spaContext,
-        userPermissions,
-        workspaceConfig: activeWorkspace
-      });
-
-      if (!isValid) {
-        throw new Error(`Layout ${newLayout} is not compatible with current context`);
+  const adaptLayoutForSPA = useCallback((spaType: SPAType | null) => {
+    if (!spaType) return layoutState.activeLayout;
+    
+    // SPA-specific layout requirements
+    const spaLayoutMap: Record<SPAType, Partial<LayoutConfiguration>> = {
+      'data-sources': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          sidebar: { ...layoutState.activeLayout.structure.sidebar, width: 300 }
+        }
+      },
+      'scan-rule-sets': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          content: { ...layoutState.activeLayout.structure.content, split: true }
+        }
+      },
+      'classifications': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          content: { ...layoutState.activeLayout.structure.content, grid: true }
+        }
+      },
+      'compliance-rules': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          footer: { height: 48, visible: true }
+        }
+      },
+      'advanced-catalog': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          content: { ...layoutState.activeLayout.structure.content, padding: 32 }
+        }
+      },
+      'scan-logic': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          content: { ...layoutState.activeLayout.structure.content, split: true }
+        }
+      },
+      'rbac-system': {
+        structure: {
+          ...layoutState.activeLayout.structure,
+          sidebar: { ...layoutState.activeLayout.structure.sidebar, width: 320 }
+        }
       }
+    };
+    
+    const spaSpecificLayout = spaLayoutMap[spaType];
+    if (spaSpecificLayout) {
+      return {
+        ...layoutState.activeLayout,
+        ...spaSpecificLayout
+      };
+    }
+    
+    return layoutState.activeLayout;
+  }, [layoutState.activeLayout]);
 
-      // Animate transition
-      await transitionAnimation.start({
-        opacity: [1, 0.5, 1],
-        scale: [1, 0.98, 1],
-        transition: { duration: 0.6, ease: "easeInOut" }
-      });
+  const adaptLayoutForBreakpoint = useCallback((
+    layout: LayoutConfiguration,
+    breakpoint: ResponsiveBreakpoint
+  ): LayoutConfiguration => {
+    const responsiveConfig = layout.responsive?.[breakpoint] || {};
+    
+    return {
+      ...layout,
+      structure: {
+        header: { ...layout.structure.header, ...responsiveConfig.header },
+        sidebar: { ...layout.structure.sidebar, ...responsiveConfig.sidebar },
+        content: { ...layout.structure.content, ...responsiveConfig.content },
+        footer: { ...layout.structure.footer, ...responsiveConfig.footer }
+      }
+    };
+  }, []);
 
+  const applyLayoutConfiguration = useCallback(async (
+    newLayoutMode: LayoutMode,
+    immediate = false
+  ) => {
+    try {
+      setLayoutState(prev => ({ ...prev, isTransitioning: true }));
+      
+      renderStartTime.current = performance.now();
+      
+      // Get base layout configuration
+      let newLayout = DEFAULT_LAYOUT_CONFIGURATIONS[newLayoutMode] || 
+                     DEFAULT_LAYOUT_CONFIGURATIONS.default;
+      
+      // Adapt for current SPA
+      newLayout = adaptLayoutForSPA(layoutState.currentSPA);
+      
+      // Adapt for current breakpoint
+      newLayout = adaptLayoutForBreakpoint(newLayout, layoutState.breakpoint);
+      
+      // Apply user preferences
+      if (userPreferences) {
+        newLayout = {
+          ...newLayout,
+          structure: {
+            ...newLayout.structure,
+            sidebar: {
+              ...newLayout.structure.sidebar,
+              width: userPreferences.sidebarWidth || newLayout.structure.sidebar.width,
+              collapsible: userPreferences.sidebarCollapsed !== undefined 
+                ? !userPreferences.sidebarCollapsed 
+                : newLayout.structure.sidebar.collapsible
+            },
+            header: {
+              ...newLayout.structure.header,
+              height: userPreferences.headerHeight || newLayout.structure.header.height
+            },
+            content: {
+              ...newLayout.structure.content,
+              padding: userPreferences.contentPadding === 'compact' ? 12 :
+                      userPreferences.contentPadding === 'spacious' ? 32 : 24
+            }
+          }
+        };
+      }
+      
+      // Animation controls
+      if (!immediate && layoutState.animationPreference !== 'none') {
+        await animationControls.start({
+          opacity: 0,
+          scale: 0.98,
+          transition: { duration: 0.15 }
+        });
+      }
+      
       // Update layout state
       setLayoutState(prev => ({
         ...prev,
-        currentLayout: newLayout,
-        isTransitioning: false,
-        transitionProgress: 100
+        activeLayout: newLayout,
+        layoutHistory: [prev.activeLayout, ...prev.layoutHistory.slice(0, 9)],
+        currentSPA: spaContext?.spaType || null
       }));
-
-      // Save preferences
-      const updatedPreferences = {
-        ...layoutPreferences,
-        defaultLayout: newLayout,
-        spaLayouts: {
-          ...layoutPreferences.spaLayouts,
-          [spaContext.activeSPA || 'default']: newLayout
-        }
-      };
-      setLayoutPreferences(updatedPreferences);
-
-      // Persist to backend
-      await updateUserPreferences({
-        layoutPreferences: updatedPreferences
-      });
-
-      // Update workspace layout if applicable
-      if (activeWorkspace) {
-        await updateWorkspaceLayout(activeWorkspace.id, {
-          defaultLayout: newLayout,
-          lastModified: new Date().toISOString()
+      
+      // Complete animation
+      if (!immediate && layoutState.animationPreference !== 'none') {
+        await animationControls.start({
+          opacity: 1,
+          scale: 1,
+          transition: { duration: 0.2 }
         });
       }
-
-      // Notify parent components
-      onLayoutChange?.(newLayout);
-
-      // Track analytics
-      await coordinateLayout({
-        action: 'layout_change',
-        from: layoutState.currentLayout,
-        to: newLayout,
-        context: spaContext,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error('Layout update failed:', error);
-      setLayoutState(prev => ({ 
-        ...prev, 
-        isTransitioning: false,
-        transitionProgress: 0
-      }));
-    }
-  }, [
-    layoutState.isTransitioning,
-    spaContext,
-    userPermissions,
-    activeWorkspace,
-    layoutPreferences,
-    transitionAnimation,
-    updateUserPreferences,
-    updateWorkspaceLayout,
-    onLayoutChange,
-    coordinateLayout
-  ]);
-
-  const addOverlay = useCallback((overlayId: string, component: ComponentType) => {
-    setLayoutState(prev => ({
-      ...prev,
-      activeOverlays: [...prev.activeOverlays, overlayId]
-    }));
-  }, []);
-
-  const removeOverlay = useCallback((overlayId: string) => {
-    setLayoutState(prev => ({
-      ...prev,
-      activeOverlays: prev.activeOverlays.filter(id => id !== overlayId)
-    }));
-  }, []);
-
-  const createSplitPane = useCallback((config: SplitPaneConfig) => {
-    setLayoutState(prev => ({
-      ...prev,
-      splitPanes: [...prev.splitPanes, config]
-    }));
-  }, []);
-
-  const createTabGroup = useCallback((config: TabGroupConfig) => {
-    setLayoutState(prev => ({
-      ...prev,
-      tabGroups: [...prev.tabGroups, config]
-    }));
-  }, []);
-
-  const optimizePerformance = useCallback(async () => {
-    try {
-      const optimizationResult = await optimizeLayoutPerformance({
-        currentLayout: layoutState.currentLayout,
-        componentCount: layoutState.performanceMetrics.componentCount,
-        memoryUsage: layoutState.performanceMetrics.memoryUsage,
-        targetPerformance: performanceMode
-      });
-
+      
+      // Track performance
+      const renderTime = performance.now() - renderStartTime.current;
       setLayoutState(prev => ({
         ...prev,
+        renderTime,
         performanceMetrics: {
           ...prev.performanceMetrics,
-          ...optimizationResult.metrics,
-          lastOptimization: new Date().toISOString()
-        }
+          renderTime
+        },
+        isTransitioning: false
       }));
-
-      return optimizationResult;
+      
+      // Track analytics
+      if (enableAnalytics) {
+        trackLayoutEvent({
+          type: 'layout_change',
+          from: layoutState.activeLayout.type,
+          to: newLayoutMode,
+          renderTime,
+          spaContext: spaContext?.spaType || null,
+          breakpoint: layoutState.breakpoint,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Notify parent component
+      onLayoutChange?.(newLayout);
+      
     } catch (error) {
-      console.error('Layout performance optimization failed:', error);
-      throw error;
-    }
-  }, [layoutState, performanceMode]);
-
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
-  // Initialize layout based on context
-  useEffect(() => {
-    const initializeLayout = async () => {
-      try {
-        // Get user layout preferences
-        const userLayoutPrefs = await getUserLayoutPreferences();
-        if (userLayoutPrefs) {
-          setLayoutPreferences(userLayoutPrefs);
-        }
-
-        // Get workspace-specific layout
-        if (activeWorkspace) {
-          const workspaceLayoutPrefs = await getWorkspaceLayoutPreferences(activeWorkspace.id);
-          if (workspaceLayoutPrefs) {
-            setLayoutState(prev => ({
-              ...prev,
-              currentLayout: workspaceLayoutPrefs.defaultLayout || prev.currentLayout
-            }));
-          }
-        }
-
-        // Apply SPA-specific layout if available
-        if (spaContext.activeSPA && layoutPreferences.spaLayouts[spaContext.activeSPA]) {
-          const spaLayout = layoutPreferences.spaLayouts[spaContext.activeSPA];
-          setLayoutState(prev => ({
-            ...prev,
-            currentLayout: spaLayout
-          }));
-        }
-
-      } catch (error) {
-        console.error('Layout initialization failed:', error);
-      }
-    };
-
-    initializeLayout();
-  }, [activeWorkspace, spaContext.activeSPA, getUserLayoutPreferences, getWorkspaceLayoutPreferences, layoutPreferences.spaLayouts]);
-
-  // Performance monitoring
-  useEffect(() => {
-    if (performanceMode === 'ultra') {
-      const monitorPerformance = () => {
-        const metrics = {
-          renderTime: performance.now(),
-          memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
-          componentCount: containerRef.current?.querySelectorAll('[data-component]').length || 0,
-          updateFrequency: Date.now()
-        };
-
-        setLayoutState(prev => ({
-          ...prev,
-          performanceMetrics: {
-            ...prev.performanceMetrics,
-            ...metrics
-          }
-        }));
-      };
-
-      const interval = setInterval(monitorPerformance, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [performanceMode]);
-
-  // Responsive layout adaptation
-  useEffect(() => {
-    if (!responsiveConfig.enabled) return;
-
-    const handleResize = () => {
-      const width = window.innerWidth;
-      let adaptiveLayout = layoutState.currentLayout;
-
-      if (width < responsiveConfig.breakpoints.tablet) {
-        adaptiveLayout = LayoutMode.SINGLE_PANE;
-      } else if (width < responsiveConfig.breakpoints.desktop) {
-        adaptiveLayout = layoutPreferences.spaLayouts[spaContext.activeSPA || ''] || LayoutMode.SINGLE_PANE;
-      }
-
-      if (adaptiveLayout !== layoutState.currentLayout) {
-        updateLayout(adaptiveLayout);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [responsiveConfig, layoutState.currentLayout, layoutPreferences.spaLayouts, spaContext.activeSPA, updateLayout]);
-
-  // ============================================================================
-  // LAYOUT COMPONENTS
-  // ============================================================================
-
-  const renderLayoutControls = () => (
-    <div className="fixed top-20 right-4 z-40">
-      <DropdownMenu open={isLayoutPanelOpen} onOpenChange={setIsLayoutPanelOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg"
-          >
-            <Layout className="w-4 h-4 mr-2" />
-            Layout
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80">
-          <DropdownMenuLabel>Layout Controls</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          
-          {/* Layout Mode Selection */}
-          <div className="p-2">
-            <Label className="text-xs font-medium">Layout Mode</Label>
-            <DropdownMenuRadioGroup
-              value={layoutState.currentLayout}
-              onValueChange={(value) => updateLayout(value as LayoutMode)}
-            >
-              <DropdownMenuRadioItem value={LayoutMode.SINGLE_PANE}>
-                <Layout className="w-4 h-4 mr-2" />
-                Single Pane
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value={LayoutMode.SPLIT_SCREEN}>
-                <SplitSquareHorizontal className="w-4 h-4 mr-2" />
-                Split Screen
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value={LayoutMode.TABBED}>
-                <Layers className="w-4 h-4 mr-2" />
-                Tabbed
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value={LayoutMode.GRID}>
-                <Grid3X3 className="w-4 h-4 mr-2" />
-                Grid
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </div>
-
-          <DropdownMenuSeparator />
-
-          {/* Performance Mode */}
-          <div className="p-2">
-            <Label className="text-xs font-medium">Performance Mode</Label>
-            <Select value={performanceMode} onValueChange={setPerformanceMode}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="high">High Performance</SelectItem>
-                <SelectItem value="ultra">Ultra Performance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Quick Actions */}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={optimizePerformance}>
-            <Zap className="w-4 h-4 mr-2" />
-            Optimize Layout
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDebugMode(!debugMode)}>
-            <Activity className="w-4 h-4 mr-2" />
-            {debugMode ? 'Disable' : 'Enable'} Debug Mode
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-
-  const renderDebugPanel = () => (
-    <AnimatePresence>
-      {debugMode && (
-        <motion.div
-          initial={{ opacity: 0, x: 300 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 300 }}
-          className="fixed top-32 right-4 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-lg border border-gray-200/50 dark:border-gray-700/50 shadow-xl z-30"
-        >
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">Layout Debug Panel</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDebugMode(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {/* Current Layout Info */}
-              <div className="space-y-2">
-                <Label className="text-xs">Current Layout</Label>
-                <div className="text-xs bg-gray-100 dark:bg-gray-800 rounded p-2">
-                  <p>Mode: {layoutState.currentLayout}</p>
-                  <p>View: {currentView}</p>
-                  <p>SPA: {spaContext.activeSPA || 'None'}</p>
-                  <p>Transitioning: {layoutState.isTransitioning ? 'Yes' : 'No'}</p>
-                </div>
-              </div>
-
-              {/* Performance Metrics */}
-              <div className="space-y-2">
-                <Label className="text-xs">Performance</Label>
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between">
-                    <span>Render Time:</span>
-                    <span>{layoutState.performanceMetrics.renderTime.toFixed(2)}ms</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Memory:</span>
-                    <span>{formatBytes(layoutState.performanceMetrics.memoryUsage)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Components:</span>
-                    <span>{layoutState.performanceMetrics.componentCount}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Overlays */}
-              {layoutState.activeOverlays.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs">Active Overlays</Label>
-                  <div className="text-xs space-y-1">
-                    {layoutState.activeOverlays.map(overlayId => (
-                      <div key={overlayId} className="flex justify-between">
-                        <span>{overlayId}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeOverlay(overlayId)}
-                          className="h-4 w-4 p-0"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
-  // ============================================================================
-  // LAYOUT RENDERING ENGINE
-  // ============================================================================
-
-  const renderLayoutContent = useCallback(() => {
-    const layoutProps = {
-      layoutMode: layoutState.currentLayout,
-      spaContext,
-      performanceConfig,
-      accessibilityConfig,
-      onLayoutChange: updateLayout,
-      onOverlayAdd: addOverlay,
-      onOverlayRemove: removeOverlay
-    };
-
-    switch (layoutState.currentLayout) {
-      case LayoutMode.SINGLE_PANE:
-        return (
-          <LayoutContent {...layoutProps}>
-            {children}
-          </LayoutContent>
-        );
-
-      case LayoutMode.SPLIT_SCREEN:
-        return (
-          <SplitScreenManager {...layoutProps}>
-            {children}
-          </SplitScreenManager>
-        );
-
-      case LayoutMode.TABBED:
-        return (
-          <TabManager {...layoutProps}>
-            {children}
-          </TabManager>
-        );
-
-      case LayoutMode.GRID:
-        return (
-          <div className="grid grid-cols-12 gap-4 h-full">
-            <div className="col-span-12">
-              <LayoutContent {...layoutProps}>
-                {children}
-              </LayoutContent>
-            </div>
-          </div>
-        );
-
-      case LayoutMode.CUSTOM:
-        return (
-          <DynamicWorkspaceManager {...layoutProps}>
-            {children}
-          </DynamicWorkspaceManager>
-        );
-
-      default:
-        return (
-          <LayoutContent {...layoutProps}>
-            {children}
-          </LayoutContent>
-        );
+      console.error('Failed to apply layout configuration:', error);
+      setLayoutState(prev => ({
+        ...prev,
+        layoutError: error instanceof Error ? error.message : 'Layout error',
+        isTransitioning: false
+      }));
     }
   }, [
-    layoutState.currentLayout,
+    layoutState.currentSPA,
+    layoutState.breakpoint,
+    layoutState.animationPreference,
+    userPreferences,
     spaContext,
-    performanceConfig,
-    accessibilityConfig,
-    updateLayout,
-    addOverlay,
-    removeOverlay,
-    children
+    animationControls,
+    enableAnalytics,
+    adaptLayoutForSPA,
+    adaptLayoutForBreakpoint,
+    onLayoutChange
   ]);
 
-  // ============================================================================
-  // CONTEXT VALUE
-  // ============================================================================
+  // ========================================================================
+  // PERFORMANCE MONITORING
+  // ========================================================================
 
-  const contextValue = useMemo<LayoutContextValue>(() => ({
-    layoutState,
-    layoutPreferences,
-    spaContext,
-    updateLayout,
-    updatePreferences: (prefs) => setLayoutPreferences(prev => ({ ...prev, ...prefs })),
-    addOverlay,
-    removeOverlay,
-    createSplitPane,
-    createTabGroup,
-    optimizePerformance
-  }), [
-    layoutState,
-    layoutPreferences,
-    spaContext,
-    updateLayout,
-    addOverlay,
-    removeOverlay,
-    createSplitPane,
-    createTabGroup,
-    optimizePerformance
+  const setupPerformanceMonitoring = useCallback(() => {
+    if (!enablePerformanceOptimization || typeof window === 'undefined') return;
+    
+    // Performance Observer for layout metrics
+    if ('PerformanceObserver' in window) {
+      performanceObserver.current = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        
+        entries.forEach((entry) => {
+          if (entry.entryType === 'layout-shift') {
+            setLayoutState(prev => ({
+              ...prev,
+              performanceMetrics: {
+                ...prev.performanceMetrics,
+                layoutShifts: prev.performanceMetrics.layoutShifts + 1
+              }
+            }));
+          }
+          
+          if (entry.entryType === 'measure') {
+            setLayoutState(prev => ({
+              ...prev,
+              performanceMetrics: {
+                ...prev.performanceMetrics,
+                interactionLatency: entry.duration
+              }
+            }));
+          }
+        });
+      });
+      
+      performanceObserver.current.observe({ 
+        entryTypes: ['layout-shift', 'measure', 'navigation', 'paint'] 
+      });
+    }
+    
+    // Memory usage monitoring
+    const monitorMemory = () => {
+      if ('memory' in performance) {
+        const memInfo = (performance as any).memory;
+        setLayoutState(prev => ({
+          ...prev,
+          memoryUsage: memInfo.usedJSHeapSize,
+          performanceMetrics: {
+            ...prev.performanceMetrics,
+            memoryUsage: memInfo.usedJSHeapSize
+          }
+        }));
+      }
+    };
+    
+    const memoryInterval = setInterval(monitorMemory, 5000);
+    
+    return () => {
+      if (performanceObserver.current) {
+        performanceObserver.current.disconnect();
+      }
+      clearInterval(memoryInterval);
+    };
+  }, [enablePerformanceOptimization]);
+
+  // ========================================================================
+  // RESPONSIVE LAYOUT HANDLING
+  // ========================================================================
+
+  useEffect(() => {
+    if (!enableResponsive) return;
+    
+    const handleResize = () => {
+      detectBreakpoint();
+    };
+    
+    // Set up ResizeObserver for container-based responsive behavior
+    if (layoutRef.current && 'ResizeObserver' in window) {
+      resizeObserver.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          
+          // Update layout based on container size
+          if (width !== layoutState.activeLayout.structure.content.width) {
+            applyLayoutConfiguration(layoutMode, true);
+          }
+        }
+      });
+      
+      resizeObserver.current.observe(layoutRef.current);
+    }
+    
+    // Window resize listener
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver.current) {
+        resizeObserver.current.disconnect();
+      }
+    };
+  }, [enableResponsive, layoutMode, detectBreakpoint, applyLayoutConfiguration]);
+
+  // ========================================================================
+  // LAYOUT MODE CHANGES
+  // ========================================================================
+
+  useEffect(() => {
+    applyLayoutConfiguration(layoutMode);
+  }, [layoutMode, applyLayoutConfiguration]);
+
+  // ========================================================================
+  // SPA CONTEXT CHANGES
+  // ========================================================================
+
+  useEffect(() => {
+    if (spaContext?.spaType !== layoutState.currentSPA) {
+      setLayoutState(prev => ({ ...prev, currentSPA: spaContext?.spaType || null }));
+      applyLayoutConfiguration(layoutMode, true);
+      onSPASwitch?.(spaContext?.spaType || 'data-sources');
+    }
+  }, [spaContext, layoutState.currentSPA, layoutMode, applyLayoutConfiguration, onSPASwitch]);
+
+  // ========================================================================
+  // PERFORMANCE MONITORING SETUP
+  // ========================================================================
+
+  useEffect(() => {
+    const cleanup = setupPerformanceMonitoring();
+    return cleanup;
+  }, [setupPerformanceMonitoring]);
+
+  // ========================================================================
+  // ACCESSIBILITY ENHANCEMENTS
+  // ========================================================================
+
+  const accessibilityProps = useMemo(() => {
+    if (!enableAccessibility) return {};
+    
+    return {
+      role: 'main',
+      'aria-label': 'Main application layout',
+      'aria-live': layoutState.isTransitioning ? 'polite' : 'off',
+      'aria-busy': layoutState.isTransitioning,
+      tabIndex: -1,
+      ...(layoutState.screenReaderOptimized && {
+        'aria-describedby': 'layout-description'
+      })
+    };
+  }, [enableAccessibility, layoutState.isTransitioning, layoutState.screenReaderOptimized]);
+
+  // ========================================================================
+  // COMPUTED STYLES
+  // ========================================================================
+
+  const computedStyles = useMemo(() => {
+    const baseStyles: React.CSSProperties = {
+      display: 'grid',
+      gridTemplateColumns: layoutState.activeLayout.structure.sidebar.width > 0
+        ? `${layoutState.activeLayout.structure.sidebar.width}px 1fr`
+        : '1fr',
+      gridTemplateRows: layoutState.activeLayout.structure.header.height > 0
+        ? `${layoutState.activeLayout.structure.header.height}px 1fr ${layoutState.activeLayout.structure.footer.visible ? layoutState.activeLayout.structure.footer.height + 'px' : ''}`
+        : `1fr ${layoutState.activeLayout.structure.footer.visible ? layoutState.activeLayout.structure.footer.height + 'px' : ''}`,
+      gridTemplateAreas: layoutState.activeLayout.structure.sidebar.width > 0
+        ? `"sidebar header" "sidebar content" ${layoutState.activeLayout.structure.footer.visible ? '"sidebar footer"' : ''}`
+        : `"header" "content" ${layoutState.activeLayout.structure.footer.visible ? '"footer"' : ''}`,
+      minHeight: '100vh',
+      maxWidth: maxWidth ? `${maxWidth}px` : 'none',
+      minWidth: `${minWidth}px`,
+      aspectRatio: aspectRatio !== 'auto' ? aspectRatio : 'auto',
+      transition: layoutState.animationPreference !== 'none' 
+        ? 'grid-template-columns 0.3s ease, grid-template-rows 0.3s ease'
+        : 'none',
+      ...(layoutState.highContrastMode && {
+        filter: 'contrast(1.5)',
+        border: '2px solid currentColor'
+      }),
+      ...style
+    };
+    
+    return baseStyles;
+  }, [
+    layoutState.activeLayout,
+    layoutState.animationPreference,
+    layoutState.highContrastMode,
+    maxWidth,
+    minWidth,
+    aspectRatio,
+    style
   ]);
 
-  // ============================================================================
-  // MAIN RENDER
-  // ============================================================================
+  // ========================================================================
+  // ERROR BOUNDARY FALLBACK
+  // ========================================================================
+
+  if (layoutState.layoutError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-8">
+        <Card className="max-w-md">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+              <h3 className="text-lg font-semibold">Layout Error</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              {layoutState.layoutError}
+            </p>
+            <Button 
+              onClick={() => {
+                setLayoutState(prev => ({ ...prev, layoutError: null }));
+                applyLayoutConfiguration('default', true);
+              }}
+              className="w-full"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Layout
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ========================================================================
+  // RENDER LAYOUT
+  // ========================================================================
 
   return (
-    <LayoutContext.Provider value={contextValue}>
-      <TooltipProvider>
-        <LayoutGroup>
-          <motion.div
-            ref={containerRef}
-            className={cn(
-              "min-h-screen relative",
-              mode === 'app-root' && "bg-background",
-              layoutState.isTransitioning && "pointer-events-none"
-            )}
-            animate={layoutAnimation}
-            layout
-          >
-            {/* Responsive Layout Engine Wrapper */}
-            <ResponsiveLayoutEngine
-              config={responsiveConfig}
-              onBreakpointChange={(breakpoint) => {
-                if (responsiveConfig.adaptiveLayouts[breakpoint]) {
-                  updateLayout(responsiveConfig.adaptiveLayouts[breakpoint]);
-                }
-              }}
+    <TooltipProvider>
+      <motion.div
+        ref={layoutRef}
+        className={cn(
+          "racine-layout-orchestrator",
+          "relative w-full",
+          layoutState.highContrastMode && "high-contrast",
+          layoutState.accessibilityMode && "accessibility-optimized",
+          className
+        )}
+        style={computedStyles}
+        animate={animationControls}
+        initial={{ opacity: 1, scale: 1 }}
+        {...accessibilityProps}
+      >
+        {/* Screen Reader Description */}
+        {layoutState.screenReaderOptimized && (
+          <div id="layout-description" className="sr-only">
+            Current layout: {layoutState.activeLayout.name}. 
+            Device type: {layoutState.deviceType}. 
+            SPA context: {layoutState.currentSPA || 'none'}.
+          </div>
+        )}
+        
+        {/* Layout Performance Indicator */}
+        {enablePerformanceOptimization && layoutState.renderTime > 100 && (
+          <div className="fixed top-4 right-4 z-50">
+            <Badge variant="outline" className="bg-background/80 backdrop-blur">
+              <Zap className="h-3 w-3 mr-1" />
+              {Math.round(layoutState.renderTime)}ms
+            </Badge>
+          </div>
+        )}
+        
+        {/* Transition Overlay */}
+        <AnimatePresence>
+          {layoutState.isTransitioning && layoutState.animationPreference !== 'none' && (
+            <motion.div
+              className="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
             >
-              {/* Contextual Overlay Manager */}
-              <ContextualOverlayManager
-                activeOverlays={layoutState.activeOverlays}
-                onOverlayChange={(overlays) => 
-                  setLayoutState(prev => ({ ...prev, activeOverlays: overlays }))
-                }
-              >
-                {/* Main Layout Content */}
-                <motion.div
-                  className="relative w-full h-full"
-                  animate={transitionAnimation}
-                >
-                  {renderLayoutContent()}
-                </motion.div>
-
-                {/* Layout Controls */}
-                {mode !== 'embedded' && renderLayoutControls()}
-
-                {/* Debug Panel */}
-                {renderDebugPanel()}
-
-                {/* Layout Transition Overlay */}
-                <AnimatePresence>
-                  {layoutState.isTransitioning && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"
-                    >
-                      <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-lg p-6 shadow-xl">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-                          <span className="text-sm font-medium">Switching Layout...</span>
-                        </div>
-                        <Progress value={layoutState.transitionProgress} className="mt-3 w-48" />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Performance Monitor Overlay */}
-                {performanceMode === 'ultra' && (
-                  <div className="fixed bottom-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg z-20">
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-medium">Layout Performance</h4>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Render:</span>
-                          <span className="ml-1 font-medium">
-                            {layoutState.performanceMetrics.renderTime.toFixed(1)}ms
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Memory:</span>
-                          <span className="ml-1 font-medium">
-                            {formatBytes(layoutState.performanceMetrics.memoryUsage)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Components:</span>
-                          <span className="ml-1 font-medium">
-                            {layoutState.performanceMetrics.componentCount}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Mode:</span>
-                          <span className="ml-1 font-medium capitalize">{performanceMode}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </ContextualOverlayManager>
-            </ResponsiveLayoutEngine>
-          </motion.div>
-        </LayoutGroup>
-      </TooltipProvider>
-    </LayoutContext.Provider>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Updating layout...
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Main Layout Content */}
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <RefreshCw className="h-6 w-6 animate-spin" />
+          </div>
+        }>
+          <ResponsiveLayoutEngine
+            layout={layoutState.activeLayout}
+            breakpoint={layoutState.breakpoint}
+            spaContext={spaContext}
+            performanceMode={enablePerformanceOptimization}
+          >
+            {children}
+          </ResponsiveLayoutEngine>
+        </Suspense>
+        
+        {/* Overlay Managers */}
+        <ContextualOverlayManager
+          spaContext={spaContext}
+          layoutMode={layoutMode}
+          isActive={!!spaContext}
+        />
+        
+        {/* Split Screen Manager */}
+        {layoutState.activeLayout.structure.content.split && (
+          <SplitScreenManager
+            primaryContent={children}
+            secondaryContent={null}
+            splitRatio={0.6}
+            orientation={layoutState.orientation === 'portrait' ? 'vertical' : 'horizontal'}
+          />
+        )}
+        
+        {/* Tab Manager */}
+        <TabManager
+          tabs={[]}
+          activeTab={null}
+          onTabChange={() => {}}
+          layout={layoutState.activeLayout}
+        />
+        
+        {/* Layout Personalization Panel */}
+        {layoutState.deviceType === 'desktop' && (
+          <LayoutPersonalization
+            currentLayout={layoutState.activeLayout}
+            userPreferences={userPreferences}
+            onLayoutChange={(newLayout) => {
+              updateLayoutPrefs(newLayout);
+              applyLayoutConfiguration(newLayout.mode || 'default');
+            }}
+            className="fixed bottom-4 right-4 z-30"
+          />
+        )}
+        
+        {/* Accessibility Announcements */}
+        <div 
+          aria-live="polite" 
+          aria-atomic="true" 
+          className="sr-only"
+          role="status"
+        >
+          {layoutState.isTransitioning && 'Layout is updating'}
+          {layoutState.layoutError && `Layout error: ${layoutState.layoutError}`}
+        </div>
+      </motion.div>
+    </TooltipProvider>
   );
 };
 
 // ============================================================================
-// LAYOUT UTILITIES AND HELPERS
+// PERFORMANCE OPTIMIZATION WRAPPER
 // ============================================================================
 
-// Layout validation utility
-export const validateLayoutMode = async (
-  layout: LayoutMode,
-  context: SPAContext,
-  permissions: any[],
-  workspace?: WorkspaceConfiguration
-): Promise<boolean> => {
-  try {
-    // Check if layout is supported for current SPA
-    if (context.activeSPA) {
-      const spaLayoutSupport = await getSPALayoutSupport(context.activeSPA);
-      if (!spaLayoutSupport.includes(layout)) {
-        return false;
-      }
-    }
+export const OptimizedMasterLayoutOrchestrator = React.memo(MasterLayoutOrchestrator, (prevProps, nextProps) => {
+  // Custom comparison for performance optimization
+  return (
+    prevProps.layoutMode === nextProps.layoutMode &&
+    prevProps.currentView === nextProps.currentView &&
+    prevProps.spaContext?.spaType === nextProps.spaContext?.spaType &&
+    JSON.stringify(prevProps.userPreferences) === JSON.stringify(nextProps.userPreferences)
+  );
+});
 
-    // Check user permissions for advanced layouts
-    if (layout === LayoutMode.GRID || layout === LayoutMode.CUSTOM) {
-      const hasPermission = permissions.some(p => p.name === 'layout.advanced');
-      if (!hasPermission) {
-        return false;
-      }
-    }
-
-    // Check workspace restrictions
-    if (workspace?.settings?.layoutRestrictions) {
-      const allowedLayouts = workspace.settings.layoutRestrictions;
-      if (!allowedLayouts.includes(layout)) {
-        return false;
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Layout validation failed:', error);
-    return false;
-  }
-};
-
-// SPA layout support mapping
-const getSPALayoutSupport = async (spaId: string): Promise<LayoutMode[]> => {
-  const supportMap: Record<string, LayoutMode[]> = {
-    'data-sources': [LayoutMode.SINGLE_PANE, LayoutMode.SPLIT_SCREEN, LayoutMode.GRID],
-    'scan-rule-sets': [LayoutMode.SINGLE_PANE, LayoutMode.TABBED, LayoutMode.SPLIT_SCREEN],
-    'classifications': [LayoutMode.SINGLE_PANE, LayoutMode.GRID],
-    'compliance-rule': [LayoutMode.SINGLE_PANE, LayoutMode.SPLIT_SCREEN],
-    'advanced-catalog': [LayoutMode.SINGLE_PANE, LayoutMode.GRID, LayoutMode.SPLIT_SCREEN],
-    'scan-logic': [LayoutMode.SINGLE_PANE, LayoutMode.TABBED],
-    'rbac-system': [LayoutMode.SINGLE_PANE, LayoutMode.GRID, LayoutMode.CUSTOM]
-  };
-
-  return supportMap[spaId] || [LayoutMode.SINGLE_PANE];
-};
+OptimizedMasterLayoutOrchestrator.displayName = 'OptimizedMasterLayoutOrchestrator';
 
 // ============================================================================
 // EXPORT DEFAULT
 // ============================================================================
 
-export default MasterLayoutOrchestrator;
+export default OptimizedMasterLayoutOrchestrator;

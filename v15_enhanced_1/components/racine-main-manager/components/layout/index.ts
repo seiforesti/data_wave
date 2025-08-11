@@ -8,6 +8,7 @@
  */
 
 // Core Layout Components
+export { default as MasterLayoutOrchestrator, OptimizedMasterLayoutOrchestrator } from './MasterLayoutOrchestrator';
 export { default as LayoutContent } from './LayoutContent';
 export { default as DynamicWorkspaceManager } from './DynamicWorkspaceManager';
 export { default as ResponsiveLayoutEngine } from './ResponsiveLayoutEngine';
@@ -22,6 +23,10 @@ export { default as QuickWorkspaceActions } from './subcomponents/QuickWorkspace
 export { default as QuickSPANavigator } from './subcomponents/QuickSPANavigator';
 
 // Type Exports
+export type {
+  MasterLayoutOrchestratorProps
+} from './MasterLayoutOrchestrator';
+
 export type {
   LayoutContentProps,
   LayoutContentState,
