@@ -5,45 +5,43 @@
  * Next.js App Router page for the Data Sources SPA
  * Integrates with the DataSourcesSPAOrchestrator to provide
  * full data source management capabilities within the Racine Main Manager.
+ * 
+ * Features RBAC route protection and permission validation.
  */
 
+'use client';
+
 import React from 'react';
-import { Metadata } from 'next';
+import { RouteGuard } from '@/components/racine-main-manager/components/routing';
 import { DataSourcesSPAOrchestrator } from '@/components/racine-main-manager/components/spa-orchestrators';
 
 // ============================================================================
-// METADATA
-// ============================================================================
-
-export const metadata: Metadata = {
-  title: 'Data Sources | Enterprise Data Governance Platform',
-  description: 'Manage and monitor all data source connections with advanced configuration and real-time status monitoring.',
-  keywords: 'data sources, connections, database, enterprise, governance, monitoring',
-  openGraph: {
-    title: 'Data Sources Management',
-    description: 'Comprehensive data source management and monitoring',
-    type: 'website'
-  }
-};
-
-// ============================================================================
-// MAIN DATA SOURCES PAGE
+// MAIN DATA SOURCES PAGE WITH ROUTE PROTECTION
 // ============================================================================
 
 export default function DataSourcesPage() {
   return (
-    <DataSourcesSPAOrchestrator 
-      mode="full-spa"
-      enableRealTimeSync={true}
-      enablePerformanceMonitoring={true}
-      enableAdvancedFiltering={true}
-      enableBulkOperations={true}
-      enableExportCapabilities={true}
-      showQuickActions={true}
-      showStatusIndicators={true}
-      showConnectionHealth={true}
-      showDataQualityMetrics={true}
-      enableNotifications={true}
-    />
+    <RouteGuard
+      requiredPermissions={['data_sources.view']}
+      requiredRoles={['user', 'admin', 'data_steward']}
+      fallbackRoute="/access-denied"
+      enableAuditLogging={true}
+      showLoadingState={true}
+      enableGracefulDegradation={true}
+    >
+      <DataSourcesSPAOrchestrator 
+        mode="full-spa"
+        enableRealTimeSync={true}
+        enablePerformanceMonitoring={true}
+        enableAdvancedFiltering={true}
+        enableBulkOperations={true}
+        enableExportCapabilities={true}
+        showQuickActions={true}
+        showStatusIndicators={true}
+        showConnectionHealth={true}
+        showDataQualityMetrics={true}
+        enableNotifications={true}
+      />
+    </RouteGuard>
   );
 }
