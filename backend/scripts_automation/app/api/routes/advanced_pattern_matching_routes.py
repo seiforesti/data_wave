@@ -74,6 +74,101 @@ async def initialize_pattern_matching(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize pattern matching: {str(e)}")
 
+@router.post("/calculate-business-impact")
+async def calculate_business_impact(
+    request_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Calculate business impact score for pattern matches using AI/ML analysis.
+    """
+    try:
+        pattern_match = request_data.get('pattern_match')
+        business_context = request_data.get('business_context')
+        calculation_method = request_data.get('calculation_method', 'ai_enhanced')
+        
+        # Analyze business impact using AI
+        impact_analysis = await scan_intelligence_service.calculate_business_impact(
+            pattern_match=pattern_match,
+            business_context=business_context,
+            method=calculation_method
+        )
+        
+        return {
+            'business_impact_score': impact_analysis.get('impact_score', 0.0),
+            'impact_factors': impact_analysis.get('factors', []),
+            'confidence': impact_analysis.get('confidence', 0.0),
+            'calculation_method': calculation_method,
+            'analysis_timestamp': datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate business impact: {str(e)}")
+
+@router.post("/assess-implementation-complexity")
+async def assess_implementation_complexity(
+    request_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Assess implementation complexity for pattern matches and rules.
+    """
+    try:
+        pattern_match = request_data.get('pattern_match')
+        rule_definition = request_data.get('rule_definition')
+        assessment_type = request_data.get('assessment_type', 'comprehensive')
+        
+        # Analyze complexity using AI
+        complexity_analysis = await scan_intelligence_service.assess_implementation_complexity(
+            pattern_match=pattern_match,
+            rule_definition=rule_definition,
+            assessment_type=assessment_type
+        )
+        
+        return {
+            'complexity_score': complexity_analysis.get('complexity_score', 0.0),
+            'complexity_factors': complexity_analysis.get('factors', []),
+            'implementation_effort': complexity_analysis.get('effort_estimate', 0.0),
+            'resource_requirements': complexity_analysis.get('resources', {}),
+            'assessment_type': assessment_type,
+            'analysis_timestamp': datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to assess complexity: {str(e)}")
+
+@router.post("/identify-risk-factors")
+async def identify_risk_factors(
+    request_data: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Identify risk factors for pattern matches and rule implementations.
+    """
+    try:
+        pattern_match = request_data.get('pattern_match')
+        rule_definition = request_data.get('rule_definition')
+        analysis_depth = request_data.get('analysis_depth', 'comprehensive')
+        
+        # Analyze risk factors using AI
+        risk_analysis = await scan_intelligence_service.identify_risk_factors(
+            pattern_match=pattern_match,
+            rule_definition=rule_definition,
+            analysis_depth=analysis_depth
+        )
+        
+        return {
+            'risk_factors': risk_analysis.get('risk_factors', []),
+            'risk_score': risk_analysis.get('overall_risk_score', 0.0),
+            'mitigation_strategies': risk_analysis.get('mitigation_strategies', []),
+            'confidence': risk_analysis.get('confidence', 0.0),
+            'analysis_depth': analysis_depth,
+            'analysis_timestamp': datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to identify risk factors: {str(e)}")
+
 @router.post("/analyze/{data_source_id}")
 async def analyze_patterns_with_ml(
     data_source_id: int,

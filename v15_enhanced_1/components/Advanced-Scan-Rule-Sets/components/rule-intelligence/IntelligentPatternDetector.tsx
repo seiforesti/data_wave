@@ -86,6 +86,9 @@ import { useScanRules } from '../../hooks/useScanRules';
 import { usePatternLibrary } from '../../hooks/usePatternLibrary';
 import { intelligenceAPI } from '../../services/intelligence-apis';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // Types
 import {
   PatternDetection,
@@ -123,6 +126,10 @@ interface IntelligentPatternDetectorProps {
   onPatternDetected?: (pattern: PatternDetection) => void;
   onAnalysisComplete?: (analysis: PatternAnalysis) => void;
   onInsightGenerated?: (insight: PatternInsight) => void;
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
 }
 
 const IntelligentPatternDetector: React.FC<IntelligentPatternDetectorProps> = ({
@@ -135,8 +142,16 @@ const IntelligentPatternDetector: React.FC<IntelligentPatternDetectorProps> = ({
   enableMLModels = true,
   onPatternDetected,
   onAnalysisComplete,
-  onInsightGenerated
+  onInsightGenerated,
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
 }) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
   // Hooks
   const {
     insights,

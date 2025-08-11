@@ -29,6 +29,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from app.api.routes import scan_routes, dashboard, custom_scan_rules, data_profiling, incremental_scan, data_discovery_routes
+from app.api.routes.advanced_pattern_matching_routes import router as advanced_pattern_matching_router
+from app.api.routes.ai_explainability_routes import router as ai_explainability_router
 from app.api.routes.scan_rule_set_validation import router as scan_rule_set_validation_router
 from app.api.routes.enterprise_analytics import router as enterprise_analytics_router
 from app.api.routes.collaboration_routes import router as collaboration_router
@@ -156,6 +158,8 @@ app.include_router(data_profiling.router)
 app.include_router(incremental_scan.router)
 app.include_router(scan_rule_set_validation_router)
 app.include_router(data_discovery_routes.router)  # Add the new data discovery routes
+app.include_router(advanced_pattern_matching_router)  # Add advanced pattern matching routes
+app.include_router(ai_explainability_router)  # Add AI explainability routes
 app.include_router(enterprise_analytics_router)  # Add enterprise analytics routes
 app.include_router(collaboration_router)  # Add collaboration routes
 app.include_router(workflow_router)  # Add workflow routes  

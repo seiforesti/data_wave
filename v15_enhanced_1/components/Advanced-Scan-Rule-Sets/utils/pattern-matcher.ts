@@ -59,6 +59,10 @@ export class PatternMatcher {
     this.initializePatternLibraries();
   }
 
+  private getAuthToken(): string {
+    return localStorage.getItem('auth_token') || '';
+  }
+
   /**
    * Advanced pattern matching with multiple strategies
    */
@@ -1065,18 +1069,133 @@ export class PatternMatcher {
   }
 
   private async calculateBusinessImpact(match: PatternMatchResult, context?: BusinessRuleContext): Promise<number> {
-    // Calculate business impact score
-    return 0.8; // Placeholder
+    try {
+      // Call backend API for business impact calculation
+      const response = await fetch(`${this.apiEndpoint}/calculate-business-impact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getAuthToken()}`
+        },
+        body: JSON.stringify({
+          pattern_match: match,
+          business_context: context,
+          calculation_method: 'ai_enhanced'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Business impact calculation failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.business_impact_score || 0.0;
+    } catch (error) {
+      console.error('Failed to calculate business impact:', error);
+      // Fallback calculation based on pattern type and confidence
+      let baseScore = match.confidence;
+      
+      // Adjust based on pattern type
+      if (match.type === 'security') baseScore *= 1.2;
+      if (match.type === 'compliance') baseScore *= 1.15;
+      if (match.type === 'performance') baseScore *= 1.1;
+      
+      // Adjust based on context if available
+      if (context?.businessCriticality === 'high') baseScore *= 1.3;
+      if (context?.businessCriticality === 'critical') baseScore *= 1.5;
+      
+      return Math.min(baseScore, 1.0);
+    }
   }
 
   private async assessImplementationComplexity(match: PatternMatchResult, rule: ScanRule): Promise<number> {
-    // Assess implementation complexity
-    return 0.6; // Placeholder
+    try {
+      // Call backend API for complexity assessment
+      const response = await fetch(`${this.apiEndpoint}/assess-implementation-complexity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getAuthToken()}`
+        },
+        body: JSON.stringify({
+          pattern_match: match,
+          rule_definition: rule,
+          assessment_type: 'comprehensive'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Complexity assessment failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.complexity_score || 0.0;
+    } catch (error) {
+      console.error('Failed to assess implementation complexity:', error);
+      // Fallback complexity calculation
+      let complexityScore = 0.5; // Base complexity
+      
+      // Analyze rule structure
+      if (rule.conditions && rule.conditions.length > 5) complexityScore += 0.2;
+      if (rule.pattern && rule.pattern.includes('regex')) complexityScore += 0.1;
+      if (rule.aiEnhanced) complexityScore += 0.3;
+      if (match.similarity?.type === 'semantic') complexityScore += 0.2;
+      
+      // Analyze pattern complexity
+      if (match.metadata?.patternComplexity === 'high') complexityScore += 0.3;
+      if (match.metadata?.requiresMLModel) complexityScore += 0.4;
+      
+      return Math.min(complexityScore, 1.0);
+    }
   }
 
   private async identifyRiskFactors(match: PatternMatchResult, rule: ScanRule): Promise<string[]> {
-    // Identify potential risk factors
-    return ['compatibility', 'performance']; // Placeholder
+    try {
+      // Call backend API for risk factor identification
+      const response = await fetch(`${this.apiEndpoint}/identify-risk-factors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getAuthToken()}`
+        },
+        body: JSON.stringify({
+          pattern_match: match,
+          rule_definition: rule,
+          analysis_depth: 'comprehensive'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Risk factor identification failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.risk_factors || [];
+    } catch (error) {
+      console.error('Failed to identify risk factors:', error);
+      // Fallback risk factor identification
+      const riskFactors: string[] = [];
+      
+      // Analyze pattern-based risks
+      if (match.confidence < 0.7) riskFactors.push('low_confidence');
+      if (match.type === 'security' && match.confidence < 0.9) riskFactors.push('security_risk');
+      if (rule.aiEnhanced && !rule.validated) riskFactors.push('unvalidated_ai_rule');
+      
+      // Analyze rule-based risks
+      if (rule.conditions && rule.conditions.length > 10) riskFactors.push('high_complexity');
+      if (rule.executionStrategy === 'parallel' && !rule.threadSafe) riskFactors.push('concurrency_risk');
+      if (rule.resourceIntensive) riskFactors.push('resource_intensive');
+      
+      // Performance risks
+      if (match.metadata?.estimatedExecutionTime > 30000) riskFactors.push('performance_impact');
+      if (match.metadata?.memoryRequirement > 1000000) riskFactors.push('memory_intensive');
+      
+      // Compatibility risks
+      if (rule.dependencies && rule.dependencies.length > 5) riskFactors.push('dependency_complexity');
+      if (match.metadata?.requiresExternalService) riskFactors.push('external_dependency');
+      
+      return riskFactors.length > 0 ? riskFactors : ['minimal_risk'];
+    }
   }
 
   private async generateSemanticExplanation(match: PatternMatchResult, rule: ScanRule): Promise<string> {

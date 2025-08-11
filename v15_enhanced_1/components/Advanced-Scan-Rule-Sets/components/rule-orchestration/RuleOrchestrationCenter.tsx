@@ -103,6 +103,9 @@ import { useReporting } from '../../hooks/useReporting';
 import { useIntelligence } from '../../hooks/useIntelligence';
 import { useCollaboration } from '../../hooks/useCollaboration';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // API Services
 import { orchestrationAPI } from '../../services/orchestration-apis';
 import { scanRulesAPI } from '../../services/scan-rules-apis';
@@ -146,6 +149,10 @@ interface RuleOrchestrationCenterProps {
   onJobCreated?: (job: OrchestrationJob) => void;
   onExecutionStarted?: (execution: WorkflowExecution) => void;
   onResourceAllocated?: (allocation: ResourceAllocation) => void;
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
 }
 
 interface OrchestrationViewState {
@@ -255,8 +262,16 @@ export const RuleOrchestrationCenter: React.FC<RuleOrchestrationCenterProps> = (
   className,
   onJobCreated,
   onExecutionStarted,
-  onResourceAllocated
+  onResourceAllocated,
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
 }) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
   // State Management
   const [viewState, setViewState] = useState<OrchestrationViewState>(DEFAULT_VIEW_STATE);
   const [orchestrationState, setOrchestrationState] = useState<OrchestrationState>({

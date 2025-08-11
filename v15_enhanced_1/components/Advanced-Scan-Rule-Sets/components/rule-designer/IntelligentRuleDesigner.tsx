@@ -150,6 +150,9 @@ import { useIntelligence } from '../../hooks/useIntelligence';
 import { useCollaboration } from '../../hooks/useCollaboration';
 import { usePatternLibrary } from '../../hooks/usePatternLibrary';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // Types
 import type {
   ScanRule,
@@ -177,6 +180,10 @@ interface IntelligentRuleDesignerProps {
   aiAssistanceEnabled?: boolean;
   advancedFeatures?: boolean;
   className?: string;
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
 }
 
 // Rule Designer State
@@ -297,8 +304,16 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
   collaborationEnabled = true,
   aiAssistanceEnabled = true,
   advancedFeatures = true,
-  className
+  className,
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
 }) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
   // Hooks
   const {
     rules,
@@ -558,17 +573,44 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
   }, [handleRuleChange]);
 
   const handleSave = useCallback(async () => {
-    if (!canSave) return;
+    // RBAC permission check
+    const canSaveRule = mode === 'create' ? rbac.canCreateRules() : rbac.canEditRules(ruleId);
+    if (!canSave || !canSaveRule) {
+      showNotification('error', 'You do not have permission to save rules');
+      return;
+    }
 
     setState(prev => ({ ...prev, isSaving: true }));
 
     try {
+      // Log user action for audit trail
+      await rbac.logUserAction('rule_save', {
+        ruleId: state.rule.id,
+        mode,
+        ruleName: state.rule.name,
+        ruleType: state.rule.type
+      });
+
       let savedRule: ScanRule;
       
       if (mode === 'create' || mode === 'clone') {
-        savedRule = await createRule(state.rule as ScanRule);
+        // Add user context to the rule
+        const ruleWithContext = {
+          ...state.rule,
+          createdBy: userContext.userId,
+          organizationId: userContext.organizationId,
+          tenantId: userContext.tenantId,
+          createdAt: new Date().toISOString()
+        };
+        savedRule = await createRule(ruleWithContext as ScanRule);
       } else {
-        savedRule = await updateRule(state.rule.id!, state.rule as Partial<ScanRule>);
+        // Add modification context
+        const ruleWithContext = {
+          ...state.rule,
+          modifiedBy: userContext.userId,
+          modifiedAt: new Date().toISOString()
+        };
+        savedRule = await updateRule(state.rule.id!, ruleWithContext as Partial<ScanRule>);
       }
 
       setState(prev => ({
@@ -589,14 +631,25 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
       showNotification('error', 'Failed to save rule');
       console.error('Save error:', error);
     }
-  }, [canSave, mode, state.rule, createRule, updateRule, onSave]);
+  }, [canSave, mode, state.rule, createRule, updateRule, onSave, rbac, userContext, ruleId]);
 
   const handleTest = useCallback(async () => {
-    if (!canTest) return;
+    // RBAC permission check
+    if (!canTest || !rbac.canExecuteRules(ruleId)) {
+      showNotification('error', 'You do not have permission to test rules');
+      return;
+    }
 
     setState(prev => ({ ...prev, isTesting: true }));
 
     try {
+      // Log user action for audit trail
+      await rbac.logUserAction('rule_test', {
+        ruleId: state.rule.id,
+        ruleName: state.rule.name,
+        testType: 'validation'
+      });
+
       const testResults = await testRule(state.rule as ScanRule);
       
       setState(prev => ({
@@ -614,14 +667,25 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
       showNotification('error', 'Rule test failed');
       console.error('Test error:', error);
     }
-  }, [canTest, state.rule, testRule, onTest]);
+  }, [canTest, state.rule, testRule, onTest, rbac, ruleId]);
 
   const handleDeploy = useCallback(async () => {
-    if (!canDeploy) return;
+    // RBAC permission check
+    if (!canDeploy || !rbac.canDeployRuleSets(state.rule.ruleSetId)) {
+      showNotification('error', 'You do not have permission to deploy rules');
+      return;
+    }
 
     setState(prev => ({ ...prev, isDeploying: true }));
 
     try {
+      // Log user action for audit trail
+      await rbac.logUserAction('rule_deploy', {
+        ruleId: state.rule.id,
+        ruleName: state.rule.name,
+        deploymentTarget: 'production'
+      });
+
       await deployRule(state.rule.id!);
       
       setState(prev => ({
@@ -629,7 +693,9 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
         isDeploying: false,
         rule: {
           ...prev.rule,
-          status: 'active'
+          status: 'active',
+          deployedBy: userContext.userId,
+          deployedAt: new Date().toISOString()
         }
       }));
 
@@ -641,7 +707,7 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
       showNotification('error', 'Rule deployment failed');
       console.error('Deploy error:', error);
     }
-  }, [canDeploy, state.rule.id, deployRule, onDeploy]);
+  }, [canDeploy, state.rule.id, state.rule.ruleSetId, deployRule, onDeploy, rbac, userContext]);
 
   const handleAISuggestion = useCallback(async (type: string) => {
     if (!aiConfig.enabled) return;
@@ -866,29 +932,47 @@ export const IntelligentRuleDesigner: React.FC<IntelligentRuleDesignerProps> = (
               </TooltipContent>
             </Tooltip>
 
+            {/* User Context Display */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline">
+                  <ShieldCheck className="h-3 w-3 mr-1" />
+                  {accessLevel}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Access Level: {accessLevel}</p>
+                <p>User: {userContext.username}</p>
+              </TooltipContent>
+            </Tooltip>
+
             {/* Actions */}
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleTest}
-                disabled={!canTest}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Test
-              </Button>
+              {rbac.canExecuteRules(ruleId) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleTest}
+                  disabled={!canTest}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Test
+                </Button>
+              )}
               
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSave}
-                disabled={!canSave}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {state.isSaving ? 'Saving...' : 'Save'}
-              </Button>
+              {(rbac.canCreateRules() || rbac.canEditRules(ruleId)) && (
+                                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSave}
+                    disabled={!canSave}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {state.isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                )}
               
-              {canDeploy && (
+              {canDeploy && rbac.canDeployRuleSets(state.rule.ruleSetId) && (
                 <Button 
                   size="sm" 
                   onClick={handleDeploy}

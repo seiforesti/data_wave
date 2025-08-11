@@ -494,6 +494,15 @@ import { useReporting } from '../hooks/useReporting'
 import { useValidation } from '../hooks/useValidation'
 import { usePatternLibrary } from '../hooks/usePatternLibrary'
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../utils/rbac-integration'
+
+// Component Interconnection
+import { interconnectionManager, useComponentInterconnection, ComponentLifecycle } from '../utils/component-interconnection'
+
+// Integration Validation
+import { useIntegrationValidation, EnterpriseHealthCheck } from '../utils/integration-validator'
+
 // Types
 import {
   ScanRule,
@@ -1411,12 +1420,147 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
     notificationSettings: {} as NotificationSettings
   })
 
+  // Initialize navigation with RBAC-filtered items
+  const accessibleNavigation = useMemo(() => rbac.getAccessibleNavigation(), [rbac]);
+  
   const [navigationState, setNavigationState] = useState({
-    items: DEFAULT_NAVIGATION,
+    items: accessibleNavigation,
     expandedItems: ['rule-designer', 'orchestration', 'optimization', 'intelligence', 'collaboration', 'reporting'],
     searchQuery: '',
-    filteredItems: DEFAULT_NAVIGATION
+    filteredItems: accessibleNavigation
   })
+
+  // Component lifecycle management
+  useEffect(() => {
+    // Set RBAC manager for interconnection
+    interconnectionManager.setRBACManager(rbac);
+
+    // Start enterprise health monitoring
+    const stopMonitoring = EnterpriseHealthCheck.startMonitoring(60000); // Every minute
+
+    // Run initial integration validation
+    if (rbac.user && rbac.canViewRules()) {
+      runValidation();
+    }
+
+    // Emit SPA mounted event
+    ComponentLifecycle.mounted('scan-rule-sets-spa', {
+      rbacManager: rbac,
+      userId: rbac.user?.id,
+      organizationId: rbac.user?.organizationId
+    });
+
+    return () => {
+      // Stop monitoring
+      stopMonitoring();
+
+      // Emit SPA unmounted event
+      ComponentLifecycle.unmounted('scan-rule-sets-spa', {
+        rbacManager: rbac,
+        userId: rbac.user?.id,
+        organizationId: rbac.user?.organizationId
+      });
+    };
+  }, [rbac, runValidation]);
+
+  // Component view change coordination
+  useEffect(() => {
+    // Emit component view change event to coordinate with other components
+    interconnection.emitEvent('view-changed', {
+      fromView: spaState.currentView,
+      toView: spaState.currentView,
+      timestamp: new Date()
+    });
+
+    // Notify component lifecycle
+    ComponentLifecycle.updated('scan-rule-sets-spa', {
+      currentView: spaState.currentView
+    }, {
+      rbacManager: rbac,
+      userId: rbac.user?.id,
+      organizationId: rbac.user?.organizationId
+    });
+  }, [spaState.currentView, interconnection, rbac]);
+
+  // Update navigation when RBAC changes
+  useEffect(() => {
+    const newNavigation = rbac.getAccessibleNavigation();
+    setNavigationState(prev => ({
+      ...prev,
+      items: newNavigation,
+      filteredItems: newNavigation
+    }));
+  }, [rbac, rbac.user, rbac.rbacState])
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!rbac.user || !rbac.canViewRules()) return;
+
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/ws/scan-rules`;
+    const ws = new WebSocket(`${wsUrl}?token=${localStorage.getItem('auth_token')}&userId=${rbac.user.id}`);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected for scan rule sets');
+      setSpaState(prev => ({ ...prev, offlineMode: false }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        handleWebSocketMessage(message);
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setSpaState(prev => ({ ...prev, offlineMode: true }));
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setSpaState(prev => ({ ...prev, offlineMode: true }));
+    };
+
+    websocketRef.current = ws;
+
+    return () => {
+      if (websocketRef.current) {
+        websocketRef.current.close();
+      }
+    };
+  }, [rbac.user, rbac.canViewRules])
+
+  // Handle WebSocket messages
+  const handleWebSocketMessage = useCallback((message: any) => {
+    switch (message.type) {
+      case 'rule_updated':
+        // Refresh rules data
+        break;
+      case 'rule_executed':
+        // Update execution status
+        break;
+      case 'optimization_completed':
+        // Update optimization results
+        break;
+      case 'system_alert':
+        // Handle system alerts
+        setSystemStatus(prev => ({
+          ...prev,
+          alerts: {
+            ...prev.alerts,
+            [message.severity]: prev.alerts[message.severity] + 1
+          }
+        }));
+        break;
+      case 'user_activity':
+        // Handle collaborative activities
+        break;
+      default:
+        console.log('Unhandled WebSocket message:', message);
+    }
+  }, [])
 
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     health: 'healthy',
@@ -1446,6 +1590,19 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
   const commandPaletteRef = useRef<HTMLDivElement>(null)
   const websocketRef = useRef<WebSocket | null>(null)
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // RBAC Integration
+  const rbac = useScanRuleRBAC();
+
+  // Component Interconnection
+  const interconnection = useComponentInterconnection('scan-rule-sets-spa', {
+    rbacManager: rbac,
+    userId: rbac.user?.id,
+    organizationId: rbac.user?.organizationId
+  });
+
+  // Integration Validation
+  const { validationReport, isValidating, runValidation, getComponentStatus } = useIntegrationValidation();
 
   // Custom hooks for data management
   const {
@@ -1643,8 +1800,22 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
     patternLibraryError
   ])
 
-  // Event handlers
-  const handleViewChange = useCallback((viewId: string) => {
+  // Event handlers with RBAC integration
+  const handleViewChange = useCallback(async (viewId: string) => {
+    // Check permissions before changing view
+    const accessibleComponents = rbac.getAccessibleComponents();
+    if (!accessibleComponents.includes(viewId) && !rbac.canViewRules()) {
+      console.warn(`Access denied for view: ${viewId}`);
+      return;
+    }
+
+    // Log user action for audit trail
+    await rbac.logUserAction('view_change', {
+      fromView: spaState.currentView,
+      toView: viewId,
+      timestamp: new Date().toISOString()
+    });
+
     setSpaState(prev => {
       const newState = { ...prev, currentView: viewId }
       
@@ -1663,7 +1834,7 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
     if (onViewChange) {
       onViewChange(viewId)
     }
-  }, [onViewChange, onStateChange])
+  }, [onViewChange, onStateChange, rbac, spaState.currentView])
 
   const handleSidebarToggle = useCallback(() => {
     setSpaState(prev => ({
@@ -1818,10 +1989,87 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
     handleViewChange
   ])
 
+  // State persistence and recovery
+  useEffect(() => {
+    // Load persisted state on mount
+    const loadPersistedState = async () => {
+      try {
+        const persistedState = localStorage.getItem(`scan-rule-sets-spa-state-${rbac.user?.id}`);
+        if (persistedState) {
+          const parsed = JSON.parse(persistedState);
+          setSpaState(prev => ({
+            ...prev,
+            ...parsed,
+            // Don't persist certain temporary states
+            commandPaletteOpen: false,
+            settingsOpen: false,
+            notificationsOpen: false,
+            profileOpen: false,
+            helpOpen: false
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load persisted state:', error);
+      }
+    };
+
+    if (rbac.user) {
+      loadPersistedState();
+    }
+  }, [rbac.user]);
+
+  // Auto-save state changes
+  useEffect(() => {
+    if (!rbac.user) return;
+
+    const saveState = () => {
+      try {
+        const stateToSave = {
+          currentView: spaState.currentView,
+          sidebarCollapsed: spaState.sidebarCollapsed,
+          userPreferences: spaState.userPreferences,
+          recentItems: spaState.recentItems,
+          bookmarkedItems: spaState.bookmarkedItems,
+          pinnedComponents: spaState.pinnedComponents,
+          customLayout: spaState.customLayout,
+          workspaceSettings: spaState.workspaceSettings
+        };
+        
+        localStorage.setItem(
+          `scan-rule-sets-spa-state-${rbac.user.id}`,
+          JSON.stringify(stateToSave)
+        );
+      } catch (error) {
+        console.error('Failed to save state:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(saveState, 1000); // Debounce saves
+    return () => clearTimeout(timeoutId);
+  }, [spaState, rbac.user]);
+
   // Component lifecycle effects
   useEffect(() => {
     // Set up keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts)
+
+    // Set up heartbeat for system monitoring
+    heartbeatIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1'}/scan-rules/health`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+        });
+        const healthData = await response.json();
+        setSystemStatus(prev => ({
+          ...prev,
+          ...healthData,
+          lastHeartbeat: new Date()
+        }));
+      } catch (error) {
+        console.error('Heartbeat failed:', error);
+        setSystemStatus(prev => ({ ...prev, health: 'warning' }));
+      }
+    }, 30000); // Every 30 seconds
 
     return () => {
       document.removeEventListener('keydown', handleKeyboardShortcuts)
@@ -1888,6 +2136,10 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
 
     const ComponentToRender = componentMap[currentComponent?.component || 'ExecutiveDashboard']
     
+    // Check RBAC permissions for the current component
+    const accessibleComponents = rbac.getAccessibleComponents();
+    const hasAccess = accessibleComponents.includes(spaState.currentView) || rbac.canViewRules();
+    
     if (!ComponentToRender) {
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -1896,6 +2148,22 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
           <p className="text-muted-foreground">
             The requested component could not be loaded.
           </p>
+        </div>
+      )
+    }
+
+    if (!hasAccess) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <ShieldX className="h-12 w-12 text-destructive mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p className="text-muted-foreground mb-4">
+            You don't have permission to access this component.
+          </p>
+          <Button onClick={() => handleViewChange('dashboard')} variant="outline">
+            <Home className="h-4 w-4 mr-2" />
+            Go to Dashboard
+          </Button>
         </div>
       )
     }
@@ -1926,6 +2194,13 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
             locale={spaState.userPreferences.locale}
             timezone={spaState.userPreferences.timezone}
             currency={spaState.userPreferences.currency}
+            // RBAC context
+            rbac={rbac}
+            userContext={rbac.getUserContext()}
+            accessLevel={rbac.getAccessLevel()}
+            // Interconnection context
+            interconnection={interconnection}
+            componentId={spaState.currentView}
           />
         </ErrorBoundary>
       </Suspense>
@@ -2082,7 +2357,7 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
             animate="animate"
             className="space-y-1"
           >
-            {DEFAULT_NAVIGATION.map((item, index) => (
+            {navigationState.items.map((item, index) => (
               <motion.div key={item.id} variants={ANIMATION_VARIANTS.staggerItem}>
                 {renderNavigationItem(item)}
               </motion.div>
@@ -2216,25 +2491,72 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
           </TooltipContent>
         </Tooltip>
 
+        {/* System Status Indicator */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <div className={`h-2 w-2 rounded-full ${
+                validationReport?.summary.overallStatus === 'healthy' ? 'bg-green-500' :
+                validationReport?.summary.overallStatus === 'degraded' ? 'bg-yellow-500' :
+                validationReport?.summary.overallStatus === 'critical' ? 'bg-red-500' :
+                'bg-gray-500'
+              }`} />
+              <span className="text-xs">
+                {interconnection.metrics.totalComponents} Components
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="space-y-1">
+              <p className="font-medium">System Status: {validationReport?.summary.overallStatus || 'Unknown'}</p>
+              <p className="text-xs">Active Connections: {interconnection.metrics.activeConnections}</p>
+              <p className="text-xs">Events/sec: {interconnection.metrics.eventsPerSecond}</p>
+              {validationReport && (
+                <>
+                  <p className="text-xs">Validations: {validationReport.summary.passedValidations}/{validationReport.summary.passedValidations + validationReport.summary.failedValidations + validationReport.summary.warnings}</p>
+                  {validationReport.summary.failedValidations > 0 && (
+                    <p className="text-xs text-red-500">Critical Issues: {validationReport.summary.failedValidations}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+
         <Separator orientation="vertical" className="h-6" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               <Avatar className="h-6 w-6">
+                <AvatarImage src={rbac.user?.profilePicture} />
                 <AvatarFallback className="text-xs">
-                  {userId.slice(0, 2).toUpperCase()}
+                  {rbac.user?.username?.slice(0, 2).toUpperCase() || userId.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm">{userId}</span>
+              <div className="flex flex-col items-start">
+                <span className="text-sm">{rbac.user?.username || userId}</span>
+                <Badge variant="outline" className="text-xs">
+                  {rbac.getAccessLevel()}
+                </Badge>
+              </div>
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{rbac.user?.displayName || rbac.user?.username || userId}</p>
+                <p className="text-xs text-muted-foreground">{rbac.user?.email}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  <span className="text-xs">Access Level: {rbac.getAccessLevel()}</span>
+                </div>
+              </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <User className="h-4 w-4 mr-2" />
+              <Users className="h-4 w-4 mr-2" />
               Profile
             </DropdownMenuItem>
             <DropdownMenuItem>
@@ -2242,8 +2564,19 @@ export const ScanRuleSetsSPA: React.FC<ScanRuleSetsSPAProps> = ({
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem>
+              <Shield className="h-4 w-4 mr-2" />
+              Permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem>
               <HelpCircle className="h-4 w-4 mr-2" />
               Help
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-xs text-muted-foreground">
+              <div className="flex flex-col space-y-1">
+                <span>Roles: {rbac.user?.roles?.map(r => r.name).join(', ') || 'None'}</span>
+                <span>Organization: {rbac.user?.organizationId || 'N/A'}</span>
+              </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>

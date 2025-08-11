@@ -94,6 +94,9 @@ import { useScanRules } from '../../hooks/useScanRules';
 import { useReporting } from '../../hooks/useReporting';
 import { collaborationAPI } from '../../services/collaboration-apis';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // Types
 import {
   TeamMember,
@@ -129,6 +132,10 @@ interface TeamCollaborationHubProps {
   onMemberAdded?: (member: TeamMember) => void;
   onSessionStarted?: (session: CollaborationSession) => void;
   onActivityUpdate?: (activity: TeamActivity) => void;
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
 }
 
 const TeamCollaborationHub: React.FC<TeamCollaborationHubProps> = ({
@@ -140,8 +147,16 @@ const TeamCollaborationHub: React.FC<TeamCollaborationHubProps> = ({
   allowInvitations = true,
   onMemberAdded,
   onSessionStarted,
-  onActivityUpdate
+  onActivityUpdate,
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
 }) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
   // Hooks
   const {
     collaborationSessions,
