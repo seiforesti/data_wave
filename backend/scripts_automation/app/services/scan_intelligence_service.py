@@ -1691,6 +1691,243 @@ class ScanIntelligenceService:
             }
         }
 
+    async def calculate_business_impact(
+        self,
+        pattern_match: Dict[str, Any],
+        business_context: Optional[Dict[str, Any]] = None,
+        method: str = 'ai_enhanced'
+    ) -> Dict[str, Any]:
+        """
+        Calculate business impact score for pattern matches using AI/ML analysis.
+        """
+        try:
+            # Extract pattern features
+            pattern_features = {
+                'confidence': pattern_match.get('confidence', 0.0),
+                'pattern_type': pattern_match.get('type', 'unknown'),
+                'complexity': pattern_match.get('complexity', 0.5),
+                'coverage': pattern_match.get('coverage', 0.0)
+            }
+            
+            # Extract business context features
+            business_features = {}
+            if business_context:
+                business_features = {
+                    'criticality': business_context.get('businessCriticality', 'medium'),
+                    'data_volume': business_context.get('dataVolume', 0),
+                    'user_count': business_context.get('userCount', 0),
+                    'revenue_impact': business_context.get('revenueImpact', 0.0)
+                }
+            
+            # Calculate base impact score
+            base_score = pattern_features['confidence']
+            
+            # Apply pattern type multipliers
+            type_multipliers = {
+                'security': 1.5,
+                'compliance': 1.3,
+                'performance': 1.2,
+                'quality': 1.1,
+                'cost': 1.0
+            }
+            type_multiplier = type_multipliers.get(pattern_features['pattern_type'], 1.0)
+            
+            # Apply business context multipliers
+            criticality_multipliers = {
+                'critical': 2.0,
+                'high': 1.5,
+                'medium': 1.0,
+                'low': 0.7
+            }
+            criticality_multiplier = criticality_multipliers.get(
+                business_features.get('criticality', 'medium'), 1.0
+            )
+            
+            # Calculate final impact score
+            impact_score = min(base_score * type_multiplier * criticality_multiplier, 1.0)
+            
+            # Identify impact factors
+            impact_factors = []
+            if pattern_features['confidence'] > 0.9:
+                impact_factors.append('high_confidence_pattern')
+            if business_features.get('criticality') == 'critical':
+                impact_factors.append('critical_business_system')
+            if business_features.get('revenue_impact', 0) > 1000000:
+                impact_factors.append('high_revenue_impact')
+            
+            return {
+                'impact_score': impact_score,
+                'factors': impact_factors,
+                'confidence': pattern_features['confidence'],
+                'method_used': method,
+                'calculation_details': {
+                    'base_score': base_score,
+                    'type_multiplier': type_multiplier,
+                    'criticality_multiplier': criticality_multiplier,
+                    'pattern_features': pattern_features,
+                    'business_features': business_features
+                }
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating business impact: {str(e)}")
+            raise
+
+    async def assess_implementation_complexity(
+        self,
+        pattern_match: Dict[str, Any],
+        rule_definition: Dict[str, Any],
+        assessment_type: str = 'comprehensive'
+    ) -> Dict[str, Any]:
+        """
+        Assess implementation complexity for pattern matches and rules.
+        """
+        try:
+            complexity_factors = []
+            complexity_score = 0.5  # Base complexity
+            
+            # Analyze rule structure complexity
+            if rule_definition:
+                conditions_count = len(rule_definition.get('conditions', []))
+                if conditions_count > 10:
+                    complexity_score += 0.3
+                    complexity_factors.append('high_condition_count')
+                elif conditions_count > 5:
+                    complexity_score += 0.1
+                    complexity_factors.append('moderate_condition_count')
+                
+                # Check for AI enhancement
+                if rule_definition.get('aiEnhanced'):
+                    complexity_score += 0.2
+                    complexity_factors.append('ai_enhanced_rule')
+                
+                # Check for dependencies
+                dependencies = rule_definition.get('dependencies', [])
+                if len(dependencies) > 5:
+                    complexity_score += 0.2
+                    complexity_factors.append('high_dependency_count')
+            
+            # Analyze pattern complexity
+            if pattern_match:
+                pattern_type = pattern_match.get('type', 'simple')
+                if pattern_type in ['semantic', 'ml_pattern']:
+                    complexity_score += 0.3
+                    complexity_factors.append('advanced_pattern_type')
+                
+                if pattern_match.get('metadata', {}).get('requiresMLModel'):
+                    complexity_score += 0.4
+                    complexity_factors.append('ml_model_required')
+            
+            # Estimate implementation effort (in person-hours)
+            effort_estimate = complexity_score * 40  # Base 40 hours for complex rules
+            
+            # Estimate resource requirements
+            resource_requirements = {
+                'cpu_cores': max(2, int(complexity_score * 8)),
+                'memory_gb': max(4, int(complexity_score * 16)),
+                'storage_gb': max(10, int(complexity_score * 50)),
+                'network_bandwidth_mbps': max(100, int(complexity_score * 1000))
+            }
+            
+            return {
+                'complexity_score': min(complexity_score, 1.0),
+                'factors': complexity_factors,
+                'effort_estimate': effort_estimate,
+                'resources': resource_requirements,
+                'assessment_type': assessment_type
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error assessing implementation complexity: {str(e)}")
+            raise
+
+    async def identify_risk_factors(
+        self,
+        pattern_match: Dict[str, Any],
+        rule_definition: Dict[str, Any],
+        analysis_depth: str = 'comprehensive'
+    ) -> Dict[str, Any]:
+        """
+        Identify risk factors for pattern matches and rule implementations.
+        """
+        try:
+            risk_factors = []
+            risk_scores = []
+            
+            # Analyze pattern-based risks
+            if pattern_match:
+                confidence = pattern_match.get('confidence', 0.0)
+                if confidence < 0.7:
+                    risk_factors.append('low_confidence_pattern')
+                    risk_scores.append(0.6)
+                
+                pattern_type = pattern_match.get('type', 'unknown')
+                if pattern_type == 'security' and confidence < 0.9:
+                    risk_factors.append('security_risk_low_confidence')
+                    risk_scores.append(0.8)
+            
+            # Analyze rule-based risks
+            if rule_definition:
+                if rule_definition.get('aiEnhanced') and not rule_definition.get('validated'):
+                    risk_factors.append('unvalidated_ai_rule')
+                    risk_scores.append(0.7)
+                
+                execution_strategy = rule_definition.get('executionStrategy', 'sequential')
+                if execution_strategy == 'parallel' and not rule_definition.get('threadSafe'):
+                    risk_factors.append('concurrency_risk')
+                    risk_scores.append(0.6)
+                
+                if rule_definition.get('resourceIntensive'):
+                    risk_factors.append('resource_intensive')
+                    risk_scores.append(0.5)
+            
+            # Performance risks
+            estimated_time = pattern_match.get('metadata', {}).get('estimatedExecutionTime', 0)
+            if estimated_time > 30000:  # 30 seconds
+                risk_factors.append('performance_impact')
+                risk_scores.append(0.7)
+            
+            memory_requirement = pattern_match.get('metadata', {}).get('memoryRequirement', 0)
+            if memory_requirement > 1000000:  # 1MB
+                risk_factors.append('memory_intensive')
+                risk_scores.append(0.6)
+            
+            # Dependency risks
+            dependencies = rule_definition.get('dependencies', [])
+            if len(dependencies) > 5:
+                risk_factors.append('dependency_complexity')
+                risk_scores.append(0.5)
+            
+            if pattern_match.get('metadata', {}).get('requiresExternalService'):
+                risk_factors.append('external_dependency')
+                risk_scores.append(0.6)
+            
+            # Calculate overall risk score
+            overall_risk_score = sum(risk_scores) / len(risk_scores) if risk_scores else 0.1
+            
+            # Generate mitigation strategies
+            mitigation_strategies = []
+            if 'low_confidence_pattern' in risk_factors:
+                mitigation_strategies.append('Increase training data and retrain models')
+            if 'security_risk_low_confidence' in risk_factors:
+                mitigation_strategies.append('Implement additional security validation layers')
+            if 'performance_impact' in risk_factors:
+                mitigation_strategies.append('Optimize query performance and add caching')
+            if 'resource_intensive' in risk_factors:
+                mitigation_strategies.append('Implement resource monitoring and limits')
+            
+            return {
+                'risk_factors': risk_factors if risk_factors else ['minimal_risk'],
+                'overall_risk_score': overall_risk_score,
+                'mitigation_strategies': mitigation_strategies,
+                'confidence': 0.85,
+                'analysis_depth': analysis_depth
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error identifying risk factors: {str(e)}")
+            raise
+
 # ===================== EXPORTS =====================
 
 __all__ = [

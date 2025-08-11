@@ -146,6 +146,9 @@ import { useOptimization } from '../../hooks/useOptimization';
 import { useScanRules } from '../../hooks/useScanRules';
 import { useCollaboration } from '../../hooks/useCollaboration';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // Types
 interface Report {
   id: string;
@@ -310,7 +313,24 @@ const REPORT_FORMATS = [
   { value: 'powerpoint', label: 'PowerPoint', icon: PieChart },
 ];
 
-export const EnterpriseReporting: React.FC = () => {
+interface EnterpriseReportingProps {
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
+}
+
+export const EnterpriseReporting: React.FC<EnterpriseReportingProps> = ({
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
+}) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
+
   // Hooks
   const {
     getReports,

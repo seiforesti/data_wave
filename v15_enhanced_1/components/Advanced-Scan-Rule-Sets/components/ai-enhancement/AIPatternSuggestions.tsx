@@ -212,6 +212,9 @@ import { useScanRules } from '../../hooks/useScanRules';
 import { useCollaboration } from '../../hooks/useCollaboration';
 import { useValidation } from '../../hooks/useValidation';
 
+// RBAC Integration
+import { useScanRuleRBAC } from '../../utils/rbac-integration';
+
 // Types
 import type {
   Pattern,
@@ -258,6 +261,10 @@ interface AIPatternSuggestionsProps {
   onPatternApply?: (pattern: Pattern) => void;
   onFeedback?: (feedback: PatternFeedback) => void;
   className?: string;
+  // RBAC props
+  rbac?: any;
+  userContext?: any;
+  accessLevel?: string;
 }
 
 // Pattern Suggestion State
@@ -661,8 +668,16 @@ export const AIPatternSuggestions: React.FC<AIPatternSuggestionsProps> = ({
   onPatternSelect,
   onPatternApply,
   onFeedback,
-  className
+  className,
+  rbac: propRbac,
+  userContext: propUserContext,
+  accessLevel: propAccessLevel
 }) => {
+  // RBAC Integration - use prop or hook
+  const hookRbac = useScanRuleRBAC();
+  const rbac = propRbac || hookRbac;
+  const userContext = propUserContext || rbac.getUserContext();
+  const accessLevel = propAccessLevel || rbac.getAccessLevel();
   // Hooks
   const {
     generatePatternSuggestions,
