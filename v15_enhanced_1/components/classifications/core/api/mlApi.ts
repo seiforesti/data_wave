@@ -735,6 +735,51 @@ class EnhancedMLApiClient extends MLApiClient {
   async getMLModel(id: string): Promise<any> {
     return this.get(`/models/${id}`);
   }
+
+  // Feature Engineering Methods
+  async getAllFeatureEngineering(filters?: any): Promise<any> {
+    const params = filters ? new URLSearchParams(filters).toString() : '';
+    return this.get(`/feature-engineering${params ? '?' + params : ''}`);
+  }
+
+  async getFeatureEngineeringProject(projectId: string): Promise<any> {
+    return this.get(`/feature-engineering/${projectId}`);
+  }
+
+  async createFeatureEngineeringProject(config: any): Promise<any> {
+    return this.post('/feature-engineering', config);
+  }
+
+  async updateFeatureEngineeringProject(projectId: string, config: any): Promise<any> {
+    return this.put(`/feature-engineering/${projectId}`, config);
+  }
+
+  async deleteFeatureEngineeringProject(projectId: string): Promise<any> {
+    return this.delete(`/feature-engineering/${projectId}`);
+  }
+
+  async executeFeaturePipeline(projectId: string, config?: any): Promise<any> {
+    return this.post(`/feature-engineering/${projectId}/execute`, config || {});
+  }
+
+  // Data Quality Methods
+  async assessDataQuality(datasetId: string, config: any): Promise<any> {
+    return this.post(`/intelligence/assess-data-quality/${datasetId}`, config);
+  }
+
+  async getDataQualityHistory(datasetId: string, timeRange?: any): Promise<any> {
+    const params = timeRange ? new URLSearchParams(timeRange).toString() : '';
+    return this.get(`/data-quality/${datasetId}/history${params ? '?' + params : ''}`);
+  }
+
+  async generateQualityReport(datasetId: string, config?: any): Promise<any> {
+    return this.post(`/data-quality/${datasetId}/report`, config || {});
+  }
+
+  // Workflow Step Execution
+  async executeMLStep(stepId: string, config?: any): Promise<any> {
+    return this.post(`/workflows/steps/${stepId}/execute`, { type: 'ml', config });
+  }
 }
 
 // Export singleton instance with enhanced methods

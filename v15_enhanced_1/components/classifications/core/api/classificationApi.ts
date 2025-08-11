@@ -1648,6 +1648,45 @@ export class ClassificationApi {
       data: entry
     });
   }
+
+  // Workflow Management
+  async getWorkflowMetrics(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/workflows/metrics'
+    });
+  }
+
+  async getActiveWorkflows(): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'GET',
+      endpoint: '/workflows/active'
+    });
+  }
+
+  async executeWorkflow(execution: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: '/workflows/execute',
+      data: execution
+    });
+  }
+
+  async executeManualStep(stepId: string, config?: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: `/workflows/steps/${stepId}/execute`,
+      data: { type: 'manual', config }
+    });
+  }
+
+  async executeValidationStep(stepId: string, config?: any): Promise<ApiResponse<any>> {
+    return this.request<any>({
+      method: 'POST',
+      endpoint: `/workflows/steps/${stepId}/execute`,
+      data: { type: 'validation', config }
+    });
+  }
 }
 
 // Default export

@@ -801,6 +801,11 @@ class EnhancedAIApiClient extends AIApiClient {
     const params = filter ? new URLSearchParams(filter).toString() : '';
     return this.get(`/models${params ? '?' + params : ''}`);
   }
+
+  // Workflow Step Execution
+  async executeAIStep(stepId: string, config?: any): Promise<any> {
+    return this.post(`/workflows/steps/${stepId}/execute`, { type: 'ai', config });
+  }
 }
 
 // Export singleton instance with enhanced methods

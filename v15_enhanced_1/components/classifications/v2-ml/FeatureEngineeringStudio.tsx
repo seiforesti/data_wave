@@ -166,6 +166,9 @@ import {
 } from 'recharts';
 import { useMLIntelligence } from '../core/hooks/useMLIntelligence';
 import { useClassificationState } from '../core/hooks/useClassificationState';
+import { useClassificationsRBAC } from '../core/hooks/useClassificationsRBAC';
+import { mlApi } from '../core/api/mlApi';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Enhanced interfaces for feature engineering
 interface Feature {
@@ -377,8 +380,47 @@ const FeatureEngineeringStudio: React.FC = () => {
   const codeEditorRef = useRef<any>(null);
   const pipelineCanvasRef = useRef<HTMLDivElement>(null);
 
-  // Mock data for demonstration
-  const mockFeatureEngineering: FeatureEngineering[] = useMemo(() => [
+  // RBAC Integration
+  const rbac = useClassificationsRBAC();
+  const queryClient = useQueryClient();
+
+  // Real backend data fetching with RBAC integration
+  const { data: featureEngineeringData, isLoading: featureEngineeringLoading, error: featureEngineeringError } = useQuery({
+    queryKey: ['feature-engineering', 'list'],
+    queryFn: async () => {
+      const response = await mlApi.getAllFeatureEngineering();
+      return response.data;
+    },
+    enabled: rbac.classificationPermissions.canFeatureEngineering,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 30 * 1000, // Refresh every 30 seconds for real-time updates
+  });
+
+  const { data: dataQualityData, isLoading: dataQualityLoading } = useQuery({
+    queryKey: ['data-quality', selectedDataset],
+    queryFn: async () => {
+      if (!selectedDataset) return null;
+      const response = await mlApi.assessDataQuality(selectedDataset, {
+        quality_config: {
+          dimensions: ['completeness', 'consistency', 'validity', 'accuracy', 'uniqueness', 'timeliness'],
+          automated_fixes: false,
+          detailed_analysis: true
+        }
+      });
+      return response.data;
+    },
+    enabled: !!selectedDataset && rbac.classificationPermissions.canFeatureEngineering,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Use real data or fallback to empty arrays
+  const featureEngineering = useMemo(() => 
+    featureEngineeringData?.projects || [], 
+    [featureEngineeringData]
+  );
+
+  // Fallback data structure for when no backend data is available
+  const fallbackFeatureEngineering: FeatureEngineering[] = useMemo(() => [
     {
       id: 'fe_1',
       name: 'Customer Behavior Feature Engineering',
@@ -506,42 +548,21 @@ const FeatureEngineeringStudio: React.FC = () => {
     }
   ], []);
 
-  const mockDataQuality: DataQuality = useMemo(() => ({
-    overall_score: 0.87,
-    completeness: 0.92,
-    consistency: 0.85,
-    validity: 0.89,
-    accuracy: 0.84,
-    uniqueness: 0.91,
-    timeliness: 0.88,
-    issues: [
-      {
-        type: 'Missing Values',
-        severity: 'medium',
-        count: 145,
-        affected_features: ['income', 'education_level'],
-        suggestions: ['Use median imputation', 'Consider domain-specific defaults']
-      },
-      {
-        type: 'Outliers',
-        severity: 'low',
-        count: 23,
-        affected_features: ['age', 'transaction_amount'],
-        suggestions: ['Apply IQR-based filtering', 'Use robust scaling methods']
-      }
-    ],
-    trends: [
-      {
-        metric: 'completeness',
-        values: [
-          { timestamp: '2024-01-15', value: 0.89 },
-          { timestamp: '2024-01-16', value: 0.91 },
-          { timestamp: '2024-01-17', value: 0.92 }
-        ],
-        trend: 'improving'
-      }
-    ]
-  }), []);
+  // Use real data quality from backend or fallback
+  const dataQuality = useMemo(() => 
+    dataQualityData?.quality_assessment || {
+      overall_score: 0,
+      completeness: 0,
+      consistency: 0,
+      validity: 0,
+      accuracy: 0,
+      uniqueness: 0,
+      timeliness: 0,
+      issues: [],
+      trends: []
+    }, 
+    [dataQualityData]
+  );
 
   // Effects
   useEffect(() => {
@@ -549,9 +570,10 @@ const FeatureEngineeringStudio: React.FC = () => {
     fetchDatasets();
   }, [fetchMLModels, fetchDatasets]);
 
-  // Computed values
+  // Computed values using real backend data
   const filteredEngineering = useMemo(() => {
-    let filtered = mockFeatureEngineering;
+    const dataToFilter = featureEngineering.length > 0 ? featureEngineering : fallbackFeatureEngineering;
+    let filtered = dataToFilter;
 
     if (engineeringFilters.status !== 'all') {
       filtered = filtered.filter(fe => fe.status === engineeringFilters.status);
@@ -583,7 +605,7 @@ const FeatureEngineeringStudio: React.FC = () => {
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [mockFeatureEngineering, engineeringFilters, searchQuery, sortBy, sortOrder]);
+  }, [featureEngineering, fallbackFeatureEngineering, engineeringFilters, searchQuery, sortBy, sortOrder]);
 
   const filteredFeatures = useMemo(() => {
     if (!selectedEngineering) return [];
@@ -1286,6 +1308,20 @@ const FeatureEngineeringStudio: React.FC = () => {
     </Dialog>
   );
 
+  // RBAC Permission Check
+  if (!rbac.classificationPermissions.canFeatureEngineering) {
+    return (
+      <Card className="p-6">
+        <div className="text-center">
+          <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Access Restricted</h3>
+          <p className="text-gray-600">You don't have permission to access Feature Engineering.</p>
+          <p className="text-sm text-gray-500 mt-2">Contact your administrator to request access.</p>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <TooltipProvider>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -1313,13 +1349,15 @@ const FeatureEngineeringStudio: React.FC = () => {
               <Label htmlFor="real-time-validation" className="text-sm">Real-time validation</Label>
             </div>
             
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
+            <rbac.PermissionGuard permission={rbac.classificationPermissions.canFeatureEngineering}>
+              <Button
+                onClick={() => setShowCreateDialog(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </rbac.PermissionGuard>
           </div>
         </div>
 
@@ -1331,20 +1369,20 @@ const FeatureEngineeringStudio: React.FC = () => {
                 <Gauge className="h-5 w-5" />
                 Data Quality Overview
               </CardTitle>
-              <Badge className={`${mockDataQuality.overall_score >= 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                {(mockDataQuality.overall_score * 100).toFixed(1)}% Quality Score
+              <Badge className={`${dataQuality.overall_score >= 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                {(dataQuality.overall_score * 100).toFixed(1)}% Quality Score
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
               {[
-                { label: 'Completeness', value: mockDataQuality.completeness, icon: CheckCircle },
-                { label: 'Consistency', value: mockDataQuality.consistency, icon: Target },
-                { label: 'Validity', value: mockDataQuality.validity, icon: Shield },
-                { label: 'Accuracy', value: mockDataQuality.accuracy, icon: Crosshair },
-                { label: 'Uniqueness', value: mockDataQuality.uniqueness, icon: Star },
-                { label: 'Timeliness', value: mockDataQuality.timeliness, icon: Clock }
+                { label: 'Completeness', value: dataQuality.completeness, icon: CheckCircle },
+                { label: 'Consistency', value: dataQuality.consistency, icon: Target },
+                { label: 'Validity', value: dataQuality.validity, icon: Shield },
+                { label: 'Accuracy', value: dataQuality.accuracy, icon: Crosshair },
+                { label: 'Uniqueness', value: dataQuality.uniqueness, icon: Star },
+                { label: 'Timeliness', value: dataQuality.timeliness, icon: Clock }
               ].map((metric, idx) => (
                 <div key={idx} className="text-center">
                   <div className="flex items-center justify-center mb-2">
@@ -1357,11 +1395,11 @@ const FeatureEngineeringStudio: React.FC = () => {
               ))}
             </div>
 
-            {mockDataQuality.issues.length > 0 && (
+            {dataQuality.issues.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium text-gray-900">Quality Issues</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {mockDataQuality.issues.map((issue, idx) => (
+                  {dataQuality.issues.map((issue, idx) => (
                     <div key={idx} className="p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-sm">{issue.type}</span>
