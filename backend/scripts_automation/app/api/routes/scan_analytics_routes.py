@@ -777,6 +777,70 @@ async def _deliver_report_via_email(
         logger.error(f"Error delivering report {report_id} via email: {str(e)}")
 
 # Health Check
+@router.get("/reports")
+async def get_analytics_reports(
+    report_types: List[str] = Query(default=["performance", "trends", "business_intelligence"]),
+    timeframe: str = Query(default="30d"),
+    include_insights: bool = Query(default=True),
+    include_recommendations: bool = Query(default=True),
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(get_current_user)
+):
+    """Get existing analytics reports"""
+    try:
+        # Permission check
+        if not await require_permissions([Permission.SCAN_ANALYTICS_VIEW], current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        # Get analytics service
+        analytics_service = ComprehensiveAnalyticsService(session)
+        
+        # Fetch reports
+        reports = await analytics_service.get_analytics_reports(
+            report_types=report_types,
+            timeframe=timeframe,
+            include_insights=include_insights,
+            include_recommendations=include_recommendations,
+            user_id=current_user.id
+        )
+        
+        return {"reports": reports, "total": len(reports)}
+        
+    except Exception as e:
+        logger.error(f"Error fetching analytics reports: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analytics reports: {str(e)}")
+
+@router.get("/visualizations")
+async def get_analytics_visualizations(
+    visualization_types: List[str] = Query(default=["line_chart", "bar_chart", "pie_chart", "heatmap"]),
+    timeframe: str = Query(default="30d"),
+    include_data: bool = Query(default=True),
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(get_current_user)
+):
+    """Get analytics visualizations"""
+    try:
+        # Permission check
+        if not await require_permissions([Permission.SCAN_ANALYTICS_VIEW], current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        # Get analytics service
+        analytics_service = ComprehensiveAnalyticsService(session)
+        
+        # Fetch visualizations
+        visualizations = await analytics_service.get_analytics_visualizations(
+            visualization_types=visualization_types,
+            timeframe=timeframe,
+            include_data=include_data,
+            user_id=current_user.id
+        )
+        
+        return {"visualizations": visualizations, "total": len(visualizations)}
+        
+    except Exception as e:
+        logger.error(f"Error fetching analytics visualizations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analytics visualizations: {str(e)}")
+
 @router.get("/health")
 async def health_check():
     """Health check for scan analytics service"""

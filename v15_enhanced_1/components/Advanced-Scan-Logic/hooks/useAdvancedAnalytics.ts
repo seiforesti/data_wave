@@ -2,19 +2,20 @@
  * 📊 Advanced Analytics Hook - Advanced Scan Logic
  * ===============================================
  * 
- * Enterprise-grade React hook for advanced analytics and insights
- * Integrates with backend monitoring, intelligence, and analytics services
+ * Enterprise-grade React hook for advanced analytics and insights with full
+ * backend integration and RBAC permission-based access control.
  * 
  * Features:
- * - Real-time analytics and metrics
- * - Predictive analytics and forecasting
- * - Pattern recognition and anomaly detection
- * - Performance analytics and optimization
- * - Business intelligence and reporting
- * - Machine learning insights
+ * - Real-time analytics and metrics with backend API integration
+ * - Predictive analytics and forecasting via ML services
+ * - Pattern recognition and anomaly detection with intelligence services
+ * - Performance analytics and optimization with scan performance APIs
+ * - Business intelligence and reporting with comprehensive analytics
+ * - Machine learning insights with AI-powered recommendations
+ * - Full RBAC integration for secure, permission-based operations
  * 
  * @author Enterprise Data Governance Team
- * @version 1.0.0 - Production Ready
+ * @version 2.0.0 - Production Ready with Real Backend Integration
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -41,6 +42,7 @@ import {
   distributedCachingAPI,
   streamingOrchestrationAPI
 } from '../services';
+import { useScanRBAC, SCAN_LOGIC_PERMISSIONS } from './use-rbac-integration';
 
 /**
  * Advanced Analytics Hook Configuration
@@ -156,6 +158,7 @@ export const useAdvancedAnalytics = (
 ): UseAdvancedAnalyticsReturn => {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   const queryClient = useQueryClient();
+  const rbac = useScanRBAC(); // RBAC integration for permission checking
   
   // State Management
   const [analyticsAlerts, setAnalyticsAlerts] = useState<AnalyticsAlert[]>([]);
@@ -227,26 +230,36 @@ export const useAdvancedAnalytics = (
     staleTime: 30000
   });
 
-  // Analytics Reports Query
+  // Analytics Reports Query - Real Backend Integration
   const {
     data: analyticsReports = [],
     isLoading: reportsLoading
   } = useQuery({
     queryKey: queryKeys.analyticsReports,
     queryFn: async () => {
-      // Mock analytics reports data - replace with actual API call
-      return [
-        {
-          id: 'report_1',
-          title: 'System Performance Analytics',
-          type: 'performance',
-          status: 'completed',
-          generated_at: new Date().toISOString(),
-          data: {},
-          insights: []
-        }
-      ] as AnalyticsReport[];
+      if (!rbac.scanLogicPermissions.canViewAnalytics) {
+        throw new Error('Insufficient permissions to view analytics reports');
+      }
+      
+      try {
+        // Log user action for audit trail
+        await rbac.logUserAction('view_analytics_reports', 'scan_analytics');
+        
+        // Real API call to analytics service
+        const response = await advancedMonitoringAPI.getAnalyticsReports({
+          report_types: ['performance', 'trends', 'predictions', 'business_intelligence'],
+          timeframe: finalConfig.retentionPeriod,
+          include_insights: true,
+          include_recommendations: true
+        });
+        
+        return response.reports || [];
+      } catch (error) {
+        console.error('Failed to fetch analytics reports:', error);
+        throw error;
+      }
     },
+    enabled: rbac.scanLogicPermissions.canViewAnalytics && rbac.isAuthenticated,
     refetchInterval: finalConfig.autoRefresh ? finalConfig.refreshInterval : false
   });
 
@@ -299,26 +312,35 @@ export const useAdvancedAnalytics = (
     refetchInterval: finalConfig.autoRefresh ? finalConfig.refreshInterval * 2 : false
   });
 
-  // Forecasting Models Query
+  // Forecasting Models Query - Real Backend Integration
   const {
     data: forecastingModels = [],
     isLoading: modelsLoading
   } = useQuery({
     queryKey: queryKeys.forecastingModels,
     queryFn: async () => {
-      // Mock forecasting models data - replace with actual API call
-      return [
-        {
-          id: 'model_1',
-          name: 'Performance Forecasting Model',
-          type: 'time_series',
-          accuracy: 0.92,
-          status: 'active',
-          created_at: new Date().toISOString()
-        }
-      ] as ForecastingModel[];
+      if (!rbac.scanLogicPermissions.canPredictiveAnalytics) {
+        throw new Error('Insufficient permissions to view forecasting models');
+      }
+      
+      try {
+        // Log user action for audit trail
+        await rbac.logUserAction('view_forecasting_models', 'scan_analytics');
+        
+        // Real API call to ML services for forecasting models
+        const response = await intelligentScanningAPI.getPredictiveModels({
+          model_types: ['time_series', 'regression', 'neural_network'],
+          status_filter: 'active',
+          include_performance_metrics: true
+        });
+        
+        return response.models || [];
+      } catch (error) {
+        console.error('Failed to fetch forecasting models:', error);
+        throw error;
+      }
     },
-    enabled: finalConfig.enablePredictiveAnalytics
+    enabled: finalConfig.enablePredictiveAnalytics && rbac.scanLogicPermissions.canPredictiveAnalytics && rbac.isAuthenticated
   });
 
   // Pattern Analysis Query
@@ -505,25 +527,35 @@ export const useAdvancedAnalytics = (
     refetchInterval: finalConfig.autoRefresh ? finalConfig.refreshInterval * 2 : false
   });
 
-  // Visualizations Query
+  // Visualizations Query - Real Backend Integration
   const {
     data: visualizations = [],
     isLoading: visualizationsLoading
   } = useQuery({
     queryKey: queryKeys.visualizations,
     queryFn: async () => {
-      // Mock visualizations data - replace with actual API call
-      return [
-        {
-          id: 'viz_1',
-          title: 'Performance Trends',
-          type: 'line_chart',
-          config: {},
-          data: {},
-          created_at: new Date().toISOString()
-        }
-      ] as DataVisualization[];
-    }
+      if (!rbac.scanLogicPermissions.canViewAnalytics) {
+        throw new Error('Insufficient permissions to view visualizations');
+      }
+      
+      try {
+        // Log user action for audit trail
+        await rbac.logUserAction('view_analytics_visualizations', 'scan_analytics');
+        
+        // Real API call to get analytics visualizations
+        const response = await advancedMonitoringAPI.getAnalyticsVisualizations({
+          visualization_types: ['line_chart', 'bar_chart', 'pie_chart', 'heatmap', 'scatter_plot'],
+          include_data: true,
+          timeframe: finalConfig.retentionPeriod || '30d'
+        });
+        
+        return response.visualizations || [];
+      } catch (error) {
+        console.error('Failed to fetch visualizations:', error);
+        throw error;
+      }
+    },
+    enabled: rbac.scanLogicPermissions.canViewAnalytics && rbac.isAuthenticated
   });
 
   // Analytics Configuration Query

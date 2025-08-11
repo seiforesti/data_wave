@@ -27,6 +27,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useScanRBAC, SCAN_LOGIC_PERMISSIONS } from '../../hooks/use-rbac-integration';
 import { 
   Card, 
   CardContent, 
@@ -1076,6 +1077,7 @@ interface HuntSchedule {
 
 export const ThreatIntelligence: React.FC = () => {
   const { toast } = useToast();
+  const rbac = useScanRBAC(); // RBAC integration for permission checking
   const {
     securityThreats,
     detectThreats,
@@ -1088,6 +1090,17 @@ export const ThreatIntelligence: React.FC = () => {
     enableRealTimeAlerts: true,
     securityLevel: 'enterprise'
   });
+
+  // Permission check - redirect if no access
+  useEffect(() => {
+    if (!rbac.isLoading && !rbac.scanLogicPermissions.canAccessThreatIntelligence) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to access Threat Intelligence.",
+        variant: "destructive",
+      });
+    }
+  }, [rbac.isLoading, rbac.scanLogicPermissions.canAccessThreatIntelligence, toast]);
 
   // ==================== State Management ====================
 
@@ -1148,8 +1161,8 @@ export const ThreatIntelligence: React.FC = () => {
       setCampaigns(data.campaigns || []);
     } catch (error) {
       console.error('Failed to fetch threat intelligence:', error);
-      // Fallback to mock data for development
-      initializeMockData();
+      // Real production error - no fallback to mock data
+      setError('Failed to fetch threat intelligence data. Please check your permissions and network connection.');
     }
   }, []);
 

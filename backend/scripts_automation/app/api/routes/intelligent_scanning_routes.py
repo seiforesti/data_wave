@@ -839,3 +839,34 @@ async def health_check():
             "ai_powered_insights"
         ]
     }
+
+@router.get("/models/predictive")
+async def get_predictive_models(
+    model_types: List[str] = Query(default=["time_series", "regression", "neural_network"]),
+    status_filter: str = Query(default="active"),
+    include_performance_metrics: bool = Query(default=True),
+    session: AsyncSession = Depends(get_session),
+    current_user = Depends(get_current_user)
+):
+    """Get predictive ML models for scan analytics"""
+    try:
+        # Permission check
+        if not await require_permissions([Permission.SCAN_INTELLIGENCE_VIEW], current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        # Get scan intelligence service
+        intelligence_service = ScanIntelligenceService(session)
+        
+        # Fetch predictive models
+        models = await intelligence_service.get_predictive_models(
+            model_types=model_types,
+            status_filter=status_filter,
+            include_performance_metrics=include_performance_metrics,
+            user_id=current_user.id
+        )
+        
+        return {"models": models, "total": len(models)}
+        
+    except Exception as e:
+        logger.error(f"Error fetching predictive models: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch predictive models: {str(e)}")
