@@ -55,6 +55,26 @@ export {
   advancedCatalogCollaborationService 
 } from './collaboration.service';
 
+export {
+  DataLineageService,
+  dataLineageService
+} from './data-lineage.service';
+
+export {
+  ImpactAnalysisService,
+  impactAnalysisService
+} from './impact-analysis.service';
+
+export {
+  TrendAnalysisService,
+  trendAnalysisService
+} from './trend-analysis.service';
+
+export {
+  PopularityAnalysisService,
+  popularityAnalysisService
+} from './popularity-analysis.service';
+
 // Export service interfaces for type safety
 export type {
   AssetCreateRequest,
@@ -115,6 +135,12 @@ export const catalogServices = {
   catalogRecommendation: catalogRecommendationService,
   catalogAI: catalogAIService,
   advancedCatalogCollaboration: advancedCatalogCollaborationService,
+  
+  // Specialized Analytics Services
+  dataLineage: dataLineageService,
+  impactAnalysis: impactAnalysisService,
+  trendAnalysis: trendAnalysisService,
+  popularityAnalysis: popularityAnalysisService,
 } as const;
 
 /**

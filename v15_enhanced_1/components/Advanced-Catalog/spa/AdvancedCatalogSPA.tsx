@@ -364,6 +364,12 @@ import { useCatalogRecommendations } from '../hooks/useCatalogRecommendations';
 import { useCatalogProfiling } from '../hooks/useCatalogProfiling';
 import { useCatalogAI } from '../hooks/useCatalogAI';
 
+// RBAC Integration
+import { useCatalogRBAC } from '../hooks/useCatalogRBAC';
+
+// Workflow Orchestration
+import { useCatalogWorkflowOrchestrator } from '../hooks/useCatalogWorkflowOrchestrator';
+
 // Services
 import { catalogAnalyticsService } from '../services/catalog-analytics.service';
 import { enterpriseCatalogService } from '../services/enterprise-catalog.service';
@@ -2181,41 +2187,72 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
   // HOOKS & STATE
   // ============================================================================
 
-  // Core Hooks
+  // RBAC Integration - Enterprise Security & Access Control
+  const rbac = useCatalogRBAC();
+  
+  // Workflow Orchestration - Enterprise Workflow Management
+  const workflowOrchestrator = useCatalogWorkflowOrchestrator();
+
+  // Core Hooks with RBAC integration
   const analyticsHook = useCatalogAnalytics({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canViewAnalyticsDashboards()
   });
 
   const discoveryHook = useCatalogDiscovery({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canViewDiscoveryResults()
   });
 
   const lineageHook = useCatalogLineage({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canViewLineage()
   });
 
   const collaborationHook = useCatalogCollaboration({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canComment()
   });
 
   const recommendationsHook = useCatalogRecommendations({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canPerformAISearch()
   });
 
   const profilingHook = useCatalogProfiling({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canViewQualityMetrics()
   });
 
   const aiHook = useCatalogAI({
     userId,
-    enableRealTimeUpdates: true
+    enableRealTimeUpdates: true && rbac.canPerformAISearch()
   });
+
+  // Authentication Check
+  if (!rbac.isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-96 p-6">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Shield className="h-6 w-6 text-blue-600" />
+              Authentication Required
+            </CardTitle>
+            <CardDescription>
+              Please log in to access the Advanced Catalog System
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => window.location.href = '/login'} className="w-full">
+              <Lock className="h-4 w-4 mr-2" />
+              Login to Continue
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Main State
   const [catalogState, setCatalogState] = useState<CatalogState>({
@@ -2266,10 +2303,59 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
       }
     },
     workflowState: {
-      activeWorkflows: [],
-      completedTasks: 0,
-      pendingTasks: 0,
-      workflowTemplates: [],
+      activeWorkflows: workflowOrchestrator.activeWorkflows.map(workflow => ({
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        status: workflow.status,
+        steps: workflow.steps.map(step => ({
+          id: step.id,
+          name: step.name,
+          status: step.status,
+          component: step.type,
+          startTime: step.startTime,
+          endTime: step.endTime,
+          duration: step.duration,
+          dependencies: step.dependencies || [],
+          outputs: []
+        })),
+        progress: workflow.overallProgress,
+        startTime: workflow.startTime,
+        endTime: workflow.endTime,
+        createdBy: workflow.createdBy,
+        assignedTo: workflow.assignedTo,
+        metadata: workflow.context
+      })),
+      completedTasks: workflowOrchestrator.workflows.reduce((acc, w) => 
+        acc + w.steps.filter(s => s.status === 'completed').length, 0),
+      pendingTasks: workflowOrchestrator.workflows.reduce((acc, w) => 
+        acc + w.steps.filter(s => s.status === 'pending').length, 0),
+      workflowTemplates: workflowOrchestrator.workflowTemplates.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        category: template.category,
+        steps: template.steps.map(step => ({
+          id: step.name,
+          name: step.name,
+          type: step.type,
+          description: '',
+          config: step.metadata || {},
+          inputs: [],
+          outputs: []
+        })),
+        triggers: [{
+          type: 'manual',
+          config: {},
+          isEnabled: true
+        }],
+        isPublic: true,
+        isVerified: true,
+        version: '1.0',
+        tags: template.tags,
+        author: 'System',
+        usageCount: 0
+      })),
       automationRules: []
     },
     collaborationState: {
@@ -2291,13 +2377,33 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
     notifications: [],
     recentActivity: [],
     orchestrationState: {
-      activeOrchestrations: [],
+      activeOrchestrations: workflowOrchestrator.activeWorkflows.map(workflow => ({
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        components: workflow.steps.map(step => step.name),
+        orchestrationType: 'SEQUENTIAL' as const,
+        triggerConditions: [],
+        dataMapping: [],
+        status: workflow.status === 'active' ? 'RUNNING' as const : 
+               workflow.status === 'completed' ? 'COMPLETED' as const :
+               workflow.status === 'failed' ? 'FAILED' as const :
+               workflow.status === 'paused' ? 'PAUSED' as const : 'IDLE' as const,
+        progress: workflow.overallProgress,
+        startTime: workflow.startTime,
+        endTime: workflow.endTime,
+        results: []
+      })),
       componentDependencies: {
-        nodes: Object.keys(COMPONENT_REGISTRY).map(componentId => ({
-          id: componentId,
-          componentId,
-          title: COMPONENT_REGISTRY[componentId].title,
-          category: COMPONENT_REGISTRY[componentId].category,
+        nodes: Object.keys(COMPONENT_REGISTRY)
+          .filter(componentId => COMPONENT_REGISTRY[componentId].permissions.every(permission => 
+            rbac.userPermissions.includes(permission)
+          ))
+          .map(componentId => ({
+            id: componentId,
+            componentId,
+            title: COMPONENT_REGISTRY[componentId].title,
+            category: COMPONENT_REGISTRY[componentId].category,
           dependencies: COMPONENT_REGISTRY[componentId].dependencies,
           dependents: [],
           status: 'IDLE' as ComponentStatus,
@@ -2500,6 +2606,9 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
   // Component State
   const [loadingComponents, setLoadingComponents] = useState<Set<string>>(new Set());
   const [errorComponents, setErrorComponents] = useState<Set<string>>(new Set());
+  
+  // Workflow orchestration state
+  const [currentWorkflow, setCurrentWorkflow] = useState<typeof workflowOrchestrator.currentWorkflow>(null);
 
   // Refs
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -2934,6 +3043,12 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
               recommendationsData={recommendationsHook.data}
               profilingData={profilingHook.data}
               aiData={aiHook.data}
+              // RBAC Integration - All components now have access to RBAC
+              rbac={rbac}
+              // Workflow Orchestration - All components can trigger workflows
+              workflowOrchestrator={workflowOrchestrator}
+              currentWorkflow={currentWorkflow}
+              onWorkflowChange={setCurrentWorkflow}
               {...componentConfig.config}
             />
           </div>
@@ -2944,6 +3059,103 @@ const AdvancedCatalogSPA: React.FC<AdvancedCatalogSPAProps> = ({
 
   const renderDashboard = () => (
     <div className="space-y-6">
+      {/* User Info and Quick Actions with RBAC */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg border border-blue-200">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Welcome, {rbac.currentUser?.name || 'User'}
+          </h2>
+          <p className="text-gray-600">
+            Role: {rbac.userRoles.length > 0 ? rbac.userRoles.join(', ') : 'No roles assigned'}
+          </p>
+          <div className="flex gap-2 mt-2">
+            {rbac.userRoles.map(role => (
+              <Badge key={role} variant="secondary" className="text-xs">
+                {role.replace('catalog_', '').replace('_', ' ').toUpperCase()}
+              </Badge>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {rbac.canCreateAsset() && (
+            <Button 
+              onClick={() => workflowOrchestrator.onboardAsset('new-asset', { quickStart: true })}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Quick Asset Onboarding
+            </Button>
+          )}
+          {rbac.canCreateDiscoveryJob() && (
+            <Button 
+              variant="outline"
+              onClick={() => workflowOrchestrator.executeDiscoveryWorkflow(['auto-detect'], { quickScan: true })}
+            >
+              <Search className="h-4 w-4 mr-2" />
+              Quick Discovery
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Workflow Orchestration Status */}
+      {workflowOrchestrator.activeWorkflows.length > 0 && (
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Workflow className="h-5 w-5" />
+              Active Workflows ({workflowOrchestrator.activeWorkflows.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {workflowOrchestrator.activeWorkflows.slice(0, 3).map(workflow => (
+                <div key={workflow.id} className="bg-white p-4 rounded-lg border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm">{workflow.name}</h4>
+                    <Badge variant={workflow.status === 'active' ? 'default' : 'secondary'}>
+                      {workflow.status}
+                    </Badge>
+                  </div>
+                  <Progress value={workflow.overallProgress} className="mb-2" />
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>{workflow.steps.filter(s => s.status === 'completed').length}/{workflow.steps.length} steps</span>
+                    <span>{Math.round(workflow.overallProgress)}%</span>
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setCurrentWorkflow(workflow)}
+                      className="text-xs"
+                    >
+                      View Details
+                    </Button>
+                    {workflow.status === 'active' && rbac.canManageCatalog() && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => workflowOrchestrator.pauseWorkflow(workflow.id)}
+                        className="text-xs"
+                      >
+                        <Pause className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {workflowOrchestrator.activeWorkflows.length > 3 && (
+              <div className="mt-4 text-center">
+                <Button variant="outline" size="sm">
+                  View All {workflowOrchestrator.activeWorkflows.length} Workflows
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dashboard Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
